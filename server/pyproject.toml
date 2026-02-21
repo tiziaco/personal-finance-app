@@ -1,0 +1,147 @@
+[project]
+name = "fastapi-langg-clerk-tmp"
+version = "0.1.0"
+description = "FastAPI LangGraph + Clerk Authentication Service"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.121.0",
+    "langchain>=1.0.5",
+    "langchain-core>=1.0.4",
+    "langchain-openai>=1.0.2",
+    "langfuse==3.9.1",
+    "langgraph>=1.0.2",
+    "langgraph-checkpoint-postgres>=3.0.1",
+    "pyjwt[crypto]>=2.9.0",
+    "clerk-backend-api>=1.0.0",
+    "psycopg[binary]>=3.3.2",
+    "asyncpg>=0.30.0",
+    "pydantic[email]>=2.11.1",
+    "pydantic-settings>=2.8.1",
+    "python-dotenv>=1.1.0",
+    "python-multipart>=0.0.20",
+    "sqlmodel>=0.0.24",
+    "structlog>=25.2.0",
+    "uvicorn>=0.34.0",
+    "slowapi>=0.1.9",
+    "email-validator>=2.2.0",
+    "prometheus-client>=0.19.0",
+    "starlette-prometheus>=0.7.0",
+    "asgiref>=3.8.1",
+    "duckduckgo-search>=3.9.0",
+    "ddgs>=9.10.0",
+    "langchain-community>=0.4.1",
+    "tenacity>=9.1.2",
+    "mem0ai>=1.0.0",
+    "uvloop>=0.22.1",
+    "greenlet>=3.1.1",
+    "asgi-correlation-id>=4.3.4",
+    "alembic>=1.18.3",
+]
+
+[project.optional-dependencies]
+dev = ["black", "isort", "flake8", "ruff", "djlint==1.36.4"]
+eval = ["colorama>=0.4.6", "tqdm>=4.67.1"]
+
+[dependency-groups]
+dev = [
+    "colorama>=0.4.6",
+]
+test = [
+    "httpx>=0.28.1",
+    "pytest>=8.3.5",
+    "pytest-asyncio>=0.25.2",
+    "pytest-cov>=6.0.0",
+    "pytest-mock>=3.14.0",
+]
+
+
+[tool.pytest.ini_options]
+# Test discovery
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+# Markers
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "unit: marks tests as unit tests",
+    "integration: marks tests as integration tests",
+    "asyncio: marks tests as async tests",
+]
+
+# Async configuration
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+
+# Coverage options
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-ra",  # Show extra test summary info for all except passed
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=0",  # Set to desired coverage % (e.g., 80)
+]
+
+# Disable warnings
+filterwarnings = [
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+[tool.black]
+line-length = 119
+exclude = "venv|migrations"
+
+[tool.flake8]
+docstring-convention = "all"
+ignore = ["D107", "D212", "E501", "W503", "W605", "D203", "D100"]
+exclude = "venv|migrations"
+max-line-length = 119
+
+# radon
+radon-max-cc = 10
+
+[tool.isort]
+profile = "black"
+multi_line_output = "VERTICAL_HANGING_INDENT"
+force_grid_wrap = 2
+line_length = 119
+skip = ["migrations", "venv"]
+
+[tool.pylint."messages control"]
+disable = [
+    "line-too-long",
+    "trailing-whitespace",
+    "missing-function-docstring",
+    "consider-using-f-string",
+    "import-error",
+    "too-few-public-methods",
+    "redefined-outer-name",
+]
+
+[tool.pylint.master]
+ignore = "migrations"
+
+[tool.ruff]
+line-length = 119
+exclude = ["migrations", "*.ipynb", "venv"]
+
+[tool.ruff.lint]
+# Enable flake8-bugbear (`B`) rules and docstring (`D`) rules
+select = ["E", "F", "B", "ERA", "D"]
+# Never enforce `E501` (line length violations).
+ignore = ["E501", "F401", "D203", "D213", "B904", "B008"]
+# Avoid trying to fix flake8-bugbear (`B`) violations.
+unfixable = ["B"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+# Ignore `E402` (import violations) in all `__init__.py` files
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["E402"]

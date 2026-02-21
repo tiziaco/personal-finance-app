@@ -1,0 +1,178 @@
+{
+  "id": null,
+  "uid": "llm-latency",
+  "title": "LLM Inference Latency",
+  "tags": ["inference", "latency"],
+  "timezone": "browser",
+  "schemaVersion": 36,
+  "version": 4,
+  "refresh": "10s",
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Avg Inference Latency",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_inference_duration_seconds_sum[5m])) / sum(rate(llm_inference_duration_seconds_count[5m]))",
+          "legendFormat": "avg",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "noValue": "no data"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 3 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Avg Stream Latency",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_stream_duration_seconds_sum[5m])) / sum(rate(llm_stream_duration_seconds_count[5m]))",
+          "legendFormat": "avg stream",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "noValue": "no data"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 2 },
+              { "color": "red", "value": 8 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Inference Request Rate",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_inference_duration_seconds_count[1m])) + sum(rate(llm_stream_duration_seconds_count[1m]))",
+          "legendFormat": "req/s",
+          "refId": "A"
+        }
+      ],
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "value",
+        "noValue": "0"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps"
+        }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Inference Duration (p95 vs avg)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_inference_duration_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} p95",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(llm_inference_duration_seconds_sum[5m])) by (model) / sum(rate(llm_inference_duration_seconds_count[5m])) by (model)",
+          "legendFormat": "{{model}} avg",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Stream Duration (p95 vs avg)",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(llm_stream_duration_seconds_bucket[5m])) by (le, model))",
+          "legendFormat": "{{model}} p95",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(llm_stream_duration_seconds_sum[5m])) by (model) / sum(rate(llm_stream_duration_seconds_count[5m])) by (model)",
+          "legendFormat": "{{model}} avg",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "s" }
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "LLM Request Rate",
+      "datasource": "Prometheus",
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(llm_inference_duration_seconds_count[1m])) by (model)",
+          "legendFormat": "{{model}} (chat)",
+          "refId": "A"
+        },
+        {
+          "expr": "sum(rate(llm_stream_duration_seconds_count[1m])) by (model)",
+          "legendFormat": "{{model}} (stream)",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "bottom" }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps" }
+      }
+    }
+  ]
+}

@@ -1,0 +1,2 @@
+# Root-level Docker Compose env file (contains secrets)
+.env
