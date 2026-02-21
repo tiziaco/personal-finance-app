@@ -202,34 +202,33 @@ class TransactionService:
     ) -> int:
         """Update multiple transactions atomically.
 
-        All-or-nothing: raises TransactionNotFoundError if any ID is invalid,
-        which causes the caller's session to roll back all changes.
+        All-or-nothing: uses a savepoint so any failure rolls back all changes.
 
         Returns:
             Count of updated transactions.
         """
-        for item in items:
-            stmt = select(Transaction).where(
-                Transaction.id == item.id,
-                Transaction.user_id == user_id,
-                Transaction.deleted_at.is_(None),
-            )
-            result = await db.execute(stmt)
-            transaction = result.scalar_one_or_none()
-
-            if not transaction:
-                raise TransactionNotFoundError(
-                    f"Transaction {item.id} not found",
-                    transaction_id=item.id,
+        async with db.begin_nested():
+            for item in items:
+                stmt = select(Transaction).where(
+                    Transaction.id == item.id,
+                    Transaction.user_id == user_id,
+                    Transaction.deleted_at.is_(None),
                 )
+                result = await db.execute(stmt)
+                transaction = result.scalar_one_or_none()
 
-            update_data = item.model_dump(exclude={"id"}, exclude_none=True)
-            for field, value in update_data.items():
-                setattr(transaction, field, value)
-            transaction.updated_at = datetime.now(UTC)
-            db.add(transaction)
+                if not transaction:
+                    raise TransactionNotFoundError(
+                        f"Transaction {item.id} not found",
+                        transaction_id=item.id,
+                    )
 
-        await db.flush()
+                update_data = item.model_dump(exclude={"id"}, exclude_none=True)
+                for field, value in update_data.items():
+                    setattr(transaction, field, value)
+                transaction.updated_at = datetime.now(UTC)
+                db.add(transaction)
+
         logger.info("transactions_batch_updated", user_id=user_id, count=len(items))
         return len(items)
 
@@ -241,32 +240,31 @@ class TransactionService:
     ) -> int:
         """Soft-delete multiple transactions atomically.
 
-        All-or-nothing: raises TransactionNotFoundError if any ID is invalid,
-        which causes the caller's session to roll back all changes.
+        All-or-nothing: uses a savepoint so any failure rolls back all changes.
 
         Returns:
             Count of soft-deleted transactions.
         """
-        for transaction_id in ids:
-            stmt = select(Transaction).where(
-                Transaction.id == transaction_id,
-                Transaction.user_id == user_id,
-                Transaction.deleted_at.is_(None),
-            )
-            result = await db.execute(stmt)
-            transaction = result.scalar_one_or_none()
-
-            if not transaction:
-                raise TransactionNotFoundError(
-                    f"Transaction {transaction_id} not found",
-                    transaction_id=transaction_id,
+        async with db.begin_nested():
+            for transaction_id in ids:
+                stmt = select(Transaction).where(
+                    Transaction.id == transaction_id,
+                    Transaction.user_id == user_id,
+                    Transaction.deleted_at.is_(None),
                 )
+                result = await db.execute(stmt)
+                transaction = result.scalar_one_or_none()
 
-            transaction.soft_delete()
-            transaction.updated_at = datetime.now(UTC)
-            db.add(transaction)
+                if not transaction:
+                    raise TransactionNotFoundError(
+                        f"Transaction {transaction_id} not found",
+                        transaction_id=transaction_id,
+                    )
 
-        await db.flush()
+                transaction.soft_delete()
+                transaction.updated_at = datetime.now(UTC)
+                db.add(transaction)
+
         logger.info("transactions_batch_deleted", user_id=user_id, count=len(ids))
         return len(ids)
 
