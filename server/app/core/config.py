@@ -11,7 +11,6 @@ from pathlib import Path
 from typing import List
 
 from pydantic import (
-    DirectoryPath,
     Field,
     SecretStr,
     field_validator,
@@ -132,16 +131,19 @@ class LoggingSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LOG_")
 
-    DIR: DirectoryPath = Field(default=Path("logs"))
+    DIR: Path = Field(default=Path("logs"))
     LEVEL: str = "INFO"
     FORMAT: str = "json"  # "json" or "console"
 
     @field_validator("DIR", mode="before")
     @classmethod
     def ensure_path(cls, v):
-        """Convert string to Path if needed."""
+        """Convert string to Path and create directory if needed."""
         if isinstance(v, str):
-            return Path(v)
+            v = Path(v)
+        # Create directory if it doesn't exist
+        if isinstance(v, Path):
+            v.mkdir(parents=True, exist_ok=True)
         return v
 
 
