@@ -9,6 +9,18 @@ from app.schemas.chat import (
     StreamResponse,
 )
 from app.schemas.conversation import ConversationResponse
+from app.schemas.transaction import (
+    BatchDeleteRequest,
+    BatchDeleteResponse,
+    BatchUpdateItem,
+    BatchUpdateRequest,
+    BatchUpdateResponse,
+    TransactionCreate,
+    TransactionFilters,
+    TransactionListResponse,
+    TransactionResponse,
+    TransactionUpdate,
+)
 
 __all__ = [
     "ConversationResponse",
@@ -18,4 +30,14 @@ __all__ = [
     "ConversationHistory",
     "Message",
     "StreamResponse",
+    "BatchDeleteRequest",
+    "BatchDeleteResponse",
+    "BatchUpdateItem",
+    "BatchUpdateRequest",
+    "BatchUpdateResponse",
+    "TransactionCreate",
+    "TransactionFilters",
+    "TransactionListResponse",
+    "TransactionResponse",
+    "TransactionUpdate",
 ]
