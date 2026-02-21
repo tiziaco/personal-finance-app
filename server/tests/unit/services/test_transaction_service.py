@@ -3,7 +3,7 @@
 All DB interactions are mocked — no real database required.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -149,7 +149,7 @@ class TestUpdate:
     @pytest.mark.asyncio
     async def test_refreshes_updated_at(self):
         mock_db = AsyncMock(spec=AsyncSession)
-        original_time = datetime(2024, 1, 1)
+        original_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
         transaction = make_transaction(updated_at=original_time)
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = transaction
