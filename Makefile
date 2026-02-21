@@ -6,6 +6,7 @@ ENV ?= development
 # Load root .env (APP_ENV, GRAFANA_ADMIN_PASSWORD, …) so Docker Compose picks
 # them up even when --env-file points to a service-specific file.
 include .env
+-include web-app/.env.local
 .EXPORT_ALL_VARIABLES:
 
 # Default target
@@ -109,9 +110,11 @@ docker-logs-core:
 
 # Clean up everything
 clean:
-	@echo "🧹 Cleaning up all services, volumes, and networks..."
+	@echo "🧹 Performing full cleanup (containers, images, cache, volumes)..."
 	@$(DOCKER_COMPOSE) down -v
-	@echo "✅ Cleanup complete"
+	@docker rmi -f personal-finance-app-web-app personal-finance-app-server 2>/dev/null || true
+	@docker builder prune -af
+	@echo "✅ Full cleanup complete"
 
 # Rebuild and start fresh
 rebuild: clean docker-run
