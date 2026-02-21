@@ -1,5 +1,5 @@
 [project]
-name = "personal-finance-app-server"
+name = "personal-finance-app"
 version = "0.1.0"
 description = "Personal Finance App Server built with FastAPI and LangChain"
 readme = "README.md"
