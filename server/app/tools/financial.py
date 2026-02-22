@@ -31,6 +31,13 @@ from app.analytics.temporal import (
 )
 
 
+_EMPTY_RESPONSE: Dict[str, Any] = {}
+
+
+def _empty_df_response(keys: list) -> Dict[str, Any]:
+    return {k: [] for k in keys}
+
+
 async def get_spending_summary(
     df: pl.DataFrame,
     start_date: Optional[date] = None,
@@ -41,6 +48,12 @@ async def get_spending_summary(
     Provides a comprehensive spending overview including total spend,
     income vs expenses, net position, and recent period comparison.
     """
+    if len(df) == 0:
+        return {
+            "overview": {"stats": [], "income_vs_expenses": []},
+            "recent_trend": {"last_3_months": [], "burn_rate": []},
+            "date_range": {"start": None, "end": None, "total_days": 0},
+        }
     overview = calculate_spending_overview(
         df, period=PeriodEnum.MONTHLY, start_date=start_date, end_date=end_date
     )
@@ -110,6 +123,18 @@ async def get_recurring_insights(
 
     Recurring expenses, subscription costs, hidden subscriptions.
     """
+    if len(df) == 0:
+        return {
+            "recurring_summary": [],
+            "monthly_recurring_costs": [],
+            "recurring_by_category": [],
+            "hidden_subscriptions": [],
+            "insights": {
+                "total_recurring_percentage": 0.0,
+                "total_hidden_subscriptions": 0,
+                "top_recurring_merchant": None,
+            },
+        }
     recurring_data = analyze_recurring(df, start_date=start_date, end_date=end_date)
 
     summary = recurring_data["recurring_summary"].to_dicts()
@@ -149,6 +174,15 @@ async def get_trend_insights(
 
     MoM/YoY growth, burn rate, fastest growing and declining categories.
     """
+    if len(df) == 0:
+        return {
+            "monthly_trend": [],
+            "year_comparison": [],
+            "burn_rate": [],
+            "top_growing": [],
+            "top_declining": [],
+            "insights": {"latest_mom_growth": None},
+        }
     monthly_data = calculate_monthly_spending_trend(
         df, start_date=start_date, end_date=end_date, include_income=True
     )
@@ -243,6 +277,19 @@ async def get_anomaly_insights(
 
     Outlier transactions, abnormal weeks, category spikes.
     """
+    if len(df) == 0:
+        return {
+            "outlier_transactions": [],
+            "category_spikes": [],
+            "volatility_summary": [],
+            "insights": {
+                "total_anomalies": 0,
+                "highest_z_score": 0.0,
+                "categories_spiking": 0,
+                "detection_window_days": rolling_window,
+                "threshold_std": std_threshold,
+            },
+        }
     df_filtered = df
     if start_date:
         df_filtered = df_filtered.filter(pl.col("date") >= start_date)
@@ -376,6 +423,25 @@ async def get_spending_stability_profile(
 
     Stability classification, fixed vs variable costs, subscription creep.
     """
+    if len(df) == 0:
+        return {
+            "stability_distribution": {
+                "stable_percentage": 0.0,
+                "moderate_percentage": 0.0,
+                "volatile_percentage": 0.0,
+            },
+            "stable_categories": [],
+            "moderate_categories": [],
+            "volatile_categories": [],
+            "volatility_metrics": [],
+            "recurring_insights": [],
+            "subscription_creep": {"mom_change_percentage": None, "status": "stable"},
+            "insights": {
+                "predictable_baseline_pct": 0.0,
+                "discretionary_portion_pct": 0.0,
+                "stability_profile": "low_predictability",
+            },
+        }
     stability_data = identify_stable_vs_volatile_categories(
         df, start_date=start_date, end_date=end_date
     )
