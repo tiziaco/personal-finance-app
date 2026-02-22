@@ -17,6 +17,18 @@ def _make_df() -> pl.DataFrame:
     })
 
 
+def _make_income_only_df() -> pl.DataFrame:
+    """DataFrame with only income transactions — no expenses to analyse."""
+    return pl.DataFrame({
+        "date": [date(2025, 1, 15)],
+        "merchant": ["Employer"],
+        "amount": [2000.0],
+        "category": ["Income"],
+        "confidence_score": [1.0],
+        "is_recurring": [False],
+    })
+
+
 @pytest.mark.asyncio
 async def test_get_spending_summary_accepts_dataframe():
     from app.tools.financial import get_spending_summary
@@ -90,3 +102,41 @@ async def test_get_anomaly_insights_forwards_std_threshold():
     result = await get_anomaly_insights(_make_df(), std_threshold=3.0, rolling_window=14)
     assert result["insights"]["threshold_std"] == 3.0
     assert result["insights"]["detection_window_days"] == 14
+
+
+# ---------------------------------------------------------------------------
+# Income-only edge case — no expenses means all expense-path analytics are empty
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_get_recurring_insights_income_only():
+    """All-income input must not crash — recurring_summary returns an empty list."""
+    from app.tools.financial import get_recurring_insights
+    result = await get_recurring_insights(_make_income_only_df())
+    assert isinstance(result, dict)
+    assert result["monthly_recurring_costs"] == []
+    assert result["recurring_summary"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_category_insights_income_only():
+    from app.tools.financial import get_category_insights
+    result = await get_category_insights(_make_income_only_df())
+    assert isinstance(result, dict)
+    assert result["top_categories"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_behavioral_patterns_income_only():
+    from app.tools.financial import get_behavioral_patterns
+    result = await get_behavioral_patterns(_make_income_only_df())
+    assert isinstance(result, dict)
+    assert result["day_of_week"]["by_weekday"] == []
+
+
+@pytest.mark.asyncio
+async def test_get_merchant_insights_income_only():
+    from app.tools.financial import get_merchant_insights
+    result = await get_merchant_insights(_make_income_only_df())
+    assert isinstance(result, dict)
+    assert result["top_merchants"] == []

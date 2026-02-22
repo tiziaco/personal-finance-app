@@ -55,6 +55,19 @@ async def test_dashboard_contains_all_sections(authenticated_client, transaction
     assert "generated_at" in body
 
 
+# ── Income-only dataset ───────────────────────────────────────────────────────
+
+@pytest.mark.parametrize("url", ALL_ENDPOINTS)
+@pytest.mark.asyncio
+async def test_all_endpoints_return_200_with_income_only(
+    authenticated_client, transactions_income_only, url
+):
+    """User has only income transactions — expense-path analytics must return empty,
+    not crash with ColumnNotFoundError."""
+    resp = await authenticated_client.get(url)
+    assert resp.status_code == 200
+
+
 # ── Single-domain endpoints ───────────────────────────────────────────────────
 
 @pytest.mark.asyncio

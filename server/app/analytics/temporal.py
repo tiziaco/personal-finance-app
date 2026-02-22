@@ -297,7 +297,7 @@ def calculate_monthly_spending_trend(
                      pl.col(str(previous_year)) * 100).alias(f"yoy_growth_{latest_year}")
                 ])
     else:
-        year_comparison = pl.DataFrame()
+        year_comparison = pl.DataFrame(schema={"month": pl.Int8, "month_name": pl.Utf8})
     
     # Prepare burn rate summary
     if include_income:
@@ -353,13 +353,32 @@ def calculate_category_trend(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
+        category_growth_schema = {
+            "category": pl.Utf8,
+            "first_month_spending": pl.Float64,
+            "last_month_spending": pl.Float64,
+            "total_spending": pl.Float64,
+            "avg_monthly_spending": pl.Float64,
+            "std_dev": pl.Float64,
+            "months_active": pl.UInt32,
+            "total_growth_pct": pl.Float64,
+            "coefficient_of_variation": pl.Float64,
+        }
         return {
-            "category_by_month": empty_df,
-            "category_pivot": empty_df,
-            "category_growth": empty_df,
-            "top_growing": empty_df,
-            "top_declining": empty_df
+            "category_by_month": pl.DataFrame(schema={
+                "year": pl.Int32,
+                "month": pl.Int8,
+                "month_name": pl.Utf8,
+                "category": pl.Utf8,
+                "total_spending": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "month_total": pl.Float64,
+                "percentage_of_month": pl.Float64,
+            }),
+            "category_pivot": pl.DataFrame(schema={"year_month": pl.Utf8}),
+            "category_growth": pl.DataFrame(schema=category_growth_schema),
+            "top_growing": pl.DataFrame(schema=category_growth_schema),
+            "top_declining": pl.DataFrame(schema=category_growth_schema),
         }
     
     # Category spending by month
@@ -446,11 +465,26 @@ def calculate_merchant_trend(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
+        merchant_by_month_schema = {
+            "year": pl.Int32,
+            "month": pl.Int8,
+            "merchant": pl.Utf8,
+            "total_spending": pl.Float64,
+            "transaction_count": pl.UInt32,
+        }
         return {
-            "merchant_by_month": empty_df,
-            "merchant_trends": empty_df,
-            "top_merchants_trend": empty_df
+            "merchant_by_month": pl.DataFrame(schema=merchant_by_month_schema),
+            "merchant_trends": pl.DataFrame(schema={
+                "merchant": pl.Utf8,
+                "total_spending": pl.Float64,
+                "total_transactions": pl.UInt32,
+                "avg_transaction": pl.Float64,
+                "std_dev": pl.Float64,
+                "first_transaction": pl.Date,
+                "last_transaction": pl.Date,
+                "spending_volatility": pl.Float64,
+            }),
+            "top_merchants_trend": pl.DataFrame(schema=merchant_by_month_schema),
         }
     
     # Merchant spending by month
@@ -514,7 +548,12 @@ def calculate_rolling_averages(
     df = _get_expenses_only(df)
     
     if len(df) == 0:
-        return pl.DataFrame()
+        schema = {"date": pl.Date, "daily_spending": pl.Float64, "transaction_count": pl.UInt32}
+        for w in windows:
+            schema[f"rolling_avg_{w}d"] = pl.Float64
+            schema[f"rolling_std_{w}d"] = pl.Float64
+        schema["cumulative_spending"] = pl.Float64
+        return pl.DataFrame(schema=schema)
     
     # Aggregate by day
     daily_spending = df.group_by("date").agg([
@@ -584,11 +623,31 @@ def analyze_seasonality_simple(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
         return {
-            "monthly_seasonality": empty_df,
-            "quarterly_seasonality": empty_df,
-            "month_volatility": empty_df
+            "monthly_seasonality": pl.DataFrame(schema={
+                "month": pl.Int8,
+                "month_name": pl.Utf8,
+                "total_spending": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "year_count": pl.UInt32,
+                "avg_monthly_spending": pl.Float64,
+                "avg_transactions": pl.Float64,
+                "seasonality_index": pl.Float64,
+            }),
+            "quarterly_seasonality": pl.DataFrame(schema={
+                "quarter": pl.Int8,
+                "total_spending": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "year_count": pl.UInt32,
+                "avg_quarterly_spending": pl.Float64,
+            }),
+            "month_volatility": pl.DataFrame(schema={
+                "month": pl.Int8,
+                "avg_spending": pl.Float64,
+                "std_dev": pl.Float64,
+                "year_count": pl.UInt32,
+                "coefficient_of_variation": pl.Float64,
+            }),
         }
     
     # Calculate overall average for normalization
@@ -694,11 +753,12 @@ def analyze_seasonality_advanced(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
+        ts_schema = {"year": pl.Int32, "month": pl.Int32, "total_spending": pl.Float64, "period": pl.Utf8}
         return {
-            "trend": pl.DataFrame(),
-            "seasonal": pl.DataFrame(),
-            "residual": pl.DataFrame(),
-            "original": pl.DataFrame(),
+            "trend": pl.DataFrame(schema={"period": pl.Date, "trend": pl.Float64}),
+            "seasonal": pl.DataFrame(schema={"period": pl.Date, "seasonal": pl.Float64}),
+            "residual": pl.DataFrame(schema={"period": pl.Date, "residual": pl.Float64}),
+            "original": pl.DataFrame(schema=ts_schema),
             "seasonal_strength": 0.0
         }
     
@@ -714,9 +774,9 @@ def analyze_seasonality_advanced(
     min_observations = period * 2
     if len(monthly_ts) < min_observations:
         return {
-            "trend": pl.DataFrame(),
-            "seasonal": pl.DataFrame(),
-            "residual": pl.DataFrame(),
+            "trend": pl.DataFrame(schema={"period": pl.Date, "trend": pl.Float64}),
+            "seasonal": pl.DataFrame(schema={"period": pl.Date, "seasonal": pl.Float64}),
+            "residual": pl.DataFrame(schema={"period": pl.Date, "residual": pl.Float64}),
             "original": monthly_ts,
             "seasonal_strength": 0.0,
             "error": f"Insufficient data: need at least {min_observations} observations, have {len(monthly_ts)}"
@@ -777,9 +837,9 @@ def analyze_seasonality_advanced(
         
     except Exception as e:
         return {
-            "trend": pl.DataFrame(),
-            "seasonal": pl.DataFrame(),
-            "residual": pl.DataFrame(),
+            "trend": pl.DataFrame(schema={"period": pl.Date, "trend": pl.Float64}),
+            "seasonal": pl.DataFrame(schema={"period": pl.Date, "seasonal": pl.Float64}),
+            "residual": pl.DataFrame(schema={"period": pl.Date, "residual": pl.Float64}),
             "original": monthly_ts,
             "seasonal_strength": 0.0,
             "error": str(e)
@@ -812,11 +872,30 @@ def analyze_day_of_week_patterns(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
         return {
-            "by_weekday": empty_df,
-            "weekday_vs_weekend": empty_df,
-            "category_by_weekday": empty_df
+            "by_weekday": pl.DataFrame(schema={
+                "weekday": pl.Int8,
+                "day_name": pl.Utf8,
+                "total_spending": pl.Float64,
+                "avg_transaction": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "percentage": pl.Float64,
+                "day_index": pl.Float64,
+            }),
+            "weekday_vs_weekend": pl.DataFrame(schema={
+                "day_type": pl.Utf8,
+                "total_spending": pl.Float64,
+                "avg_transaction": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "avg_per_day": pl.Float64,
+            }),
+            "category_by_weekday": pl.DataFrame(schema={
+                "weekday": pl.Int8,
+                "day_name": pl.Utf8,
+                "category": pl.Utf8,
+                "total_spending": pl.Float64,
+                "transaction_count": pl.UInt32,
+            }),
         }
     
     # Spending by weekday
@@ -898,11 +977,26 @@ def analyze_payday_proximity(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
         return {
-            "payday_proximity": empty_df,
-            "payday_summary": empty_df,
-            "category_payday_pattern": empty_df
+            "payday_proximity": pl.DataFrame(schema={
+                "days_from_payday": pl.Int64,
+                "total_spending": pl.Float64,
+                "avg_transaction": pl.Float64,
+                "transaction_count": pl.UInt32,
+            }),
+            "payday_summary": pl.DataFrame(schema={
+                "payday_period": pl.Utf8,
+                "total_spending": pl.Float64,
+                "avg_transaction": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "percentage": pl.Float64,
+            }),
+            "category_payday_pattern": pl.DataFrame(schema={
+                "payday_period": pl.Utf8,
+                "category": pl.Utf8,
+                "total_spending": pl.Float64,
+                "transaction_count": pl.UInt32,
+            }),
         }
     
     # Calculate days from nearest payday
@@ -994,12 +1088,30 @@ def analyze_spending_volatility(
     df = _add_temporal_features(df)
     
     if len(df) == 0:
-        empty_df = pl.DataFrame()
+        cv_schema = {
+            "category": pl.Utf8,
+            "mean_transaction": pl.Float64,
+            "std_dev": pl.Float64,
+            "variance": pl.Float64,
+            "min_transaction": pl.Float64,
+            "max_transaction": pl.Float64,
+            "transaction_count": pl.UInt32,
+            "coefficient_of_variation": pl.Float64,
+            "range": pl.Float64,
+            "stability_class": pl.Utf8,
+        }
         return {
-            "category_volatility": empty_df,
-            "stable_categories": empty_df,
-            "volatile_categories": empty_df,
-            "monthly_variance": empty_df
+            "category_volatility": pl.DataFrame(schema=cv_schema),
+            "stable_categories": pl.DataFrame(schema=cv_schema),
+            "volatile_categories": pl.DataFrame(schema=cv_schema),
+            "monthly_variance": pl.DataFrame(schema={
+                "category": pl.Utf8,
+                "avg_monthly_spending": pl.Float64,
+                "monthly_std_dev": pl.Float64,
+                "monthly_variance": pl.Float64,
+                "months_with_spending": pl.UInt32,
+                "monthly_cv": pl.Float64,
+            }),
         }
     
     # Category volatility (transaction-level)

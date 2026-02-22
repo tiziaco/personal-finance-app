@@ -143,3 +143,19 @@ async def transactions_400(db_session, test_user):
     ):
         db_session.add(t)
     await db_session.flush()
+
+
+@pytest_asyncio.fixture
+async def transactions_income_only(db_session, test_user):
+    """Single income transaction — no expenses, exercises all expense-path analytics."""
+    t = Transaction(
+        user_id=test_user.id,
+        date=datetime(2025, 6, 15),
+        merchant="Employer",
+        amount=Decimal("2000.00"),
+        category=CategoryEnum.INCOME,
+        confidence_score=1.0,
+        is_recurring=False,
+    )
+    db_session.add(t)
+    await db_session.flush()

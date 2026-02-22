@@ -489,12 +489,43 @@ def analyze_recurring(
     ])
     
     if len(expenses_df) == 0:
-        empty_df = pl.DataFrame()
+        monthly_recurring_cost_schema = {
+            "merchant": pl.Utf8,
+            "total_amount": pl.Float64,
+            "transaction_count": pl.UInt32,
+            "avg_transaction_amount": pl.Float64,
+            "first_transaction": pl.Date,
+            "last_transaction": pl.Date,
+            "category": pl.Utf8,
+            "estimated_monthly_cost": pl.Float64,
+        }
+        hidden_subscriptions_schema = {
+            "merchant": pl.Utf8,
+            "avg_amount": pl.Float64,
+            "total_transactions": pl.UInt32,
+            "category": pl.Utf8,
+            "first_transaction": pl.Date,
+            "last_transaction": pl.Date,
+            "months_active": pl.UInt32,
+            "avg_monthly_frequency": pl.Float64,
+        }
         return {
-            "recurring_summary": empty_df,
-            "monthly_recurring_cost": empty_df,
-            "recurring_by_category": empty_df,
-            "hidden_subscriptions": empty_df
+            "recurring_summary": pl.DataFrame(schema={
+                "is_recurring": pl.Boolean,
+                "transaction_count": pl.UInt32,
+                "total_amount": pl.Float64,
+                "avg_amount": pl.Float64,
+                "transaction_percentage": pl.Float64,
+                "amount_percentage": pl.Float64,
+            }),
+            "monthly_recurring_cost": pl.DataFrame(schema=monthly_recurring_cost_schema),
+            "recurring_by_category": pl.DataFrame(schema={
+                "category": pl.Utf8,
+                "total_amount": pl.Float64,
+                "transaction_count": pl.UInt32,
+                "avg_amount": pl.Float64,
+            }),
+            "hidden_subscriptions": pl.DataFrame(schema=hidden_subscriptions_schema),
         }
     
     # Recurring vs non-recurring summary
@@ -549,7 +580,12 @@ def analyze_recurring(
         pl.col("amount").sum().alias("total_amount"),
         pl.len().alias("transaction_count"),
         pl.col("amount").mean().alias("avg_amount"),
-    ]).sort("total_amount", descending=True) if len(recurring_expenses) > 0 else pl.DataFrame()
+    ]).sort("total_amount", descending=True) if len(recurring_expenses) > 0 else pl.DataFrame(schema={
+        "category": pl.Utf8,
+        "total_amount": pl.Float64,
+        "transaction_count": pl.UInt32,
+        "avg_amount": pl.Float64,
+    })
     
     # Hidden subscriptions detection
     # Find merchants with low amounts, high frequency, but NOT flagged as recurring
@@ -583,7 +619,16 @@ def analyze_recurring(
             (pl.col("avg_monthly_frequency") >= hidden_subscription_min_frequency)
         ).sort("avg_monthly_frequency", descending=True)
     else:
-        hidden_subscriptions = pl.DataFrame()
+        hidden_subscriptions = pl.DataFrame(schema={
+            "merchant": pl.Utf8,
+            "avg_amount": pl.Float64,
+            "total_transactions": pl.UInt32,
+            "category": pl.Utf8,
+            "first_transaction": pl.Date,
+            "last_transaction": pl.Date,
+            "months_active": pl.UInt32,
+            "avg_monthly_frequency": pl.Float64,
+        })
     
     return {
         "recurring_summary": recurring_summary,
