@@ -245,7 +245,7 @@ class TestUpdate:
         assert response.status_code == 200
         data = response.json()
         assert data["merchant"] == "Updated Merchant"
-        assert data["amount"] == original_amount  # unchanged
+        assert data["amount"] == str(original_amount)  # Decimal serialized to string in JSON
 
     @pytest.mark.asyncio
     async def test_updated_at_is_refreshed(self, auth_client, db_session, transaction):

@@ -1,4 +1,5 @@
 from datetime import datetime
+from decimal import Decimal
 from typing import Annotated, Literal, Optional
 
 from fastapi import Query
@@ -20,7 +21,7 @@ class TransactionCreate(SQLModel):
 
     date: datetime
     merchant: str = Field(min_length=1, max_length=255)
-    amount: float
+    amount: Decimal = Field(max_digits=12, decimal_places=2)
     category: CategoryEnum
     description: Optional[str] = Field(default=None, max_length=1000)
     original_category: Optional[str] = Field(default=None, max_length=255)
@@ -35,7 +36,7 @@ class TransactionUpdate(SQLModel):
 
     date: Optional[datetime] = None
     merchant: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    amount: Optional[float] = None
+    amount: Optional[Decimal] = Field(default=None, max_digits=12, decimal_places=2)
     description: Optional[str] = Field(default=None, max_length=1000)
     original_category: Optional[str] = Field(default=None, max_length=255)
     category: Optional[CategoryEnum] = None
@@ -51,7 +52,7 @@ class BatchUpdateItem(SQLModel):
     id: int
     date: Optional[datetime] = None
     merchant: Optional[str] = Field(default=None, min_length=1, max_length=255)
-    amount: Optional[float] = None
+    amount: Optional[Decimal] = Field(default=None, max_digits=12, decimal_places=2)
     description: Optional[str] = Field(default=None, max_length=1000)
     original_category: Optional[str] = Field(default=None, max_length=255)
     category: Optional[CategoryEnum] = None
@@ -80,7 +81,7 @@ class TransactionResponse(SQLModel):
     user_id: str
     date: datetime
     merchant: str
-    amount: float
+    amount: Decimal
     description: Optional[str]
     original_category: Optional[str]
     category: CategoryEnum
@@ -122,8 +123,8 @@ class TransactionFilters:
         date_to: Optional[datetime] = Query(None, description="Filter transactions on or before this date"),
         category: Optional[CategoryEnum] = Query(None, description="Filter by category"),
         merchant: Optional[str] = Query(None, description="Substring match on merchant name"),
-        amount_min: Optional[float] = Query(None, description="Minimum transaction amount"),
-        amount_max: Optional[float] = Query(None, description="Maximum transaction amount"),
+        amount_min: Optional[Decimal] = Query(None, description="Minimum transaction amount"),
+        amount_max: Optional[Decimal] = Query(None, description="Maximum transaction amount"),
         is_recurring: Optional[bool] = Query(None, description="Filter by recurring status"),
         sort_by: Literal["date", "amount", "merchant"] = Query("date", description="Field to sort by"),
         sort_order: Literal["asc", "desc"] = Query("desc", description="Sort direction"),

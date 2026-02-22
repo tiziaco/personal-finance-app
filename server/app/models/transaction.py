@@ -1,8 +1,9 @@
 from datetime import datetime
+from decimal import Decimal
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
-from sqlalchemy import DateTime
+from sqlalchemy import DateTime, NUMERIC
 from sqlmodel import Field, Relationship
 
 from app.models.base import BaseModel, SoftDeleteMixin
@@ -50,7 +51,7 @@ class Transaction(BaseModel, SoftDeleteMixin, table=True):
     # Core Transaction Data
     date: datetime = Field(sa_type=DateTime(timezone=True), index=True)
     merchant: str
-    amount: float
+    amount: Decimal = Field(sa_type=NUMERIC(12, 2))
     description: Optional[str] = None
     original_category: Optional[str] = None
 
