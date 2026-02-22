@@ -1,7 +1,6 @@
 """Analytics read-only endpoints — feeds dashboard and per-tab analytics page."""
 
-from datetime import datetime
-from typing import Annotated
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Query, Request
 
@@ -33,7 +32,7 @@ async def get_dashboard(
     data = await analytics_service.get_dashboard(
         db, user.id, filters.date_from, filters.date_to
     )
-    return DashboardResponse(**data, generated_at=datetime.utcnow())
+    return DashboardResponse(**data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -52,7 +51,7 @@ async def get_spending(
     data = await analytics_service.get_spending(
         db, user.id, filters.date_from, filters.date_to
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -72,7 +71,7 @@ async def get_categories(
     data = await analytics_service.get_categories(
         db, user.id, filters.date_from, filters.date_to, top_n=top_n
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -92,7 +91,7 @@ async def get_merchants(
     data = await analytics_service.get_merchants(
         db, user.id, filters.date_from, filters.date_to, top_n=top_n
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -114,7 +113,7 @@ async def get_recurring(
     data = await analytics_service.get_recurring(
         db, user.id, filters.date_from, filters.date_to
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -136,7 +135,7 @@ async def get_behavior(
     data = await analytics_service.get_behavior(
         db, user.id, filters.date_from, filters.date_to
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))
 
 
 @router.get(
@@ -167,4 +166,4 @@ async def get_anomalies(
         std_threshold=std_threshold,
         rolling_window=rolling_window,
     )
-    return AnalyticsResponse(data=data, generated_at=datetime.utcnow())
+    return AnalyticsResponse(data=data, generated_at=datetime.now(timezone.utc))

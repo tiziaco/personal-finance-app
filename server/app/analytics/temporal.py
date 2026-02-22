@@ -281,7 +281,7 @@ def calculate_monthly_spending_trend(
         year_comparison = year_comparison.pivot(
             values="total_spending",
             index=["month", "month_name"],
-            columns="year"
+            on="year"
         ).sort("month")
         
         # Calculate YoY growth if we have consecutive years
@@ -386,7 +386,7 @@ def calculate_category_trend(
     ]).pivot(
         values="total_spending",
         index="year_month",
-        columns="category"
+        on="category"
     ).sort("year_month")
     
     # Category growth analysis
