@@ -2,6 +2,7 @@ from datetime import datetime
 from typing import Annotated, Literal, Optional
 
 from fastapi import Query
+from pydantic import ConfigDict
 from sqlmodel import Field, SQLModel
 
 from app.models.transaction import CategoryEnum
@@ -14,6 +15,8 @@ class TransactionCreate(SQLModel):
 
     confidence_score defaults to 1.0 (human-verified) for manual entries.
     """
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
     date: datetime
     merchant: str = Field(min_length=1, max_length=255)
@@ -28,6 +31,8 @@ class TransactionCreate(SQLModel):
 class TransactionUpdate(SQLModel):
     """Request body for partially updating a single transaction."""
 
+    model_config = ConfigDict(allow_inf_nan=False)
+
     date: Optional[datetime] = None
     merchant: Optional[str] = Field(default=None, min_length=1, max_length=255)
     amount: Optional[float] = None
@@ -40,6 +45,8 @@ class TransactionUpdate(SQLModel):
 
 class BatchUpdateItem(SQLModel):
     """A single item in a batch update request."""
+
+    model_config = ConfigDict(allow_inf_nan=False)
 
     id: int
     date: Optional[datetime] = None
