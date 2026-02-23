@@ -17,14 +17,11 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional, TypedDict
-from enum import Enum
 
 import polars as pl
 from pydantic import BaseModel, Field
 from typing_extensions import TypedDict
 from langgraph.graph import StateGraph, START, END
-
-from langchain_core.language_models import BaseLanguageModel
 
 # Import raw async analytical tools
 from app.tools.financial import (
@@ -39,46 +36,14 @@ from app.tools.financial import (
 )
 from langfuse.langchain import CallbackHandler
 from app.core.config import settings
+from app.schemas.insights import Insight, InsightType, SeverityLevel
 
 logger = logging.getLogger(__name__)
 
 
 # ============================================================================
-# Enums & Models
+# Config & State
 # ============================================================================
-
-class InsightType(str, Enum):
-    """Insight type categories aligned with PRD."""
-    SPENDING_BEHAVIOR = "spending_behavior"
-    RECURRING_SUBSCRIPTIONS = "recurring_subscriptions"
-    TREND = "trend"
-    BEHAVIORAL = "behavioral"
-    MERCHANT = "merchant"
-    STABILITY = "stability"
-    ANOMALY = "anomaly"
-
-
-class SeverityLevel(str, Enum):
-    """Severity levels for insights."""
-    INFO = "info"
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
-
-
-class Insight(BaseModel):
-    """Standardized insight schema for dashboard."""
-    insight_id: str = Field(description="Unique identifier for this insight")
-    type: InsightType = Field(description="Category of insight")
-    severity: SeverityLevel = Field(description="Severity/urgency level")
-    time_window: str = Field(description="Time period analyzed (e.g., 'last_3_months')")
-    summary: str = Field(description="Templated summary for dashboard")
-    narrative_analysis: Optional[str] = Field(default=None, description="LLM-powered narrative (optional)")
-    supporting_metrics: Dict[str, Any] = Field(description="Data supporting the insight")
-    confidence: float = Field(ge=0.0, le=1.0, description="Confidence score (0.0-1.0)")
-    section: str = Field(description="Dashboard section: 'spending', 'subscriptions', 'trends', 'behavior', 'anomalies'")
-
 
 class InsightsConfig(BaseModel):
     """Configuration for insights generation."""
@@ -170,24 +135,18 @@ async def analyze_spending_behavior(state: InsightsState) -> Dict[str, Any]:
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not spending_summary.get("success"):
-            logger.error(f"get_spending_summary failed: {spending_summary.get('error', 'No error message')}")
-        
+
         category_insights = await get_category_insights(
             state["transactions_df"],
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not category_insights.get("success"):
-            logger.error(f"get_category_insights failed: {category_insights.get('error', 'No error message')}")
-        
+
         return {
             "spending_insights": {
                 "spending_summary": spending_summary,
                 "category_insights": category_insights,
-                "success": spending_summary.get("success") and category_insights.get("success")
+                "success": True,
             }
         }
     
@@ -219,14 +178,11 @@ async def analyze_recurring_patterns(state: InsightsState) -> Dict[str, Any]:
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not recurring_insights.get("success"):
-            logger.error(f"get_recurring_insights failed: {recurring_insights.get('error', 'No error message')}")
-        
+
         return {
             "recurring_insights": {
                 "recurring_insights": recurring_insights,
-                "success": recurring_insights.get("success")
+                "success": True,
             }
         }
     
@@ -258,24 +214,18 @@ async def analyze_trends_and_stability(state: InsightsState) -> Dict[str, Any]:
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not trend_insights.get("success"):
-            logger.error(f"get_trend_insights failed: {trend_insights.get('error', 'No error message')}")
-        
+
         stability_profile = await get_spending_stability_profile(
             state["transactions_df"],
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not stability_profile.get("success"):
-            logger.error(f"get_spending_stability_profile failed: {stability_profile.get('error', 'No error message')}")
-        
+
         return {
             "trends_insights": {
                 "trend_insights": trend_insights,
                 "stability_profile": stability_profile,
-                "success": trend_insights.get("success") and stability_profile.get("success")
+                "success": True,
             }
         }
     
@@ -309,19 +259,13 @@ async def analyze_behavioral_and_anomalies(state: InsightsState) -> Dict[str, An
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not behavioral_patterns.get("success"):
-            logger.error(f"get_behavioral_patterns failed: {behavioral_patterns.get('error', 'No error message')}")
-        
+
         merchant_insights = await get_merchant_insights(
             state["transactions_df"],
             start_date=state["start_date"],
             end_date=state["end_date"]
         )
-        
-        if not merchant_insights.get("success"):
-            logger.error(f"get_merchant_insights failed: {merchant_insights.get('error', 'No error message')}")
-        
+
         anomaly_insights = None
         if state["config"].include_anomalies:
             anomaly_insights = await get_anomaly_insights(
@@ -330,16 +274,13 @@ async def analyze_behavioral_and_anomalies(state: InsightsState) -> Dict[str, An
                 end_date=state["end_date"],
                 std_threshold=state["config"].anomaly_std_threshold
             )
-            
-            if anomaly_insights and not anomaly_insights.get("success"):
-                logger.error(f"get_anomaly_insights failed: {anomaly_insights.get('error', 'No error message')}")
-        
+
         return {
             "behavioral_anomaly_insights": {
                 "behavioral_insights": behavioral_patterns,
                 "merchant_insights": merchant_insights,
                 "anomaly_insights": anomaly_insights,
-                "success": behavioral_patterns.get("success") and merchant_insights.get("success")
+                "success": True,
             }
         }
     
@@ -379,8 +320,8 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     if spending_data.get("success"):
         logger.debug(f"Processing spending insights. Keys: {list(spending_data.keys())}")
         try:
-            spending_summary = spending_data["spending_summary"]["data"]
-            category_insights = spending_data["category_insights"]["data"]
+            spending_summary = spending_data["spending_summary"]
+            category_insights = spending_data["category_insights"]
             logger.debug(f"Extracted spending_summary and category_insights successfully")
             
             # Top category insight
@@ -429,7 +370,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     if recurring_data.get("success"):
         logger.debug(f"Processing recurring insights. Keys: {list(recurring_data.keys())}")
         try:
-            recurring_summary = recurring_data["recurring_insights"]["data"]
+            recurring_summary = recurring_data["recurring_insights"]
             logger.debug(f"Extracted recurring_summary successfully")
             
             if recurring_summary:
@@ -474,7 +415,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     if trends_data.get("success"):
         logger.debug(f"Processing trend insights. Keys: {list(trends_data.keys())}")
         try:
-            trend_summary = trends_data["trend_insights"]["data"]
+            trend_summary = trends_data["trend_insights"]
             logger.debug(f"Extracted trend_summary successfully")
             
             if trend_summary:
@@ -518,7 +459,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     if behavioral_data.get("success"):
         logger.debug(f"Processing behavioral insights. Keys: {list(behavioral_data.keys())}")
         try:
-            behavioral_summary = behavioral_data["behavioral_insights"]["data"]
+            behavioral_summary = behavioral_data["behavioral_insights"]
             logger.debug(f"Extracted behavioral_summary successfully")
             
             if behavioral_summary:
@@ -554,7 +495,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     # ===== Merchant Insights =====
     if behavioral_data.get("success"):
         try:
-            merchant_summary = behavioral_data["merchant_insights"]["data"]
+            merchant_summary = behavioral_data["merchant_insights"]
             
             if merchant_summary:
                 concentration = merchant_summary["concentration_metrics"]
@@ -589,7 +530,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     trends_data = state.get("trends_insights", {})
     if trends_data.get("success"):
         try:
-            stability_summary = trends_data["stability_profile"]["data"]
+            stability_summary = trends_data["stability_profile"]
             
             if stability_summary:
                 distribution = stability_summary["stability_distribution"]
@@ -621,7 +562,7 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
     # ===== Anomaly Insights =====
     if behavioral_data.get("success") and state["config"].include_anomalies:
         try:
-            anomaly_summary = behavioral_data["anomaly_insights"]["data"]
+            anomaly_summary = behavioral_data["anomaly_insights"]
             
             # Check insights nested structure for total_anomalies
             total_anomalies = anomaly_summary.get("insights", {}).get("total_anomalies", 0)
@@ -679,7 +620,7 @@ async def format_insights(state: InsightsState) -> Dict[str, Any]:
     formatted_insights: List[Insight] = []
     
     for insight in state["raw_insights"]:
-        formatted_insight = insight.copy()
+        formatted_insight = insight.model_copy()
         
         # Add LLM narrative if enabled
         if state["config"].enable_llm_enrichment and state["config"].llm_model:
