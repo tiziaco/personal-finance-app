@@ -1,0 +1,11 @@
+user_id,date,merchant,amount,description,category,confidence_score,is_recurring,original_category
+test_user,2025-11-03,Freelancer Account,2400.0,Salary Genie.Knowledge October 2025,Income,0.95,false,
+test_user,2025-11-03,RSG Group GmbH,-30.0,B0020--0186-0000999 B0020-25139123 New Year.s Special 30.00 EUR 01.11.25-30.11.25,Miscellaneous,0.3,false,
+test_user,2025-11-03,Roberta Annecchino,-968.0,Affitto,Household & Utilities,0.98,false,
+test_user,2025-11-05,TRENITALIA FRANCE ECOM,-29.6,"",Transportation,0.95,false,
+test_user,2025-11-05,BRI Shop,-14.0,"",Shopping,0.7,false,
+test_user,2025-11-05,PARAFARMACIA WOJTYLA,-15.29,"",Healthcare & Drug Stores,0.95,false,
+test_user,2025-11-08,Kanchi Nepalese,-17.65,"",Bars & Restaurants,0.95,false,
+test_user,2025-11-08,Zettle_*Arturo Bistro,-10.5,"",Bars & Restaurants,0.95,false,
+test_user,2025-11-09,NOMI Weinbar,-18.7,"",Bars & Restaurants,0.95,false,
+test_user,2025-11-09,NOMI Weinbar,-39.0,"",Bars & Restaurants,0.95,false,

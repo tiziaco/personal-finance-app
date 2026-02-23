@@ -93,6 +93,9 @@ async def delete_me(
     await delete_user_memory(user.id)
 
     # 5. Anonymize the user record (clears PII fields + nulls conversation names)
+    # Eagerly load conversations so anonymize_user() can iterate them without
+    # triggering a synchronous lazy load on an async session (MissingGreenlet).
+    await db_session.refresh(user, attribute_names=["conversations"])
     user.anonymize_user()
     db_session.add(user)
     await db_session.commit()

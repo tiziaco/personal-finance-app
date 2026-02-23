@@ -64,3 +64,98 @@ async def authenticated_client_with_agent(authenticated_client, mock_agent):
     app.dependency_overrides[get_chatbot_agent] = lambda: mock_agent
     yield authenticated_client
     app.dependency_overrides.pop(get_chatbot_agent, None)
+
+
+# ── Analytics transaction fixtures ────────────────────────────────────────────
+
+import polars as pl
+from decimal import Decimal
+from datetime import datetime
+
+from app.models.transaction import CategoryEnum, Transaction
+
+
+def _load_transactions_from_csv(path: str, test_user, db_session):
+    """Helper: read CSV, override user_id with test_user.id, return Transaction list."""
+    df = pl.read_csv(path)
+    transactions = []
+    for row in df.iter_rows(named=True):
+        raw_date = row["date"]
+        parsed_date = (
+            datetime.strptime(raw_date, "%Y-%m-%d") if isinstance(raw_date, str) else raw_date
+        )
+        t = Transaction(
+            user_id=test_user.id,
+            date=parsed_date,
+            merchant=row["merchant"],
+            amount=Decimal(str(row["amount"])),
+            description=row.get("description") or None,
+            original_category=row.get("original_category") or None,
+            category=CategoryEnum(row["category"]),
+            confidence_score=float(row["confidence_score"]),
+            is_recurring=str(row["is_recurring"]).lower() == "true",
+        )
+        transactions.append(t)
+    return transactions
+
+
+@pytest_asyncio.fixture
+async def transactions_single(db_session, test_user):
+    """1 transaction inline — tests division-by-zero and empty-trend edge cases."""
+    t = Transaction(
+        user_id=test_user.id,
+        date=datetime(2025, 6, 15),
+        merchant="ACME Corp",
+        amount=Decimal("-75.00"),
+        category=CategoryEnum.SHOPPING,
+        confidence_score=1.0,
+        is_recurring=False,
+    )
+    db_session.add(t)
+    await db_session.flush()
+
+
+@pytest_asyncio.fixture
+async def transactions_10(db_session, test_user):
+    """10 transactions from test_transactions_10.csv (same month)."""
+    for t in _load_transactions_from_csv(
+        "tests/data/test_transactions_10.csv", test_user, db_session
+    ):
+        db_session.add(t)
+    await db_session.flush()
+
+
+@pytest_asyncio.fixture
+async def transactions_2_months(db_session, test_user):
+    """~90 transactions from test_transactions_2_months.csv (2 continuous months)."""
+    for t in _load_transactions_from_csv(
+        "tests/data/test_transactions_2_months.csv", test_user, db_session
+    ):
+        db_session.add(t)
+    await db_session.flush()
+
+
+@pytest_asyncio.fixture
+async def transactions_400(db_session, test_user):
+    """~400 transactions from test_transactions_400.csv (3 years)."""
+    for t in _load_transactions_from_csv(
+        "tests/data/test_transactions_400.csv", test_user, db_session
+    ):
+        db_session.add(t)
+    await db_session.flush()
+
+
+@pytest_asyncio.fixture
+async def transactions_income_only(db_session, test_user):
+    """Single income transaction — no expenses, exercises all expense-path analytics."""
+    t = Transaction(
+        user_id=test_user.id,
+        date=datetime(2025, 6, 15),
+        merchant="Employer",
+        amount=Decimal("2000.00"),
+        category=CategoryEnum.INCOME,
+        confidence_score=1.0,
+        is_recurring=False,
+    )
+    db_session.add(t)
+    await db_session.flush()
