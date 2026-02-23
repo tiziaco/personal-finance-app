@@ -88,7 +88,7 @@ async def test_get_spending_delegates_to_tool():
     })
 
     with patch.object(AnalyticsService, "load_dataframe", return_value=empty_df) as mock_load, \
-         patch("app.services.analytics.service.get_spending_summary", return_value={"key": "val"}) as mock_tool:
+         patch("app.services.analytics.service.get_spending_summary", new_callable=AsyncMock, return_value={"key": "val"}) as mock_tool:
 
         db = AsyncMock()
         result = await AnalyticsService.get_spending(db, "user_123", None, None)
@@ -132,7 +132,7 @@ async def test_get_anomalies_forwards_params_to_tool():
     })
 
     with patch.object(AnalyticsService, "load_dataframe", return_value=empty_df), \
-         patch("app.services.analytics.service.get_anomaly_insights", return_value={}) as mock_tool:
+         patch("app.services.analytics.service.get_anomaly_insights", new_callable=AsyncMock, return_value={}) as mock_tool:
 
         db = AsyncMock()
         await AnalyticsService.get_anomalies(
