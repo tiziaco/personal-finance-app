@@ -25,7 +25,7 @@ class SeverityLevel(str, Enum):
     CRITICAL = "critical"
 
 
-class InsightItem(BaseModel):
+class Insight(BaseModel):
     """A single AI-generated financial insight."""
 
     insight_id: str
@@ -42,5 +42,5 @@ class InsightItem(BaseModel):
 class InsightsResponse(BaseModel):
     """Envelope for GET /api/v1/insights."""
 
-    insights: List[InsightItem]
+    insights: List[Insight]
     generated_at: datetime

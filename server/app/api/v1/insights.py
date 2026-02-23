@@ -5,7 +5,7 @@ from fastapi import APIRouter, Request
 from app.api.dependencies.auth import CurrentUser
 from app.api.dependencies.database import DbSession
 from app.core.limiter import limiter
-from app.schemas.insights import InsightItem, InsightsResponse
+from app.schemas.insights import Insight, InsightsResponse
 from app.services.insights.service import insights_service
 
 router = APIRouter()
@@ -29,6 +29,6 @@ async def get_insights(
 ) -> InsightsResponse:
     row = await insights_service.get_insights(db, user.id)
     return InsightsResponse(
-        insights=[InsightItem(**i) for i in row.insights],
+        insights=[Insight(**i) for i in row.insights],
         generated_at=row.generated_at,
     )
