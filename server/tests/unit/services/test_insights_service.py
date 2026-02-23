@@ -21,6 +21,7 @@ EMPTY_DF = pl.DataFrame(
 def _mock_db_with_row(row):
     """Return an AsyncMock DB that returns `row` from execute().scalar_one_or_none()."""
     db = AsyncMock()
+    db.add = MagicMock()  # session.add() is sync in SQLAlchemy
     mock_result = MagicMock()
     mock_result.scalar_one_or_none.return_value = row
     db.execute.return_value = mock_result
@@ -47,6 +48,7 @@ async def test_get_insights_generates_when_no_cache():
     from app.services.insights.service import InsightsService
 
     db = AsyncMock()
+    db.add = MagicMock()  # session.add() is sync in SQLAlchemy
     generated_row = MagicMock()
 
     # First call returns None (no cache), second returns the generated row
