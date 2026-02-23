@@ -108,10 +108,10 @@ async def test_get_dashboard_contains_all_sections():
     })
 
     with patch.object(AnalyticsService, "load_dataframe", return_value=empty_df), \
-         patch("app.services.analytics.service.get_spending_summary", return_value={"s": 1}), \
-         patch("app.services.analytics.service.get_category_insights", return_value={"c": 1}), \
-         patch("app.services.analytics.service.get_recurring_insights", return_value={"r": 1}), \
-         patch("app.services.analytics.service.get_trend_insights", return_value={"t": 1}):
+         patch("app.services.analytics.service.get_spending_summary", new_callable=AsyncMock, return_value={"s": 1}), \
+         patch("app.services.analytics.service.get_category_insights", new_callable=AsyncMock, return_value={"c": 1}), \
+         patch("app.services.analytics.service.get_recurring_insights", new_callable=AsyncMock, return_value={"r": 1}), \
+         patch("app.services.analytics.service.get_trend_insights", new_callable=AsyncMock, return_value={"t": 1}):
 
         db = AsyncMock()
         result = await AnalyticsService.get_dashboard(db, "user_123", None, None)
