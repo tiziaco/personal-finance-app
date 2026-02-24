@@ -24,6 +24,7 @@ from app.models.base import (
 
 if TYPE_CHECKING:
     from app.models.conversation import Conversation
+    from app.models.insight import Insight
     from app.models.transaction import Transaction
 
 
@@ -65,6 +66,7 @@ class User(BaseModel, AnonymizableMixin, table=True):
     )
     conversations: List["Conversation"] = Relationship(back_populates="user")
     transactions: List["Transaction"] = Relationship(back_populates="user")
+    insights: List["Insight"] = Relationship(back_populates="user")
 
     def anonymize_user(self) -> None:
         """Anonymize user personal data for GDPR compliance.
@@ -92,4 +94,5 @@ class User(BaseModel, AnonymizableMixin, table=True):
 
 # Avoid circular imports
 from app.models.conversation import Conversation  # noqa: E402
+from app.models.insight import Insight  # noqa: E402
 from app.models.transaction import Transaction  # noqa: E402

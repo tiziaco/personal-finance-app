@@ -1,15 +1,14 @@
 """Analytics service — data bridge between the DB and analytics tools."""
 
-from datetime import date, datetime
+from datetime import date
 from typing import Any, Dict, Optional
 
 import polars as pl
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
 from app.core.logging import logger
-from app.models.transaction import Transaction
 from app.services.analytics.exceptions import AnalyticsError
+from app.services.transaction.service import TransactionService
 from app.tools.financial import (
     get_anomaly_insights,
     get_behavioral_patterns,
@@ -36,65 +35,12 @@ class AnalyticsService:
         date_from: Optional[date] = None,
         date_to: Optional[date] = None,
     ) -> pl.DataFrame:
-        """Fetch non-deleted user transactions and return as a Polars DataFrame.
+        """Delegate to TransactionService.load_dataframe.
 
-        Applies date filter at the DB level for efficiency.
-        Returns a typed empty DataFrame (correct schema) when no rows match.
-
-        Args:
-            db: Database session.
-            user_id: ID of the authenticated user.
-            date_from: Optional inclusive start date (DB-level filter).
-            date_to: Optional inclusive end date (DB-level filter).
-
-        Returns:
-            pl.DataFrame with columns: date (Date), merchant (Utf8),
-            amount (Float64), category (Utf8), confidence_score (Float64),
-            is_recurring (Boolean).
+        Kept here for backwards compatibility — callers in this service
+        use self-referential calls (e.g. load_dataframe inside get_spending).
         """
-        empty_schema = {
-            "date": pl.Date,
-            "merchant": pl.Utf8,
-            "amount": pl.Float64,
-            "category": pl.Utf8,
-            "confidence_score": pl.Float64,
-            "is_recurring": pl.Boolean,
-        }
-
-        conditions = [
-            Transaction.user_id == user_id,
-            Transaction.deleted_at.is_(None),
-        ]
-        if date_from:
-            conditions.append(Transaction.date >= datetime.combine(date_from, datetime.min.time()))
-        if date_to:
-            conditions.append(Transaction.date <= datetime.combine(date_to, datetime.max.time()))
-
-        stmt = select(Transaction).where(*conditions).order_by(Transaction.date)
-        result = await db.execute(stmt)
-        transactions = result.scalars().all()
-
-        if not transactions:
-            return pl.DataFrame(schema=empty_schema)
-
-        rows = [
-            {
-                "date": t.date.date() if isinstance(t.date, datetime) else t.date,
-                "merchant": t.merchant,
-                "amount": float(t.amount),
-                "category": t.category.value,
-                "confidence_score": float(t.confidence_score),
-                "is_recurring": t.is_recurring,
-            }
-            for t in transactions
-        ]
-
-        logger.debug(
-            "analytics_dataframe_loaded",
-            user_id=user_id,
-            rows=len(rows),
-        )
-        return pl.DataFrame(rows)
+        return await TransactionService.load_dataframe(db, user_id, date_from, date_to)
 
     @staticmethod
     async def get_dashboard(

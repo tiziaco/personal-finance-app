@@ -265,3 +265,73 @@ class TestBatchDelete:
 
         with pytest.raises(TransactionNotFoundError):
             await TransactionService.batch_delete(mock_db, MOCK_USER_ID, [1, 999])
+
+
+# ── load_dataframe tests ──────────────────────────────────────────────────────
+
+import polars as pl
+from decimal import Decimal
+from datetime import datetime as _datetime
+
+from app.models.transaction import CategoryEnum
+
+
+def _make_mock_transaction(**kwargs) -> MagicMock:
+    t = MagicMock(spec=Transaction)
+    t.date = kwargs.get("date", _datetime(2025, 1, 15))
+    t.merchant = kwargs.get("merchant", "ACME")
+    t.amount = kwargs.get("amount", Decimal("-50.00"))
+    t.category = kwargs.get("category", CategoryEnum.SHOPPING)
+    t.confidence_score = kwargs.get("confidence_score", 1.0)
+    t.is_recurring = kwargs.get("is_recurring", False)
+    return t
+
+
+def _mock_db(transactions: list) -> AsyncMock:
+    db = AsyncMock()
+    mock_result = MagicMock()
+    mock_result.scalars.return_value.all.return_value = transactions
+    db.execute.return_value = mock_result
+    return db
+
+
+@pytest.mark.asyncio
+async def test_load_dataframe_returns_empty_schema_when_no_transactions():
+    df = await TransactionService.load_dataframe(_mock_db([]), "user_123")
+
+    assert isinstance(df, pl.DataFrame)
+    assert len(df) == 0
+    assert set(df.columns) == {
+        "date", "merchant", "amount", "category", "confidence_score", "is_recurring"
+    }
+
+
+@pytest.mark.asyncio
+async def test_load_dataframe_converts_transactions_to_correct_types():
+    mock_tx = _make_mock_transaction()
+    df = await TransactionService.load_dataframe(_mock_db([mock_tx]), "user_123")
+
+    assert len(df) == 1
+    assert df["merchant"][0] == "ACME"
+    assert df["amount"][0] == -50.0
+    assert df["category"][0] == CategoryEnum.SHOPPING.value
+    assert isinstance(df["date"][0], type(df["date"][0]))  # date type
+
+
+@pytest.mark.asyncio
+async def test_load_dataframe_excludes_soft_deleted_via_query():
+    db = _mock_db([])
+    await TransactionService.load_dataframe(db, "user_123")
+    db.execute.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_load_dataframe_applies_date_filter():
+    from datetime import date
+    db = _mock_db([])
+    await TransactionService.load_dataframe(
+        db, "user_123",
+        date_from=date(2025, 1, 1),
+        date_to=date(2025, 3, 31),
+    )
+    db.execute.assert_called_once()
