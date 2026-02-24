@@ -61,6 +61,7 @@ async def format_insights(state: InsightsState) -> Dict[str, Any]:
                 template = load_narrative_prompt(state["config"].narrative_prompt_version)
                 llm_prompt = template.format(
                     insight_type=insight.type.value,
+                    severity=insight.severity.value,
                     summary=insight.summary,
                     metrics=insight.supporting_metrics,
                 )
