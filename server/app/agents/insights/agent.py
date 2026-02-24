@@ -20,6 +20,7 @@ from typing import Dict, Any, List, Optional
 
 import polars as pl
 from langgraph.graph import StateGraph, START, END
+from langgraph.graph.state import CompiledStateGraph
 
 from app.agents.insights.state import InsightsConfig, InsightsState
 from app.agents.insights.nodes import (
@@ -98,7 +99,7 @@ def _create_insights_config(user_id: str) -> dict:
     }
 
 
-def build_insights_graph() -> Any:
+def build_insights_graph() -> CompiledStateGraph:
     """
     Build and compile the insights graph.
 
@@ -142,6 +143,10 @@ def build_insights_graph() -> Any:
     return workflow.compile()
 
 
+# Compiled once at import time — reused across all requests
+_insights_graph = build_insights_graph()
+
+
 # ============================================================================
 # Main Invocation
 # ============================================================================
@@ -175,8 +180,7 @@ async def generate_insights(
     logger.info("Starting insights generation...")
     start_time = datetime.now()
 
-    # Build graph
-    graph = build_insights_graph()
+    graph = _insights_graph
 
     # Prepare initial state
     initial_state: InsightsState = {
