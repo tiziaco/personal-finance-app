@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from app.agents.insights.agent import InsightsConfig, generate_insights
+from app.agents.insights import InsightsConfig, generate_insights
 from app.core.logging import logger
 from app.models.insight import Insight as InsightModel
 from app.services.insights.exceptions import InsightsError

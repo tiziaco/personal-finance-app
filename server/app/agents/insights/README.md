@@ -20,13 +20,27 @@ START
     END
 ```
 
+## Module Structure
+
+```
+app/agents/insights/
+├── agent.py          # Graph wiring, format_insights, entry points
+├── state.py          # InsightsConfig, InsightsState
+├── nodes.py          # 4 async analyze_* functions
+├── aggregator.py     # aggregate_insights
+├── templates.py      # INSIGHT_TEMPLATES (deterministic summaries)
+└── prompts/
+    ├── __init__.py   # load_narrative_prompt(version)
+    └── v1.md         # LLM narrative prompt (add v2.md, etc. for evals)
+```
+
 ## Basic Usage
 
 ### Async (Recommended)
 
 ```python
 import polars as pl
-from src.agents.insights.agent import generate_insights, InsightsConfig
+from app.agents.insights import generate_insights, InsightsConfig
 
 # Load transactions
 df = pl.read_csv("transactions.csv")
@@ -34,6 +48,7 @@ df = pl.read_csv("transactions.csv")
 # Generate insights with defaults (templates only)
 result = await generate_insights(
     df,
+    user_id="user_123",
     config=InsightsConfig(enable_llm_enrichment=False)
 )
 
@@ -47,10 +62,10 @@ for insight in result["formatted_insights"]:
 ### Sync (For Django/FastAPI)
 
 ```python
-from src.agents.insights.agent import generate_insights_sync
+from app.agents.insights import generate_insights_sync
 
 # Blocking call - suitable for request handlers
-result = generate_insights_sync(df)
+result = generate_insights_sync(df, user_id="user_123")
 
 # Use in your dashboard API
 return {
@@ -63,7 +78,7 @@ return {
 
 ```python
 from langchain_openai import ChatOpenAI
-from src.agents.insights.agent import generate_insights, InsightsConfig
+from app.agents.insights import generate_insights, InsightsConfig
 
 llm = ChatOpenAI(model="gpt-4-turbo")
 
@@ -72,7 +87,7 @@ config = InsightsConfig(
     llm_model=llm
 )
 
-result = await generate_insights(df, config=config)
+result = await generate_insights(df, user_id="user_123", config=config)
 
 # Now each insight has optional narrative_analysis
 for insight in result["formatted_insights"]:
@@ -90,7 +105,8 @@ config = InsightsConfig(
     time_window_days=90,                # Default analysis period
     min_confidence_score=0.7,           # Minimum confidence threshold
     include_anomalies=True,             # Include anomaly detection
-    anomaly_std_threshold=2.5           # Std deviations for anomalies
+    anomaly_std_threshold=2.5,          # Std deviations for anomalies
+    narrative_prompt_version="v1",      # Prompt version for LLM narratives
 )
 ```
 
@@ -154,12 +170,32 @@ print(f"Execution time: {result['metadata']['execution_time_seconds']}s")
 
 ## Advanced: Custom Template Modifications
 
-To customize insight summaries, modify `INSIGHT_TEMPLATES` in `agent.py`:
+To customize deterministic insight summaries, modify `INSIGHT_TEMPLATES` in `templates.py`:
 
 ```python
+from app.agents.insights.templates import INSIGHT_TEMPLATES
+from app.schemas.insights import InsightType
+
 INSIGHT_TEMPLATES[InsightType.SPENDING_BEHAVIOR]["top_category"] = \
     "You're spending {percentage}% on {category} - that's {amount_formatted}!"
 ```
+
+## Advanced: Prompt Versioning for Evals
+
+To test a new LLM narrative prompt, add a new markdown file in `prompts/` and pass the version via config:
+
+```python
+# 1. Create prompts/v2.md with your new prompt template
+# 2. Run with the new version
+config = InsightsConfig(
+    enable_llm_enrichment=True,
+    llm_model=llm,
+    narrative_prompt_version="v2",
+)
+result = await generate_insights(df, user_id="user_123", config=config)
+```
+
+The prompt file uses flat named placeholders: `{insight_type}`, `{summary}`, `{metrics}`.
 
 ## Next Steps
 
