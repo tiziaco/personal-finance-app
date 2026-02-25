@@ -59,7 +59,13 @@ Return ONLY a JSON object like:
     elif "```" in text:
         text = text.split("```")[1].split("```")[0]
 
-    return json.loads(text)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Column mapping could not be parsed from LLM response: {exc}",
+        )
 
 
 # ── CSV Upload routes (must precede /{transaction_id}) ────────────────────────
