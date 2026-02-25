@@ -1,6 +1,8 @@
 """Transaction service — all business logic for transaction CRUD."""
 
+import hashlib
 from datetime import UTC, date, datetime
+from decimal import Decimal
 from typing import List, Optional
 
 import polars as pl
@@ -21,6 +23,29 @@ from app.services.transaction.exceptions import TransactionNotFoundError
 
 class TransactionService:
     """Stateless service for transaction CRUD operations."""
+
+    @staticmethod
+    def compute_fingerprint(
+        user_id: str,
+        date: datetime,
+        merchant: str,
+        amount: Decimal,
+        description: Optional[str],
+    ) -> str:
+        """SHA-256 fingerprint for deduplication.
+
+        Includes description because merchants like PayPal use it to
+        distinguish recipients — same date/merchant/amount but different
+        description = different transaction.
+        """
+        raw = (
+            f"{user_id}|"
+            f"{date.isoformat()}|"
+            f"{merchant.strip().lower()}|"
+            f"{float(amount):.2f}|"
+            f"{(description or '').strip().lower()}"
+        )
+        return hashlib.sha256(raw.encode()).hexdigest()
 
     @staticmethod
     async def create(
