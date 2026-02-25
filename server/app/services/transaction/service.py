@@ -63,8 +63,16 @@ class TransactionService:
         Returns:
             The created Transaction.
         """
+        fingerprint = TransactionService.compute_fingerprint(
+            user_id=user_id,
+            date=data.date,
+            merchant=data.merchant,
+            amount=data.amount,
+            description=data.description,
+        )
         transaction = Transaction(
             user_id=user_id,
+            fingerprint=fingerprint,
             **data.model_dump(),
         )
         db.add(transaction)
