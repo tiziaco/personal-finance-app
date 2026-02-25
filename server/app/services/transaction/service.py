@@ -20,6 +20,9 @@ from app.schemas.transaction import (
 )
 from app.services.transaction.exceptions import TransactionNotFoundError
 
+# Type alias for clarity (using Tuple from typing to avoid Python version issues)
+_FingerprintedRow = "tuple[TransactionCreate, str]"
+
 
 class TransactionService:
     """Stateless service for transaction CRUD operations."""
@@ -302,6 +305,79 @@ class TransactionService:
         logger.info("transactions_batch_deleted", user_id=user_id, count=len(ids))
         return len(ids)
 
+
+    @staticmethod
+    async def import_from_csv(
+        db: AsyncSession,
+        user_id: str,
+        rows: List[TransactionCreate],
+    ) -> "tuple[int, int, List[str]]":
+        """Bulk-import pre-labeled transactions, skipping fingerprint duplicates.
+
+        Fetches all existing fingerprints for the user in a single query before
+        inserting — no per-row DB lookups.
+
+        Args:
+            db: Database session.
+            user_id: Authenticated user's ID.
+            rows: Validated, labeled TransactionCreate objects.
+
+        Returns:
+            Tuple of (imported_count, skipped_count, errors).
+            errors is always [] — row-level errors are handled upstream.
+        """
+        # 1. Compute fingerprint for each incoming row
+        fingerprinted: List = [
+            (
+                row,
+                TransactionService.compute_fingerprint(
+                    user_id=user_id,
+                    date=row.date,
+                    merchant=row.merchant,
+                    amount=row.amount,
+                    description=row.description,
+                ),
+            )
+            for row in rows
+        ]
+
+        # 2. Fetch all existing fingerprints for this user in one query
+        stmt = select(Transaction.fingerprint).where(
+            Transaction.user_id == user_id,
+            Transaction.fingerprint.isnot(None),
+            Transaction.deleted_at.is_(None),
+        )
+        result = await db.execute(stmt)
+        existing: set[str] = set(result.scalars().all())
+
+        # 3. Filter duplicates (also catches within-batch duplicates)
+        to_insert: List = []
+        skipped = 0
+        for row, fp in fingerprinted:
+            if fp in existing:
+                skipped += 1
+            else:
+                to_insert.append((row, fp))
+                existing.add(fp)  # prevent within-batch duplicates
+
+        # 4. Bulk insert
+        for row, fp in to_insert:
+            db.add(
+                Transaction(
+                    user_id=user_id,
+                    fingerprint=fp,
+                    **row.model_dump(),
+                )
+            )
+        await db.flush()
+
+        logger.info(
+            "csv_import_complete",
+            user_id=user_id,
+            imported=len(to_insert),
+            skipped=skipped,
+        )
+        return len(to_insert), skipped, []
 
     @staticmethod
     async def load_dataframe(
