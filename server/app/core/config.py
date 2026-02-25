@@ -228,6 +228,10 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     DEBUG: bool = False
 
+    # CSV Upload
+    CSV_MAX_ROWS: int = 3000
+    UPLOAD_SESSION_TTL_MINUTES: int = 30
+
     # Nested Settings
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)
     langfuse: LangfuseSettings = Field(default_factory=LangfuseSettings)
