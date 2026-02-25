@@ -13,8 +13,10 @@ class CSVUploadProposalResponse(SQLModel):
     """
 
     mapping_id: str
-    proposed_mapping: Dict[str, str]  # {"Buchungsdatum": "date", "Betrag": "amount", ...}
-    sample_rows: List[Dict[str, Any]]  # first 3 parsed rows for visual verification
+    proposed_mapping: Dict[str, str]        # {"Buchungsdatum": "date", "Betrag": "amount", ...}
+    sample_rows: List[Dict[str, Any]]       # representative rows for visual verification
+    available_fields: List[str]             # valid target field names for the mapping dropdowns
+    column_null_rates: Dict[str, float]     # fraction of null values per column (0.0–1.0)
 
 
 class CSVConfirmRequest(SQLModel):
