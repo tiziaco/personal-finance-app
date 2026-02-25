@@ -151,20 +151,20 @@ def get_common_merchant_mappings() -> Dict[str, CategoryEnum]:
         "Tui": CategoryEnum.TRAVEL_HOLIDAYS,
         
         # Insurance & Finance
-        "Allianz": CategoryEnum.INSURANCES_FINANCES,
-        "Axa": CategoryEnum.INSURANCES_FINANCES,
-        "Debeka": CategoryEnum.INSURANCES_FINANCES,
-        "Ergo": CategoryEnum.INSURANCES_FINANCES,
-        "Versicherung": CategoryEnum.INSURANCES_FINANCES,
-        "Bank": CategoryEnum.INSURANCES_FINANCES,
-        "Sparkasse": CategoryEnum.INSURANCES_FINANCES,
-        "Deutsche Bank": CategoryEnum.INSURANCES_FINANCES,
-        "Comdirect": CategoryEnum.INSURANCES_FINANCES,
-        "Ing": CategoryEnum.INSURANCES_FINANCES,
-        "N26": CategoryEnum.INSURANCES_FINANCES,
-        "Tk" : CategoryEnum.INSURANCES_FINANCES,  # Techniker Krankenkasse
-        "Aok": CategoryEnum.INSURANCES_FINANCES,
-        "Feather": CategoryEnum.INSURANCES_FINANCES,
+        "Allianz": CategoryEnum.INSURANCE,
+        "Axa": CategoryEnum.INSURANCE,
+        "Debeka": CategoryEnum.INSURANCE,
+        "Ergo": CategoryEnum.INSURANCE,
+        "Versicherung": CategoryEnum.INSURANCE,
+        "Bank": CategoryEnum.INSURANCE,
+        "Sparkasse": CategoryEnum.INSURANCE,
+        "Deutsche Bank": CategoryEnum.INSURANCE,
+        "Comdirect": CategoryEnum.INSURANCE,
+        "Ing": CategoryEnum.INSURANCE,
+        "N26": CategoryEnum.INSURANCE,
+        "Tk" : CategoryEnum.INSURANCE,  # Techniker Krankenkasse
+        "Aok": CategoryEnum.INSURANCE,
+        "Feather": CategoryEnum.INSURANCE,
         
         # Education
         "Vhs": CategoryEnum.EDUCATION,

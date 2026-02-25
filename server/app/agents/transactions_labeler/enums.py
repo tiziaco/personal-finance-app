@@ -4,6 +4,8 @@ from enum import Enum
 
 
 class CategoryEnum(str, Enum):
+    """Predefined spending categories for transaction classification."""
+
     INCOME = "Income"
     TRANSPORTATION = "Transportation"
     SALARY = "Salary"
@@ -13,10 +15,9 @@ class CategoryEnum(str, Enum):
     FOOD_GROCERIES = "Food & Groceries"
     FOOD_DELIVERY = "Food Delivery"
     ATM = "ATM"
-    INSURANCES_FINANCES = "Insurances & Finances"
+    INSURANCE = "Insurances"
     SHOPPING = "Shopping"
     BARS_RESTAURANTS = "Bars & Restaurants"
-    BUSINESS_EXPENSES = "Business expenses"
     EDUCATION = "Education"
     FAMILY_FRIENDS = "Family & Friends"
     DONATIONS_CHARITY = "Donations & Charity"
