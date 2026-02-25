@@ -72,6 +72,39 @@ async def test_upload_valid_csv_returns_proposal(auth_client):
     assert "mapping_id" in body
     assert body["proposed_mapping"] == MOCK_MAPPING
     assert len(body["sample_rows"]) <= 3
+    assert "available_fields" in body
+    assert "date" in body["available_fields"]
+    assert "ignore" in body["available_fields"]
+    assert "column_null_rates" in body
+    assert set(body["column_null_rates"].keys()) == set(body["proposed_mapping"].keys())
+
+
+@pytest.mark.asyncio
+async def test_upload_returns_null_rates_for_sparse_column(auth_client):
+    """Columns with all-null values in the file get null_rate=1.0."""
+    csv_with_nulls = (
+        b"Date,Merchant,Amount,Reference\n"
+        b"2026-01-01,Netflix,12.99,\n"
+        b"2026-01-02,Spotify,9.99,\n"
+    )
+    with patch(
+        "app.api.v1.transactions.CSVMappingService.get_profile",
+        new_callable=AsyncMock,
+        return_value=None,
+    ), patch(
+        "app.api.v1.transactions._propose_column_mapping",
+        new_callable=AsyncMock,
+        return_value={"Date": "date", "Merchant": "merchant", "Amount": "amount", "Reference": "ignore"},
+    ):
+        response = await auth_client.post(
+            BASE_URL,
+            files={"file": ("test.csv", io.BytesIO(csv_with_nulls), "text/csv")},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["column_null_rates"]["Reference"] == 1.0
+    assert body["column_null_rates"]["Amount"] == 0.0
 
 
 @pytest.mark.asyncio
