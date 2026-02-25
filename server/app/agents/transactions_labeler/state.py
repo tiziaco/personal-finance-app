@@ -12,6 +12,7 @@ class CategorizationState(BaseModel):
     user_id: str
     raw_transactions: List[Dict[str, Any]]
     user_preferences: UserCategoryPreference
+    prompt_version: str = "v1"
 
     # Processing
     enriched_transactions: List[Dict[str, Any]]

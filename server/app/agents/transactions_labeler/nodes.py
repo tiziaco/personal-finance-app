@@ -103,7 +103,7 @@ async def categorize_batch(state: CategorizationState) -> CategorizationState:
 
     async def process_batch(idx: int, batch: list):
         try:
-            prompt = build_categorization_prompt(batch, state["user_preferences"])
+            prompt = build_categorization_prompt(batch, state["user_preferences"], state["prompt_version"])
             async with semaphore:
                 response = await llm.ainvoke(prompt)
             text = response.content

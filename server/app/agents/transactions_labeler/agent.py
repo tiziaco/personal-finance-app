@@ -41,6 +41,7 @@ async def run_labeler(
     transactions: List[Dict[str, Any]],
     user_id: str,
     user_preferences: Optional[UserCategoryPreference] = None,
+    prompt_version: str = "v1",
 ) -> List[TransactionCreate]:
     """Run the transaction categorization workflow.
 
@@ -65,6 +66,7 @@ async def run_labeler(
         "user_id": user_id,
         "raw_transactions": transactions,
         "user_preferences": user_preferences,
+        "prompt_version": prompt_version,
         "enriched_transactions": [],
         "categorized_transactions": [],
         "results": [],
