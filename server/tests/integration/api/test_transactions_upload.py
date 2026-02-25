@@ -72,11 +72,9 @@ async def test_upload_valid_csv_returns_proposal(auth_client):
     assert "mapping_id" in body
     assert body["proposed_mapping"] == MOCK_MAPPING
     assert len(body["sample_rows"]) <= 3
-    assert "available_fields" in body
-    assert "date" in body["available_fields"]
-    assert "ignore" in body["available_fields"]
+    assert body["available_fields"] == ["date", "merchant", "amount", "description", "original_category", "is_recurring", "ignore"]
     assert "column_null_rates" in body
-    assert set(body["column_null_rates"].keys()) == set(body["proposed_mapping"].keys())
+    assert set(body["column_null_rates"].keys()) == {"Buchungsdatum", "Empfaenger", "Betrag", "Verwendungszweck"}
 
 
 @pytest.mark.asyncio
