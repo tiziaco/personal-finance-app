@@ -11,7 +11,7 @@ from app.agents.transactions_labeler.prompts import load_categorization_prompt
 def build_categorization_prompt(
     transactions: List[Dict[str, Any]],
     user_preferences: UserCategoryPreference,
-    version: str = "v1",
+    version: str = "v2",
 ) -> str:
     """Build the categorization prompt for a batch of transactions.
 

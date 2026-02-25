@@ -1,9 +1,12 @@
 """Public entry point for the transaction labeler workflow."""
 
+import logging
 import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 from langgraph.graph import END, START, StateGraph
 
@@ -41,7 +44,7 @@ async def run_labeler(
     transactions: List[Dict[str, Any]],
     user_id: str,
     user_preferences: Optional[UserCategoryPreference] = None,
-    prompt_version: str = "v1",
+    prompt_version: str = "v2",
 ) -> List[TransactionCreate]:
     """Run the transaction categorization workflow.
 
@@ -91,12 +94,18 @@ async def run_labeler(
         if date_val.tzinfo is None:
             date_val = date_val.replace(tzinfo=timezone.utc)
 
+        try:
+            category = CategoryEnum(r["category"])
+        except ValueError:
+            logger.warning("LLM returned unknown category %r, falling back to Miscellaneous", r["category"])
+            category = CategoryEnum.MISCELLANEOUS
+
         labeled.append(
             TransactionCreate(
                 date=date_val,
                 merchant=r["merchant"],
                 amount=Decimal(str(r["amount"])),
-                category=CategoryEnum(r["category"]),
+                category=category,
                 description=r.get("description"),
                 original_category=r.get("original_category"),
                 is_recurring=r.get("is_recurring", False),

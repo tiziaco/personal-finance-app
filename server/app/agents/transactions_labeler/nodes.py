@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 from langchain_openai import ChatOpenAI
 
@@ -13,6 +13,8 @@ from app.agents.transactions_labeler.prompts.categorization import build_categor
 from app.agents.transactions_labeler.state import CategorizationState
 from app.utils.http_clients import TransactionLabelerHTTPClient
 from app.utils.merchant_mappings import get_common_merchant_mappings
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +100,7 @@ async def categorize_batch(state: CategorizationState) -> CategorizationState:
             unique_merchants.append(e)
         merchant_to_txs[m].append(e)
 
-    llm = ChatOpenAI(model="gpt-4o-mini", temperature=0.1)
+    llm = ChatOpenAI(model=settings.llm.DEFAULT_LLM_MODEL, temperature=0)
     semaphore = TransactionLabelerHTTPClient.get_semaphore()
 
     async def process_batch(idx: int, batch: list):
