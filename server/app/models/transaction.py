@@ -62,5 +62,8 @@ class Transaction(BaseModel, SoftDeleteMixin, table=True):
     # Recurring Detection
     is_recurring: bool = Field(default=False)
 
+    # Deduplication
+    fingerprint: Optional[str] = Field(default=None, index=True)
+
     # Relationships
     user: Optional["User"] = Relationship(back_populates="transactions")
