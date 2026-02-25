@@ -1,12 +1,12 @@
 from datetime import UTC, datetime
-from typing import Any, Dict, Optional
+from typing import TYPE_CHECKING, Any, Dict, Optional
 
 import sqlalchemy as sa
 from sqlmodel import Field, Relationship
 
 from app.models.base import BaseModel
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from app.models.user import User
 
 
