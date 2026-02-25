@@ -3,6 +3,8 @@ import pytest
 
 from app.utils.csv_utils import pick_representative_sample
 
+pytestmark = pytest.mark.unit
+
 
 def test_empty_dataframe_returns_empty():
     df = pl.DataFrame({"date": [], "amount": []})

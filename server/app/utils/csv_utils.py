@@ -24,12 +24,13 @@ def pick_representative_sample(df: pl.DataFrame, n: int = 3) -> list[dict]:
     all_rows = df.to_dicts()
     n = min(n, len(all_rows))
     selected: list[int] = []
+    selected_set: set[int] = set()
     uncovered = set(df.columns)
 
     while len(selected) < n and uncovered:
         best_idx, best_score = -1, -1
         for i, row in enumerate(all_rows):
-            if i in selected:
+            if i in selected_set:   # O(1)
                 continue
             score = sum(1 for col in uncovered if row.get(col) is not None)
             if score > best_score:
@@ -37,13 +38,15 @@ def pick_representative_sample(df: pl.DataFrame, n: int = 3) -> list[dict]:
         if best_idx == -1:
             break
         selected.append(best_idx)
+        selected_set.add(best_idx)
         uncovered -= {col for col in uncovered if all_rows[best_idx].get(col) is not None}
 
     # Fill remaining slots with sequential rows not yet selected
     for i in range(len(all_rows)):
         if len(selected) >= n:
             break
-        if i not in selected:
+        if i not in selected_set:   # O(1)
             selected.append(i)
+            selected_set.add(i)
 
     return [all_rows[i] for i in sorted(selected)]
