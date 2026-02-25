@@ -1,18 +1,16 @@
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
-from pydantic import BaseModel
-
-from app.agents.transactions_labeler.models import RawTransaction, UserCategoryPreference
+from app.agents.transactions_labeler.models import UserCategoryPreference
 
 
-class CategorizationState(BaseModel):
+class CategorizationState(TypedDict, total=False):
     """LangGraph state for the transaction categorization workflow."""
 
     # Input
     user_id: str
     raw_transactions: List[Dict[str, Any]]
     user_preferences: UserCategoryPreference
-    prompt_version: str = "v1"
+    prompt_version: str
 
     # Processing
     enriched_transactions: List[Dict[str, Any]]
@@ -20,5 +18,5 @@ class CategorizationState(BaseModel):
     # Output
     categorized_transactions: List[Dict[str, Any]]
     results: List[Dict[str, Any]]
-    error: Optional[str] = None
-    stats: Optional[Dict[str, Any]] = None
+    error: Optional[str]
+    stats: Optional[Dict[str, Any]]
