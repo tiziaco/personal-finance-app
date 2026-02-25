@@ -29,22 +29,24 @@ from app.schemas.transaction import (
 )
 from app.services.csv_mapping.service import CSVMappingService
 from app.services.transaction.service import transaction_service
+from app.utils.csv_utils import pick_representative_sample
 
 router = APIRouter()
 
+SCHEMA_FIELDS = ["date", "merchant", "amount", "description", "original_category", "is_recurring", "ignore"]
 
-async def _propose_column_mapping(columns: list[str], sample_row: dict) -> dict[str, str]:
+
+async def _propose_column_mapping(columns: list[str], sample_rows: list[dict]) -> dict[str, str]:
     """Call OpenAI to map CSV column names to transaction schema fields."""
-    schema_fields = ["date", "merchant", "amount", "description", "original_category", "is_recurring", "ignore"]
     prompt = f"""You are a column mapping assistant for a personal finance app.
 
-Map each CSV column to one of these schema fields: {schema_fields}
+Map each CSV column to one of these schema fields: {SCHEMA_FIELDS}
 
 Use "ignore" for columns that don't map to any field.
 Required fields that MUST be mapped: date, merchant, amount.
 
 CSV columns: {columns}
-Sample row values: {sample_row}
+Sample rows (up to 3 rows shown to help infer meaning from values): {sample_rows}
 
 Return ONLY a JSON object like:
 {{"Buchungsdatum": "date", "Empfaenger": "merchant", "Betrag": "amount", "Notiz": "ignore"}}"""
@@ -103,14 +105,16 @@ async def upload_csv(
     column_hash = CSVMappingService.compute_column_hash(columns)
     cached_profile = await CSVMappingService.get_profile(db, user.id, column_hash)
 
+    # 5. Pick representative sample rows (maximises non-null column coverage)
+    sample_rows = pick_representative_sample(df, n=3)
+
     if cached_profile:
         proposed_mapping = cached_profile.mapping
     else:
-        # 5. Call OpenAI to propose mapping
-        sample_row = df.head(1).to_dicts()[0] if len(df) > 0 else {}
-        proposed_mapping = await _propose_column_mapping(columns, sample_row)
+        # 6. Call OpenAI to propose mapping using representative rows
+        proposed_mapping = await _propose_column_mapping(columns, sample_rows)
 
-        # 6. Validate required fields are mapped
+        # 7. Validate required fields are mapped
         mapped_fields = set(proposed_mapping.values())
         required = {"date", "merchant", "amount"}
         missing = required - mapped_fields
@@ -121,7 +125,7 @@ async def upload_csv(
                        f"Please ensure your CSV contains date, merchant, and amount columns.",
             )
 
-    # 7. Create upload session (stores raw CSV for confirm step)
+    # 8. Create upload session (stores raw CSV for confirm step)
     session = await CSVMappingService.create_session(
         db=db,
         user_id=user.id,
@@ -129,13 +133,20 @@ async def upload_csv(
         csv_content=csv_text,
     )
 
-    # 8. Sample rows for display
-    sample_rows = df.head(3).to_dicts()
+    # 9. Compute per-column null rates
+    total_rows = len(df)
+    null_counts = df.null_count().to_dicts()[0]
+    column_null_rates = {
+        col: (count / total_rows if total_rows > 0 else 0.0)
+        for col, count in null_counts.items()
+    }
 
     return CSVUploadProposalResponse(
         mapping_id=session.mapping_id,
         proposed_mapping=proposed_mapping,
         sample_rows=sample_rows,
+        available_fields=SCHEMA_FIELDS,
+        column_null_rates=column_null_rates,
     )
 
 
