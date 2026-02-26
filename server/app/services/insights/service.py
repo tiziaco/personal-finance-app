@@ -53,6 +53,9 @@ class InsightsService:
         formatted_insights = result.get("formatted_insights", [])
         serialized = [i.model_dump() for i in formatted_insights]
 
+        if not serialized:
+            logger.warning("insights_generated_empty", user_id=user_id)
+
         # Upsert: update existing row or create a new one
         stmt = select(InsightModel).where(InsightModel.user_id == user_id)
         result_db = await db.execute(stmt)

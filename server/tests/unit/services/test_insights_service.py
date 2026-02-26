@@ -139,3 +139,26 @@ async def test_load_and_generate_with_empty_dataframe_stores_empty_list():
 
     added_obj = db.add.call_args[0][0]
     assert added_obj.insights == []
+
+
+@pytest.mark.asyncio
+async def test_load_and_generate_logs_warning_when_empty(caplog):
+    """load_and_generate emits a warning when generation returns zero insights."""
+    import logging
+    from app.services.insights.service import InsightsService
+
+    db = _mock_db_with_row(None)
+
+    with patch(
+        "app.services.insights.service.TransactionService.load_dataframe",
+        new_callable=AsyncMock,
+        return_value=EMPTY_DF,
+    ), patch(
+        "app.services.insights.service.generate_insights",
+        new_callable=AsyncMock,
+        return_value={"formatted_insights": [], "errors": []},
+    ):
+        with caplog.at_level(logging.WARNING):
+            await InsightsService.load_and_generate(db, "user_123")
+
+    assert any("insights_generated_empty" in r.message for r in caplog.records)
