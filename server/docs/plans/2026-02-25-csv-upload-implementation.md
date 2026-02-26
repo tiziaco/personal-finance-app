@@ -1,6 +1,7 @@
 # CSV Transaction Import — Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+**Date:** 2026-02-25
+**Status:** Implemented  ✓
 
 **Goal:** Implement two-step CSV transaction import (`POST /transactions/upload` + `POST /transactions/upload/{mapping_id}/confirm`) with flexible LLM-powered column mapping, SHA-256 dedup, and AI-powered transaction labeling.
 
