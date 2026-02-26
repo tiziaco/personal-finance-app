@@ -116,6 +116,10 @@ class InsightsService:
             )
             latest_tx_at = (await db.execute(latest_tx_stmt)).scalar_one_or_none()
 
+            if latest_tx_at is not None:
+                if latest_tx_at.tzinfo is None:
+                    latest_tx_at = latest_tx_at.replace(tzinfo=UTC)
+
             if latest_tx_at and latest_tx_at > row.generated_at:
                 await InsightsService.load_and_generate(db, user_id)
                 result = await db.execute(stmt)
