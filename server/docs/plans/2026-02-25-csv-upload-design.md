@@ -1,7 +1,8 @@
 # CSV Transaction Import — Design
 
-**Date:** 2026-02-25
-**Branch:** upload-csv
+**Date:** 2026-02-25  
+**Updated:** 2026-02-26 (merged improvements for representative sampling + manual mapping support)  
+**Branch:** upload-csv  
 **Status:** Approved
 
 ---
@@ -18,12 +19,14 @@ Allow users to bulk-import transactions from a CSV file via two new endpoints. T
 POST /transactions/upload
   │
   ├─ Validate file (extension, ≤3000 rows, not empty)
-  ├─ Parse CSV headers only
+  ├─ Parse CSV with Polars
   ├─ Look up CSVMappingProfile by (user_id, column_hash)
   │   ├─ HIT  → return cached mapping, skip OpenAI call
   │   └─ MISS → call OpenAI to propose column→field mapping
+  ├─ Pick representative sample rows (greedy algorithm, max non-null coverage)
+  ├─ Compute per-column null rates
   └─ Persist CSVUploadSession (raw bytes + proposed mapping, TTL 30min)
-     Return: mapping_id, proposed_mapping, sample_rows (first 3)
+     Return: mapping_id, proposed_mapping, sample_rows (representative), available_fields, column_null_rates
 
 POST /transactions/upload/{mapping_id}/confirm
   │
@@ -38,7 +41,7 @@ POST /transactions/upload/{mapping_id}/confirm
   └─ Return: CSVUploadResponse {imported, skipped, errors}
 ```
 
-**OpenAI mapping call:** given CSV column names + a sample row, returns a JSON object mapping each column to one of: `date`, `merchant`, `amount`, `description`, `original_category`, `is_recurring`, or `ignore`. If `date`, `merchant`, or `amount` cannot be mapped, returns `422` before issuing a `mapping_id`.
+**OpenAI mapping call:** given CSV column names + representative sample rows (up to 3, selected to maximize non-null column coverage), returns a JSON object mapping each column to one of: `date`, `merchant`, `amount`, `description`, `original_category`, `is_recurring`, or `ignore`. If `date`, `merchant`, or `amount` cannot be mapped, returns `422` before issuing a `mapping_id`.
 
 ---
 
@@ -112,7 +115,18 @@ Response 200:
     "Verwendungszweck": "description",
     "Kategorie":        "original_category"
   },
-  "sample_rows": [...]   // first 3 rows for user to visually verify
+  "sample_rows": [...],          // representative rows (max 3) for visual verification
+  "available_fields": [          // valid target field names for mapping dropdowns
+    "date", "merchant", "amount", "description", 
+    "original_category", "is_recurring", "ignore"
+  ],
+  "column_null_rates": {         // fraction of null values per column (0.0–1.0)
+    "Buchungsdatum": 0.0,
+    "Empfänger": 0.0,
+    "Betrag": 0.0,
+    "Verwendungszweck": 0.42,    // e.g., 42% of rows have null description
+    "Kategorie": 1.0              // e.g., all rows have null original_category
+  }
 }
 
 Response 422: wrong file type | exceeds CSV_MAX_ROWS | required column unmappable
@@ -235,7 +249,44 @@ async def import_from_csv(
 
 ---
 
+## Utilities
+
+### New: CSV Utilities (`app/utils/csv_utils.py`)
+
+```python
+def pick_representative_sample(df: pl.DataFrame, n: int = 3) -> list[dict]
+```
+
+**Purpose:** Return up to `n` rows from a Polars DataFrame that maximize non-null column coverage.
+
+**Algorithm:** Greedy selection — repeatedly picks the row that adds the most newly-covered (non-null) columns, stopping when `n` rows are selected or all columns are covered. Remaining slots are filled with sequential rows not yet selected.
+
+**Why:** Improves LLM mapping quality by ensuring sparse columns (e.g., payment references that only appear in 5% of rows) are visible in the prompt, rather than always sampling the first 3 rows which might all be null for that column.
+
+**Example:**
+```python
+# Sparse "reference" column appears only in row 4
+df = pl.DataFrame({
+    "date": ["2024-01-01", "2024-01-02", "2024-01-03", "2024-01-04"],
+    "description": [None, None, None, "Payment ref 123"],
+    "amount": [1.0, 2.0, 3.0, 4.0],
+})
+
+sample = pick_representative_sample(df, n=3)
+# → Includes row 4 because it's the only non-null for "description"
+```
+
+---
+
 ## Testing
+
+### Unit (`tests/unit/utils/test_csv_utils.py`)
+
+- Empty DataFrame returns empty list
+- Fewer rows than `n` returns all rows
+- All non-null DataFrame returns first `n` rows
+- Sparse column row is included in sample (greedy selection works)
+- All-null column still returns `n` rows (doesn't break selection)
 
 ### Unit (`tests/unit/services/test_transaction_service.py`)
 
@@ -248,6 +299,8 @@ async def import_from_csv(
 ### Integration (`tests/integration/api/test_transactions_upload.py`)
 
 - Valid CSV → correct `imported` count, rows in DB
+- Valid CSV → response includes `available_fields` and `column_null_rates`
+- CSV with sparse column → `column_null_rates` correctly reflects null fraction
 - Upload same file twice → second: `imported=0`, `skipped=N`
 - Partial overlap → correct counts on both sides
 - Wrong file type → `422`
