@@ -1,6 +1,7 @@
 # Insights Agent Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+**Date:** 2026-02-25
+**Status:** Implemented  ✓
 
 **Goal:** Refactor the research-phase insights agent into the app, store results in a DB cache, and expose `GET /api/v1/insights`.
 

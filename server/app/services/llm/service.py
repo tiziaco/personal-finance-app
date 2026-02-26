@@ -51,8 +51,8 @@ class LLMRegistry:
             "llm": ChatOpenAI(
                 model="gpt-5-mini",
                 api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "low"},
+                max_completion_tokens=settings.llm.MAX_TOKENS,
+                reasoning_effort="low",
             ),
         },
         {
@@ -60,8 +60,8 @@ class LLMRegistry:
             "llm": ChatOpenAI(
                 model="gpt-5",
                 api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "medium"},
+                max_completion_tokens=settings.llm.MAX_TOKENS,
+                reasoning_effort="medium",
             ),
         },
         {
@@ -69,8 +69,8 @@ class LLMRegistry:
             "llm": ChatOpenAI(
                 model="gpt-5-nano",
                 api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "minimal"},
+                max_completion_tokens=settings.llm.MAX_TOKENS,
+                reasoning_effort="minimal",
             ),
         },
         {

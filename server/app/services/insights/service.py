@@ -3,11 +3,12 @@
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import func, select
 
 from app.agents.insights import InsightsConfig, generate_insights
 from app.core.logging import logger
 from app.models.insight import Insight as InsightModel
+from app.models.transaction import Transaction
 from app.services.insights.exceptions import InsightsError
 from app.services.llm import llm_service
 from app.services.transaction.service import TransactionService
@@ -51,7 +52,10 @@ class InsightsService:
             raise InsightsError(f"Insights generation failed: {e}") from e
 
         formatted_insights = result.get("formatted_insights", [])
-        serialized = [i.model_dump() for i in formatted_insights]
+        serialized = [i.model_dump(mode="json") for i in formatted_insights]
+
+        if not serialized:
+            logger.warning("insights_generated_empty", user_id=user_id)
 
         # Upsert: update existing row or create a new one
         stmt = select(InsightModel).where(InsightModel.user_id == user_id)
@@ -104,6 +108,22 @@ class InsightsService:
             await InsightsService.load_and_generate(db, user_id)
             result = await db.execute(stmt)
             row = result.scalar_one_or_none()
+        else:
+            # Staleness check: regenerate if any transaction is newer than the cache
+            latest_tx_stmt = select(func.max(Transaction.created_at)).where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+            )
+            latest_tx_at = (await db.execute(latest_tx_stmt)).scalar_one_or_none()
+
+            if latest_tx_at is not None:
+                if latest_tx_at.tzinfo is None:
+                    latest_tx_at = latest_tx_at.replace(tzinfo=UTC)
+
+            if latest_tx_at and latest_tx_at > row.generated_at:
+                await InsightsService.load_and_generate(db, user_id)
+                result = await db.execute(stmt)
+                row = result.scalar_one_or_none()
 
         if row is None:
             raise InsightsError("Failed to generate insights for user", user_id=user_id)
