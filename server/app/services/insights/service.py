@@ -3,11 +3,12 @@
 from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import func, select
 
 from app.agents.insights import InsightsConfig, generate_insights
 from app.core.logging import logger
 from app.models.insight import Insight as InsightModel
+from app.models.transaction import Transaction
 from app.services.insights.exceptions import InsightsError
 from app.services.llm import llm_service
 from app.services.transaction.service import TransactionService
@@ -107,6 +108,18 @@ class InsightsService:
             await InsightsService.load_and_generate(db, user_id)
             result = await db.execute(stmt)
             row = result.scalar_one_or_none()
+        else:
+            # Staleness check: regenerate if any transaction is newer than the cache
+            latest_tx_stmt = select(func.max(Transaction.created_at)).where(
+                Transaction.user_id == user_id,
+                Transaction.deleted_at.is_(None),
+            )
+            latest_tx_at = (await db.execute(latest_tx_stmt)).scalar_one_or_none()
+
+            if latest_tx_at and latest_tx_at > row.generated_at:
+                await InsightsService.load_and_generate(db, user_id)
+                result = await db.execute(stmt)
+                row = result.scalar_one_or_none()
 
         if row is None:
             raise InsightsError("Failed to generate insights for user", user_id=user_id)

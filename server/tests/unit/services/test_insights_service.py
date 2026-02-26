@@ -30,16 +30,26 @@ def _mock_db_with_row(row):
 
 @pytest.mark.asyncio
 async def test_get_insights_returns_cached_row():
-    """When a cached row exists, get_insights returns it without triggering generation."""
+    """When a cached row exists and no newer transactions exist, return it without regenerating."""
     from app.services.insights.service import InsightsService
 
     cached_row = MagicMock()
-    db = _mock_db_with_row(cached_row)
+    db = AsyncMock()
+    db.add = MagicMock()
 
-    result = await InsightsService.get_insights(db, "user_123")
+    select_cached = MagicMock()
+    select_cached.scalar_one_or_none.return_value = cached_row
+    select_max = MagicMock()
+    select_max.scalar_one_or_none.return_value = None  # no transactions → no staleness
+    db.execute.side_effect = [select_cached, select_max]
+
+    with patch.object(
+        InsightsService, "load_and_generate", new_callable=AsyncMock
+    ) as mock_gen:
+        result = await InsightsService.get_insights(db, "user_123")
+        mock_gen.assert_not_awaited()  # no generation triggered
 
     assert result is cached_row
-    db.execute.assert_called_once()  # only one SELECT, no generation
 
 
 @pytest.mark.asyncio
@@ -163,3 +173,70 @@ async def test_load_and_generate_logs_warning_when_empty():
 
     mock_logger.warning.assert_called_once_with("insights_generated_empty", user_id="user_123")
     mock_logger.info.assert_called_once()  # insights_generated still fires
+
+
+@pytest.mark.asyncio
+async def test_get_insights_regenerates_when_stale():
+    """When a cached row exists but a newer transaction exists, regenerate."""
+    from datetime import UTC, datetime
+    from app.services.insights.service import InsightsService
+
+    stale_time = datetime(2024, 1, 1, tzinfo=UTC)
+    newer_tx_time = datetime(2024, 6, 1, tzinfo=UTC)
+
+    cached_row = MagicMock()
+    cached_row.generated_at = stale_time
+    fresh_row = MagicMock()
+
+    db = AsyncMock()
+    db.add = MagicMock()
+
+    # execute calls in order:
+    # 1. SELECT insight row  → cached_row
+    # 2. SELECT MAX(created_at) → newer_tx_time
+    # 3. SELECT insight row again (after regen) → fresh_row
+    select_cached = MagicMock()
+    select_cached.scalar_one_or_none.return_value = cached_row
+    select_max = MagicMock()
+    select_max.scalar_one_or_none.return_value = newer_tx_time
+    select_fresh = MagicMock()
+    select_fresh.scalar_one_or_none.return_value = fresh_row
+    db.execute.side_effect = [select_cached, select_max, select_fresh]
+
+    with patch.object(
+        InsightsService, "load_and_generate", new_callable=AsyncMock
+    ) as mock_gen:
+        result = await InsightsService.get_insights(db, "user_123")
+        mock_gen.assert_awaited_once_with(db, "user_123")
+
+    assert result is fresh_row
+
+
+@pytest.mark.asyncio
+async def test_get_insights_does_not_regenerate_when_fresh():
+    """When a cached row is newer than the latest transaction, return it as-is."""
+    from datetime import UTC, datetime
+    from app.services.insights.service import InsightsService
+
+    newer_cache_time = datetime(2024, 6, 1, tzinfo=UTC)
+    older_tx_time = datetime(2024, 1, 1, tzinfo=UTC)
+
+    cached_row = MagicMock()
+    cached_row.generated_at = newer_cache_time
+
+    db = AsyncMock()
+    db.add = MagicMock()
+
+    select_cached = MagicMock()
+    select_cached.scalar_one_or_none.return_value = cached_row
+    select_max = MagicMock()
+    select_max.scalar_one_or_none.return_value = older_tx_time
+    db.execute.side_effect = [select_cached, select_max]
+
+    with patch.object(
+        InsightsService, "load_and_generate", new_callable=AsyncMock
+    ) as mock_gen:
+        result = await InsightsService.get_insights(db, "user_123")
+        mock_gen.assert_not_awaited()
+
+    assert result is cached_row
