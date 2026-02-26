@@ -162,3 +162,4 @@ async def test_load_and_generate_logs_warning_when_empty():
         await InsightsService.load_and_generate(db, "user_123")
 
     mock_logger.warning.assert_called_once_with("insights_generated_empty", user_id="user_123")
+    mock_logger.info.assert_called_once()  # insights_generated still fires
