@@ -1,6 +1,7 @@
 # Insights: Staleness Detection & Empty-Result Warning Implementation Plan
 
-> **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
+**Date:** 2026-02-26
+**Status:** Implemented  ✓
 
 **Goal:** Fix two bugs in `InsightsService`: add a warning when generation produces zero insights, and regenerate the cache when new transactions exist that post-date it.
 
