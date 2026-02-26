@@ -52,7 +52,7 @@ class InsightsService:
             raise InsightsError(f"Insights generation failed: {e}") from e
 
         formatted_insights = result.get("formatted_insights", [])
-        serialized = [i.model_dump() for i in formatted_insights]
+        serialized = [i.model_dump(mode="json") for i in formatted_insights]
 
         if not serialized:
             logger.warning("insights_generated_empty", user_id=user_id)
