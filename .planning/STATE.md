@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T11:08:38.265Z"
+last_updated: "2026-02-27T12:52:25Z"
 progress:
-  total_phases: 1
+  total_phases: 7
   completed_phases: 1
-  total_plans: 5
-  completed_plans: 10
+  total_plans: 6
+  completed_plans: 6
 ---
 
 # Project State
@@ -18,16 +18,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-02-27)
 
 **Core value:** Users can understand where their money goes — at a glance on the dashboard, and in depth through analytics and AI insights — without manual data entry beyond uploading a CSV.
-**Current focus:** Phase 1 — Foundation
+**Current focus:** Phase 2 — Dashboard
 
 ## Current Position
 
-Phase: 1 of 7 (Foundation)
-Plan: 5 of 5 in current phase
-Status: Phase 1 complete
-Last activity: 2026-02-27 — Plan 05 complete (React Query data hooks)
+Phase: 2 of 7 (Dashboard)
+Plan: 1 of 4 in current phase (02-01 complete)
+Status: In progress
+Last activity: 2026-02-27 — Plan 02-01 complete (DashboardResponse type narrowing + format utilities)
 
-Progress: [░░░░░░░░░░] 0%
+Progress: [██░░░░░░░░] 20%
 
 ## Performance Metrics
 
@@ -52,6 +52,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P03 | 2 | 2 tasks | 4 files |
 | Phase 01-foundation P04 | 8 | 2 tasks | 7 files |
 | Phase 01-foundation P05 | 1 | 2 tasks | 5 files |
+| Phase 02-dashboard P01 | 1 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -71,6 +72,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 01-foundation]: getToken() called inside queryFn (not hook body) — token is not stable and should not be in queryKey; correct Clerk + React Query v5 pattern
 - [Phase 01-foundation]: Analytics hooks accept enabled=true flag — supports Phase 4 tab-based lazy loading without refactoring at call site
 - [Phase 01-foundation]: staleTime ladder proportional to compute cost — transactions=30s, dashboard=2min, analytics=5min, insights=10min
+- [Phase 02-dashboard]: DashboardResponse Record<string, unknown> fields narrowed to concrete sub-interfaces matching financial.py tool return shapes exactly
+- [Phase 02-dashboard]: formatPercent alreadyScaled=true by default — DashboardCategoryItem.percentage from backend is already scaled (e.g. 45.6, not 0.456)
+- [Phase 02-dashboard]: No changes to use-dashboard-summary.ts required — useQuery<DashboardResponse> propagates narrowed types automatically
 
 ### Pending Todos
 
@@ -85,5 +89,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 01-foundation-05-PLAN.md
+Stopped at: Completed 02-dashboard-01-PLAN.md
 Resume file: None

@@ -16,12 +16,12 @@
 
 ### Dashboard
 
-- [ ] **DASH-01**: User sees a welcome card with their name and total spending this month
-- [ ] **DASH-02**: User sees 4 summary cards: Total Spent This Month, Remaining Budget, Recurring Costs, Savings Goal Progress — with color coding (green positive, red overspend)
-- [ ] **DASH-03**: User sees a spending-by-category pie chart (top 5 categories, interactive with legend and percentages)
-- [ ] **DASH-04**: User sees a 6-month spending trend line chart with current month highlighted and hover tooltips
-- [ ] **DASH-05**: User sees a recent transactions widget showing the last 5-10 transactions (date, merchant, amount, category) with a "View All" link
-- [ ] **DASH-06**: User sees an AI insights callout showing 1-2 most important highlights, with a "Generate New Insights" CTA and a badge when new transaction data has been added since last generation
+- [x] **DASH-01**: User sees a welcome card with their name and total spending this month
+- [x] **DASH-02**: User sees 4 summary cards: Total Spent This Month, Remaining Budget, Recurring Costs, Savings Goal Progress — with color coding (green positive, red overspend)
+- [x] **DASH-03**: User sees a spending-by-category pie chart (top 5 categories, interactive with legend and percentages)
+- [x] **DASH-04**: User sees a 6-month spending trend line chart with current month highlighted and hover tooltips
+- [x] **DASH-05**: User sees a recent transactions widget showing the last 5-10 transactions (date, merchant, amount, category) with a "View All" link
+- [x] **DASH-06**: User sees an AI insights callout showing 1-2 most important highlights, with a "Generate New Insights" CTA and a badge when new transaction data has been added since last generation
 - [ ] **DASH-07**: User can click "Upload CSV" primary CTA from the dashboard to reach the upload flow
 - [ ] **DASH-08**: User can click "View Insights" secondary CTA to navigate to the Insights page
 
@@ -126,12 +126,12 @@
 | FOUND-04 | Phase 1 — Foundation | Complete |
 | FOUND-05 | Phase 1 — Foundation | Complete |
 | FOUND-06 | Phase 1 — Foundation | Complete |
-| DASH-01 | Phase 2 — Dashboard | Pending |
-| DASH-02 | Phase 2 — Dashboard | Pending |
-| DASH-03 | Phase 2 — Dashboard | Pending |
-| DASH-04 | Phase 2 — Dashboard | Pending |
-| DASH-05 | Phase 2 — Dashboard | Pending |
-| DASH-06 | Phase 2 — Dashboard | Pending |
+| DASH-01 | Phase 2 — Dashboard | Complete |
+| DASH-02 | Phase 2 — Dashboard | Complete |
+| DASH-03 | Phase 2 — Dashboard | Complete |
+| DASH-04 | Phase 2 — Dashboard | Complete |
+| DASH-05 | Phase 2 — Dashboard | Complete |
+| DASH-06 | Phase 2 — Dashboard | Complete |
 | DASH-07 | Phase 2 — Dashboard | Pending |
 | DASH-08 | Phase 2 — Dashboard | Pending |
 | TXN-01 | Phase 3 — Transactions | Pending |
