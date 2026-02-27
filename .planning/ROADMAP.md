@@ -44,7 +44,14 @@ Decimal phases appear between their surrounding integers in numeric order.
   3. User sees a spending-by-category pie chart (top 5 categories with interactive legend and percentages) and a 6-month trend line chart with hover tooltips
   4. User sees the last 5-10 transactions with date, merchant, amount, and category — and a "View All" link that navigates to the Transactions page
   5. User sees an AI insights callout with 1-2 highlights and can click "Upload CSV" or "View Insights" to navigate to those flows
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Narrow DashboardResponse types + formatCurrency/formatDate utilities
+- [ ] 02-02-PLAN.md — WelcomeCard and SummaryCards widgets (DASH-01, DASH-02)
+- [ ] 02-03-PLAN.md — SpendingPieChart and TrendLineChart widgets (DASH-03, DASH-04)
+- [ ] 02-04-PLAN.md — RecentTransactions and InsightsCallout widgets (DASH-05, DASH-06, DASH-07, DASH-08)
+- [ ] 02-05-PLAN.md — Dashboard page composition + /upload route stub
 
 ### Phase 3: Transactions
 **Goal**: Users can find, review, and recategorize any transaction in their history quickly, with bulk operations for handling many at once
@@ -114,7 +121,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-02-27 |
-| 2. Dashboard | 0/TBD | Not started | - |
+| 2. Dashboard | 0/5 | Not started | - |
 | 3. Transactions | 0/TBD | Not started | - |
 | 4. Analytics | 0/TBD | Not started | - |
 | 5. Insights | 0/TBD | Not started | - |
