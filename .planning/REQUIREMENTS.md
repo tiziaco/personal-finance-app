@@ -11,8 +11,8 @@
 - [ ] **FOUND-02**: A typed API client module exists with authenticated fetch functions using Clerk JWT tokens for all backend endpoints
 - [ ] **FOUND-03**: React Query hooks exist for all data needs: useTransactions (paginated + filtered), useDashboardSummary, useAnalytics (per endpoint), useInsights, useCategories
 - [ ] **FOUND-04**: Shared chart wrapper components exist (pie chart, line chart, bar chart) using shadcn/ui Chart (Recharts), with SSR-safe rendering and consistent design tokens
-- [ ] **FOUND-05**: Shared skeleton components exist for all data-bearing UI regions (cards, tables, charts, insight cards)
-- [ ] **FOUND-06**: Error boundary components exist and are applied to all pages and major sections
+- [x] **FOUND-05**: Shared skeleton components exist for all data-bearing UI regions (cards, tables, charts, insight cards)
+- [x] **FOUND-06**: Error boundary components exist and are applied to all pages and major sections
 
 ### Dashboard
 
@@ -124,8 +124,8 @@
 | FOUND-02 | Phase 1 — Foundation | Pending |
 | FOUND-03 | Phase 1 — Foundation | Pending |
 | FOUND-04 | Phase 1 — Foundation | Pending |
-| FOUND-05 | Phase 1 — Foundation | Pending |
-| FOUND-06 | Phase 1 — Foundation | Pending |
+| FOUND-05 | Phase 1 — Foundation | Complete |
+| FOUND-06 | Phase 1 — Foundation | Complete |
 | DASH-01 | Phase 2 — Dashboard | Pending |
 | DASH-02 | Phase 2 — Dashboard | Pending |
 | DASH-03 | Phase 2 — Dashboard | Pending |

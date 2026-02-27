@@ -72,10 +72,10 @@ None yet.
 
 - **[Phase 5 — Insights]:** Confirm whether `/insights` backend endpoint generates on GET or requires a separate POST/trigger call before implementing the regenerate button flow.
 - **[Phase 3 — Transactions]:** Confirm exact request body shape for `PATCH /transactions/batch` and `DELETE /transactions/batch` before building the bulk action bar.
-- **[Phase 1]:** Confirm whether `react-error-boundary` npm package is acceptable to add, or whether a custom implementation is preferred.
+- ~~**[Phase 1]:** Confirm whether `react-error-boundary` npm package is acceptable to add, or whether a custom implementation is preferred.~~ RESOLVED: Custom class component implemented (Plan 02).
 
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 01-foundation-01-PLAN.md
+Stopped at: Completed 01-foundation-02-PLAN.md
 Resume file: None
