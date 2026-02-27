@@ -118,24 +118,65 @@
 
 ## Traceability
 
-Populated during roadmap creation.
-
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| FOUND-01–06 | Phase 1 | Pending |
-| DASH-01–08 | Phase 2 | Pending |
-| TXN-01–10 | Phase 3 | Pending |
-| ANLT-01–06 | Phase 4 | Pending |
-| INSGT-01–07 | Phase 5 | Pending |
-| BUDG-01 | Phase 6 | Pending |
-| SETT-01–05 | Phase 6 | Pending |
-| DESGN-01–08 | Phase 6 | Pending |
+| FOUND-01 | Phase 1 — Foundation | Pending |
+| FOUND-02 | Phase 1 — Foundation | Pending |
+| FOUND-03 | Phase 1 — Foundation | Pending |
+| FOUND-04 | Phase 1 — Foundation | Pending |
+| FOUND-05 | Phase 1 — Foundation | Pending |
+| FOUND-06 | Phase 1 — Foundation | Pending |
+| DASH-01 | Phase 2 — Dashboard | Pending |
+| DASH-02 | Phase 2 — Dashboard | Pending |
+| DASH-03 | Phase 2 — Dashboard | Pending |
+| DASH-04 | Phase 2 — Dashboard | Pending |
+| DASH-05 | Phase 2 — Dashboard | Pending |
+| DASH-06 | Phase 2 — Dashboard | Pending |
+| DASH-07 | Phase 2 — Dashboard | Pending |
+| DASH-08 | Phase 2 — Dashboard | Pending |
+| TXN-01 | Phase 3 — Transactions | Pending |
+| TXN-02 | Phase 3 — Transactions | Pending |
+| TXN-03 | Phase 3 — Transactions | Pending |
+| TXN-04 | Phase 3 — Transactions | Pending |
+| TXN-05 | Phase 3 — Transactions | Pending |
+| TXN-06 | Phase 3 — Transactions | Pending |
+| TXN-07 | Phase 3 — Transactions | Pending |
+| TXN-08 | Phase 3 — Transactions | Pending |
+| TXN-09 | Phase 3 — Transactions | Pending |
+| TXN-10 | Phase 3 — Transactions | Pending |
+| ANLT-01 | Phase 4 — Analytics | Pending |
+| ANLT-02 | Phase 4 — Analytics | Pending |
+| ANLT-03 | Phase 4 — Analytics | Pending |
+| ANLT-04 | Phase 4 — Analytics | Pending |
+| ANLT-05 | Phase 4 — Analytics | Pending |
+| ANLT-06 | Phase 4 — Analytics | Pending |
+| INSGT-01 | Phase 5 — Insights | Pending |
+| INSGT-02 | Phase 5 — Insights | Pending |
+| INSGT-03 | Phase 5 — Insights | Pending |
+| INSGT-04 | Phase 5 — Insights | Pending |
+| INSGT-05 | Phase 5 — Insights | Pending |
+| INSGT-06 | Phase 5 — Insights | Pending |
+| INSGT-07 | Phase 5 — Insights | Pending |
+| BUDG-01 | Phase 6 — Budgets + Settings | Pending |
+| SETT-01 | Phase 6 — Budgets + Settings | Pending |
+| SETT-02 | Phase 6 — Budgets + Settings | Pending |
+| SETT-03 | Phase 6 — Budgets + Settings | Pending |
+| SETT-04 | Phase 6 — Budgets + Settings | Pending |
+| SETT-05 | Phase 6 — Budgets + Settings | Pending |
+| DESGN-01 | Phase 7 — Polish | Pending |
+| DESGN-02 | Phase 7 — Polish | Pending |
+| DESGN-03 | Phase 7 — Polish | Pending |
+| DESGN-04 | Phase 7 — Polish | Pending |
+| DESGN-05 | Phase 7 — Polish | Pending |
+| DESGN-06 | Phase 7 — Polish | Pending |
+| DESGN-07 | Phase 7 — Polish | Pending |
+| DESGN-08 | Phase 7 — Polish | Pending |
 
 **Coverage:**
-- v1 requirements: 48 total
-- Mapped to phases: 48
+- v1 requirements: 51 total
+- Mapped to phases: 51
 - Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-02-27*
-*Last updated: 2026-02-27 after initial definition*
+*Last updated: 2026-02-27 — traceability populated after roadmap creation*
