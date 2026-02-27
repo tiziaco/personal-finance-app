@@ -7,7 +7,9 @@ import type { TransactionFilters, TransactionListResponse } from '@/types/transa
 
 export function useTransactions(filters: TransactionFilters = {}, page: number = 0) {
   const { getToken } = useAuth()
-  const limit = 25
+  // Allow callers to override limit via filters (e.g. limit: 10 for dashboard widgets).
+  // Fall back to 25 (full page) when not specified.
+  const limit = filters.limit ?? 25
   const offset = page * limit
 
   return useQuery<TransactionListResponse>({
