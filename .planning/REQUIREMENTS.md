@@ -8,7 +8,7 @@
 ### Foundation
 
 - [x] **FOUND-01**: Typed TypeScript interfaces exist for all backend API response shapes (transactions, analytics, insights, dashboard summary)
-- [ ] **FOUND-02**: A typed API client module exists with authenticated fetch functions using Clerk JWT tokens for all backend endpoints
+- [x] **FOUND-02**: A typed API client module exists with authenticated fetch functions using Clerk JWT tokens for all backend endpoints
 - [ ] **FOUND-03**: React Query hooks exist for all data needs: useTransactions (paginated + filtered), useDashboardSummary, useAnalytics (per endpoint), useInsights, useCategories
 - [ ] **FOUND-04**: Shared chart wrapper components exist (pie chart, line chart, bar chart) using shadcn/ui Chart (Recharts), with SSR-safe rendering and consistent design tokens
 - [x] **FOUND-05**: Shared skeleton components exist for all data-bearing UI regions (cards, tables, charts, insight cards)
@@ -121,7 +121,7 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | FOUND-01 | Phase 1 — Foundation | Complete |
-| FOUND-02 | Phase 1 — Foundation | Pending |
+| FOUND-02 | Phase 1 — Foundation | Complete |
 | FOUND-03 | Phase 1 — Foundation | Pending |
 | FOUND-04 | Phase 1 — Foundation | Pending |
 | FOUND-05 | Phase 1 — Foundation | Complete |
