@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-02-27T06:38:47.714Z"
+last_updated: "2026-02-27T11:08:38.265Z"
 progress:
   total_phases: 1
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 5
-  completed_plans: 4
+  completed_plans: 10
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 1 of 7 (Foundation)
-Plan: 4 of 5 in current phase
-Status: In progress
-Last activity: 2026-02-27 — Plan 04 complete (Chart wrapper components)
+Plan: 5 of 5 in current phase
+Status: Phase 1 complete
+Last activity: 2026-02-27 — Plan 05 complete (React Query data hooks)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation P02 | 2 | 2 tasks | 5 files |
 | Phase 01-foundation P03 | 2 | 2 tasks | 4 files |
 | Phase 01-foundation P04 | 8 | 2 tasks | 7 files |
+| Phase 01-foundation P05 | 1 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -67,6 +68,9 @@ Progress: [░░░░░░░░░░] 0%
 - [Phase 01-foundation]: sonner toast.error() used in componentDidCatch (regular function, not hook — class component safe)
 - [Phase 01-foundation]: buildAnalyticsQuery uses object parameter type — TypeScript strict mode rejects AnalyticsFilters as Record<string, unknown> without index signature; object with internal cast preserves runtime behavior
 - [Phase 01-foundation]: Chart colors use var(--chart-N) CSS variables directly — NOT hsl(var(--chart-N)) — Tailwind v4 globals.css defines OKLCH values; hsl() wrapper breaks color rendering
+- [Phase 01-foundation]: getToken() called inside queryFn (not hook body) — token is not stable and should not be in queryKey; correct Clerk + React Query v5 pattern
+- [Phase 01-foundation]: Analytics hooks accept enabled=true flag — supports Phase 4 tab-based lazy loading without refactoring at call site
+- [Phase 01-foundation]: staleTime ladder proportional to compute cost — transactions=30s, dashboard=2min, analytics=5min, insights=10min
 
 ### Pending Todos
 
@@ -81,5 +85,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-02-27
-Stopped at: Completed 01-foundation-04-PLAN.md
+Stopped at: Completed 01-foundation-05-PLAN.md
 Resume file: None

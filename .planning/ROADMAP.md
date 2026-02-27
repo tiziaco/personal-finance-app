@@ -12,7 +12,7 @@ Seven phases build the web dashboard from the inside out: first the typed API la
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation** - API client, TypeScript types, React Query hooks, and shared display primitives
+- [x] **Phase 1: Foundation** - API client, TypeScript types, React Query hooks, and shared display primitives (completed 2026-02-27)
 - [ ] **Phase 2: Dashboard** - The first page users see; welcome card, summary cards, charts, recent transactions, insights callout
 - [ ] **Phase 3: Transactions** - Filterable/searchable paginated table with category editing and bulk actions
 - [ ] **Phase 4: Analytics** - Four-tab analytics page with lazy-loaded charts for each spending dimension
@@ -113,7 +113,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation | 4/5 | In Progress|  |
+| 1. Foundation | 5/5 | Complete   | 2026-02-27 |
 | 2. Dashboard | 0/TBD | Not started | - |
 | 3. Transactions | 0/TBD | Not started | - |
 | 4. Analytics | 0/TBD | Not started | - |
