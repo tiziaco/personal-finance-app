@@ -80,12 +80,14 @@ Plans:
   3. User can view spending by category with a date filter (1M / 3M / 6M) that updates the chart
   4. User can view income vs expenses as a bar chart by month and read a cash flow summary below it
   5. User can view month-over-month trends and seasonality patterns (by month and day of week) as charts
-**Plans**: 3 plans
+**Plans**: 5 plans
 
 Plans:
 - [ ] 04-01-PLAN.md — SpendingByCategoryTab (PieChart + 1M/3M/6M filter) + IncomeVsExpensesTab (BarChart + cash flow summary) [Wave 1]
 - [ ] 04-02-PLAN.md — TrendsTab (LineChart MoM) + SeasonalityTab (two BarCharts: day-of-week + monthly) [Wave 1, parallel with 04-01]
 - [ ] 04-03-PLAN.md — AnalyticsPage composition at /stats — Base UI Tabs with visitedTabs lazy-load pattern [Wave 2]
+- [ ] 04-04-PLAN.md — Gap closure: Fix PieChart Recharts Pie ring structure (ANLT-03) [Wave 1]
+- [ ] 04-05-PLAN.md — Gap closure: Fix get_spending_summary() overview.stats per-month shape (ANLT-04, ANLT-05) [Wave 1]
 
 ### Phase 5: Insights
 **Goal**: Users can generate, browse, and act on AI-powered financial insights organized by type, with a savings tracker showing their total opportunity
@@ -133,7 +135,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 1. Foundation | 5/5 | Complete   | 2026-02-27 |
 | 2. Dashboard | 5/5 | Complete   | 2026-03-01 |
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
-| 4. Analytics | 3/3 | Complete   | 2026-03-01 |
+| 4. Analytics | 3/5 | Gap closure in progress | 2026-03-01 |
 | 5. Insights | 0/TBD | Not started | - |
 | 6. Budgets + Settings | 0/TBD | Not started | - |
 | 7. Polish | 0/TBD | Not started | - |
