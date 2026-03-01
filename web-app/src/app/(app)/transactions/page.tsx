@@ -46,16 +46,16 @@ function BulkCategoryModal({
   onSave,
   isPending,
 }: BulkCategoryModalProps) {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryEnum | undefined>()
+  const [selectedCategory, setSelectedCategory] = useState<CategoryEnum | ''>('')
 
   const handleSave = () => {
-    if (!selectedCategory) return
+    if (selectedCategory === '') return
     onSave(selectedCategory)
   }
 
   // Reset selection when modal closes
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setSelectedCategory(undefined)
+    if (!nextOpen) setSelectedCategory('')
     onOpenChange(nextOpen)
   }
 
@@ -85,7 +85,7 @@ function BulkCategoryModal({
         </Select>
 
         <DialogFooter showCloseButton>
-          <Button onClick={handleSave} disabled={isPending || !selectedCategory}>
+          <Button onClick={handleSave} disabled={isPending || selectedCategory === ''}>
             {isPending ? 'Saving…' : 'Save'}
           </Button>
         </DialogFooter>
