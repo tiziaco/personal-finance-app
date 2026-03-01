@@ -20,13 +20,15 @@ interface PieChartProps {
 export function PieChart({ data, config, className, showLegend = true }: PieChartProps) {
   return (
     <ChartContainer config={config} className={className}>
-      <RechartsPie data={data} cx="50%" cy="50%" outerRadius={80}>
-        {data.map((entry, index) => (
-          <Cell
-            key={entry.label}
-            fill={entry.color ?? `var(--chart-${(index % 5) + 1})`}
-          />
-        ))}
+      <RechartsPie>
+        <Pie data={data} dataKey="value" nameKey="label" cx="50%" cy="50%" outerRadius={80}>
+          {data.map((entry, index) => (
+            <Cell
+              key={entry.label}
+              fill={entry.color ?? `var(--chart-${(index % 5) + 1})`}
+            />
+          ))}
+        </Pie>
         <ChartTooltip content={<ChartTooltipContent />} />
         {showLegend && <Legend />}
       </RechartsPie>
