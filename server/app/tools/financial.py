@@ -61,9 +61,24 @@ async def get_spending_summary(
         df, start_date=start_date, end_date=end_date, include_income=True
     )
 
+    monthly_stats = [
+        {
+            "month": f"{row['year']:04d}-{row['month']:02d}",
+            "total_income": row["total_income"],
+            "total_expense": row["total_expenses"],
+            "net": row["net_amount"],
+            "expense_mom_growth": (
+                row["expense_mom_growth"] * 100
+                if row["expense_mom_growth"] is not None
+                else None
+            ),
+        }
+        for row in trends["monthly_trend"].to_dicts()
+    ]
+
     return {
         "overview": {
-            "stats": overview["summary"].to_dicts(),
+            "stats": monthly_stats,
             "income_vs_expenses": overview["income_vs_expenses"].to_dicts(),
         },
         "recent_trend": {
