@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 04-analytics
 source: [04-01-SUMMARY.md, 04-02-SUMMARY.md, 04-03-SUMMARY.md]
 started: 2026-03-01T19:50:00Z
-updated: 2026-03-01T20:05:00Z
+updated: 2026-03-01T21:00:00Z
 ---
 
 ## Current Test
@@ -53,7 +53,7 @@ skipped: 0
 ## Gaps
 
 - truth: "By Category tab shows a PieChart with color-coded slices per spending category, a legend, and 1M/3M/6M toggle buttons"
-  status: failed
+  status: resolved
   reason: "User reported: i see the Category Breakdown tab but i don't see the pie chart"
   severity: major
   test: 2
@@ -67,7 +67,7 @@ skipped: 0
   debug_session: ".planning/debug/piechart-not-visible.md"
 
 - truth: "Income vs Expenses tab shows a BarChart of monthly income vs expenses and a cash flow summary card"
-  status: failed
+  status: resolved
   reason: "User reported: React key prop warning from IncomeVsExpensesTab line 124, and no bar charts visible (database has data from oct/nov 2025, today is march 1st 2026)"
   severity: major
   test: 3
@@ -82,7 +82,7 @@ skipped: 0
   debug_session: ""
 
 - truth: "Trends tab shows a LineChart of monthly expenses over time and a MoM growth table"
-  status: failed
+  status: resolved
   reason: "User reported: i do not see the line charts (database has data from oct/nov 2025, today is march 1st 2026 — same date range issue as test 3)"
   severity: major
   test: 4
