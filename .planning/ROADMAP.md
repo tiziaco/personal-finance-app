@@ -80,7 +80,12 @@ Plans:
   3. User can view spending by category with a date filter (1M / 3M / 6M) that updates the chart
   4. User can view income vs expenses as a bar chart by month and read a cash flow summary below it
   5. User can view month-over-month trends and seasonality patterns (by month and day of week) as charts
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — SpendingByCategoryTab (PieChart + 1M/3M/6M filter) + IncomeVsExpensesTab (BarChart + cash flow summary) [Wave 1]
+- [ ] 04-02-PLAN.md — TrendsTab (LineChart MoM) + SeasonalityTab (two BarCharts: day-of-week + monthly) [Wave 1, parallel with 04-01]
+- [ ] 04-03-PLAN.md — AnalyticsPage composition at /stats — Base UI Tabs with visitedTabs lazy-load pattern [Wave 2]
 
 ### Phase 5: Insights
 **Goal**: Users can generate, browse, and act on AI-powered financial insights organized by type, with a savings tracker showing their total opportunity
