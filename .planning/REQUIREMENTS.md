@@ -36,7 +36,7 @@
 - [x] **TXN-07**: User can navigate between pages with "Previous / Page X of Y / Next" controls and a "Showing X-Y of Z transactions" count
 - [x] **TXN-08**: User can click a transaction's category or edit button to open a category edit modal (shows merchant, amount, date; dropdown for new category; save/cancel)
 - [x] **TXN-09**: User can select multiple transactions via checkbox and bulk-recategorize them
-- [ ] **TXN-10**: User sees an empty state with illustration and "Upload a CSV file to get started" CTA when no transactions exist
+- [x] **TXN-10**: User sees an empty state with illustration and "Upload a CSV file to get started" CTA when no transactions exist
 
 ### Analytics
 
@@ -143,7 +143,7 @@
 | TXN-07 | Phase 3 — Transactions | Complete |
 | TXN-08 | Phase 3 — Transactions | Complete |
 | TXN-09 | Phase 3 — Transactions | Complete |
-| TXN-10 | Phase 3 — Transactions | Pending |
+| TXN-10 | Phase 3 — Transactions | Complete |
 | ANLT-01 | Phase 4 — Analytics | Pending |
 | ANLT-02 | Phase 4 — Analytics | Pending |
 | ANLT-03 | Phase 4 — Analytics | Pending |
