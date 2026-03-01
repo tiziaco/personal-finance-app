@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T19:43:08.467Z"
+last_updated: "2026-03-01T20:17:32.246Z"
 progress:
   total_phases: 4
   completed_phases: 4
-  total_plans: 16
-  completed_plans: 21
+  total_plans: 18
+  completed_plans: 23
 ---
 
 # Project State
@@ -62,6 +62,8 @@ Progress: [████░░░░░░] 40%
 | Phase 04-analytics P01 | 2 | 2 tasks | 2 files |
 | Phase 04-analytics P02 | 8 | 2 tasks | 2 files |
 | Phase 04-analytics P03 | 3 | 1 tasks | 1 files |
+| Phase 04-analytics P05 | 3 | 1 tasks | 1 files |
+| Phase 04-analytics P04 | 1 | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -102,6 +104,9 @@ Progress: [████░░░░░░] 40%
 - [Phase 04-analytics]: monthly_patterns fields beyond 'month' accessed defensively via fallback chain (avg_spending ?? total_spending ?? average_spending ?? 0) — field names from analyze_seasonality_simple() unverified
 - [Phase 04-analytics]: visitedTabs Set initialized with new Set(['category']) — category tab fetches immediately on page load as the default active tab
 - [Phase 04-analytics]: Each Tabs.Panel independently wrapped in ErrorBoundary — chart error in one tab does not crash the entire analytics page
+- [Phase 04-analytics]: Build per-month stats from trends['monthly_trend'] instead of flat aggregate — monthly_trend has per-month rows sorted by year/month
+- [Phase 04-analytics]: Multiply expense_mom_growth by 100 at backend — Polars pct_change() returns decimal ratio; frontend renders .toFixed(1)+'%' so values must be in percentage units
+- [Phase 04-analytics]: Recharts <Pie> ring component owns data/cx/cy/outerRadius props — <PieChart> container takes no data props; Cell elements are children of <Pie> not <PieChart>
 
 ### Pending Todos
 
