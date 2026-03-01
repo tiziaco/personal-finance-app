@@ -59,6 +59,7 @@ Progress: [███░░░░░░░] 30%
 | Phase 03-transactions P01 | 1 | 2 tasks | 2 files |
 | Phase 03-transactions P02 | 2 | 2 tasks | 2 files |
 | Phase 03-transactions P03 | 2 | 2 tasks | 3 files |
+| Phase 04-analytics P01 | 2 | 2 tasks | 2 files |
 | Phase 04-analytics P02 | 8 | 2 tasks | 2 files |
 
 ## Accumulated Context
@@ -112,5 +113,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 04-analytics-02-PLAN.md (TrendsTab and SeasonalityTab components — ANLT-04/05/06 done)
+Stopped at: Completed 04-analytics-01-PLAN.md (SpendingByCategoryTab + IncomeVsExpensesTab — ANLT-02/03/06 done) [Wave 1 with 04-02]
 Resume file: None
