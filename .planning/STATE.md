@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T15:26:15.344Z"
+last_updated: "2026-03-01T15:30:08.275Z"
 progress:
   total_phases: 3
   completed_phases: 2
   total_plans: 13
-  completed_plans: 16
+  completed_plans: 17
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 3 of 7 (Transactions)
-Plan: 1 of 3 in current phase (03-01 complete)
+Plan: 2 of 3 in current phase (03-02 complete)
 Status: In progress
-Last activity: 2026-03-01 — Plan 03-01 complete (useDebounce + useUpdateTransaction + useBatchUpdateTransactions hooks)
+Last activity: 2026-03-01 — Plan 03-02 complete (FiltersBar + TransactionsTable UI components)
 
 Progress: [██░░░░░░░░] 20%
 
@@ -57,6 +57,7 @@ Progress: [██░░░░░░░░] 20%
 | Phase 02-dashboard P02 | 2 | 2 tasks | 2 files |
 | Phase 02-dashboard P05 | 5 | 2 tasks | 2 files |
 | Phase 03-transactions P01 | 1 | 2 tasks | 2 files |
+| Phase 03-transactions P02 | 2 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,9 @@ Progress: [██░░░░░░░░] 20%
 - [Phase 02-dashboard]: SummaryCards ErrorBoundary fallback wraps CardSkeleton in matching grid div to avoid layout shift on error
 - [Phase 03-transactions]: useDebounce has no 'use client' directive — pure hook with no React DOM APIs, safe for RSC import
 - [Phase 03-transactions]: useBatchUpdateTransactions accepts Array<{id, category}> and maps to BatchUpdateRequest internally — cleaner call site for callers
+- [Phase 03-transactions]: TransactionsTable uses getRowId: (row) => String(row.id) — prevents selection drift when server re-fetches return data with shifted array indices
+- [Phase 03-transactions]: No getPaginationRowModel() in TransactionsTable — pagination is fully server-side, controlled by parent page via offset/limit/page props
+- [Phase 03-transactions]: DataTableBulkActions rendered outside overflow-auto table wrapper — enables sticky bottom positioning across full viewport width
 
 ### Pending Todos
 
@@ -101,5 +105,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-01
-Stopped at: Completed 03-transactions-01-PLAN.md
+Stopped at: Completed 03-transactions-02-PLAN.md
 Resume file: None
