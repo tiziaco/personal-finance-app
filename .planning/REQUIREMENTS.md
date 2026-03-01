@@ -22,8 +22,8 @@
 - [x] **DASH-04**: User sees a 6-month spending trend line chart with current month highlighted and hover tooltips
 - [x] **DASH-05**: User sees a recent transactions widget showing the last 5-10 transactions (date, merchant, amount, category) with a "View All" link
 - [x] **DASH-06**: User sees an AI insights callout showing 1-2 most important highlights, with a "Generate New Insights" CTA and a badge when new transaction data has been added since last generation
-- [ ] **DASH-07**: User can click "Upload CSV" primary CTA from the dashboard to reach the upload flow
-- [ ] **DASH-08**: User can click "View Insights" secondary CTA to navigate to the Insights page
+- [x] **DASH-07**: User can click "Upload CSV" primary CTA from the dashboard to reach the upload flow
+- [x] **DASH-08**: User can click "View Insights" secondary CTA to navigate to the Insights page
 
 ### Transactions
 
@@ -132,8 +132,8 @@
 | DASH-04 | Phase 2 — Dashboard | Complete |
 | DASH-05 | Phase 2 — Dashboard | Complete |
 | DASH-06 | Phase 2 — Dashboard | Complete |
-| DASH-07 | Phase 2 — Dashboard | Pending |
-| DASH-08 | Phase 2 — Dashboard | Pending |
+| DASH-07 | Phase 2 — Dashboard | Complete |
+| DASH-08 | Phase 2 — Dashboard | Complete |
 | TXN-01 | Phase 3 — Transactions | Pending |
 | TXN-02 | Phase 3 — Transactions | Pending |
 | TXN-03 | Phase 3 — Transactions | Pending |
