@@ -111,7 +111,7 @@ export function SpendingByCategoryTab({ enabled }: SpendingByCategoryTabProps) {
                         className="inline-block h-3 w-3 rounded-full shrink-0"
                         style={{ backgroundColor: `var(--chart-${(i % 5) + 1})` }}
                       />
-                      <span className="font-medium truncate max-w-[160px]">{c.category}</span>
+                      <span className="font-medium truncate max-w-40">{c.category}</span>
                     </div>
                     <div className="flex items-center gap-3 text-right">
                       <span className="text-muted-foreground">{formatPercent(c.percentage)}</span>
