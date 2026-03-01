@@ -63,7 +63,12 @@ Plans:
   3. User can click a transaction's category or edit button to open a modal, select a new category, and save — the table reflects the change immediately
   4. User can select multiple transactions via checkboxes and apply a bulk recategorize action to all selected rows at once
   5. User sees an empty state with an illustration and "Upload a CSV" CTA when no transactions exist
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — useDebounce hook + useUpdateTransaction / useBatchUpdateTransactions mutation hooks
+- [ ] 03-02-PLAN.md — FiltersBar + TransactionsTable components (TanStack Table v8, row selection, pagination UI)
+- [ ] 03-03-PLAN.md — CategoryEditModal + TransactionsEmptyState + TransactionsPage composition
 
 ### Phase 4: Analytics
 **Goal**: Users can explore their spending across four dimensions (by category, income vs expenses, month-over-month trends, and seasonality) without waiting for all data to load at once
@@ -122,7 +127,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 |-------|----------------|--------|-----------|
 | 1. Foundation | 5/5 | Complete   | 2026-02-27 |
 | 2. Dashboard | 5/5 | Complete   | 2026-03-01 |
-| 3. Transactions | 0/TBD | Not started | - |
+| 3. Transactions | 0/3 | Not started | - |
 | 4. Analytics | 0/TBD | Not started | - |
 | 5. Insights | 0/TBD | Not started | - |
 | 6. Budgets + Settings | 0/TBD | Not started | - |
