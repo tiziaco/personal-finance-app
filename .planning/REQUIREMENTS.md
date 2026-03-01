@@ -40,7 +40,7 @@
 
 ### Analytics
 
-- [ ] **ANLT-01**: User sees an Analytics page with tabbed navigation (shadcn Tabs component) for each analytics dimension
+- [x] **ANLT-01**: User sees an Analytics page with tabbed navigation (shadcn Tabs component) for each analytics dimension
 - [x] **ANLT-02**: User can view spending by category tab with pie/bar chart and quick date filters (1M / 3M / 6M)
 - [x] **ANLT-03**: User can view income vs expenses tab showing a bar chart by month with a cash flow summary
 - [x] **ANLT-04**: User can view month-over-month trends tab with a line chart comparing spending across months
@@ -144,7 +144,7 @@
 | TXN-08 | Phase 3 — Transactions | Complete |
 | TXN-09 | Phase 3 — Transactions | Complete |
 | TXN-10 | Phase 3 — Transactions | Complete |
-| ANLT-01 | Phase 4 — Analytics | Pending |
+| ANLT-01 | Phase 4 — Analytics | Complete |
 | ANLT-02 | Phase 4 — Analytics | Complete |
 | ANLT-03 | Phase 4 — Analytics | Complete |
 | ANLT-04 | Phase 4 — Analytics | Complete |
