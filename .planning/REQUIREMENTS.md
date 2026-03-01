@@ -27,15 +27,15 @@
 
 ### Transactions
 
-- [ ] **TXN-01**: User can search transactions by merchant name with real-time filtering
+- [x] **TXN-01**: User can search transactions by merchant name with real-time filtering
 - [ ] **TXN-02**: User can filter transactions by date range (start/end date picker)
 - [ ] **TXN-03**: User can filter transactions by category (dropdown showing all available categories)
 - [ ] **TXN-04**: User can filter transactions by amount range (min/max input or slider)
 - [ ] **TXN-05**: User can sort transactions by date (newest first default), amount (high to low), or merchant (A-Z)
 - [ ] **TXN-06**: User sees a paginated transaction table (25 per page) with columns: Checkbox, Date, Merchant, Amount, Category, Confidence Score, Actions
 - [ ] **TXN-07**: User can navigate between pages with "Previous / Page X of Y / Next" controls and a "Showing X-Y of Z transactions" count
-- [ ] **TXN-08**: User can click a transaction's category or edit button to open a category edit modal (shows merchant, amount, date; dropdown for new category; save/cancel)
-- [ ] **TXN-09**: User can select multiple transactions via checkbox and bulk-recategorize them
+- [x] **TXN-08**: User can click a transaction's category or edit button to open a category edit modal (shows merchant, amount, date; dropdown for new category; save/cancel)
+- [x] **TXN-09**: User can select multiple transactions via checkbox and bulk-recategorize them
 - [ ] **TXN-10**: User sees an empty state with illustration and "Upload a CSV file to get started" CTA when no transactions exist
 
 ### Analytics
@@ -134,15 +134,15 @@
 | DASH-06 | Phase 2 — Dashboard | Complete |
 | DASH-07 | Phase 2 — Dashboard | Complete |
 | DASH-08 | Phase 2 — Dashboard | Complete |
-| TXN-01 | Phase 3 — Transactions | Pending |
+| TXN-01 | Phase 3 — Transactions | Complete |
 | TXN-02 | Phase 3 — Transactions | Pending |
 | TXN-03 | Phase 3 — Transactions | Pending |
 | TXN-04 | Phase 3 — Transactions | Pending |
 | TXN-05 | Phase 3 — Transactions | Pending |
 | TXN-06 | Phase 3 — Transactions | Pending |
 | TXN-07 | Phase 3 — Transactions | Pending |
-| TXN-08 | Phase 3 — Transactions | Pending |
-| TXN-09 | Phase 3 — Transactions | Pending |
+| TXN-08 | Phase 3 — Transactions | Complete |
+| TXN-09 | Phase 3 — Transactions | Complete |
 | TXN-10 | Phase 3 — Transactions | Pending |
 | ANLT-01 | Phase 4 — Analytics | Pending |
 | ANLT-02 | Phase 4 — Analytics | Pending |
