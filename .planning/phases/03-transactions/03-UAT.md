@@ -79,5 +79,10 @@ skipped: 0
   reason: "User reported: the bulk category update does work. but i do get an error in the browser: Base UI: A component is changing the uncontrolled value state of Select to be controlled. selectedCategory starts as undefined then gets set to a value when user picks a category. src/app/(app)/transactions/page.tsx (69:9) @ BulkCategoryModal"
   severity: minor
   test: 10
-  artifacts: []
-  missing: []
+  root_cause: "useState<CategoryEnum | undefined>() initializes selectedCategory as undefined — Base UI Select treats undefined value as uncontrolled. When user picks a category it becomes a string (controlled), triggering the warning. Fix: initialize with '' (empty string) and guard handleSave with selectedCategory !== ''"
+  artifacts:
+    - path: "web-app/src/app/(app)/transactions/page.tsx"
+      issue: "line 49: useState<CategoryEnum | undefined>() — should be useState<CategoryEnum | ''>('')"
+  missing:
+    - "Change initial state to '' and update handleSave guard from !selectedCategory to selectedCategory === ''"
+    - "Update handleOpenChange reset to use '' instead of undefined"
