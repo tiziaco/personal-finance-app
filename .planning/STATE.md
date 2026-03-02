@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T16:54:48.363Z"
+last_updated: "2026-03-02T16:55:32.993Z"
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 24
-  completed_plans: 27
+  completed_plans: 28
 ---
 
 # Project State
@@ -68,6 +68,7 @@ Progress: [██████░░░░] 60%
 | Phase 05-insights P02 | 25 | 3 tasks | 6 files |
 | Phase 05-insights P03 | 10 | 2 tasks | 2 files |
 | Phase 06-budgets-settings P01 | 2 | 1 tasks | 2 files |
+| Phase 06-budgets-settings P03 | 2 | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -121,6 +122,9 @@ Progress: [██████░░░░] 60%
 - [Phase 05-insights]: savings_opportunities SECTION_CONFIG filter removed — section-based routing is sufficient when sections are properly discriminated
 - [Phase 05-insights]: getCTAForInsight adds case 'savings' mirroring 'subscriptions' CTA — savings insights link to Review Subscriptions
 - [Phase 06-budgets-settings]: Budgets page is server component placeholder with PiggyBank icon — no interactivity or CTA; no backend budget API available
+- [Phase 06-budgets-settings]: useDeleteAllTransactions paginates with limit=100, breaks when items.length < pageSize — matches backend 100-ID BatchDeleteRequest cap
+- [Phase 06-budgets-settings]: NotificationsSection uses Badge variant=secondary (Coming Soon) instead of Switch — non-functional placeholders should not show false affordance
+- [Phase 06-budgets-settings]: integrations-section.tsx deleted — Google Drive/Slack template leftover with no relevance to personal finance app
 
 ### Pending Todos
 
