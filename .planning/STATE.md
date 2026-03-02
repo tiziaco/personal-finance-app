@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T08:46:23.366Z"
+last_updated: "2026-03-02T09:10:52.661Z"
 progress:
   total_phases: 5
   completed_phases: 5
-  total_plans: 20
-  completed_plans: 25
+  total_plans: 21
+  completed_plans: 26
 ---
 
 # Project State
@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 ## Current Position
 
-Phase: 5 of 7 (Insights) — In Progress
-Plan: 1 of 2 in current phase (05-01 complete)
-Status: Phase 5 in progress — INSGT-01 through INSGT-05 foundations complete; insights building blocks ready for Plan 02 assembly
-Last activity: 2026-03-02 — Plan 05-01 complete (insights-helpers.ts, GenerateButton, InsightCard — all INSGT requirements foundations done)
+Phase: 5 of 7 (Insights) — Complete
+Plan: 3 of 3 in current phase (05-03 complete — gap closure)
+Status: Phase 5 complete — all 3 plans done; tab deduplication bug fixed; INSGT-03 satisfied
+Last activity: 2026-03-02 — Plan 05-03 complete (aggregator.py savings insight + insights-helpers.ts savings_opportunities fix — tab deduplication bug closed)
 
-Progress: [████░░░░░░] 40%
+Progress: [██████░░░░] 60%
 
 ## Performance Metrics
 
@@ -66,6 +66,7 @@ Progress: [████░░░░░░] 40%
 | Phase 04-analytics P04 | 1 | 1 tasks | 1 files |
 | Phase 05-insights P01 | 2 | 3 tasks | 3 files |
 | Phase 05-insights P02 | 25 | 3 tasks | 6 files |
+| Phase 05-insights P03 | 10 | 2 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -115,6 +116,9 @@ Progress: [████░░░░░░] 40%
 - [Phase 05-insights]: InsightCard receives generatedAt from parent (InsightsResponse envelope) — Insight type has no per-insight timestamp field
 - [Phase 05-insights]: SavingsTracker checklist state is useState-only with no persistence — v1 scope; localStorage or server-side persistence deferred
 - [Phase 05-insights]: InsightsPage isEmptyState guards on both isLoading and isFetching — prevents flash of empty state during refetch with existing data
+- [Phase 05-insights]: subscription_savings_opportunity uses section='savings' as sole discriminator between Recurring Charges and Savings Opportunities tabs — no filter predicate needed
+- [Phase 05-insights]: savings_opportunities SECTION_CONFIG filter removed — section-based routing is sufficient when sections are properly discriminated
+- [Phase 05-insights]: getCTAForInsight adds case 'savings' mirroring 'subscriptions' CTA — savings insights link to Review Subscriptions
 
 ### Pending Todos
 
