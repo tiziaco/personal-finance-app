@@ -116,7 +116,12 @@ Plans:
   3. User can toggle between Light, Dark, and System themes from Settings and the change takes effect immediately
   4. User can click "Delete All Transactions" in Settings, confirm via a modal, and have all transactions removed
   5. User sees non-functional Notification Preferences toggles (email, budget alerts, newsletter) as placeholders in Settings
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Budgets placeholder page at /budgets + nav item (BUDG-01) [Wave 1]
+- [ ] 06-02-PLAN.md — DateFormatProvider + useFormatDate hook + GeneralSection date format picker (SETT-02, SETT-03) [Wave 1]
+- [ ] 06-03-PLAN.md — useDeleteAllTransactions + DataSection AlertDialog + NotificationsSection + settings nav cleanup (SETT-04, SETT-05) [Wave 1]
 
 ### Phase 7: Polish
 **Goal**: The app looks and works correctly on every device and in both light and dark mode, with consistent design tokens, toast feedback, and skeleton loading states throughout
@@ -142,5 +147,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
 | 4. Analytics | 5/5 | Complete   | 2026-03-01 |
 | 5. Insights | 2/3 | In Progress|  |
-| 6. Budgets + Settings | 0/TBD | Not started | - |
+| 6. Budgets + Settings | 0/3 | Not started | - |
 | 7. Polish | 0/TBD | Not started | - |
