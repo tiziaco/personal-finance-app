@@ -54,8 +54,8 @@
 - [x] **INSGT-03**: The Generate button is disabled with a countdown timer ("Refreshes in XX minutes") for 1 hour after last generation
 - [x] **INSGT-04**: User sees insight cards organized by category (Spending Patterns, Recurring Charges, Savings Opportunities, Anomalies, Comparisons) — implemented as tabs or accordion
 - [x] **INSGT-05**: Each insight card shows: title, icon, description (2-3 sentences), a highlighted key metric, an optional action CTA, and a "Generated at [time]" timestamp
-- [ ] **INSGT-06**: User sees a savings tracker showing total potential monthly savings across all actionable insights, with a checkbox list to mark recommendations as done
-- [ ] **INSGT-07**: User sees an empty state with illustration and "Generate Insights" CTA when no insights have been generated yet
+- [x] **INSGT-06**: User sees a savings tracker showing total potential monthly savings across all actionable insights, with a checkbox list to mark recommendations as done
+- [x] **INSGT-07**: User sees an empty state with illustration and "Generate Insights" CTA when no insights have been generated yet
 
 ### Budgets
 
@@ -155,8 +155,8 @@
 | INSGT-03 | Phase 5 — Insights | Complete |
 | INSGT-04 | Phase 5 — Insights | Complete |
 | INSGT-05 | Phase 5 — Insights | Complete |
-| INSGT-06 | Phase 5 — Insights | Pending |
-| INSGT-07 | Phase 5 — Insights | Pending |
+| INSGT-06 | Phase 5 — Insights | Complete |
+| INSGT-07 | Phase 5 — Insights | Complete |
 | BUDG-01 | Phase 6 — Budgets + Settings | Pending |
 | SETT-01 | Phase 6 — Budgets + Settings | Pending |
 | SETT-02 | Phase 6 — Budgets + Settings | Pending |

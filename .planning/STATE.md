@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T08:31:02.601Z"
+last_updated: "2026-03-02T08:43:12.637Z"
 progress:
   total_phases: 5
-  completed_phases: 4
+  completed_phases: 5
   total_plans: 20
-  completed_plans: 24
+  completed_plans: 25
 ---
 
 # Project State
@@ -65,6 +65,7 @@ Progress: [████░░░░░░] 40%
 | Phase 04-analytics P05 | 3 | 1 tasks | 1 files |
 | Phase 04-analytics P04 | 1 | 1 tasks | 1 files |
 | Phase 05-insights P01 | 2 | 3 tasks | 3 files |
+| Phase 05-insights P02 | 25 | 3 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -112,6 +113,8 @@ Progress: [████░░░░░░] 40%
 - [Phase 05-insights]: formatCurrency inlined in insights-helpers.ts — @/lib/utils only exports cn; no formatCurrency exists
 - [Phase 05-insights]: GenerateButton has no props — self-contained component managing cooldown state internally for clean composition in Plan 02
 - [Phase 05-insights]: InsightCard receives generatedAt from parent (InsightsResponse envelope) — Insight type has no per-insight timestamp field
+- [Phase 05-insights]: SavingsTracker checklist state is useState-only with no persistence — v1 scope; localStorage or server-side persistence deferred
+- [Phase 05-insights]: InsightsPage isEmptyState guards on both isLoading and isFetching — prevents flash of empty state during refetch with existing data
 
 ### Pending Todos
 
