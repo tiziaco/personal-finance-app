@@ -3,6 +3,7 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from '@clerk/nextjs'
 import { QueryProvider } from "@/providers/query-provider";
+import { DateFormatProvider } from "@/providers/date-format-provider";
 
 import type { Metadata } from "next";
 import "@/styles/globals.css";
@@ -41,8 +42,10 @@ export default function RootLayout({
                 enableSystem
               disableTransitionOnChange
           >
-            {children}
-            <Toaster position="bottom-right" />
+            <DateFormatProvider>
+              {children}
+              <Toaster position="bottom-right" />
+            </DateFormatProvider>
           </ThemeProvider>
           </QueryProvider>
         </body>

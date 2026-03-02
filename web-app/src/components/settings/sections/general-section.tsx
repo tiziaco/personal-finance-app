@@ -5,9 +5,17 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
+import { useDateFormat, type DateFormat } from "@/providers/date-format-provider"
+
+const FORMAT_OPTIONS = [
+  { value: "de-DE" as DateFormat, label: "DD/MM/YYYY", example: "27.02.2026" },
+  { value: "en-US" as DateFormat, label: "MM/DD/YYYY", example: "02/27/2026" },
+  { value: "sv-SE" as DateFormat, label: "YYYY-MM-DD", example: "2026-02-27" },
+]
 
 export function GeneralSection() {
   const { theme, setTheme } = useTheme();
+  const { dateFormat, setDateFormat } = useDateFormat()
 
   // Capitalize the theme for display
   const displayTheme = theme ? theme.charAt(0).toUpperCase() + theme.slice(1) : "";
@@ -59,6 +67,29 @@ export function GeneralSection() {
                   System
                 </div>
               </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </SettingSection>
+      <SettingSection title="Regional">
+        <div className="flex items-center justify-between">
+          <Label>Date Format</Label>
+          <Select
+            value={dateFormat}
+            onValueChange={(value) => { if (value) setDateFormat(value as DateFormat) }}
+          >
+            <SelectTrigger className="w-34">
+              <SelectValue>
+                {FORMAT_OPTIONS.find(o => o.value === dateFormat)?.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="min-w-40 max-w-40">
+              {FORMAT_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  <span>{opt.label}</span>
+                  <span className="text-muted-foreground text-xs ml-2">{opt.example}</span>
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
