@@ -99,7 +99,11 @@ Plans:
   3. User sees insight cards organized into categories (Spending Patterns, Recurring Charges, Savings Opportunities, Anomalies, Comparisons) with title, icon, description, key metric, optional CTA, and timestamp
   4. User sees a savings tracker showing total potential monthly savings with a checklist to mark recommendations as done
   5. User sees an empty state with illustration and "Generate Insights" CTA when no insights exist yet
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — insights-helpers.ts (section mapping, metric extraction) + GenerateButton (refetch + localStorage cooldown) + InsightCard [Wave 1]
+- [ ] 05-02-PLAN.md — InsightCategoryTabs + SavingsTracker + InsightsEmptyState + InsightsPage at /insights + nav + callout link fixes [Wave 2]
 
 ### Phase 6: Budgets + Settings
 **Goal**: The Budgets page communicates future intent without misleading users, and Settings lets users control their currency, date format, theme, and data — all without breaking the existing settings modal
@@ -136,6 +140,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Dashboard | 5/5 | Complete   | 2026-03-01 |
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
 | 4. Analytics | 5/5 | Complete   | 2026-03-01 |
-| 5. Insights | 0/TBD | Not started | - |
+| 5. Insights | 0/2 | Not started | - |
 | 6. Budgets + Settings | 0/TBD | Not started | - |
 | 7. Polish | 0/TBD | Not started | - |
