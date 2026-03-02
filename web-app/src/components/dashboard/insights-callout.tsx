@@ -43,7 +43,7 @@ export function InsightsCallout() {
             </p>
             {/* DASH-07: "Generate New Insights" button in empty state */}
             <Link
-              href="/stats"
+              href="/insights"
               className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
             >
               Generate New Insights
@@ -71,7 +71,7 @@ export function InsightsCallout() {
             </div>
             {/* DASH-06: "Generate New Insights" also present in non-empty state */}
             <Link
-              href="/stats"
+              href="/insights"
               className={cn(buttonVariants({ variant: 'outline', size: 'sm' }), 'w-full')}
             >
               Generate New Insights
@@ -88,7 +88,7 @@ export function InsightsCallout() {
             Upload CSV
           </Link>
           <Link
-            href="/stats"
+            href="/insights"
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >
             View Insights
