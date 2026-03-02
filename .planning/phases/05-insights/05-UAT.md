@@ -1,5 +1,5 @@
 ---
-status: complete
+status: diagnosed
 phase: 05-insights
 source: 05-01-SUMMARY.md, 05-02-SUMMARY.md
 started: 2026-03-02T08:50:00Z
@@ -61,7 +61,12 @@ skipped: 0
   reason: "User reported: 'Recurring charges' and 'Saving opportunities' tabs show the same insight 'Recurring expenses account for...'"
   severity: major
   test: 6
-  root_cause: ""
-  artifacts: []
-  missing: []
+  root_cause: "Both SECTION_CONFIG entries ('recurring_charges' and 'savings_opportunities') use sections: ['subscriptions']. The savings_opportunities filter checks typeof insight.supporting_metrics?.monthly_cost === 'number', but monthly_cost is present on every subscription insight (backend always emits it), so the filter never excludes anything — both tabs return the identical insight list."
+  artifacts:
+    - path: "web-app/src/lib/insights-helpers.ts"
+      issue: "Lines 17-32: savings_opportunities filter predicate matches every subscription insight because monthly_cost is always present"
+    - path: "server/app/agents/insights/aggregator.py"
+      issue: "Lines 95-108: subscription insight always includes monthly_cost in supporting_metrics, making the filter non-discriminating"
+  missing:
+    - "Backend needs to emit a distinct section value (e.g. 'savings') for savings-oriented insights, OR frontend filter must discriminate on a field that is only present on a true subset of subscription insights"
   debug_session: ""
