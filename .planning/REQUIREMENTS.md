@@ -49,11 +49,11 @@
 
 ### Insights
 
-- [ ] **INSGT-01**: User sees a prominent "Generate New Insights" button at the top of the Insights page
-- [ ] **INSGT-02**: User sees a loading spinner and disabled button state while insights are generating
-- [ ] **INSGT-03**: The Generate button is disabled with a countdown timer ("Refreshes in XX minutes") for 1 hour after last generation
-- [ ] **INSGT-04**: User sees insight cards organized by category (Spending Patterns, Recurring Charges, Savings Opportunities, Anomalies, Comparisons) — implemented as tabs or accordion
-- [ ] **INSGT-05**: Each insight card shows: title, icon, description (2-3 sentences), a highlighted key metric, an optional action CTA, and a "Generated at [time]" timestamp
+- [x] **INSGT-01**: User sees a prominent "Generate New Insights" button at the top of the Insights page
+- [x] **INSGT-02**: User sees a loading spinner and disabled button state while insights are generating
+- [x] **INSGT-03**: The Generate button is disabled with a countdown timer ("Refreshes in XX minutes") for 1 hour after last generation
+- [x] **INSGT-04**: User sees insight cards organized by category (Spending Patterns, Recurring Charges, Savings Opportunities, Anomalies, Comparisons) — implemented as tabs or accordion
+- [x] **INSGT-05**: Each insight card shows: title, icon, description (2-3 sentences), a highlighted key metric, an optional action CTA, and a "Generated at [time]" timestamp
 - [ ] **INSGT-06**: User sees a savings tracker showing total potential monthly savings across all actionable insights, with a checkbox list to mark recommendations as done
 - [ ] **INSGT-07**: User sees an empty state with illustration and "Generate Insights" CTA when no insights have been generated yet
 
@@ -150,11 +150,11 @@
 | ANLT-04 | Phase 4 — Analytics | Complete |
 | ANLT-05 | Phase 4 — Analytics | Complete |
 | ANLT-06 | Phase 4 — Analytics | Complete |
-| INSGT-01 | Phase 5 — Insights | Pending |
-| INSGT-02 | Phase 5 — Insights | Pending |
-| INSGT-03 | Phase 5 — Insights | Pending |
-| INSGT-04 | Phase 5 — Insights | Pending |
-| INSGT-05 | Phase 5 — Insights | Pending |
+| INSGT-01 | Phase 5 — Insights | Complete |
+| INSGT-02 | Phase 5 — Insights | Complete |
+| INSGT-03 | Phase 5 — Insights | Complete |
+| INSGT-04 | Phase 5 — Insights | Complete |
+| INSGT-05 | Phase 5 — Insights | Complete |
 | INSGT-06 | Phase 5 — Insights | Pending |
 | INSGT-07 | Phase 5 — Insights | Pending |
 | BUDG-01 | Phase 6 — Budgets + Settings | Pending |

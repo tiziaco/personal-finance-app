@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-01T20:21:26.574Z"
+last_updated: "2026-03-02T08:31:02.601Z"
 progress:
-  total_phases: 4
+  total_phases: 5
   completed_phases: 4
-  total_plans: 18
-  completed_plans: 23
+  total_plans: 20
+  completed_plans: 24
 ---
 
 # Project State
@@ -22,10 +22,10 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 ## Current Position
 
-Phase: 4 of 7 (Analytics) — Complete
-Plan: 3 of 3 in current phase (04-03 complete)
-Status: Phase 4 complete — all six ANLT requirements satisfied; AnalyticsPage at /stats fully integrated
-Last activity: 2026-03-01 — Plan 04-03 complete (AnalyticsPage — ANLT-01 through ANLT-06 all done)
+Phase: 5 of 7 (Insights) — In Progress
+Plan: 1 of 2 in current phase (05-01 complete)
+Status: Phase 5 in progress — INSGT-01 through INSGT-05 foundations complete; insights building blocks ready for Plan 02 assembly
+Last activity: 2026-03-02 — Plan 05-01 complete (insights-helpers.ts, GenerateButton, InsightCard — all INSGT requirements foundations done)
 
 Progress: [████░░░░░░] 40%
 
@@ -64,6 +64,7 @@ Progress: [████░░░░░░] 40%
 | Phase 04-analytics P03 | 3 | 1 tasks | 1 files |
 | Phase 04-analytics P05 | 3 | 1 tasks | 1 files |
 | Phase 04-analytics P04 | 1 | 1 tasks | 1 files |
+| Phase 05-insights P01 | 2 | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -107,6 +108,10 @@ Progress: [████░░░░░░] 40%
 - [Phase 04-analytics]: Build per-month stats from trends['monthly_trend'] instead of flat aggregate — monthly_trend has per-month rows sorted by year/month
 - [Phase 04-analytics]: Multiply expense_mom_growth by 100 at backend — Polars pct_change() returns decimal ratio; frontend renders .toFixed(1)+'%' so values must be in percentage units
 - [Phase 04-analytics]: Recharts <Pie> ring component owns data/cx/cy/outerRadius props — <PieChart> container takes no data props; Cell elements are children of <Pie> not <PieChart>
+- [Phase 05-insights]: SECTION_CONFIG uses filter predicate for savings_opportunities — backend has no savings section; derived from subscriptions where monthly_cost is number
+- [Phase 05-insights]: formatCurrency inlined in insights-helpers.ts — @/lib/utils only exports cn; no formatCurrency exists
+- [Phase 05-insights]: GenerateButton has no props — self-contained component managing cooldown state internally for clean composition in Plan 02
+- [Phase 05-insights]: InsightCard receives generatedAt from parent (InsightsResponse envelope) — Insight type has no per-insight timestamp field
 
 ### Pending Todos
 
@@ -120,6 +125,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-01
-Stopped at: Completed 04-analytics-04-PLAN.md (PieChart Recharts Pie ring fix — ANLT-03 gap closure complete)
+Last session: 2026-03-02
+Stopped at: Completed 05-insights-01-PLAN.md (insights-helpers.ts, GenerateButton, InsightCard — INSGT-01 through INSGT-05 foundations complete)
 Resume file: None
