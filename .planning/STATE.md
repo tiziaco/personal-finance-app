@@ -3,7 +3,7 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T16:56:16.464Z"
+last_updated: "2026-03-02T17:02:36.928Z"
 progress:
   total_phases: 6
   completed_phases: 6
@@ -129,6 +129,7 @@ Progress: [██████░░░░] 60%
 - [Phase 06-budgets-settings]: useEffect localStorage read after mount avoids SSR hydration mismatch without suppressHydrationWarning
 - [Phase 06-budgets-settings]: Shadow import pattern (const formatDate = useFormatDate()) migrates call sites with zero JSX changes
 - [Phase 06-budgets-settings]: sv-SE locale used for YYYY-MM-DD ordering (standard Intl workaround confirmed in RESEARCH.md)
+- [Phase 06-budgets-settings]: Budgets page is server component placeholder with PiggyBank icon — no interactivity or CTA; no backend budget API available
 
 ### Pending Todos
 
