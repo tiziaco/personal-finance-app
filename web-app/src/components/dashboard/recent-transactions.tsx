@@ -6,10 +6,12 @@ import { TableSkeleton } from '@/components/shared/skeletons/table-skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { buttonVariants } from '@/components/ui/button'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
+import { useFormatDate } from '@/hooks/use-date-format'
 import { cn } from '@/lib/utils'
 
 export function RecentTransactions() {
+  const formatDate = useFormatDate()
   const { data, isLoading } = useTransactions({ sort_by: 'date', sort_order: 'desc', limit: 10 }, 0)
 
   if (isLoading) return <TableSkeleton rows={10} columns={4} />

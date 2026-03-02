@@ -17,7 +17,8 @@ import {
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { useUpdateTransaction } from '@/hooks/use-transaction-mutations'
-import { formatCurrency, formatDate } from '@/lib/format'
+import { formatCurrency } from '@/lib/format'
+import { useFormatDate } from '@/hooks/use-date-format'
 import { type CategoryEnum, type TransactionResponse, CATEGORY_OPTIONS } from '@/types/transaction'
 
 interface CategoryEditModalProps {
@@ -27,6 +28,7 @@ interface CategoryEditModalProps {
 }
 
 export function CategoryEditModal({ transaction, open, onOpenChange }: CategoryEditModalProps) {
+  const formatDate = useFormatDate()
   const [selectedCategory, setSelectedCategory] = useState<CategoryEnum | undefined>()
   const { mutate, isPending } = useUpdateTransaction()
 
