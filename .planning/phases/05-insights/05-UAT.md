@@ -1,9 +1,9 @@
 ---
-status: diagnosed
+status: resolved
 phase: 05-insights
 source: 05-01-SUMMARY.md, 05-02-SUMMARY.md
 started: 2026-03-02T08:50:00Z
-updated: 2026-03-02T09:10:00Z
+updated: 2026-03-02T10:30:00Z
 ---
 
 ## Current Test
@@ -57,7 +57,7 @@ skipped: 0
 ## Gaps
 
 - truth: "Each category tab shows only insights belonging to that category — Recurring Charges and Savings Opportunities tabs show distinct, correctly filtered insights"
-  status: failed
+  status: resolved
   reason: "User reported: 'Recurring charges' and 'Saving opportunities' tabs show the same insight 'Recurring expenses account for...'"
   severity: major
   test: 6
