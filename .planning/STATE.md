@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T16:55:32.993Z"
+last_updated: "2026-03-02T16:56:16.464Z"
 progress:
   total_phases: 6
-  completed_phases: 5
+  completed_phases: 6
   total_plans: 24
-  completed_plans: 28
+  completed_plans: 29
 ---
 
 # Project State
@@ -69,6 +69,7 @@ Progress: [██████░░░░] 60%
 | Phase 05-insights P03 | 10 | 2 tasks | 2 files |
 | Phase 06-budgets-settings P01 | 2 | 1 tasks | 2 files |
 | Phase 06-budgets-settings P03 | 2 | 2 tasks | 5 files |
+| Phase 06-budgets-settings P02 | 2 | 3 tasks | 7 files |
 
 ## Accumulated Context
 
@@ -125,6 +126,9 @@ Progress: [██████░░░░] 60%
 - [Phase 06-budgets-settings]: useDeleteAllTransactions paginates with limit=100, breaks when items.length < pageSize — matches backend 100-ID BatchDeleteRequest cap
 - [Phase 06-budgets-settings]: NotificationsSection uses Badge variant=secondary (Coming Soon) instead of Switch — non-functional placeholders should not show false affordance
 - [Phase 06-budgets-settings]: integrations-section.tsx deleted — Google Drive/Slack template leftover with no relevance to personal finance app
+- [Phase 06-budgets-settings]: useEffect localStorage read after mount avoids SSR hydration mismatch without suppressHydrationWarning
+- [Phase 06-budgets-settings]: Shadow import pattern (const formatDate = useFormatDate()) migrates call sites with zero JSX changes
+- [Phase 06-budgets-settings]: sv-SE locale used for YYYY-MM-DD ordering (standard Intl workaround confirmed in RESEARCH.md)
 
 ### Pending Todos
 

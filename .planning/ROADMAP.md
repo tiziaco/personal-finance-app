@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 3: Transactions** - Filterable/searchable paginated table with category editing and bulk actions (completed 2026-03-01)
 - [x] **Phase 4: Analytics** - Four-tab analytics page with lazy-loaded charts for each spending dimension (completed 2026-03-01)
 - [ ] **Phase 5: Insights** - AI insight cards, savings tracker, and regenerate button with cooldown
-- [ ] **Phase 6: Budgets + Settings** - Budgets placeholder and Settings enhancements (currency, date format, theme, delete data)
+- [x] **Phase 6: Budgets + Settings** - Budgets placeholder and Settings enhancements (currency, date format, theme, delete data) (completed 2026-03-02)
 - [ ] **Phase 7: Polish** - Dark mode, mobile responsiveness, design system tokens, and final QA
 
 ## Phase Details
@@ -147,5 +147,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
 | 4. Analytics | 5/5 | Complete   | 2026-03-01 |
 | 5. Insights | 2/3 | In Progress|  |
-| 6. Budgets + Settings | 1/3 | In Progress|  |
+| 6. Budgets + Settings | 3/3 | Complete   | 2026-03-02 |
 | 7. Polish | 0/TBD | Not started | - |
