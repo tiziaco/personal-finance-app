@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Settings, Plug, Database, Cog } from "lucide-react"
+import { Settings, Bell, Database, Cog } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -17,10 +17,10 @@ import {
 } from "@/components/ui/sidebar"
 import { ServerHealthIndicator } from "@/components/settings/server-status"
 import { GeneralSection } from "./sections/general-section"
-import { IntegrationsSection } from "./sections/integrations-section"
+import { NotificationsSection } from "./sections/notifications-section"
 import { DataSection } from "./sections/data-section"
 
-type SettingsSection = "general" | "integrations" | "data"
+type SettingsSection = "general" | "notifications" | "data"
 
 interface NavItem {
   id: SettingsSection
@@ -30,7 +30,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: "general", label: "General", icon: <Settings className="w-5 h-5" /> },
-  { id: "integrations", label: "Integrations", icon: <Plug className="w-5 h-5" /> },
+  { id: "notifications", label: "Notifications", icon: <Bell className="w-5 h-5" /> },
   { id: "data", label: "Data", icon: <Database className="w-5 h-5" /> },
 ]
 
@@ -41,8 +41,8 @@ export function SettingsDialog({ children }: { children?: React.ReactElement }) 
     switch (activeSection) {
       case "general":
         return <GeneralSection />
-      case "integrations":
-        return <IntegrationsSection />
+      case "notifications":
+        return <NotificationsSection />
       case "data":
         return <DataSection />
       default:

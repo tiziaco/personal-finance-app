@@ -3,10 +3,64 @@
 import { SettingSection } from "@/components/ui/setting-section"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
+import { useDeleteAllTransactions } from "@/hooks/use-delete-all-transactions"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export function DataSection() {
+  const deleteAll = useDeleteAllTransactions()
+
   return (
     <div className="space-y-6">
+
+      <SettingSection title="Transactions">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-sm text-muted-foreground">
+            Permanently remove all your transaction history
+          </p>
+          <AlertDialog>
+            <AlertDialogTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-red-500 text-red-500 hover:text-red-500 hover:bg-red-50 shrink-0"
+                >
+                  Delete All Transactions
+                </Button>
+              }
+            />
+            <AlertDialogContent size="sm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete all transactions?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently remove all your transaction history. This
+                  action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  variant="destructive"
+                  onClick={() => deleteAll.mutate()}
+                  disabled={deleteAll.isPending}
+                >
+                  {deleteAll.isPending ? "Deleting…" : "Delete all"}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
+      </SettingSection>
 
       <SettingSection title="Data Management">
         <div className="flex items-center justify-between gap-4">
