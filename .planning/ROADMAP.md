@@ -147,5 +147,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
 | 4. Analytics | 5/5 | Complete   | 2026-03-01 |
 | 5. Insights | 2/3 | In Progress|  |
-| 6. Budgets + Settings | 0/3 | Not started | - |
+| 6. Budgets + Settings | 1/3 | In Progress|  |
 | 7. Polish | 0/TBD | Not started | - |

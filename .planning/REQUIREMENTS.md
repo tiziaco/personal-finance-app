@@ -59,7 +59,7 @@
 
 ### Budgets
 
-- [ ] **BUDG-01**: User sees a Budgets page with a prominent "Coming Soon" message and brief description of what budgets will offer
+- [x] **BUDG-01**: User sees a Budgets page with a prominent "Coming Soon" message and brief description of what budgets will offer
 
 ### Settings Enhancements
 
@@ -157,7 +157,7 @@
 | INSGT-05 | Phase 5 — Insights | Complete |
 | INSGT-06 | Phase 5 — Insights | Complete |
 | INSGT-07 | Phase 5 — Insights | Complete |
-| BUDG-01 | Phase 6 — Budgets + Settings | Pending |
+| BUDG-01 | Phase 6 — Budgets + Settings | Complete |
 | SETT-01 | Phase 6 — Budgets + Settings | Pending |
 | SETT-02 | Phase 6 — Budgets + Settings | Pending |
 | SETT-03 | Phase 6 — Budgets + Settings | Pending |
