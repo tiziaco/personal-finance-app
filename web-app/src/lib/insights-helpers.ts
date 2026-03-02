@@ -24,11 +24,9 @@ export const SECTION_CONFIG = [
     key: 'savings_opportunities',
     label: 'Savings Opportunities',
     icon: PiggyBank,
-    sections: ['subscriptions'] as string[],
-    // Savings Opportunities = subscription insights that have monthly_cost
-    // NOTE: backend has no "savings" section — derived from subscriptions with monthly_cost
-    filter: (insight: Insight) =>
-      typeof insight.supporting_metrics?.monthly_cost === 'number',
+    sections: ['savings'] as string[],
+    // backend emits section='savings' for savings-action insights, distinct from section='subscriptions' (Recurring Charges)
+    filter: undefined as ((insight: Insight) => boolean) | undefined,
   },
   {
     key: 'anomalies',
@@ -166,6 +164,11 @@ export function getCTAForInsight(
   insight: Insight,
 ): { label: string; href: string } | null {
   switch (insight.section) {
+    case 'savings':
+      return {
+        label: 'Review Subscriptions',
+        href: '/transactions?category=Subscriptions',
+      }
     case 'subscriptions':
       return {
         label: 'Review Subscriptions',
