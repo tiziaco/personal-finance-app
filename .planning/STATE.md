@@ -22,12 +22,12 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 
 ## Current Position
 
-Phase: 5 of 7 (Insights) — Complete
-Plan: 3 of 3 in current phase (05-03 complete — gap closure)
-Status: Phase 5 complete — all 3 plans done; tab deduplication bug fixed; INSGT-03 satisfied
-Last activity: 2026-03-02 — Plan 05-03 complete (aggregator.py savings insight + insights-helpers.ts savings_opportunities fix — tab deduplication bug closed)
+Phase: 7 of 7 (Polish) — In progress
+Plan: 3 of 5 in current phase (07-03 complete — mobile sidebar trigger, tap targets, chart overflow fix)
+Status: Phase 7 plan 03 complete — DESGN-03, DESGN-04, DESGN-05 resolved; SidebarTrigger standard shadcn pattern; pie chart overflow fixed at md
+Last activity: 2026-03-03 — Plan 07-03 complete (revert custom mobile header to standard shadcn SidebarTrigger; fix spending-by-category chart overflow at md breakpoint)
 
-Progress: [██████░░░░] 60%
+Progress: [███████░░░] 70%
 
 ## Performance Metrics
 
@@ -71,6 +71,7 @@ Progress: [██████░░░░] 60%
 | Phase 06-budgets-settings P03 | 2 | 2 tasks | 5 files |
 | Phase 06-budgets-settings P02 | 2 | 3 tasks | 7 files |
 | Phase 07-polish P01 | 1 | 2 tasks | 6 files |
+| Phase 07-polish P03 | 30 | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -133,6 +134,8 @@ Progress: [██████░░░░] 60%
 - [Phase 06-budgets-settings]: Budgets page is server component placeholder with PiggyBank icon — no interactivity or CTA; no backend budget API available
 - [Phase 07-polish]: OKLCH bare values used for --success/--warning tokens — no hsl() wrapper per STATE.md v4 decision
 - [Phase 07-polish]: hover:bg-destructive/10 pattern replaces hover:bg-red-50 — opacity modifier adapts automatically in dark mode
+- [Phase 07-polish]: SidebarTrigger placed inline inside SidebarInset without breakpoint wrapper — shadcn's toggleSidebar() calls setOpenMobile() on mobile (Sheet drawer) and collapses inline on desktop; no custom md:hidden header needed
+- [Phase 07-polish]: PieChart max-h-[280px] w-full constrains Recharts ResponsiveContainer within grid card at md breakpoint — fixed outerRadius overflows when two-column grid narrows cards
 
 ### Pending Todos
 
@@ -146,6 +149,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-02
-Stopped at: Completed 05-insights-01-PLAN.md (insights-helpers.ts, GenerateButton, InsightCard — INSGT-01 through INSGT-05 foundations complete)
+Last session: 2026-03-03
+Stopped at: Completed 07-polish-03-PLAN.md (SidebarTrigger standard shadcn pattern; 48px tap targets; pie chart overflow fix at md breakpoint — DESGN-03, DESGN-04, DESGN-05 complete)
 Resume file: None
