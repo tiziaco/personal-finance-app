@@ -92,8 +92,8 @@ export function SpendingByCategoryTab({ enabled }: SpendingByCategoryTabProps) {
               <CardHeader>
                 <CardTitle>Spending by Category</CardTitle>
               </CardHeader>
-              <CardContent>
-                <PieChart data={chartData} config={config} showLegend />
+              <CardContent className="min-h-0">
+                <PieChart data={chartData} config={config} showLegend className="max-h-[280px] w-full" />
               </CardContent>
             </Card>
           </ErrorBoundary>
