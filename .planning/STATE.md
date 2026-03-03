@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T09:34:30.319Z"
+last_updated: "2026-03-03T10:11:41.917Z"
 progress:
   total_phases: 7
   completed_phases: 6
   total_plans: 29
-  completed_plans: 31
+  completed_plans: 32
 ---
 
 # Project State
@@ -23,9 +23,9 @@ See: .planning/PROJECT.md (updated 2026-02-27)
 ## Current Position
 
 Phase: 7 of 7 (Polish) — In progress
-Plan: 3 of 5 in current phase (07-03 complete — mobile sidebar trigger, tap targets, chart overflow fix)
-Status: Phase 7 plan 03 complete — DESGN-03, DESGN-04, DESGN-05 resolved; SidebarTrigger standard shadcn pattern; pie chart overflow fixed at md
-Last activity: 2026-03-03 — Plan 07-03 complete (revert custom mobile header to standard shadcn SidebarTrigger; fix spending-by-category chart overflow at md breakpoint)
+Plan: 4 of 5 in current phase (07-02 complete — CurrencyProvider, useFormatCurrency hook, Settings currency dropdown, 8 call-site migrations)
+Status: Phase 7 plan 02 complete — SETT-01 resolved; CurrencyProvider with EUR/USD/GBP/CHF; all monetary displays now reactive to currency preference
+Last activity: 2026-03-03 — Plan 07-02 complete (CurrencyProvider mirroring DateFormatProvider; useFormatCurrency shadow-import hook; Settings dropdown; 8 component migrations)
 
 Progress: [███████░░░] 70%
 
@@ -72,6 +72,7 @@ Progress: [███████░░░] 70%
 | Phase 06-budgets-settings P02 | 2 | 3 tasks | 7 files |
 | Phase 07-polish P01 | 1 | 2 tasks | 6 files |
 | Phase 07-polish P03 | 30 | 3 tasks | 4 files |
+| Phase 07-polish P02 | 3 | 3 tasks | 10 files |
 
 ## Accumulated Context
 
@@ -136,6 +137,8 @@ Progress: [███████░░░] 70%
 - [Phase 07-polish]: hover:bg-destructive/10 pattern replaces hover:bg-red-50 — opacity modifier adapts automatically in dark mode
 - [Phase 07-polish]: SidebarTrigger placed inline inside SidebarInset without breakpoint wrapper — shadcn's toggleSidebar() calls setOpenMobile() on mobile (Sheet drawer) and collapses inline on desktop; no custom md:hidden header needed
 - [Phase 07-polish]: PieChart max-h-[280px] w-full constrains Recharts ResponsiveContainer within grid card at md breakpoint — fixed outerRadius overflows when two-column grid narrows cards
+- [Phase 07-polish]: LOCALE_MAP ties Currency to Intl locale (EUR->de-DE, USD->en-US, GBP->en-GB, CHF->de-CH) for culturally correct formatting
+- [Phase 07-polish]: Shadow-import hook pattern (const formatCurrency = useFormatCurrency()) enables zero-JSX-change migration at all call sites
 
 ### Pending Todos
 
@@ -150,5 +153,5 @@ None yet.
 ## Session Continuity
 
 Last session: 2026-03-03
-Stopped at: Completed 07-polish-03-PLAN.md (SidebarTrigger standard shadcn pattern; 48px tap targets; pie chart overflow fix at md breakpoint — DESGN-03, DESGN-04, DESGN-05 complete)
+Stopped at: Completed 07-polish-02-PLAN.md (CurrencyProvider, useFormatCurrency hook, Settings currency dropdown, 8 call-site migrations — SETT-01 complete)
 Resume file: None

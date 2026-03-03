@@ -63,7 +63,7 @@
 
 ### Settings Enhancements
 
-- [ ] **SETT-01**: User can set currency preference (dropdown: EUR default, plus USD, GBP, etc.) in Settings
+- [x] **SETT-01**: User can set currency preference (dropdown: EUR default, plus USD, GBP, etc.) in Settings
 - [x] **SETT-02**: User can set date format preference (DD/MM/YYYY default, plus MM/DD/YYYY, YYYY-MM-DD)
 - [x] **SETT-03**: User can toggle theme between Light / Dark / System from Settings
 - [x] **SETT-04**: User can delete all transactions from Settings (red button requiring confirmation modal)
@@ -158,7 +158,7 @@
 | INSGT-06 | Phase 5 — Insights | Complete |
 | INSGT-07 | Phase 5 — Insights | Complete |
 | BUDG-01 | Phase 6 — Budgets + Settings | Complete |
-| SETT-01 | Phase 7 — Polish | Pending |
+| SETT-01 | Phase 7 — Polish | Complete |
 | SETT-02 | Phase 6 — Budgets + Settings | Complete |
 | SETT-03 | Phase 6 — Budgets + Settings | Complete |
 | SETT-04 | Phase 6 — Budgets + Settings | Complete |
