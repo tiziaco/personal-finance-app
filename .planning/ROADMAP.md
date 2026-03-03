@@ -102,9 +102,9 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — insights-helpers.ts (section mapping, metric extraction) + GenerateButton (refetch + localStorage cooldown) + InsightCard [Wave 1]
-- [ ] 05-02-PLAN.md — InsightCategoryTabs + SavingsTracker + InsightsEmptyState + InsightsPage at /insights + nav + callout link fixes [Wave 2]
-- [ ] 05-03-PLAN.md — Gap closure: Fix Recurring Charges / Savings Opportunities tab deduplication (INSGT-03) [Wave 1]
+- [x] 05-01-PLAN.md — insights-helpers.ts (section mapping, metric extraction) + GenerateButton (refetch + localStorage cooldown) + InsightCard [Wave 1]
+- [x] 05-02-PLAN.md — InsightCategoryTabs + SavingsTracker + InsightsEmptyState + InsightsPage at /insights + nav + callout link fixes [Wave 2]
+- [x] 05-03-PLAN.md — Gap closure: Fix Recurring Charges / Savings Opportunities tab deduplication (INSGT-03) [Wave 1]
 
 ### Phase 6: Budgets + Settings
 **Goal**: The Budgets page communicates future intent without misleading users, and Settings lets users control their date format, theme, and data — all without breaking the existing settings modal
@@ -146,6 +146,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5 → 6 → 7
 | 2. Dashboard | 5/5 | Complete   | 2026-03-01 |
 | 3. Transactions | 3/3 | Complete   | 2026-03-01 |
 | 4. Analytics | 5/5 | Complete   | 2026-03-01 |
-| 5. Insights | 2/3 | In Progress|  |
+| 5. Insights | 3/3 | Complete   | 2026-03-02 |
 | 6. Budgets + Settings | 3/3 | Complete   | 2026-03-02 |
 | 7. Polish | 0/TBD | Not started | - |
