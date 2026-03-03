@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
+import { toast } from "sonner"
 import { useDateFormat, type DateFormat } from "@/providers/date-format-provider"
 import { useCurrency, type Currency } from "@/providers/currency-provider"
 
@@ -106,7 +107,12 @@ export function GeneralSection() {
           <Label>Currency</Label>
           <Select
             value={currency}
-            onValueChange={(value) => { if (value) setCurrency(value as Currency) }}
+            onValueChange={(value) => {
+              if (value) {
+                setCurrency(value as Currency)
+                toast.success('Currency preference saved')
+              }
+            }}
           >
             <SelectTrigger className="w-34">
               <SelectValue>
