@@ -16,6 +16,40 @@ import { TableSkeleton } from '@/components/shared/skeletons/table-skeleton'
 import { type TransactionResponse } from '@/types/transaction'
 import { useFormatCurrency } from '@/hooks/use-currency-format'
 import { useFormatDate } from '@/hooks/use-date-format'
+import { useCurrency } from '@/providers/currency-provider'
+
+function TransactionCard({
+  transaction,
+  onEdit,
+}: {
+  transaction: TransactionResponse
+  onEdit: (t: TransactionResponse) => void
+}) {
+  const formatDate = useFormatDate()
+  const { formatAmount } = useCurrency()
+
+  return (
+    <div className="rounded-lg border bg-card p-4 flex items-start justify-between gap-3">
+      <div className="min-w-0 flex-1 space-y-1">
+        <p className="font-medium text-sm truncate">{transaction.merchant}</p>
+        <p className="text-xs text-muted-foreground">{formatDate(transaction.date)}</p>
+        <span className="inline-block text-xs px-2 py-0.5 rounded bg-muted text-muted-foreground">
+          {transaction.category}
+        </span>
+      </div>
+      <div className="shrink-0 flex flex-col items-end gap-2">
+        <p className="font-semibold text-sm">{formatAmount(transaction.amount)}</p>
+        <button
+          onClick={() => onEdit(transaction)}
+          className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
+          aria-label="Edit category"
+        >
+          <Edit2 className="h-4 w-4" />
+        </button>
+      </div>
+    </div>
+  )
+}
 
 export interface TransactionsTableProps {
   data: TransactionResponse[]
@@ -164,7 +198,8 @@ export function TransactionsTable({
 
   return (
     <>
-      <div className="w-full overflow-auto rounded-lg border">
+      {/* === DESKTOP TABLE: hidden on mobile (< sm = 640px) === */}
+      <div className="hidden sm:block w-full overflow-auto rounded-lg border">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -201,37 +236,52 @@ export function TransactionsTable({
             )}
           </tbody>
         </table>
+      </div>
 
-        {/* Pagination controls */}
-        <div className="flex items-center justify-between px-2 py-3">
-          <span className="text-sm text-muted-foreground">
-            Showing {total > 0 ? from : 0}–{to} of {total} transactions
+      {/* === MOBILE CARD LIST: shown only on mobile (< sm) === */}
+      <div className="sm:hidden space-y-3">
+        {table.getRowModel().rows.length === 0 ? (
+          <p className="text-center text-muted-foreground py-8">No transactions found.</p>
+        ) : (
+          table.getRowModel().rows.map((row) => (
+            <TransactionCard
+              key={row.id}
+              transaction={row.original}
+              onEdit={onEditTransaction}
+            />
+          ))
+        )}
+      </div>
+
+      {/* === PAGINATION: visible on all breakpoints === */}
+      <div className="flex items-center justify-between px-2 py-3">
+        <span className="text-sm text-muted-foreground">
+          Showing {total > 0 ? from : 0}–{to} of {total} transactions
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 0}
+            className="min-h-12"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Previous
+          </Button>
+          <span className="text-sm">
+            Page {page + 1} of {totalPages || 1}
           </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page - 1)}
-              disabled={page === 0}
-              className="min-h-12"
-            >
-              <ChevronLeft className="h-4 w-4" />
-              Previous
-            </Button>
-            <span className="text-sm">
-              Page {page + 1} of {totalPages || 1}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onPageChange(page + 1)}
-              disabled={to >= total}
-              className="min-h-12"
-            >
-              Next
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => onPageChange(page + 1)}
+            disabled={to >= total}
+            className="min-h-12"
+          >
+            Next
+            <ChevronRight className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
