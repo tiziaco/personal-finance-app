@@ -4,11 +4,12 @@ import { CreditCard, RefreshCw, TrendingUp, TrendingDown, PiggyBank } from 'luci
 import { useDashboardSummary } from '@/hooks/use-dashboard-summary'
 import { CardSkeleton } from '@/components/shared/skeletons/card-skeleton'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 import { cn } from '@/lib/utils'
 
 export function SummaryCards() {
   const { data, isLoading } = useDashboardSummary()
+  const formatCurrency = useFormatCurrency()
 
   if (isLoading) {
     return (

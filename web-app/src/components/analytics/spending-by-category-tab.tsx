@@ -7,7 +7,8 @@ import { ChartSkeleton } from '@/components/shared/skeletons/chart-skeleton'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { formatCurrency, formatPercent } from '@/lib/format'
+import { formatPercent } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 import type { ChartConfig } from '@/components/ui/chart'
 
 // Inline type — narrows AnalyticsResponse.data for this endpoint
@@ -40,6 +41,7 @@ interface SpendingByCategoryTabProps {
 }
 
 export function SpendingByCategoryTab({ enabled }: SpendingByCategoryTabProps) {
+  const formatCurrency = useFormatCurrency()
   const [range, setRange] = useState<DateRange>('3M')
   const dateFrom = getDateFrom(range)
 

@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { DataTableBulkActions } from '@/components/ui/data-table-bulk-actions'
 import { TableSkeleton } from '@/components/shared/skeletons/table-skeleton'
 import { type TransactionResponse } from '@/types/transaction'
-import { formatCurrency } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 import { useFormatDate } from '@/hooks/use-date-format'
 
 export interface TransactionsTableProps {
@@ -43,6 +43,7 @@ export function TransactionsTable({
   isLoading,
 }: TransactionsTableProps) {
   const formatDate = useFormatDate()
+  const formatCurrency = useFormatCurrency()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
   const selectAllRef = useRef<HTMLInputElement>(null)
 

@@ -4,11 +4,12 @@ import { useUser } from '@clerk/nextjs'
 import { useDashboardSummary } from '@/hooks/use-dashboard-summary'
 import { CardSkeleton } from '@/components/shared/skeletons/card-skeleton'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 
 export function WelcomeCard() {
   const { user } = useUser()
   const { data, isLoading } = useDashboardSummary()
+  const formatCurrency = useFormatCurrency()
 
   if (isLoading) return <CardSkeleton />
 

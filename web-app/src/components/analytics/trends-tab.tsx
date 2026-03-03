@@ -5,7 +5,7 @@ import { LineChart } from '@/components/shared/charts/line-chart'
 import { ChartSkeleton } from '@/components/shared/skeletons/chart-skeleton'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 import type { ChartConfig } from '@/components/ui/chart'
 
 // Inline type — narrows AnalyticsResponse.data for /api/v1/analytics/spending (trends fields)
@@ -41,6 +41,7 @@ const chartConfig: ChartConfig = {
 }
 
 export function TrendsTab({ enabled }: TrendsTabProps) {
+  const formatCurrency = useFormatCurrency()
   // CRITICAL: pass enabled — must NOT fire until tab is first activated
   // queryKey: ['analytics', 'spending', {}] — shared with IncomeVsExpensesTab; React Query serves from cache
   const { data, isLoading } = useSpendingAnalytics({}, enabled)

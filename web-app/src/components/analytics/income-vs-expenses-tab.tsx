@@ -5,7 +5,7 @@ import { BarChart } from '@/components/shared/charts/bar-chart'
 import { ChartSkeleton } from '@/components/shared/skeletons/chart-skeleton'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { formatCurrency } from '@/lib/format'
+import { useFormatCurrency } from '@/hooks/use-currency-format'
 import type { ChartConfig } from '@/components/ui/chart'
 
 // Inline type — narrows AnalyticsResponse.data for /api/v1/analytics/spending
@@ -41,6 +41,7 @@ const chartConfig: ChartConfig = {
 }
 
 export function IncomeVsExpensesTab({ enabled }: IncomeVsExpensesTabProps) {
+  const formatCurrency = useFormatCurrency()
   // CRITICAL: pass enabled — must NOT fire until tab is first activated
   // No date filters needed for this tab (research: no filter controls on income vs expenses)
   const { data, isLoading } = useSpendingAnalytics({}, enabled)
