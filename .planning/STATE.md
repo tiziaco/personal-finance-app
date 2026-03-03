@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-03T10:11:41.917Z"
+last_updated: "2026-03-03T10:20:27.782Z"
 progress:
   total_phases: 7
-  completed_phases: 6
+  completed_phases: 7
   total_plans: 29
-  completed_plans: 32
+  completed_plans: 34
 ---
 
 # Project State
@@ -73,6 +73,7 @@ Progress: [███████░░░] 70%
 | Phase 07-polish P01 | 1 | 2 tasks | 6 files |
 | Phase 07-polish P03 | 30 | 3 tasks | 4 files |
 | Phase 07-polish P02 | 3 | 3 tasks | 10 files |
+| Phase 07-polish P04 | checkpoint-continuation | 2 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -139,6 +140,9 @@ Progress: [███████░░░] 70%
 - [Phase 07-polish]: PieChart max-h-[280px] w-full constrains Recharts ResponsiveContainer within grid card at md breakpoint — fixed outerRadius overflows when two-column grid narrows cards
 - [Phase 07-polish]: LOCALE_MAP ties Currency to Intl locale (EUR->de-DE, USD->en-US, GBP->en-GB, CHF->de-CH) for culturally correct formatting
 - [Phase 07-polish]: Shadow-import hook pattern (const formatCurrency = useFormatCurrency()) enables zero-JSX-change migration at all call sites
+- [Phase 07-polish]: useCurrency().formatAmount used in TransactionCard; useFormatCurrency shadow-import in parent for desktop — no hook rule violations
+- [Phase 07-polish]: Pagination extracted outside rounded-lg border wrapper — was previously inside; ensures visibility on mobile where table wrapper is hidden
+- [Phase 07-polish]: TransactionCard has no checkbox — bulk actions are desktop-only for v1; mobile card-list is read/edit only
 
 ### Pending Todos
 

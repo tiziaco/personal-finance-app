@@ -76,7 +76,7 @@
 - [x] **DESGN-03**: Desktop layout has a collapsible sidebar; mobile layout has a hamburger menu that opens the sidebar as an overlay or drawer
 - [x] **DESGN-04**: All interactive elements have minimum 48px tap targets on mobile
 - [x] **DESGN-05**: Charts render at full width on mobile, 2-column grid on desktop
-- [ ] **DESGN-06**: Transaction table collapses to a card-list layout at mobile breakpoints
+- [x] **DESGN-06**: Transaction table collapses to a card-list layout at mobile breakpoints
 - [ ] **DESGN-07**: Toast notifications appear for all user-initiated actions (category update, insights generated, errors)
 - [ ] **DESGN-08**: Skeleton loading screens appear for all data-heavy regions before data loads
 
@@ -168,7 +168,7 @@
 | DESGN-03 | Phase 7 — Polish | Complete |
 | DESGN-04 | Phase 7 — Polish | Complete |
 | DESGN-05 | Phase 7 — Polish | Complete |
-| DESGN-06 | Phase 7 — Polish | Pending |
+| DESGN-06 | Phase 7 — Polish | Complete |
 | DESGN-07 | Phase 7 — Polish | Pending |
 | DESGN-08 | Phase 7 — Polish | Pending |
 
