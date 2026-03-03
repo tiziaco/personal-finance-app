@@ -1,9 +1,9 @@
 ---
 gsd_state_version: 1.0
 milestone: v1.0
-milestone_name: milestone
+milestone_name: MVP
 status: complete
-last_updated: "2026-03-03T10:20:27.782Z"
+last_updated: "2026-03-03T18:05:06.019Z"
 progress:
   total_phases: 7
   completed_phases: 7
@@ -15,10 +15,10 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-02-27)
+See: .planning/PROJECT.md (updated 2026-03-03)
 
 **Core value:** Users can understand where their money goes — at a glance on the dashboard, and in depth through analytics and AI insights — without manual data entry beyond uploading a CSV.
-**Current focus:** Phase 4 — Analytics
+**Current focus:** Planning next milestone (v1.1)
 
 ## Current Position
 
