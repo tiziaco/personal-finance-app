@@ -102,7 +102,7 @@ export function TrendsTab({ enabled }: TrendsTabProps) {
                       <div className="flex items-center gap-6">
                         <span className="font-semibold">{formatCurrency(s.total_expense)}</span>
                         {growth !== null && growth !== undefined ? (
-                          <span className={`text-xs font-medium w-16 text-right ${growth > 0 ? 'text-destructive' : 'text-green-600'}`}>
+                          <span className={`text-xs font-medium w-16 text-right ${growth > 0 ? 'text-destructive' : 'text-success'}`}>
                             {growth > 0 ? '+' : ''}{growth.toFixed(1)}%
                           </span>
                         ) : (

@@ -105,7 +105,7 @@ export function IncomeVsExpensesTab({ enabled }: IncomeVsExpensesTabProps) {
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Income</p>
-                  <p className="text-xl font-semibold text-green-600">{formatCurrency(totalIncome)}</p>
+                  <p className="text-xl font-semibold text-success">{formatCurrency(totalIncome)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Total Expenses</p>
@@ -113,7 +113,7 @@ export function IncomeVsExpensesTab({ enabled }: IncomeVsExpensesTabProps) {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Net Cash Flow</p>
-                  <p className={`text-xl font-semibold ${totalNet >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                  <p className={`text-xl font-semibold ${totalNet >= 0 ? 'text-success' : 'text-destructive'}`}>
                     {formatCurrency(totalNet)}
                   </p>
                 </div>
@@ -125,9 +125,9 @@ export function IncomeVsExpensesTab({ enabled }: IncomeVsExpensesTabProps) {
                   <div key={s.month} className="flex items-center justify-between text-sm py-2 border-t first:border-t-0">
                     <span className="font-medium text-muted-foreground">{s.month}</span>
                     <div className="flex items-center gap-6">
-                      <span className="text-green-600">{formatCurrency(s.total_income)}</span>
+                      <span className="text-success">{formatCurrency(s.total_income)}</span>
                       <span className="text-destructive">{formatCurrency(s.total_expense)}</span>
-                      <span className={`font-semibold w-24 text-right ${s.net >= 0 ? 'text-green-600' : 'text-destructive'}`}>
+                      <span className={`font-semibold w-24 text-right ${s.net >= 0 ? 'text-success' : 'text-destructive'}`}>
                         {formatCurrency(s.net)}
                       </span>
                     </div>
