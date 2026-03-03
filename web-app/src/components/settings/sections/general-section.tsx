@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
 import { useDateFormat, type DateFormat } from "@/providers/date-format-provider"
+import { useCurrency, type Currency } from "@/providers/currency-provider"
 
 const FORMAT_OPTIONS = [
   { value: "de-DE" as DateFormat, label: "DD/MM/YYYY", example: "27.02.2026" },
@@ -13,9 +14,17 @@ const FORMAT_OPTIONS = [
   { value: "sv-SE" as DateFormat, label: "YYYY-MM-DD", example: "2026-02-27" },
 ]
 
+const CURRENCY_OPTIONS = [
+  { value: "EUR" as Currency, label: "EUR", example: "€1.234,56" },
+  { value: "USD" as Currency, label: "USD", example: "$1,234.56" },
+  { value: "GBP" as Currency, label: "GBP", example: "£1,234.56" },
+  { value: "CHF" as Currency, label: "CHF", example: "CHF 1'234.56" },
+]
+
 export function GeneralSection() {
   const { theme, setTheme } = useTheme();
   const { dateFormat, setDateFormat } = useDateFormat()
+  const { currency, setCurrency } = useCurrency()
 
   // Capitalize the theme for display
   const displayTheme = theme ? theme.charAt(0).toUpperCase() + theme.slice(1) : "";
@@ -85,6 +94,27 @@ export function GeneralSection() {
             </SelectTrigger>
             <SelectContent className="min-w-40 max-w-40">
               {FORMAT_OPTIONS.map(opt => (
+                <SelectItem key={opt.value} value={opt.value}>
+                  <span>{opt.label}</span>
+                  <span className="text-muted-foreground text-xs ml-2">{opt.example}</span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex items-center justify-between">
+          <Label>Currency</Label>
+          <Select
+            value={currency}
+            onValueChange={(value) => { if (value) setCurrency(value as Currency) }}
+          >
+            <SelectTrigger className="w-34">
+              <SelectValue>
+                {CURRENCY_OPTIONS.find(o => o.value === currency)?.label}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className="min-w-40 max-w-40">
+              {CURRENCY_OPTIONS.map(opt => (
                 <SelectItem key={opt.value} value={opt.value}>
                   <span>{opt.label}</span>
                   <span className="text-muted-foreground text-xs ml-2">{opt.example}</span>
