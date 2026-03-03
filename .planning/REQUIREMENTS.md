@@ -169,8 +169,8 @@
 | DESGN-04 | Phase 7 — Polish | Complete |
 | DESGN-05 | Phase 7 — Polish | Complete |
 | DESGN-06 | Phase 7 — Polish | Complete |
-| DESGN-07 | Phase 7 — Polish | Pending |
-| DESGN-08 | Phase 7 — Polish | Pending |
+| DESGN-07 | Phase 7 — Polish | Complete |
+| DESGN-08 | Phase 7 — Polish | Complete |
 
 **Coverage:**
 - v1 requirements: 51 total
