@@ -158,7 +158,7 @@
 | INSGT-06 | Phase 5 — Insights | Complete |
 | INSGT-07 | Phase 5 — Insights | Complete |
 | BUDG-01 | Phase 6 — Budgets + Settings | Complete |
-| SETT-01 | Phase 6 — Budgets + Settings | Pending |
+| SETT-01 | Phase 7 — Polish | Pending |
 | SETT-02 | Phase 6 — Budgets + Settings | Complete |
 | SETT-03 | Phase 6 — Budgets + Settings | Complete |
 | SETT-04 | Phase 6 — Budgets + Settings | Complete |

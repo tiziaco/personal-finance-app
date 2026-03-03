@@ -107,12 +107,12 @@ Plans:
 - [ ] 05-03-PLAN.md — Gap closure: Fix Recurring Charges / Savings Opportunities tab deduplication (INSGT-03) [Wave 1]
 
 ### Phase 6: Budgets + Settings
-**Goal**: The Budgets page communicates future intent without misleading users, and Settings lets users control their currency, date format, theme, and data — all without breaking the existing settings modal
+**Goal**: The Budgets page communicates future intent without misleading users, and Settings lets users control their date format, theme, and data — all without breaking the existing settings modal
 **Depends on**: Phase 5
-**Requirements**: BUDG-01, SETT-01, SETT-02, SETT-03, SETT-04, SETT-05
+**Requirements**: BUDG-01, SETT-02, SETT-03, SETT-04, SETT-05
 **Success Criteria** (what must be TRUE):
   1. User sees a Budgets page with a prominent "Coming Soon" message and a brief description of what budgets will offer
-  2. User can set currency preference (EUR default) and date format preference from Settings and the app reflects the new format throughout
+  2. User can set date format preference from Settings and the app reflects the new format throughout
   3. User can toggle between Light, Dark, and System themes from Settings and the change takes effect immediately
   4. User can click "Delete All Transactions" in Settings, confirm via a modal, and have all transactions removed
   5. User sees non-functional Notification Preferences toggles (email, budget alerts, newsletter) as placeholders in Settings
@@ -126,7 +126,7 @@ Plans:
 ### Phase 7: Polish
 **Goal**: The app looks and works correctly on every device and in both light and dark mode, with consistent design tokens, toast feedback, and skeleton loading states throughout
 **Depends on**: Phase 6
-**Requirements**: DESGN-01, DESGN-02, DESGN-03, DESGN-04, DESGN-05, DESGN-06, DESGN-07, DESGN-08
+**Requirements**: SETT-01, DESGN-01, DESGN-02, DESGN-03, DESGN-04, DESGN-05, DESGN-06, DESGN-07, DESGN-08
 **Success Criteria** (what must be TRUE):
   1. App uses consistent color tokens (Teal #208E95 primary, Warm Gray #5E5240 secondary, Cream #FCFCF9 background, Charcoal #1F2121 dark) across all pages with no hardcoded hex values in component files
   2. Dark mode is fully applied via Tailwind dark: classes — no component shows unthemed colors when dark mode is active
