@@ -71,8 +71,8 @@
 
 ### Design System & Responsiveness
 
-- [ ] **DESGN-01**: App uses consistent color tokens: Teal (#208E95) primary, Warm Gray (#5E5240) secondary, Cream (#FCFCF9) light background, Charcoal (#1F2121) dark mode background, Red (#C01527) overspend alerts, Green (#208E95) savings
-- [ ] **DESGN-02**: App supports full dark mode with Tailwind CSS dark: classes applied throughout all pages and components
+- [x] **DESGN-01**: App uses consistent color tokens: Teal (#208E95) primary, Warm Gray (#5E5240) secondary, Cream (#FCFCF9) light background, Charcoal (#1F2121) dark mode background, Red (#C01527) overspend alerts, Green (#208E95) savings
+- [x] **DESGN-02**: App supports full dark mode with Tailwind CSS dark: classes applied throughout all pages and components
 - [ ] **DESGN-03**: Desktop layout has a collapsible sidebar; mobile layout has a hamburger menu that opens the sidebar as an overlay or drawer
 - [ ] **DESGN-04**: All interactive elements have minimum 48px tap targets on mobile
 - [ ] **DESGN-05**: Charts render at full width on mobile, 2-column grid on desktop
@@ -163,8 +163,8 @@
 | SETT-03 | Phase 6 — Budgets + Settings | Complete |
 | SETT-04 | Phase 6 — Budgets + Settings | Complete |
 | SETT-05 | Phase 6 — Budgets + Settings | Complete |
-| DESGN-01 | Phase 7 — Polish | Pending |
-| DESGN-02 | Phase 7 — Polish | Pending |
+| DESGN-01 | Phase 7 — Polish | Complete |
+| DESGN-02 | Phase 7 — Polish | Complete |
 | DESGN-03 | Phase 7 — Polish | Pending |
 | DESGN-04 | Phase 7 — Polish | Pending |
 | DESGN-05 | Phase 7 — Polish | Pending |

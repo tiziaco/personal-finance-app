@@ -3,12 +3,12 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: unknown
-last_updated: "2026-03-02T17:02:36.928Z"
+last_updated: "2026-03-03T09:34:30.319Z"
 progress:
-  total_phases: 6
+  total_phases: 7
   completed_phases: 6
-  total_plans: 24
-  completed_plans: 29
+  total_plans: 29
+  completed_plans: 31
 ---
 
 # Project State
@@ -70,6 +70,7 @@ Progress: [██████░░░░] 60%
 | Phase 06-budgets-settings P01 | 2 | 1 tasks | 2 files |
 | Phase 06-budgets-settings P03 | 2 | 2 tasks | 5 files |
 | Phase 06-budgets-settings P02 | 2 | 3 tasks | 7 files |
+| Phase 07-polish P01 | 1 | 2 tasks | 6 files |
 
 ## Accumulated Context
 
@@ -130,6 +131,8 @@ Progress: [██████░░░░] 60%
 - [Phase 06-budgets-settings]: Shadow import pattern (const formatDate = useFormatDate()) migrates call sites with zero JSX changes
 - [Phase 06-budgets-settings]: sv-SE locale used for YYYY-MM-DD ordering (standard Intl workaround confirmed in RESEARCH.md)
 - [Phase 06-budgets-settings]: Budgets page is server component placeholder with PiggyBank icon — no interactivity or CTA; no backend budget API available
+- [Phase 07-polish]: OKLCH bare values used for --success/--warning tokens — no hsl() wrapper per STATE.md v4 decision
+- [Phase 07-polish]: hover:bg-destructive/10 pattern replaces hover:bg-red-50 — opacity modifier adapts automatically in dark mode
 
 ### Pending Todos
 
