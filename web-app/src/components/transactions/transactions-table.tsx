@@ -51,23 +51,27 @@ export function TransactionsTable({
     columnHelper.display({
       id: 'select',
       header: ({ table }) => (
-        <input
-          type="checkbox"
-          ref={selectAllRef}
-          checked={table.getIsAllRowsSelected()}
-          onChange={table.getToggleAllRowsSelectedHandler()}
-          aria-label="Select all rows"
-          className="cursor-pointer"
-        />
+        <div className="flex items-center justify-center min-h-12 min-w-8">
+          <input
+            type="checkbox"
+            ref={selectAllRef}
+            checked={table.getIsAllRowsSelected()}
+            onChange={table.getToggleAllRowsSelectedHandler()}
+            aria-label="Select all rows"
+            className="cursor-pointer"
+          />
+        </div>
       ),
       cell: ({ row }) => (
-        <input
-          type="checkbox"
-          checked={row.getIsSelected()}
-          onChange={row.getToggleSelectedHandler()}
-          aria-label="Select row"
-          className="cursor-pointer"
-        />
+        <div className="flex items-center justify-center min-h-12 min-w-8">
+          <input
+            type="checkbox"
+            checked={row.getIsSelected()}
+            onChange={row.getToggleSelectedHandler()}
+            aria-label="Select row"
+            className="cursor-pointer"
+          />
+        </div>
       ),
     }),
     // 2. Date column
@@ -106,7 +110,7 @@ export function TransactionsTable({
         const score = info.getValue()
         const pct = `${(score * 100).toFixed(0)}%`
         return (
-          <span className={score < 0.7 ? 'text-amber-600' : 'text-green-600'}>{pct}</span>
+          <span className={score < 0.7 ? 'text-warning' : 'text-success'}>{pct}</span>
         )
       },
     }),
@@ -120,6 +124,7 @@ export function TransactionsTable({
           size="sm"
           onClick={() => onEditTransaction(row.original)}
           aria-label="Edit transaction"
+          className="min-h-12 min-w-12"
         >
           <Edit2 className="h-4 w-4" />
         </Button>
@@ -207,6 +212,7 @@ export function TransactionsTable({
               size="sm"
               onClick={() => onPageChange(page - 1)}
               disabled={page === 0}
+              className="min-h-12"
             >
               <ChevronLeft className="h-4 w-4" />
               Previous
@@ -219,6 +225,7 @@ export function TransactionsTable({
               size="sm"
               onClick={() => onPageChange(page + 1)}
               disabled={to >= total}
+              className="min-h-12"
             >
               Next
               <ChevronRight className="h-4 w-4" />

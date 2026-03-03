@@ -33,7 +33,7 @@ export function DataSection() {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="border-red-500 text-red-500 hover:text-red-500 hover:bg-red-50 shrink-0"
+                  className="border-destructive text-destructive hover:text-destructive hover:bg-destructive/10 shrink-0 min-h-12"
                 >
                   Delete All Transactions
                 </Button>
@@ -65,7 +65,7 @@ export function DataSection() {
       <SettingSection title="Data Management">
         <div className="flex items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">Manage or delete your chats</p>
-          <Button variant="outline" size="sm" className="border-red-500 text-red-500 hover:text-red-500 hover:bg-red-50">
+          <Button variant="outline" size="sm" className="border-destructive text-destructive hover:text-destructive hover:bg-destructive/10 min-h-12">
             Delete All Chats
           </Button>
         </div>
