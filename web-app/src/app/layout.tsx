@@ -13,8 +13,8 @@ const publicSans = Public_Sans({subsets:['latin'],variable:'--font-sans'});
 
 
 export const metadata: Metadata = {
-  title: "Fullstack Template",
-  description: "Fullstack template project using Next.js, Tailwind CSS, and Clerk for authentication.",
+  title: "Personal Finance App",
+  description: "Personal finance management app. Track your expenses, set budgets, and achieve your financial goals with ease.",
   icons: {
     icon: [
       { url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" },
