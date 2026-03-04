@@ -109,14 +109,17 @@ export function FiltersBar({
         <label className="text-xs text-muted-foreground">Date range</label>
         <Popover open={calendarOpen} onOpenChange={(open) => setCalendarOpen(open)}>
           <PopoverTrigger
-            render={
-              <button className={cn(buttonVariants({ variant: 'outline' }), 'w-52 justify-start text-left font-normal')}>
+            render={(props) => (
+              <button
+                {...props}
+                className={cn(buttonVariants({ variant: 'outline' }), 'w-52 justify-start text-left font-normal')}
+              >
                 <CalendarIcon className="mr-2 h-4 w-4" />
                 <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
                   {triggerLabel}
                 </span>
               </button>
-            }
+            )}
           />
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
