@@ -12,7 +12,7 @@ import { InsightsCallout } from '@/components/dashboard/insights-callout'
 
 export default function HomePage() {
   return (
-    <div className="space-y-6 p-6">
+    <div className="space-y-6 p-0">
       <ErrorBoundary>
         <WelcomeCard />
       </ErrorBoundary>

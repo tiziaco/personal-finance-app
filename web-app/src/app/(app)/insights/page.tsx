@@ -19,7 +19,7 @@ export default function InsightsPage() {
   const isEmptyState = !isLoading && !isFetching && insights.length === 0
 
   return (
-    <div className="container max-w-5xl mx-auto py-8 space-y-8">
+    <div className="container max-w-6xl mx-auto py-8 space-y-8">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">AI Insights</h1>
