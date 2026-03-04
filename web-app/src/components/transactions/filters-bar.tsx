@@ -5,7 +5,7 @@ import { Search, ArrowUp, ArrowDown, CalendarIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { type DateRange } from 'react-day-picker'
 import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
 import {
   Popover,
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 import { type CategoryEnum, CATEGORY_OPTIONS } from '@/types/transaction'
 
 export interface FiltersBarProps {
@@ -64,24 +65,27 @@ export function FiltersBar({
 }: FiltersBarProps) {
   const [calendarOpen, setCalendarOpen] = React.useState(false)
 
-  const selectedRange: DateRange = {
+  const selectedRange = React.useMemo<DateRange>(() => ({
     from: dateFrom ? parseISO(dateFrom) : undefined,
     to: dateTo ? parseISO(dateTo) : undefined,
-  }
+  }), [dateFrom, dateTo])
 
-  const triggerLabel = selectedRange.from
-    ? selectedRange.to
-      ? `${format(selectedRange.from, 'MMM d')} → ${format(selectedRange.to, 'MMM d')}`
-      : `${format(selectedRange.from, 'MMM d')} →`
-    : 'Pick a date range'
+  const triggerLabel = React.useMemo(() =>
+    selectedRange.from
+      ? selectedRange.to
+        ? `${format(selectedRange.from, 'MMM d')} → ${format(selectedRange.to, 'MMM d')}`
+        : `${format(selectedRange.from, 'MMM d')} →`
+      : 'Pick a date range',
+    [selectedRange]
+  )
 
-  function handleRangeSelect(range: DateRange | undefined) {
+  const handleRangeSelect = React.useCallback((range: DateRange | undefined) => {
     onDateFromChange(range?.from ? format(range.from, 'yyyy-MM-dd') : undefined)
     onDateToChange(range?.to ? format(range.to, 'yyyy-MM-dd') : undefined)
     if (range?.from && range?.to) {
       setCalendarOpen(false)
     }
-  }
+  }, [onDateFromChange, onDateToChange])
 
   return (
     <div className="flex flex-wrap gap-3 items-end">
@@ -104,14 +108,16 @@ export function FiltersBar({
       <div className="flex flex-col gap-1">
         <label className="text-xs text-muted-foreground">Date range</label>
         <Popover open={calendarOpen} onOpenChange={(open) => setCalendarOpen(open)}>
-          <PopoverTrigger render={
-            <Button variant="outline" className="w-52 justify-start text-left font-normal">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
-                {triggerLabel}
-              </span>
-            </Button>
-          } />
+          <PopoverTrigger
+            render={
+              <button className={cn(buttonVariants({ variant: 'outline' }), 'w-52 justify-start text-left font-normal')}>
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
+                  {triggerLabel}
+                </span>
+              </button>
+            }
+          />
           <PopoverContent className="w-auto p-0" align="start">
             <Calendar
               mode="range"
