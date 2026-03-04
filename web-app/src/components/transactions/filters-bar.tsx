@@ -1,8 +1,17 @@
 'use client'
 
-import { Search, ArrowUp, ArrowDown } from 'lucide-react'
+import * as React from 'react'
+import { Search, ArrowUp, ArrowDown, CalendarIcon } from 'lucide-react'
+import { format, parseISO } from 'date-fns'
+import { type DateRange } from 'react-day-picker'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -53,6 +62,27 @@ export function FiltersBar({
   onClearAll,
   hasActiveFilters,
 }: FiltersBarProps) {
+  const [calendarOpen, setCalendarOpen] = React.useState(false)
+
+  const selectedRange: DateRange = {
+    from: dateFrom ? parseISO(dateFrom) : undefined,
+    to: dateTo ? parseISO(dateTo) : undefined,
+  }
+
+  const triggerLabel = selectedRange.from
+    ? selectedRange.to
+      ? `${format(selectedRange.from, 'MMM d')} → ${format(selectedRange.to, 'MMM d')}`
+      : `${format(selectedRange.from, 'MMM d')} →`
+    : 'Pick a date range'
+
+  function handleRangeSelect(range: DateRange | undefined) {
+    onDateFromChange(range?.from ? format(range.from, 'yyyy-MM-dd') : undefined)
+    onDateToChange(range?.to ? format(range.to, 'yyyy-MM-dd') : undefined)
+    if (range?.from && range?.to) {
+      setCalendarOpen(false)
+    }
+  }
+
   return (
     <div className="flex flex-wrap gap-3 items-end">
       {/* Search input */}
@@ -70,26 +100,26 @@ export function FiltersBar({
         </div>
       </div>
 
-      {/* Date From */}
+      {/* Date Range */}
       <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">From</label>
-        <Input
-          type="date"
-          value={dateFrom ?? ''}
-          onChange={(e) => onDateFromChange(e.target.value || undefined)}
-          className="w-36"
-        />
-      </div>
-
-      {/* Date To */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">To</label>
-        <Input
-          type="date"
-          value={dateTo ?? ''}
-          onChange={(e) => onDateToChange(e.target.value || undefined)}
-          className="w-36"
-        />
+        <label className="text-xs text-muted-foreground">Date range</label>
+        <Popover open={calendarOpen} onOpenChange={(open) => setCalendarOpen(open)}>
+          <PopoverTrigger render={
+            <Button variant="outline" className="w-52 justify-start text-left font-normal">
+              <CalendarIcon className="mr-2 h-4 w-4" />
+              <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
+                {triggerLabel}
+              </span>
+            </Button>
+          } />
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar
+              mode="range"
+              selected={selectedRange}
+              onSelect={handleRangeSelect}
+            />
+          </PopoverContent>
+        </Popover>
       </div>
 
       {/* Category dropdown */}
