@@ -48,7 +48,7 @@ export default function AnalyticsPage() {
               value={tab.value}
               className={cn(
                 'px-4 py-2 text-sm font-medium text-muted-foreground',
-                'data-[active]:text-foreground data-[active]:border-b-2 data-[active]:border-primary',
+                'data-active:text-foreground data-active:border-b-2 data-active:border-primary',
                 'focus-visible:outline-none transition-colors cursor-pointer'
               )}
             >
