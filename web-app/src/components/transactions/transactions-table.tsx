@@ -118,7 +118,7 @@ export function TransactionsTable({
     columnHelper.accessor('merchant', {
       header: 'Merchant',
       cell: (info) => (
-        <span className="block max-w-[200px] truncate">{info.getValue()}</span>
+        <span className="block max-w-50 truncate">{info.getValue()}</span>
       ),
     }),
     // 4. Amount column
