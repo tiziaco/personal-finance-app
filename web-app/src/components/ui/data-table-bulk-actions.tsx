@@ -15,11 +15,13 @@ export interface BulkAction<TData> {
 interface DataTableBulkActionsProps<TData> {
   table: Table<TData>
   actions: BulkAction<TData>[]
+  style?: React.CSSProperties
 }
 
 export function DataTableBulkActions<TData>({
   table,
   actions,
+  style,
 }: DataTableBulkActionsProps<TData>) {
   const selectedRows = table.getFilteredSelectedRowModel().rows
   const selectedCount = selectedRows.length
@@ -31,7 +33,7 @@ export function DataTableBulkActions<TData>({
   const selectedData = selectedRows.map((row) => row.original)
 
   return (
-    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
+    <div className="fixed bottom-8 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200" style={style}>
       <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-4 py-2 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80">
         {/* Selected count badge */}
         <div className="flex items-center gap-2">

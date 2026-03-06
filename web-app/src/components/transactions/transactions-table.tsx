@@ -12,6 +12,7 @@ import {
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
+import { useSidebar } from '@/components/ui/sidebar'
 import { DataTableBulkActions } from '@/components/ui/data-table-bulk-actions'
 import { TableSkeleton } from '@/components/shared/skeletons/table-skeleton'
 import { type TransactionResponse } from '@/types/transaction'
@@ -80,6 +81,12 @@ export function TransactionsTable({
   const formatDate = useFormatDate()
   const formatCurrency = useFormatCurrency()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
+  const { state: sidebarState, isMobile } = useSidebar()
+  const bulkActionsLeft = isMobile
+    ? '50%'
+    : sidebarState === 'expanded'
+      ? 'calc((100vw + var(--sidebar-width)) / 2)'
+      : 'calc((100vw + var(--sidebar-width-icon)) / 2)'
 
   const columns = [
     // 1. Select column
@@ -276,6 +283,7 @@ export function TransactionsTable({
       {/* Bulk actions — outside table wrapper so it sticks to viewport bottom */}
       <DataTableBulkActions
         table={table}
+        style={{ left: bulkActionsLeft }}
         actions={[
           {
             label: 'Recategorize',
