@@ -31,7 +31,7 @@ export function DataTableBulkActions<TData>({
   const selectedData = selectedRows.map((row) => row.original)
 
   return (
-    <div className="sticky bottom-8 mx-auto w-fit z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200">
       <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-4 py-2 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80">
         {/* Selected count badge */}
         <div className="flex items-center gap-2">
