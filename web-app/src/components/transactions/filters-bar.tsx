@@ -82,7 +82,7 @@ export function FiltersBar({
   const handleRangeSelect = React.useCallback((range: DateRange | undefined) => {
     onDateFromChange(range?.from ? format(range.from, 'yyyy-MM-dd') : undefined)
     onDateToChange(range?.to ? format(range.to, 'yyyy-MM-dd') : undefined)
-    if (range?.from && range?.to) {
+    if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
       setCalendarOpen(false)
     }
   }, [onDateFromChange, onDateToChange])
