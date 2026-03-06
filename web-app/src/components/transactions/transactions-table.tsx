@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState } from 'react'
 import {
   createColumnHelper,
   useReactTable,
@@ -11,6 +11,7 @@ import {
 } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Checkbox } from '@/components/ui/checkbox'
 import { DataTableBulkActions } from '@/components/ui/data-table-bulk-actions'
 import { TableSkeleton } from '@/components/shared/skeletons/table-skeleton'
 import { type TransactionResponse } from '@/types/transaction'
@@ -79,7 +80,6 @@ export function TransactionsTable({
   const formatDate = useFormatDate()
   const formatCurrency = useFormatCurrency()
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
-  const selectAllRef = useRef<HTMLInputElement>(null)
 
   const columns = [
     // 1. Select column
@@ -87,24 +87,20 @@ export function TransactionsTable({
       id: 'select',
       header: ({ table }) => (
         <div className="flex items-center justify-center min-h-12 min-w-8">
-          <input
-            type="checkbox"
-            ref={selectAllRef}
+          <Checkbox
             checked={table.getIsAllRowsSelected()}
-            onChange={table.getToggleAllRowsSelectedHandler()}
+            indeterminate={table.getIsSomeRowsSelected()}
+            onCheckedChange={(checked) => table.toggleAllRowsSelected(!!checked)}
             aria-label="Select all rows"
-            className="cursor-pointer"
           />
         </div>
       ),
       cell: ({ row }) => (
         <div className="flex items-center justify-center min-h-12 min-w-8">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={row.getIsSelected()}
-            onChange={row.getToggleSelectedHandler()}
+            onCheckedChange={(checked) => row.toggleSelected(!!checked)}
             aria-label="Select row"
-            className="cursor-pointer"
           />
         </div>
       ),
@@ -178,14 +174,6 @@ export function TransactionsTable({
     getRowId: (row) => String(row.id),
     // NO getPaginationRowModel — pagination is server-side
   })
-
-  // Keep the select-all checkbox indeterminate state in sync
-  useEffect(() => {
-    if (selectAllRef.current) {
-      const someSelected = table.getIsSomeRowsSelected()
-      selectAllRef.current.indeterminate = someSelected
-    }
-  }, [table, rowSelection])
 
   // Pagination calculations
   const totalPages = Math.ceil(total / limit)
