@@ -1,6 +1,6 @@
 'use client'
 
-import * as React from 'react'
+import { useRef, useState, useMemo, useCallback } from 'react'
 import { Search, ArrowUp, ArrowDown, CalendarIcon } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { type DateRange } from 'react-day-picker'
@@ -63,29 +63,55 @@ export function FiltersBar({
   onClearAll,
   hasActiveFilters,
 }: FiltersBarProps) {
-  const [calendarOpen, setCalendarOpen] = React.useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
+  const awaitingEndRef = useRef(false)
+  const firstClickDateRef = useRef<string | null>(null)
 
-  const selectedRange = React.useMemo<DateRange>(() => ({
+  const selectedRange = useMemo<DateRange>(() => ({
     from: dateFrom ? parseISO(dateFrom) : undefined,
     to: dateTo ? parseISO(dateTo) : undefined,
   }), [dateFrom, dateTo])
 
-  const triggerLabel = React.useMemo(() =>
+  const triggerLabel = useMemo(() =>
     selectedRange.from
-      ? selectedRange.to
+      ? selectedRange.to && selectedRange.from.getTime() !== selectedRange.to.getTime()
         ? `${format(selectedRange.from, 'MMM d')} → ${format(selectedRange.to, 'MMM d')}`
-        : `${format(selectedRange.from, 'MMM d')} →`
+        : format(selectedRange.from, 'MMM d')
       : 'Pick a date range',
     [selectedRange]
   )
 
-  const handleRangeSelect = React.useCallback((range: DateRange | undefined) => {
-    onDateFromChange(range?.from ? format(range.from, 'yyyy-MM-dd') : undefined)
-    onDateToChange(range?.to ? format(range.to, 'yyyy-MM-dd') : undefined)
-    if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+  const handleRangeSelect = useCallback((range: DateRange | undefined) => {
+    if (!awaitingEndRef.current) {
+      // First click — record start date, wait for end
+      const fromStr = range?.from ? format(range.from, 'yyyy-MM-dd') : undefined
+      firstClickDateRef.current = fromStr ?? null
+      onDateFromChange(fromStr)
+      onDateToChange(undefined)
+      awaitingEndRef.current = true
+    } else {
+      // Second click — confirm and close
+      awaitingEndRef.current = false
+      if (range?.from && range?.to && range.from.getTime() !== range.to.getTime()) {
+        // Different end date — commit range
+        onDateFromChange(format(range.from, 'yyyy-MM-dd'))
+        onDateToChange(format(range.to, 'yyyy-MM-dd'))
+      } else {
+        // Same date (react-day-picker sends undefined) — single-day selection
+        onDateToChange(firstClickDateRef.current ?? undefined)
+      }
+      firstClickDateRef.current = null
       setCalendarOpen(false)
     }
   }, [onDateFromChange, onDateToChange])
+
+  const handleOpenChange = useCallback((open: boolean) => {
+    if (!open) {
+      awaitingEndRef.current = false
+      firstClickDateRef.current = null
+    }
+    setCalendarOpen(open)
+  }, [])
 
   return (
     <div className="flex flex-wrap gap-3 items-end">
@@ -107,7 +133,7 @@ export function FiltersBar({
       {/* Date Range */}
       <div className="flex flex-col gap-1">
         <label className="text-xs text-muted-foreground">Date range</label>
-        <Popover open={calendarOpen} onOpenChange={(open) => setCalendarOpen(open)}>
+        <Popover open={calendarOpen} onOpenChange={handleOpenChange}>
           <PopoverTrigger
             render={(props) => (
               <button
