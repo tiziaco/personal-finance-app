@@ -1,6 +1,6 @@
 "use client"
 
-import { HomeIcon, TrendingUp, ArrowLeftRight } from "lucide-react"
+import { HomeIcon, TrendingUp, ArrowLeftRight, Lightbulb, PiggyBank } from "lucide-react"
 import type { NavItem } from "@/types/nav"
 
 /**
@@ -16,8 +16,16 @@ export const HUB_NAV: NavItem[] = [
     url: "/transactions",
     icon: ArrowLeftRight,
   },
-  { title: "Stats",
-    url: "/stats",
+  { title: "Analytics",
+    url: "/analytics",
     icon: TrendingUp,
+  },
+  { title: "Insights",
+    url: "/insights",
+    icon: Lightbulb,
+  },
+  { title: "Budgets",
+    url: "/budgets",
+    icon: PiggyBank,
   },
 ]

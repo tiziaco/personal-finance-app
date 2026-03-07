@@ -108,6 +108,24 @@ def aggregate_insights(state: InsightsState) -> Dict[str, Any]:
                 )
                 insights.append(insight)
                 logger.debug(f"✅ Created insight: subscription_load_index")
+
+                if total_monthly > 0:
+                    savings_summary = f"You could save up to ${total_monthly:.2f}/month by reviewing your {len(monthly_costs)} recurring subscriptions."
+                    savings_insight = Insight(
+                        insight_id="subscription_savings_opportunity",
+                        type=InsightType.RECURRING_SUBSCRIPTIONS,
+                        severity=SeverityLevel.MEDIUM if total_monthly > 50 else SeverityLevel.INFO,
+                        time_window="monthly",
+                        summary=savings_summary,
+                        supporting_metrics={
+                            "monthly_cost": total_monthly,
+                            "recurring_count": len(monthly_costs)
+                        },
+                        confidence=0.80,
+                        section="savings"
+                    )
+                    insights.append(savings_insight)
+                    logger.debug(f"Created insight: subscription_savings_opportunity")
         except Exception as e:
             logger.error(f"Error extracting recurring insights: {e}", exc_info=True)
             errors.append(f"Recurring insights extraction: {str(e)}")

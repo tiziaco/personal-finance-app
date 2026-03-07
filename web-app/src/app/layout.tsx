@@ -3,6 +3,8 @@ import { ThemeProvider } from "@/components/ui/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { ClerkProvider } from '@clerk/nextjs'
 import { QueryProvider } from "@/providers/query-provider";
+import { DateFormatProvider } from "@/providers/date-format-provider";
+import { CurrencyProvider } from "@/providers/currency-provider";
 
 import type { Metadata } from "next";
 import "@/styles/globals.css";
@@ -11,8 +13,8 @@ const publicSans = Public_Sans({subsets:['latin'],variable:'--font-sans'});
 
 
 export const metadata: Metadata = {
-  title: "Fullstack Template",
-  description: "Fullstack template project using Next.js, Tailwind CSS, and Clerk for authentication.",
+  title: "Personal Finance App",
+  description: "Personal finance management app. Track your expenses, set budgets, and achieve your financial goals with ease.",
   icons: {
     icon: [
       { url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" },
@@ -41,8 +43,12 @@ export default function RootLayout({
                 enableSystem
               disableTransitionOnChange
           >
-            {children}
-            <Toaster position="bottom-right" />
+            <DateFormatProvider>
+              <CurrencyProvider>
+                {children}
+                <Toaster position="bottom-right" />
+              </CurrencyProvider>
+            </DateFormatProvider>
           </ThemeProvider>
           </QueryProvider>
         </body>

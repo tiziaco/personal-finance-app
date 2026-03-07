@@ -20,12 +20,12 @@ export function ServerHealthIndicator() {
 
   // If there's an error, show offline status regardless of cached data
   const statusColor = error || !status
-    ? 'bg-red-500'
-    : status.status === 'healthy' 
-    ? 'bg-green-500' 
+    ? 'bg-red-500 dark:bg-red-400'
+    : status.status === 'healthy'
+    ? 'bg-green-500 dark:bg-green-400'
     : status.status === 'degraded'
     ? 'bg-yellow-500'
-    : 'bg-red-500'
+    : 'bg-red-500 dark:bg-red-400'
 
   // Status indicator component
   const statusIndicator = (
@@ -84,8 +84,8 @@ export function ServerHealthIndicator() {
                 <div className={cn(
                   'size-1.5 rounded-full',
                   status?.components?.api === 'healthy'
-                    ? 'bg-green-500'
-                    : 'bg-red-500'
+                    ? 'bg-green-500 dark:bg-green-400'
+                    : 'bg-red-500 dark:bg-red-400'
                 )} />
                 <span className="text-xs capitalize">
                   {status?.components?.api || 'unknown'}
@@ -99,8 +99,8 @@ export function ServerHealthIndicator() {
                 <div className={cn(
                   'size-1.5 rounded-full',
                   status?.components?.database?.status === 'healthy'
-                    ? 'bg-green-500'
-                    : 'bg-red-500'
+                    ? 'bg-green-500 dark:bg-green-400'
+                    : 'bg-red-500 dark:bg-red-400'
                 )} />
                 <span className="text-xs capitalize">
                   {status?.components?.database?.status || 'unknown'}
@@ -114,8 +114,8 @@ export function ServerHealthIndicator() {
                 <div className={cn(
                   'size-1.5 rounded-full',
                   status?.components?.agents?.chatbot?.ready
-                    ? 'bg-green-500'
-                    : 'bg-red-500'
+                    ? 'bg-green-500 dark:bg-green-400'
+                    : 'bg-red-500 dark:bg-red-400'
                 )} />
                 <span className="text-xs">
                   {status?.components?.agents?.chatbot?.ready ? 'Ready' : 'Not Ready'}
