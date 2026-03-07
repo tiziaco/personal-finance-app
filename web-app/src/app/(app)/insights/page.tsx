@@ -3,7 +3,6 @@
 import { useInsights } from '@/hooks/use-insights'
 import { GenerateButton } from '@/components/insights/generate-button'
 import { InsightCategoryTabs } from '@/components/insights/insight-category-tabs'
-import { SavingsTracker } from '@/components/insights/savings-tracker'
 import { InsightsEmptyState } from '@/components/insights/insights-empty-state'
 import { InsightCardSkeleton } from '@/components/shared/skeletons/insight-card-skeleton'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
@@ -47,7 +46,6 @@ export default function InsightsPage() {
       {!isLoading && insights.length > 0 && (
         <ErrorBoundary>
           <div className="space-y-8">
-            <SavingsTracker insights={insights} />
             <InsightCategoryTabs insights={insights} generatedAt={generatedAt} />
           </div>
         </ErrorBoundary>
