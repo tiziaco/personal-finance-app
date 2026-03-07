@@ -166,13 +166,13 @@ export function getCTAForInsight(
   switch (insight.section) {
     case 'savings':
       return {
-        label: 'Review Subscriptions',
-        href: '/transactions?category=Subscriptions',
+        label: 'View Recurring Charges',
+        href: '/transactions?is_recurring=true',
       }
     case 'subscriptions':
       return {
-        label: 'Review Subscriptions',
-        href: '/transactions?category=Subscriptions',
+        label: 'View Recurring Charges',
+        href: '/transactions?is_recurring=true',
       }
     case 'anomalies':
       return { label: 'View Anomalies', href: '/transactions' }

@@ -35,6 +35,8 @@ export interface FiltersBarProps {
   onAmountMinChange: (value: string | undefined) => void
   amountMax: string | undefined
   onAmountMaxChange: (value: string | undefined) => void
+  isRecurring: boolean | undefined
+  onIsRecurringChange: (value: boolean | undefined) => void
   sortBy: 'date' | 'amount' | 'merchant'
   onSortByChange: (value: 'date' | 'amount' | 'merchant') => void
   sortOrder: 'asc' | 'desc'
@@ -56,6 +58,8 @@ export function FiltersBar({
   onAmountMinChange,
   amountMax,
   onAmountMaxChange,
+  isRecurring,
+  onIsRecurringChange,
   sortBy,
   onSortByChange,
   sortOrder,
@@ -204,6 +208,19 @@ export function FiltersBar({
           onChange={(e) => onAmountMaxChange(e.target.value || undefined)}
           className="w-24"
         />
+      </div>
+
+      {/* Recurring toggle */}
+      <div className="flex flex-col gap-1">
+        <label className="text-xs text-muted-foreground">Recurring</label>
+        <Button
+          variant={isRecurring === true ? 'default' : 'outline'}
+          size="sm"
+          className="h-9"
+          onClick={() => onIsRecurringChange(isRecurring === true ? undefined : true)}
+        >
+          Recurring only
+        </Button>
       </div>
 
       {/* Sort By + Sort Order */}

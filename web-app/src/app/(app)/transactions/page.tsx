@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useSearchParams } from 'next/navigation'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useDebounce } from '@/hooks/use-debounce'
 import { useBatchUpdateTransactions } from '@/hooks/use-transaction-mutations'
@@ -99,6 +100,8 @@ function BulkCategoryModal({
 // ---------------------------------------------------------------------------
 
 export default function TransactionsPage() {
+  const searchParams = useSearchParams()
+
   // Filter state
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebounce(searchInput, 300)
@@ -107,6 +110,10 @@ export default function TransactionsPage() {
   const [category, setCategory] = useState<CategoryEnum | undefined>()
   const [amountMin, setAmountMin] = useState<string | undefined>()
   const [amountMax, setAmountMax] = useState<string | undefined>()
+  const [isRecurring, setIsRecurring] = useState<boolean | undefined>(() => {
+    const v = searchParams.get('is_recurring')
+    return v === 'true' ? true : v === 'false' ? false : undefined
+  })
   const [sortBy, setSortBy] = useState<'date' | 'amount' | 'merchant'>('date')
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(0)
@@ -125,6 +132,7 @@ export default function TransactionsPage() {
     category?: CategoryEnum
     amountMin?: string
     amountMax?: string
+    isRecurring?: boolean
     sortBy?: 'date' | 'amount' | 'merchant'
     sortOrder?: 'asc' | 'desc'
   }) {
@@ -135,6 +143,7 @@ export default function TransactionsPage() {
     if ('category' in update) setCategory(update.category)
     if ('amountMin' in update) setAmountMin(update.amountMin)
     if ('amountMax' in update) setAmountMax(update.amountMax)
+    if ('isRecurring' in update) setIsRecurring(update.isRecurring)
     if ('sortBy' in update) setSortBy(update.sortBy ?? 'date')
     if ('sortOrder' in update) setSortOrder(update.sortOrder ?? 'desc')
   }
@@ -146,6 +155,7 @@ export default function TransactionsPage() {
     setCategory(undefined)
     setAmountMin(undefined)
     setAmountMax(undefined)
+    setIsRecurring(undefined)
     setSortBy('date')
     setSortOrder('desc')
     setPage(0)
@@ -159,13 +169,14 @@ export default function TransactionsPage() {
     category,
     amount_min: amountMin,
     amount_max: amountMax,
+    is_recurring: isRecurring,
     sort_by: sortBy,
     sort_order: sortOrder,
   }
   const { data, isLoading } = useTransactions(filters, page)
 
   // Active filter detection — gates empty state display (research pitfall #4)
-  const hasActiveFilters = !!(debouncedSearch || dateFrom || dateTo || category || amountMin || amountMax)
+  const hasActiveFilters = !!(debouncedSearch || dateFrom || dateTo || category || amountMin || amountMax || isRecurring !== undefined)
   const isEmpty = !isLoading && data?.total === 0
 
   // Bulk recategorize
@@ -216,6 +227,8 @@ export default function TransactionsPage() {
             onAmountMinChange={(v) => updateFilter({ amountMin: v })}
             amountMax={amountMax}
             onAmountMaxChange={(v) => updateFilter({ amountMax: v })}
+            isRecurring={isRecurring}
+            onIsRecurringChange={(v) => updateFilter({ isRecurring: v })}
             sortBy={sortBy}
             onSortByChange={(v) => updateFilter({ sortBy: v })}
             sortOrder={sortOrder}
