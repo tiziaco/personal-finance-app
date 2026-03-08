@@ -18,24 +18,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { useUploadCSV, useConfirmCSVUpload } from '@/hooks/use-csv-upload'
+import { useUploadCSV } from '@/hooks/use-csv-upload'
 import type { CSVUploadProposalResponse } from '@/types/csv-upload'
 
-type Step = 'idle' | 'uploading' | 'mapping' | 'confirming'
+type Step = 'idle' | 'uploading' | 'mapping'
 
 interface CSVUploadDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onConfirm: (mappingId: string, confirmedMapping: Record<string, string>) => void
 }
 
-export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
+export function CSVUploadDialog({ open, onOpenChange, onConfirm }: CSVUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState<Step>('idle')
   const [proposal, setProposal] = useState<CSVUploadProposalResponse | null>(null)
   const [editedMapping, setEditedMapping] = useState<Record<string, string>>({})
 
   const uploadMutation = useUploadCSV()
-  const confirmMutation = useConfirmCSVUpload()
 
   function resetState() {
     setStep('idle')
@@ -76,25 +76,18 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
     if (file) handleFile(file)
   }
 
-  function handleMappingChange(column: string, value: string) {
+  function handleMappingChange(column: string, value: string | null) {
+    if (value === null) return
     setEditedMapping((prev) => ({ ...prev, [column]: value }))
   }
 
   function handleConfirm() {
     if (!proposal) return
-    setStep('confirming')
-    confirmMutation.mutate(
-      { mappingId: proposal.mapping_id, confirmedMapping: editedMapping },
-      {
-        onSuccess: () => {
-          handleOpenChange(false)
-        },
-        onError: () => setStep('mapping'),
-      }
-    )
+    onConfirm(proposal.mapping_id, editedMapping)
+    resetState()
   }
 
-  const isMapping = step === 'mapping' || step === 'confirming'
+  const isMapping = step === 'mapping'
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -195,15 +188,11 @@ export function CSVUploadDialog({ open, onOpenChange }: CSVUploadDialogProps) {
             </div>
 
             <DialogFooter showCloseButton>
-              <Button
-                variant="outline"
-                onClick={() => setStep('idle')}
-                disabled={step === 'confirming'}
-              >
+              <Button variant="outline" onClick={() => setStep('idle')}>
                 Back
               </Button>
-              <Button onClick={handleConfirm} disabled={step === 'confirming'}>
-                {step === 'confirming' ? 'Importing…' : 'Import →'}
+              <Button onClick={handleConfirm}>
+                Import →
               </Button>
             </DialogFooter>
           </>
