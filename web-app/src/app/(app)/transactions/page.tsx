@@ -9,6 +9,7 @@ import { FiltersBar } from '@/components/transactions/filters-bar'
 import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
 import { TransactionsEmptyState } from '@/components/transactions/transactions-empty-state'
+import { CSVUploadDialog } from '@/components/transactions/csv-upload-dialog'
 import {
   Dialog,
   DialogContent,
@@ -119,6 +120,7 @@ export default function TransactionsPage() {
   const [page, setPage] = useState(0)
 
   // Modal state
+  const [uploadOpen, setUploadOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [bulkTransactions, setBulkTransactions] = useState<TransactionResponse[]>([])
@@ -202,8 +204,14 @@ export default function TransactionsPage() {
   if (isEmpty && !hasActiveFilters) {
     return (
       <div className="container max-w-6xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Transactions</h1>
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
+            Import CSV
+          </Button>
+        </div>
         <TransactionsEmptyState />
+        <CSVUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
       </div>
     )
   }
@@ -211,7 +219,12 @@ export default function TransactionsPage() {
   return (
     <ErrorBoundary>
       <div className="container max-w-6xl mx-auto py-8 space-y-6">
-        <h1 className="text-2xl font-bold">Transactions</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <Button variant="outline" size="sm" onClick={() => setUploadOpen(true)}>
+            Import CSV
+          </Button>
+        </div>
 
         <ErrorBoundary>
           <FiltersBar
@@ -263,6 +276,8 @@ export default function TransactionsPage() {
             />
           </ErrorBoundary>
         )}
+
+        <CSVUploadDialog open={uploadOpen} onOpenChange={setUploadOpen} />
 
         <CategoryEditModal
           transaction={editingTransaction}
