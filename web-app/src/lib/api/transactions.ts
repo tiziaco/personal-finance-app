@@ -7,7 +7,47 @@ import type {
   BatchDeleteRequest,
   BatchDeleteResponse,
 } from '@/types/transaction'
+import type {
+  CSVUploadProposalResponse,
+  CSVUploadResponse,
+} from '@/types/csv-upload'
 import { apiRequest } from './client'
+
+export async function uploadCSV(
+  token: string | null,
+  file: File
+): Promise<CSVUploadProposalResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/transactions/upload`
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+    cache: 'no-store',
+  })
+  if (!response.ok) {
+    throw new Error(`API error ${response.status}: /api/v1/transactions/upload`)
+  }
+  return response.json() as Promise<CSVUploadProposalResponse>
+}
+
+export async function confirmCSVUpload(
+  token: string | null,
+  mappingId: string,
+  confirmedMapping: Record<string, string>
+): Promise<CSVUploadResponse> {
+  return apiRequest<CSVUploadResponse>(
+    `/api/v1/transactions/upload/${mappingId}/confirm`,
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ confirmed_mapping: confirmedMapping }),
+    }
+  )
+}
 
 export async function fetchTransactions(
   token: string | null,
