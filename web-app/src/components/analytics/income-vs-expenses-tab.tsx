@@ -91,7 +91,7 @@ export function IncomeVsExpensesTab({ enabled }: IncomeVsExpensesTabProps) {
                   ]}
                   xAxisKey="month"
                   config={chartConfig}
-                  className="h-[300px] w-full"
+                  className="h-75 w-full"
                 />
               </CardContent>
             </Card>
