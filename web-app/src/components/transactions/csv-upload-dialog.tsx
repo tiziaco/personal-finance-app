@@ -188,7 +188,7 @@ export function CSVUploadDialog({ open, onOpenChange, onConfirm }: CSVUploadDial
             </div>
 
             <DialogFooter showCloseButton>
-              <Button variant="outline" onClick={() => setStep('idle')}>
+              <Button variant="outline" onClick={resetState}>
                 Back
               </Button>
               <Button onClick={handleConfirm}>
