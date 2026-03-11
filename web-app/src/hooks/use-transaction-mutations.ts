@@ -45,7 +45,7 @@ export function useBatchUpdateTransactions() {
 }
 
 export function useCreateTransaction() {
-  const { getToken } = useAuth()
+  const { getToken, userId } = useAuth()
   const queryClient = useQueryClient()
 
   return useMutation({
@@ -66,7 +66,7 @@ export function useCreateTransaction() {
       // Build optimistic transaction with a temporary negative ID
       const optimistic: TransactionResponse = {
         id: -Date.now(),
-        user_id: '',
+        user_id: userId ?? '',
         date: payload.date,
         merchant: payload.merchant,
         amount: payload.amount,
