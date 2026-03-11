@@ -10,7 +10,8 @@ import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
 import { TransactionsEmptyState } from '@/components/transactions/transactions-empty-state'
 import { useUploadStore } from '@/lib/stores/upload-store'
-import { Loader2 } from 'lucide-react'
+import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
+import { Loader2, Plus } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -125,6 +126,7 @@ export default function TransactionsPage() {
   const isImporting = useUploadStore((s) => s.isImporting)
 
   // Modal state
+  const [addOpen, setAddOpen] = useState(false)
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [bulkTransactions, setBulkTransactions] = useState<TransactionResponse[]>([])
@@ -213,26 +215,11 @@ export default function TransactionsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setUploadOpen(true)}
-            disabled={isImporting}
+            onClick={() => setAddOpen(true)}
           >
-            {isImporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
-            ) : (
-              'Import CSV'
-            )}
+            <Plus className="h-4 w-4 mr-2" />
+            Add Transaction
           </Button>
-        </div>
-        <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
-      </div>
-    )
-  }
-
-  return (
-    <ErrorBoundary>
-      <div className="container max-w-6xl mx-auto py-8 space-y-6">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Transactions</h1>
           <Button
             variant="outline"
             size="sm"
@@ -245,6 +232,40 @@ export default function TransactionsPage() {
               'Import CSV'
             )}
           </Button>
+        </div>
+        <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
+        <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />
+      </div>
+    )
+  }
+
+  return (
+    <ErrorBoundary>
+      <div className="container max-w-6xl mx-auto py-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Transaction
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUploadOpen(true)}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+              ) : (
+                'Import CSV'
+              )}
+            </Button>
+          </div>
         </div>
 
         <ErrorBoundary>
@@ -313,6 +334,8 @@ export default function TransactionsPage() {
           onSave={handleBulkSave}
           isPending={batchMutation.isPending}
         />
+
+        <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />
       </div>
     </ErrorBoundary>
   )
