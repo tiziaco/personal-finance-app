@@ -9,8 +9,15 @@ import {
   flexRender,
   type RowSelectionState,
 } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useSidebar } from '@/components/ui/sidebar'
 import { DataTableBulkActions } from '@/components/ui/data-table-bulk-actions'
@@ -23,9 +30,11 @@ import { useCurrency } from '@/providers/currency-provider'
 function TransactionCard({
   transaction,
   onEdit,
+  onDelete,
 }: {
   transaction: TransactionResponse
   onEdit: (t: TransactionResponse) => void
+  onDelete: (t: TransactionResponse) => void
 }) {
   const formatDate = useFormatDate()
   const { formatAmount } = useCurrency()
@@ -41,13 +50,28 @@ function TransactionCard({
       </div>
       <div className="shrink-0 flex flex-col items-end gap-2">
         <p className="font-semibold text-sm">{formatAmount(transaction.amount)}</p>
-        <button
-          onClick={() => onEdit(transaction)}
-          className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
-          aria-label="Edit category"
-        >
-          <Edit2 className="h-4 w-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
+            aria-label="Transaction actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEdit(transaction)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(transaction)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -61,6 +85,7 @@ export interface TransactionsTableProps {
   page: number
   onPageChange: (page: number) => void
   onEditTransaction: (transaction: TransactionResponse) => void
+  onDeleteTransaction: (transaction: TransactionResponse) => void
   onBulkRecategorize: (transactions: TransactionResponse[], resetSelection: () => void) => void
   isLoading?: boolean
 }
@@ -75,6 +100,7 @@ export function TransactionsTable({
   page,
   onPageChange,
   onEditTransaction,
+  onDeleteTransaction,
   onBulkRecategorize,
   isLoading,
 }: TransactionsTableProps) {
@@ -157,15 +183,28 @@ export function TransactionsTable({
       id: 'actions',
       header: 'Actions',
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onEditTransaction(row.original)}
-          aria-label="Edit transaction"
-          className="min-h-12 min-w-12"
-        >
-          <Edit2 className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
+            aria-label="Transaction actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEditTransaction(row.original)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDeleteTransaction(row.original)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     }),
   ]
@@ -243,6 +282,7 @@ export function TransactionsTable({
               key={row.id}
               transaction={row.original}
               onEdit={onEditTransaction}
+              onDelete={onDeleteTransaction}
             />
           ))
         )}
