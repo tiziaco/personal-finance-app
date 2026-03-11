@@ -59,22 +59,21 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     e.preventDefault()
     if (!form.date || !form.merchant || !form.amount || !form.category) return
 
-    mutate(
-      {
-        date: form.date,
-        merchant: form.merchant.trim(),
-        amount: form.amount,
-        category: form.category,
-        description: form.description.trim() || undefined,
-        is_recurring: form.is_recurring,
-      },
-      {
-        onSuccess: () => handleOpenChange(false),
-      }
-    )
+    const parsedAmount = parseFloat(form.amount)
+    if (!isFinite(parsedAmount)) return
+
+    mutate({
+      date: form.date,
+      merchant: form.merchant.trim(),
+      amount: form.amount,
+      category: form.category,
+      description: form.description.trim() || undefined,
+      is_recurring: form.is_recurring,
+    })
+    handleOpenChange(false)
   }
 
-  const isValid = !!(form.date && form.merchant && form.amount && form.category)
+  const isValid = !!(form.date && form.merchant && form.category) && isFinite(parseFloat(form.amount))
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
