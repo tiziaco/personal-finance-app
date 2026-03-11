@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useDebounce } from '@/hooks/use-debounce'
-import { useBatchUpdateTransactions } from '@/hooks/use-transaction-mutations'
+import { useBatchUpdateTransactions, useDeleteTransaction } from '@/hooks/use-transaction-mutations'
 import { FiltersBar } from '@/components/transactions/filters-bar'
 import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
@@ -187,6 +187,13 @@ export default function TransactionsPage() {
   const hasActiveFilters = !!(debouncedSearch || dateFrom || dateTo || category || amountMin || amountMax || isRecurring !== undefined)
   const isEmpty = !isLoading && data?.total === 0
 
+  // Delete transaction
+  const deleteMutation = useDeleteTransaction()
+
+  function handleDeleteTransaction(transaction: TransactionResponse) {
+    deleteMutation.mutate(transaction.id)
+  }
+
   // Bulk recategorize
   const batchMutation = useBatchUpdateTransactions()
 
@@ -315,6 +322,7 @@ export default function TransactionsPage() {
               page={page}
               onPageChange={setPage}
               onEditTransaction={setEditingTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
               onBulkRecategorize={handleBulkRecategorize}
               isLoading={isLoading}
             />
