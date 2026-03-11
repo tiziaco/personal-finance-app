@@ -1,7 +1,10 @@
 'use client'
 
 import { useState } from 'react'
+import { format, parse } from 'date-fns'
+import { CalendarIcon } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Calendar } from '@/components/ui/calendar'
 import {
   Dialog,
   DialogContent,
@@ -9,6 +12,11 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -48,6 +56,7 @@ const EMPTY_FORM: FormState = {
 
 export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialogProps) {
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const { mutate, isPending } = useCreateTransaction()
 
   function handleOpenChange(next: boolean) {
@@ -55,7 +64,7 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     onOpenChange(next)
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (!form.date || !form.merchant || !form.amount || !form.category) return
 
@@ -85,14 +94,32 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
         <form onSubmit={handleSubmit} className="flex flex-col gap-4 mt-2">
           {/* Date */}
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="at-date">Date</Label>
-            <Input
-              id="at-date"
-              type="date"
-              value={form.date}
-              onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))}
-              required
-            />
+            <Label>Date</Label>
+            <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+              <PopoverTrigger
+                render={
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                    {form.date
+                      ? format(parse(form.date, 'yyyy-MM-dd', new Date()), 'PPP')
+                      : <span className="text-muted-foreground">Pick a date</span>}
+                  </Button>
+                }
+              />
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={form.date ? parse(form.date, 'yyyy-MM-dd', new Date()) : undefined}
+                  onSelect={(date) => {
+                    if (date) setForm((f) => ({ ...f, date: format(date, 'yyyy-MM-dd') }))
+                    setCalendarOpen(false)
+                  }}
+                />
+              </PopoverContent>
+            </Popover>
           </div>
 
           {/* Merchant */}
