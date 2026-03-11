@@ -6,6 +6,7 @@ import type {
   BatchUpdateResponse,
   BatchDeleteRequest,
   BatchDeleteResponse,
+  CreateTransactionRequest,
 } from '@/types/transaction'
 import type {
   CSVUploadProposalResponse,
@@ -68,6 +69,16 @@ export async function updateTransaction(
 ): Promise<TransactionResponse> {
   return apiRequest<TransactionResponse>(`/api/v1/transactions/${id}`, token, {
     method: 'PATCH',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function createTransaction(
+  token: string | null,
+  data: CreateTransactionRequest
+): Promise<TransactionResponse> {
+  return apiRequest<TransactionResponse>('/api/v1/transactions', token, {
+    method: 'POST',
     body: JSON.stringify(data),
   })
 }

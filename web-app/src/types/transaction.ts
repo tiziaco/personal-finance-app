@@ -105,3 +105,14 @@ export interface BatchDeleteRequest {
 export interface BatchDeleteResponse {
   deleted: number
 }
+
+export interface CreateTransactionRequest {
+  /** ISO 8601 date string, e.g. '2024-01-15' */
+  date: string
+  merchant: string
+  /** Decimal as string — e.g. '-42.50' for expense, '1200.00' for income */
+  amount: string
+  category: CategoryEnum
+  description?: string
+  is_recurring?: boolean
+}
