@@ -223,7 +223,7 @@ export default function TransactionsPage() {
             )}
           </Button>
         </div>
-        <TransactionsEmptyState />
+        <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
       </div>
     )
   }
