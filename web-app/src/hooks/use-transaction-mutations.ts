@@ -3,7 +3,7 @@
 import { useAuth } from '@clerk/nextjs'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import { updateTransaction, batchUpdateTransactions, createTransaction } from '@/lib/api/transactions'
+import { updateTransaction, batchUpdateTransactions, createTransaction, batchDeleteTransactions } from '@/lib/api/transactions'
 import type { CategoryEnum, CreateTransactionRequest, TransactionListResponse, TransactionResponse } from '@/types/transaction'
 
 export function useUpdateTransaction() {
@@ -106,6 +106,25 @@ export function useCreateTransaction() {
     onSettled: () => {
       // Sync real server state regardless of outcome
       queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    },
+  })
+}
+
+export function useDeleteTransaction() {
+  const { getToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: number) => {
+      const token = await getToken()
+      return batchDeleteTransactions(token, { ids: [id] })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      toast.success('Transaction deleted')
+    },
+    onError: () => {
+      toast.error('Failed to delete transaction')
     },
   })
 }
