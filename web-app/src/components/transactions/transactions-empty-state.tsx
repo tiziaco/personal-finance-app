@@ -1,8 +1,11 @@
-import Link from 'next/link'
 import { Upload } from 'lucide-react'
-import { buttonVariants } from '@/components/ui/button'
+import { Button } from '@/components/ui/button'
 
-export function TransactionsEmptyState() {
+interface TransactionsEmptyStateProps {
+  onUpload: () => void
+}
+
+export function TransactionsEmptyState({ onUpload }: TransactionsEmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center py-24 gap-6 text-center">
       <Upload className="h-16 w-16 text-muted-foreground/40" />
@@ -12,9 +15,7 @@ export function TransactionsEmptyState() {
           Upload a CSV file to import your bank transactions and get started.
         </p>
       </div>
-      <Link href="/upload" className={buttonVariants({ variant: 'default' })}>
-        Upload a CSV file to get started
-      </Link>
+      <Button onClick={onUpload}>Upload a CSV file to get started</Button>
     </div>
   )
 }

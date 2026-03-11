@@ -82,12 +82,6 @@ export function InsightsCallout() {
         {/* DASH-08: Upload CSV CTA always visible */}
         <div className="flex gap-3 pt-2">
           <Link
-            href="/upload"
-            className={cn(buttonVariants({ variant: 'default', size: 'sm' }))}
-          >
-            Upload CSV
-          </Link>
-          <Link
             href="/insights"
             className={cn(buttonVariants({ variant: 'outline', size: 'sm' }))}
           >

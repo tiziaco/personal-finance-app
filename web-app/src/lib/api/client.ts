@@ -8,10 +8,11 @@ export async function apiRequest<T>(
   options?: RequestInit
 ): Promise<T> {
   const url = `${process.env.NEXT_PUBLIC_API_URL}${path}`
+  const isFormData = options?.body instanceof FormData
   const response = await fetch(url, {
     ...options,
     headers: {
-      'Content-Type': 'application/json',
+      ...(isFormData ? {} : { 'Content-Type': 'application/json' }),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },

@@ -9,6 +9,8 @@ import { FiltersBar } from '@/components/transactions/filters-bar'
 import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
 import { TransactionsEmptyState } from '@/components/transactions/transactions-empty-state'
+import { useUploadStore } from '@/lib/stores/upload-store'
+import { Loader2 } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -118,6 +120,10 @@ export default function TransactionsPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [page, setPage] = useState(0)
 
+  // Upload store
+  const setUploadOpen = useUploadStore((s) => s.setOpen)
+  const isImporting = useUploadStore((s) => s.isImporting)
+
   // Modal state
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
@@ -202,8 +208,22 @@ export default function TransactionsPage() {
   if (isEmpty && !hasActiveFilters) {
     return (
       <div className="container max-w-6xl mx-auto py-8">
-        <h1 className="text-2xl font-bold mb-6">Transactions</h1>
-        <TransactionsEmptyState />
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+            ) : (
+              'Import CSV'
+            )}
+          </Button>
+        </div>
+        <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
       </div>
     )
   }
@@ -211,7 +231,21 @@ export default function TransactionsPage() {
   return (
     <ErrorBoundary>
       <div className="container max-w-6xl mx-auto py-8 space-y-6">
-        <h1 className="text-2xl font-bold">Transactions</h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold">Transactions</h1>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+            ) : (
+              'Import CSV'
+            )}
+          </Button>
+        </div>
 
         <ErrorBoundary>
           <FiltersBar

@@ -7,7 +7,42 @@ import type {
   BatchDeleteRequest,
   BatchDeleteResponse,
 } from '@/types/transaction'
+import type {
+  CSVUploadProposalResponse,
+  CSVUploadResponse,
+} from '@/types/csv-upload'
 import { apiRequest } from './client'
+
+export async function uploadCSV(
+  token: string | null,
+  file: File
+): Promise<CSVUploadProposalResponse> {
+  const formData = new FormData()
+  formData.append('file', file)
+  return apiRequest<CSVUploadProposalResponse>(
+    '/api/v1/transactions/upload',
+    token,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  )
+}
+
+export async function confirmCSVUpload(
+  token: string | null,
+  mappingId: string,
+  confirmedMapping: Record<string, string>
+): Promise<CSVUploadResponse> {
+  return apiRequest<CSVUploadResponse>(
+    `/api/v1/transactions/upload/${mappingId}/confirm`,
+    token,
+    {
+      method: 'POST',
+      body: JSON.stringify({ confirmed_mapping: confirmedMapping }),
+    }
+  )
+}
 
 export async function fetchTransactions(
   token: string | null,
