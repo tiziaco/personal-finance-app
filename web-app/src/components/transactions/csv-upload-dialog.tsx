@@ -31,6 +31,8 @@ interface CSVUploadDialogProps {
 
 export function CSVUploadDialog({ open, onOpenChange, onConfirm }: CSVUploadDialogProps) {
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const openRef = useRef(open)
+  openRef.current = open
   const [step, setStep] = useState<Step>('idle')
   const [proposal, setProposal] = useState<CSVUploadProposalResponse | null>(null)
   const [editedMapping, setEditedMapping] = useState<Record<string, string>>({})
@@ -53,11 +55,15 @@ export function CSVUploadDialog({ open, onOpenChange, onConfirm }: CSVUploadDial
     setStep('uploading')
     uploadMutation.mutate(file, {
       onSuccess: (data) => {
+        if (!openRef.current) return
         setProposal(data)
         setEditedMapping({ ...data.proposed_mapping })
         setStep('mapping')
       },
-      onError: () => setStep('idle'),
+      onError: () => {
+        if (!openRef.current) return
+        setStep('idle')
+      },
     })
   }
 
