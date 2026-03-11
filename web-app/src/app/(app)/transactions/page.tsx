@@ -212,26 +212,28 @@ export default function TransactionsPage() {
       <div className="container max-w-6xl mx-auto py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Transactions</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Transaction
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setUploadOpen(true)}
-            disabled={isImporting}
-          >
-            {isImporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
-            ) : (
-              'Import CSV'
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Transaction
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setUploadOpen(true)}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+              ) : (
+                'Import CSV'
+              )}
+            </Button>
+          </div>
         </div>
         <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
         <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />
