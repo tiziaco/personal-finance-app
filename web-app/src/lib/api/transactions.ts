@@ -19,19 +19,14 @@ export async function uploadCSV(
 ): Promise<CSVUploadProposalResponse> {
   const formData = new FormData()
   formData.append('file', file)
-  const url = `${process.env.NEXT_PUBLIC_API_URL}/api/v1/transactions/upload`
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: formData,
-    cache: 'no-store',
-  })
-  if (!response.ok) {
-    throw new Error(`API error ${response.status}: /api/v1/transactions/upload`)
-  }
-  return response.json() as Promise<CSVUploadProposalResponse>
+  return apiRequest<CSVUploadProposalResponse>(
+    '/api/v1/transactions/upload',
+    token,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  )
 }
 
 export async function confirmCSVUpload(
