@@ -221,7 +221,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold">Transactions</h1>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => setAddOpen(true)}
             >
@@ -231,6 +231,7 @@ export default function TransactionsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="bg-card"
               onClick={() => setUploadOpen(true)}
               disabled={isImporting}
             >
@@ -255,7 +256,7 @@ export default function TransactionsPage() {
           <h1 className="text-2xl font-bold">Transactions</h1>
           <div className="flex items-center gap-2">
             <Button
-              variant="outline"
+              variant="default"
               size="sm"
               onClick={() => setAddOpen(true)}
             >
@@ -265,6 +266,7 @@ export default function TransactionsPage() {
             <Button
               variant="outline"
               size="sm"
+              className="bg-card"
               onClick={() => setUploadOpen(true)}
               disabled={isImporting}
             >
