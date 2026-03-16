@@ -155,7 +155,7 @@ export function TransactionsTable({
     columnHelper.accessor('amount', {
       header: 'Amount',
       cell: (info) => {
-        const val = info.getValue()
+        const val = Number(info.getValue())
         return (
           <span className={cn('font-medium tabular-nums', val < 0 ? 'text-destructive' : 'text-success')}>
             {formatCurrency(val)}
