@@ -30,11 +30,11 @@ import { useCurrency } from '@/providers/currency-provider'
 
 function TransactionCard({
   transaction,
-  onEdit,
+  onEditTransaction,
   onDelete,
 }: {
   transaction: TransactionResponse
-  onEdit: (t: TransactionResponse) => void
+  onEditTransaction: (t: TransactionResponse) => void
   onDelete: (t: TransactionResponse) => void
 }) {
   const formatDate = useFormatDate()
@@ -59,7 +59,7 @@ function TransactionCard({
             <MoreHorizontal className="h-4 w-4" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => onEdit(transaction)}>
+            <DropdownMenuItem onClick={() => onEditTransaction(transaction)}>
               <Pencil className="h-4 w-4 mr-2" />
               Edit
             </DropdownMenuItem>
@@ -85,6 +85,7 @@ export interface TransactionsTableProps {
   limit: number
   page: number
   onPageChange: (page: number) => void
+  onEditCategory: (transaction: TransactionResponse) => void
   onEditTransaction: (transaction: TransactionResponse) => void
   onDeleteTransaction: (transaction: TransactionResponse) => void
   onBulkRecategorize: (transactions: TransactionResponse[], resetSelection: () => void) => void
@@ -100,6 +101,7 @@ export function TransactionsTable({
   limit,
   page,
   onPageChange,
+  onEditCategory,
   onEditTransaction,
   onDeleteTransaction,
   onBulkRecategorize,
@@ -169,7 +171,7 @@ export function TransactionsTable({
       cell: (info) => (
         <span
           className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors"
-          onClick={() => onEditTransaction(info.row.original)}
+          onClick={() => onEditCategory(info.row.original)}
         >
           {info.getValue()}
         </span>
@@ -289,7 +291,7 @@ export function TransactionsTable({
             <TransactionCard
               key={row.id}
               transaction={row.original}
-              onEdit={onEditTransaction}
+              onEditTransaction={onEditTransaction}
               onDelete={onDeleteTransaction}
             />
           ))
