@@ -4,9 +4,9 @@ import { useAuth } from '@clerk/nextjs'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { updateTransaction, batchUpdateTransactions, createTransaction, batchDeleteTransactions } from '@/lib/api/transactions'
-import type { CategoryEnum, CreateTransactionRequest, TransactionListResponse, TransactionResponse } from '@/types/transaction'
+import type { CategoryEnum, CreateTransactionRequest, TransactionListResponse, TransactionResponse, TransactionUpdateRequest } from '@/types/transaction'
 
-export function useUpdateTransaction() {
+export function useUpdateTransactionCategory() {
   const { getToken } = useAuth()
   const queryClient = useQueryClient()
 
@@ -21,6 +21,64 @@ export function useUpdateTransaction() {
     },
     onError: () => {
       toast.error('Failed to update category')
+    },
+  })
+}
+
+export function useUpdateTransaction() {
+  const { getToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (payload: { id: number } & TransactionUpdateRequest) => {
+      const { id, ...data } = payload
+      const token = await getToken()
+      return updateTransaction(token, id, data)
+    },
+
+    onMutate: async (payload) => {
+      // Cancel in-flight queries to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['transactions'] })
+
+      // Snapshot all cached transaction pages for rollback
+      const previousData = queryClient.getQueriesData<TransactionListResponse>({
+        queryKey: ['transactions'],
+      })
+
+      const { id, ...changes } = payload
+
+      // Merge changed fields onto the matching transaction in every cached page
+      queryClient.setQueriesData<TransactionListResponse>(
+        { queryKey: ['transactions'] },
+        (old) => {
+          if (!old) return old
+          return {
+            ...old,
+            items: old.items.map((item) =>
+              item.id === id ? { ...item, ...changes } : item
+            ),
+          }
+        }
+      )
+
+      return { previousData }
+    },
+
+    onError: (_err, _variables, context) => {
+      // Roll back all snapshots
+      context?.previousData.forEach(([queryKey, data]) => {
+        queryClient.setQueryData(queryKey, data)
+      })
+      toast.error('Failed to update transaction')
+    },
+
+    onSuccess: () => {
+      toast.success('Transaction updated')
+    },
+
+    onSettled: () => {
+      // Sync real server state regardless of outcome
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
