@@ -116,3 +116,14 @@ export interface CreateTransactionRequest {
   description?: string
   is_recurring?: boolean
 }
+
+export interface TransactionUpdateRequest {
+  date?: string
+  merchant?: string
+  /** CRITICAL: Decimal as string — e.g. '-42.50' for expense, '1200.00' for income; must NOT be number */
+  amount?: string
+  /** null not supported for clearing — backend uses exclude_none=True */
+  description?: string
+  category?: CategoryEnum
+  is_recurring?: boolean
+}
