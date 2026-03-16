@@ -11,6 +11,7 @@ import { CategoryEditModal } from '@/components/transactions/category-edit-modal
 import { TransactionsEmptyState } from '@/components/transactions/transactions-empty-state'
 import { useUploadStore } from '@/lib/stores/upload-store'
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
+import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
 import { Loader2, Plus } from 'lucide-react'
 import {
   Dialog,
@@ -127,6 +128,7 @@ export default function TransactionsPage() {
 
   // Modal state
   const [addOpen, setAddOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<TransactionResponse | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [bulkTransactions, setBulkTransactions] = useState<TransactionResponse[]>([])
@@ -323,6 +325,7 @@ export default function TransactionsPage() {
               limit={data?.limit ?? 25}
               page={page}
               onPageChange={setPage}
+              onEditCategory={setEditingCategory}
               onEditTransaction={setEditingTransaction}
               onDeleteTransaction={handleDeleteTransaction}
               onBulkRecategorize={handleBulkRecategorize}
@@ -332,6 +335,14 @@ export default function TransactionsPage() {
         )}
 
         <CategoryEditModal
+          transaction={editingCategory}
+          open={editingCategory !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingCategory(null)
+          }}
+        />
+
+        <EditTransactionDialog
           transaction={editingTransaction}
           open={editingTransaction !== null}
           onOpenChange={(open) => {
