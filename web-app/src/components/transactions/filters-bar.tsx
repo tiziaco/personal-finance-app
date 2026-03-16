@@ -118,156 +118,152 @@ export function FiltersBar({
   }, [])
 
   return (
-    <div className="flex flex-wrap gap-3 items-end">
-      {/* Search input */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Search</label>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-          <Input
-            type="text"
-            placeholder="Search merchants…"
-            value={searchInput}
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 w-52"
-          />
-        </div>
-      </div>
-
-      {/* Date Range */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Date range</label>
-        <Popover open={calendarOpen} onOpenChange={handleOpenChange}>
-          <PopoverTrigger
-            render={(props) => (
-              <button
-                {...props}
-                className={cn(buttonVariants({ variant: 'outline' }), 'w-52 justify-start text-left font-normal')}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
-                  {triggerLabel}
-                </span>
-              </button>
-            )}
-          />
-          <PopoverContent className="w-auto p-0" align="start">
-            <Calendar
-              mode="range"
-              selected={selectedRange}
-              onSelect={handleRangeSelect}
+    <div className="bg-card rounded-xl border border-border/60 p-4 shadow-sm space-y-3">
+      <div className="flex flex-wrap gap-2 items-end">
+        {/* Search input */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Search</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground pointer-events-none" />
+            <Input
+              type="text"
+              placeholder="Search merchants…"
+              value={searchInput}
+              onChange={(e) => onSearchChange(e.target.value)}
+              className="pl-8 h-8 w-44 text-sm"
             />
-          </PopoverContent>
-        </Popover>
-      </div>
+          </div>
+        </div>
 
-      {/* Category dropdown */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Category</label>
-        <Select
-          value={category ?? 'all'}
-          onValueChange={(value) => {
-            if (value) {
-              onCategoryChange(value === 'all' ? undefined : (value as CategoryEnum))
-            }
-          }}
-        >
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="All categories" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All categories</SelectItem>
-            {CATEGORY_OPTIONS.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        {/* Date Range */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Date range</label>
+          <Popover open={calendarOpen} onOpenChange={handleOpenChange}>
+            <PopoverTrigger
+              render={(props) => (
+                <button
+                  {...props}
+                  className={cn(buttonVariants({ variant: 'outline' }), 'h-8 w-44 justify-start text-left text-sm font-normal')}
+                >
+                  <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                  <span className={!selectedRange.from ? 'text-muted-foreground' : ''}>
+                    {triggerLabel}
+                  </span>
+                </button>
+              )}
+            />
+            <PopoverContent className="w-auto p-0" align="start">
+              <Calendar
+                mode="range"
+                selected={selectedRange}
+                onSelect={handleRangeSelect}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
 
-      {/* Amount Min */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Min €</label>
-        <Input
-          type="number"
-          placeholder="0"
-          value={amountMin ?? ''}
-          onChange={(e) => onAmountMinChange(e.target.value || undefined)}
-          className="w-24"
-        />
-      </div>
-
-      {/* Amount Max */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Max €</label>
-        <Input
-          type="number"
-          placeholder="∞"
-          value={amountMax ?? ''}
-          onChange={(e) => onAmountMaxChange(e.target.value || undefined)}
-          className="w-24"
-        />
-      </div>
-
-      {/* Recurring toggle */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Recurring</label>
-        <Button
-          variant={isRecurring === true ? 'default' : 'outline'}
-          size="sm"
-          className="h-9"
-          onClick={() => onIsRecurringChange(isRecurring === true ? undefined : true)}
-        >
-          Recurring only
-        </Button>
-      </div>
-
-      {/* Sort By + Sort Order */}
-      <div className="flex flex-col gap-1">
-        <label className="text-xs text-muted-foreground">Sort by</label>
-        <div className="flex items-center gap-1">
+        {/* Category dropdown */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Category</label>
           <Select
-            value={sortBy}
+            value={category ?? 'all'}
             onValueChange={(value) => {
               if (value) {
-                onSortByChange(value as 'date' | 'amount' | 'merchant')
+                onCategoryChange(value === 'all' ? undefined : (value as CategoryEnum))
               }
             }}
           >
-            <SelectTrigger className="w-32">
-              <SelectValue />
+            <SelectTrigger className="h-8 w-44 text-sm">
+              <SelectValue placeholder="All categories" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="date">Date</SelectItem>
-              <SelectItem value="amount">Amount</SelectItem>
-              <SelectItem value="merchant">Merchant</SelectItem>
+              <SelectItem value="all">All categories</SelectItem>
+              {CATEGORY_OPTIONS.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Amount range */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground">Amount range</label>
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              placeholder="Min"
+              value={amountMin ?? ''}
+              onChange={(e) => onAmountMinChange(e.target.value || undefined)}
+              className="h-8 w-20 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">–</span>
+            <Input
+              type="number"
+              placeholder="Max"
+              value={amountMax ?? ''}
+              onChange={(e) => onAmountMaxChange(e.target.value || undefined)}
+              className="h-8 w-20 text-sm"
+            />
+          </div>
+        </div>
+
+        {/* Recurring toggle */}
+        <div className="flex flex-col gap-1">
+          <label className="text-xs text-muted-foreground invisible">Recurring</label>
           <Button
-            variant="ghost"
+            variant={isRecurring === true ? 'default' : 'outline'}
             size="sm"
-            onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
-            aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+            className="h-8 text-sm"
+            onClick={() => onIsRecurringChange(isRecurring === true ? undefined : true)}
           >
-            {sortOrder === 'asc' ? (
-              <ArrowUp className="h-4 w-4" />
-            ) : (
-              <ArrowDown className="h-4 w-4" />
-            )}
+            Recurring only
           </Button>
+        </div>
+
+        {/* Sort By + Sort Order — pushed to the right */}
+        <div className="flex flex-col gap-1 ml-auto">
+          <label className="text-xs text-muted-foreground">Sort by</label>
+          <div className="flex items-center gap-1">
+            <Select
+              value={sortBy}
+              onValueChange={(value) => {
+                if (value) {
+                  onSortByChange(value as 'date' | 'amount' | 'merchant')
+                }
+              }}
+            >
+              <SelectTrigger className="h-8 w-28 text-sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="date">Date</SelectItem>
+                <SelectItem value="amount">Amount</SelectItem>
+                <SelectItem value="merchant">Merchant</SelectItem>
+              </SelectContent>
+            </Select>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 w-8 p-0"
+              onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
+              aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
+            >
+              {sortOrder === 'asc' ? (
+                <ArrowUp className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDown className="h-3.5 w-3.5" />
+              )}
+            </Button>
+            {hasActiveFilters && (
+              <Button variant="ghost" size="sm" className="h-8 text-sm text-muted-foreground hover:text-foreground" onClick={onClearAll}>
+                Clear
+              </Button>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Clear All */}
-      {hasActiveFilters && (
-        <div className="flex flex-col gap-1">
-          <label className="text-xs text-muted-foreground invisible">Clear</label>
-          <Button variant="outline" size="sm" onClick={onClearAll}>
-            Clear
-          </Button>
-        </div>
-      )}
     </div>
   )
 }

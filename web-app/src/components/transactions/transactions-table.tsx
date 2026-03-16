@@ -10,6 +10,7 @@ import {
   type RowSelectionState,
 } from '@tanstack/react-table'
 import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -119,7 +120,7 @@ export function TransactionsTable({
     columnHelper.display({
       id: 'select',
       header: ({ table }) => (
-        <div className="flex items-center justify-center min-h-12 min-w-8">
+        <div className="flex items-center justify-center w-8">
           <Checkbox
             checked={table.getIsAllRowsSelected()}
             indeterminate={table.getIsSomeRowsSelected()}
@@ -129,7 +130,7 @@ export function TransactionsTable({
         </div>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center justify-center min-h-12 min-w-8">
+        <div className="flex items-center justify-center w-8">
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(checked) => row.toggleSelected(!!checked)}
@@ -153,14 +154,21 @@ export function TransactionsTable({
     // 4. Amount column
     columnHelper.accessor('amount', {
       header: 'Amount',
-      cell: (info) => formatCurrency(info.getValue()),
+      cell: (info) => {
+        const val = info.getValue()
+        return (
+          <span className={cn('font-medium tabular-nums', val < 0 ? 'text-destructive' : 'text-success')}>
+            {formatCurrency(val)}
+          </span>
+        )
+      },
     }),
     // 5. Category column
     columnHelper.accessor('category', {
       header: 'Category',
       cell: (info) => (
         <span
-          className="text-sm cursor-pointer hover:underline"
+          className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors"
           onClick={() => onEditTransaction(info.row.original)}
         >
           {info.getValue()}
@@ -181,11 +189,11 @@ export function TransactionsTable({
     // 7. Actions column
     columnHelper.display({
       id: 'actions',
-      header: 'Actions',
+      header: '',
       cell: ({ row }) => (
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted"
             aria-label="Transaction actions"
           >
             <MoreHorizontal className="h-4 w-4" />
@@ -233,7 +241,7 @@ export function TransactionsTable({
   return (
     <>
       {/* === DESKTOP TABLE: hidden on mobile (< sm = 640px) === */}
-      <div className="hidden sm:block w-full overflow-auto rounded-lg border">
+      <div className="hidden sm:block w-full overflow-auto rounded-xl border border-border/60 bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -241,7 +249,7 @@ export function TransactionsTable({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50"
+                    className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/40"
                   >
                     {header.isPlaceholder
                       ? null
@@ -253,9 +261,9 @@ export function TransactionsTable({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-t hover:bg-muted/30 transition-colors">
+              <tr key={row.id} className="border-t hover:bg-muted/20 transition-colors">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3">
+                  <td key={cell.id} className="px-4 py-2">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -299,7 +307,6 @@ export function TransactionsTable({
             size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 0}
-            className="min-h-12"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
@@ -312,7 +319,6 @@ export function TransactionsTable({
             size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={to >= total}
-            className="min-h-12"
           >
             Next
             <ChevronRight className="h-4 w-4" />
