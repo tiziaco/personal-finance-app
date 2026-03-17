@@ -322,10 +322,10 @@ export function FiltersBar({
                   </div>
 
                   {/* Status hint */}
-                  <p className="min-h-6 text-xs text-muted-foreground">{calendarHint}</p>
+                  <p className="min-h-4 text-xs text-muted-foreground">{calendarHint}</p>
 
                   {/* Calendar */}
-                  <div className="flex justify-center">
+                  <div className="-mt-2 flex justify-center">
                     <Calendar
                       mode="range"
                       selected={selectedRange}
