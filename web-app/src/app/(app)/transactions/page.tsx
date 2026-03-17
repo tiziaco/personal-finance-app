@@ -12,92 +12,11 @@ import { TransactionsEmptyState } from '@/components/transactions/transactions-e
 import { useUploadStore } from '@/lib/stores/upload-store'
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
 import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
+import { BulkCategoryModal } from '@/components/transactions/bulk-category-modal'
 import { Loader2, Plus, Upload } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import type { CategoryEnum, TransactionResponse, TransactionFilters } from '@/types/transaction'
-import { CATEGORY_OPTIONS } from '@/types/transaction'
-
-// ---------------------------------------------------------------------------
-// BulkCategoryModal — local component, not exported
-// ---------------------------------------------------------------------------
-
-interface BulkCategoryModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  transactions: TransactionResponse[]
-  onSave: (category: CategoryEnum) => void
-  isPending: boolean
-}
-
-function BulkCategoryModal({
-  open,
-  onOpenChange,
-  transactions,
-  onSave,
-  isPending,
-}: BulkCategoryModalProps) {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryEnum | ''>('')
-
-  const handleSave = () => {
-    if (selectedCategory === '') return
-    onSave(selectedCategory)
-  }
-
-  // Reset selection when modal closes
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setSelectedCategory('')
-    onOpenChange(nextOpen)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Recategorize {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</DialogTitle>
-        </DialogHeader>
-
-        <Select
-          value={selectedCategory}
-          onValueChange={(value) => {
-            if (value) setSelectedCategory(value as CategoryEnum)
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a category" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_OPTIONS.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <DialogFooter showCloseButton>
-          <Button onClick={handleSave} disabled={isPending || selectedCategory === ''}>
-            {isPending ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // TransactionsPage — filter state owner and page composition
