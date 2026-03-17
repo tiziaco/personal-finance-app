@@ -1,12 +1,31 @@
 'use client'
 
 import { useRef, useState, useMemo, useCallback } from 'react'
-import { Search, ArrowUp, ArrowDown, SlidersHorizontal } from 'lucide-react'
-import { format, parseISO } from 'date-fns'
+import {
+  Search,
+  ArrowUp,
+  ArrowDown,
+  SlidersHorizontal,
+  CalendarIcon,
+} from 'lucide-react'
+import {
+  format,
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+  startOfMonth,
+  endOfMonth,
+  subMonths,
+} from 'date-fns'
 import { type DateRange } from 'react-day-picker'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Calendar } from '@/components/ui/calendar'
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover'
 import {
   Select,
   SelectContent,
@@ -72,6 +91,7 @@ export function FiltersBar({
   hasActiveFilters,
 }: FiltersBarProps) {
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [calendarOpen, setCalendarOpen] = useState(false)
   const awaitingEndRef = useRef(false)
   const firstClickDateRef = useRef<string | null>(null)
 
@@ -86,6 +106,18 @@ export function FiltersBar({
     !!(amountMin || amountMax),
     isRecurring !== undefined,
   ].filter(Boolean).length
+
+  // Label shown on the date range trigger button
+  const dateTriggerLabel = useMemo(() => {
+    if (!dateFrom) return null
+    if (!dateTo || dateFrom === dateTo) return format(parseISO(dateFrom), 'MMM d, yyyy')
+    return `${format(parseISO(dateFrom), 'MMM d')} – ${format(parseISO(dateTo), 'MMM d, yyyy')}`
+  }, [dateFrom, dateTo])
+
+  // Hint text shown inside the popover
+  const calendarHint = awaitingEndRef.current
+    ? 'Now select an end date — or click the same day for a single day'
+    : 'Select a start date'
 
   const handleRangeSelect = useCallback((range: DateRange | undefined) => {
     if (!awaitingEndRef.current) {
@@ -103,13 +135,31 @@ export function FiltersBar({
         onDateToChange(firstClickDateRef.current ?? undefined)
       }
       firstClickDateRef.current = null
+      setCalendarOpen(false)
     }
+  }, [onDateFromChange, onDateToChange])
+
+  const applyPreset = useCallback((from: Date, to: Date) => {
+    onDateFromChange(format(from, 'yyyy-MM-dd'))
+    onDateToChange(format(to, 'yyyy-MM-dd'))
+    awaitingEndRef.current = false
+    firstClickDateRef.current = null
+    setCalendarOpen(false)
+  }, [onDateFromChange, onDateToChange])
+
+  const clearDate = useCallback(() => {
+    onDateFromChange(undefined)
+    onDateToChange(undefined)
+    awaitingEndRef.current = false
+    firstClickDateRef.current = null
+    setCalendarOpen(false)
   }, [onDateFromChange, onDateToChange])
 
   const handleSheetOpenChange = useCallback((open: boolean) => {
     if (!open) {
       awaitingEndRef.current = false
       firstClickDateRef.current = null
+      setCalendarOpen(false)
     }
     setDrawerOpen(open)
   }, [])
@@ -189,34 +239,119 @@ export function FiltersBar({
 
       {/* Filters Sheet */}
       <Sheet open={drawerOpen} onOpenChange={handleSheetOpenChange}>
-        <SheetContent side="right">
-          <SheetHeader>
+        <SheetContent side="right" className="bg-card">
+          <SheetHeader className="pb-0">
             <SheetTitle>Filters</SheetTitle>
             {activeCount > 0 && (
               <SheetDescription>{activeCount} active</SheetDescription>
             )}
+            <Separator className="-mx-6 mt-4 w-[calc(100%+3rem)]" />
           </SheetHeader>
 
-          <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-6">
+          <div className="flex-1 overflow-y-auto px-6 pt-6 pb-6 space-y-6">
             {/* Date range */}
             <div className="space-y-3">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Date range
-              </p>
-              <Calendar
-                mode="range"
-                selected={selectedRange}
-                onSelect={handleRangeSelect}
-              />
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Date range
+                </p>
+                {(dateFrom || dateTo) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={clearDate}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
+
+              <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+                <PopoverTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full h-9 justify-start gap-2 font-normal text-sm"
+                    />
+                  }
+                >
+                  <CalendarIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                  {dateTriggerLabel
+                    ? <span>{dateTriggerLabel}</span>
+                    : <span className="text-muted-foreground">Pick a date range</span>
+                  }
+                </PopoverTrigger>
+                <PopoverContent align="start" className="w-auto p-3 space-y-3">
+                  {/* Presets */}
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      {
+                        label: 'Today',
+                        from: new Date(),
+                        to: new Date(),
+                      },
+                      {
+                        label: 'This week',
+                        from: startOfWeek(new Date(), { weekStartsOn: 1 }),
+                        to: endOfWeek(new Date(), { weekStartsOn: 1 }),
+                      },
+                      {
+                        label: 'This month',
+                        from: startOfMonth(new Date()),
+                        to: endOfMonth(new Date()),
+                      },
+                      {
+                        label: 'Last month',
+                        from: startOfMonth(subMonths(new Date(), 1)),
+                        to: endOfMonth(subMonths(new Date(), 1)),
+                      },
+                    ].map(({ label, from, to }) => (
+                      <Button
+                        key={label}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 px-2.5 text-xs"
+                        onClick={() => applyPreset(from, to)}
+                      >
+                        {label}
+                      </Button>
+                    ))}
+                  </div>
+
+                  {/* Status hint */}
+                  <p className="text-xs text-muted-foreground">{calendarHint}</p>
+
+                  {/* Calendar */}
+                  <Calendar
+                    mode="range"
+                    selected={selectedRange}
+                    onSelect={handleRangeSelect}
+                  />
+                </PopoverContent>
+              </Popover>
             </div>
 
             <Separator />
 
             {/* Category */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Category
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Category
+                </p>
+                {category && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => onCategoryChange(undefined)}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
               <Select
                 value={category ?? 'all'}
                 onValueChange={(value) => {
@@ -239,9 +374,24 @@ export function FiltersBar({
 
             {/* Amount range */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Amount range
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Amount range
+                </p>
+                {(amountMin || amountMax) && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto py-0 px-1 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      onAmountMinChange(undefined)
+                      onAmountMaxChange(undefined)
+                    }}
+                  >
+                    Clear
+                  </Button>
+                )}
+              </div>
               <div className="flex items-end gap-2">
                 <div className="flex-1 space-y-1">
                   <span className="text-xs text-muted-foreground">Min (€)</span>
