@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/sheet'
 import { Separator } from '@/components/ui/separator'
 import { Switch } from '@/components/ui/switch'
+import { cn } from '@/lib/utils'
 import { type CategoryEnum, CATEGORY_OPTIONS } from '@/types/transaction'
 
 export interface FiltersBarProps {
@@ -123,15 +124,15 @@ export function FiltersBar({
           placeholder="Search merchants…"
           value={searchInput}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="pl-8 h-9 w-52 text-sm"
+          className="pl-8 h-9 w-52 text-sm bg-card"
         />
       </div>
 
       {/* Filters button */}
       <Button
-        variant={drawerOpen || activeCount > 0 ? 'default' : 'outline'}
+        variant={activeCount > 0 ? 'default' : 'outline'}
         size="sm"
-        className="h-9 gap-1.5"
+        className={cn("h-9 gap-1.5", activeCount === 0 && "bg-card")}
         onClick={() => setDrawerOpen(true)}
       >
         <SlidersHorizontal className="h-4 w-4" />
@@ -163,7 +164,7 @@ export function FiltersBar({
             if (value) onSortByChange(value as 'date' | 'amount' | 'merchant')
           }}
         >
-          <SelectTrigger className="h-9 w-28 text-sm">
+          <SelectTrigger className="h-9 w-28 text-sm bg-card">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -175,7 +176,7 @@ export function FiltersBar({
         <Button
           variant="outline"
           size="sm"
-          className="h-9 w-9 p-0"
+          className="h-9 w-9 p-0 bg-card"
           onClick={() => onSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
           aria-label={sortOrder === 'asc' ? 'Sort ascending' : 'Sort descending'}
         >
