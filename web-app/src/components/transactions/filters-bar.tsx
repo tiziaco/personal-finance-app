@@ -37,6 +37,7 @@ import {
   Sheet,
   SheetContent,
   SheetHeader,
+  SheetFooter,
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
@@ -435,6 +436,18 @@ export function FiltersBar({
               />
             </div>
           </div>
+
+          {activeCount > 0 && (
+            <SheetFooter className="border-t border-border">
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={onClearAll}
+              >
+                Clear all filters
+              </Button>
+            </SheetFooter>
+          )}
         </SheetContent>
       </Sheet>
     </div>
