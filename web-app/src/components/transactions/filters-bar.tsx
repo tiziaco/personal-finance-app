@@ -214,10 +214,10 @@ export function FiltersBar({
             if (value) onSortByChange(value as 'date' | 'amount' | 'merchant')
           }}
         >
-          <SelectTrigger className="h-9 w-28 text-sm bg-card">
+          <SelectTrigger className="h-9 w-28 text-sm bg-card capitalize">
             <SelectValue />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="min-w-0">
             <SelectItem value="date">Date</SelectItem>
             <SelectItem value="amount">Amount</SelectItem>
             <SelectItem value="merchant">Merchant</SelectItem>
