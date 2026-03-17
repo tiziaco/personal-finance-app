@@ -4,6 +4,7 @@ import { Table } from "@tanstack/react-table"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { X } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export interface BulkAction<TData> {
   label: string
@@ -15,12 +16,14 @@ export interface BulkAction<TData> {
 interface DataTableBulkActionsProps<TData> {
   table: Table<TData>
   actions: BulkAction<TData>[]
+  className?: string
   style?: React.CSSProperties
 }
 
 export function DataTableBulkActions<TData>({
   table,
   actions,
+  className,
   style,
 }: DataTableBulkActionsProps<TData>) {
   const selectedRows = table.getFilteredSelectedRowModel().rows
@@ -33,8 +36,8 @@ export function DataTableBulkActions<TData>({
   const selectedData = selectedRows.map((row) => row.original)
 
   return (
-    <div className="fixed bottom-8 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200" style={style}>
-      <div className="flex items-center gap-3 rounded-xl border bg-background/95 px-4 py-2 shadow-lg backdrop-blur supports-backdrop-filter:bg-background/80">
+    <div className={cn("fixed bottom-8 -translate-x-1/2 z-50 animate-in fade-in slide-in-from-bottom-4 duration-200", className)} style={style}>
+      <div className="flex items-center gap-3 rounded-xl border bg-card px-4 py-2 shadow-lg">
         {/* Selected count badge */}
         <div className="flex items-center gap-2">
           <Badge className="h-6 w-6 rounded-lg p-0 flex items-center justify-center text-sm font-semibold">
