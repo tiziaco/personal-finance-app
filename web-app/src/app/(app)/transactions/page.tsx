@@ -12,7 +12,7 @@ import { TransactionsEmptyState } from '@/components/transactions/transactions-e
 import { useUploadStore } from '@/lib/stores/upload-store'
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
 import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
-import { Loader2, Plus } from 'lucide-react'
+import { Loader2, Plus, Upload } from 'lucide-react'
 import {
   Dialog,
   DialogContent,
@@ -240,7 +240,7 @@ export default function TransactionsPage() {
               {isImporting ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
               ) : (
-                'Import CSV'
+                <><Upload className="h-4 w-4 mr-2" />Import CSV</>
               )}
             </Button>
           </div>
@@ -275,7 +275,7 @@ export default function TransactionsPage() {
               {isImporting ? (
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
               ) : (
-                'Import CSV'
+                <><Upload className="h-4 w-4 mr-2" />Import CSV</>
               )}
             </Button>
           </div>
