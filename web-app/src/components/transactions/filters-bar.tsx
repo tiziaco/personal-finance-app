@@ -240,12 +240,11 @@ export function FiltersBar({
       {/* Filters Sheet */}
       <Sheet open={drawerOpen} onOpenChange={handleSheetOpenChange}>
         <SheetContent side="right" className="bg-card">
-          <SheetHeader className="pb-0">
+          <SheetHeader className="border-b border-border pb-4">
             <SheetTitle>Filters</SheetTitle>
             {activeCount > 0 && (
               <SheetDescription>{activeCount} active</SheetDescription>
             )}
-            <Separator className="-mx-6 mt-4 w-[calc(100%+3rem)]" />
           </SheetHeader>
 
           <div className="flex-1 overflow-y-auto px-6 pt-6 pb-6 space-y-6">
