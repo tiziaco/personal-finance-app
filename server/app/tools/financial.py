@@ -82,7 +82,7 @@ async def get_spending_summary(
             "income_vs_expenses": overview["income_vs_expenses"].to_dicts(),
         },
         "recent_trend": {
-            "last_3_months": trends["monthly_trend"].tail(3).to_dicts(),
+            "last_3_months": monthly_stats[-3:],
             "burn_rate": trends["burn_rate"].to_dicts(),
         },
         "date_range": {
