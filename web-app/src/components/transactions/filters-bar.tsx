@@ -284,7 +284,7 @@ export function FiltersBar({
                     : <span className="text-muted-foreground">Pick a date range</span>
                   }
                 </PopoverTrigger>
-                <PopoverContent align="start" className="w-auto p-3 space-y-3">
+                <PopoverContent align="start" className="w-84 p-3 space-y-2">
                   {/* Presets */}
                   <div className="flex flex-wrap gap-1.5">
                     {[
@@ -322,14 +322,16 @@ export function FiltersBar({
                   </div>
 
                   {/* Status hint */}
-                  <p className="text-xs text-muted-foreground">{calendarHint}</p>
+                  <p className="min-h-6 text-xs text-muted-foreground">{calendarHint}</p>
 
                   {/* Calendar */}
-                  <Calendar
-                    mode="range"
-                    selected={selectedRange}
-                    onSelect={handleRangeSelect}
-                  />
+                  <div className="flex justify-center">
+                    <Calendar
+                      mode="range"
+                      selected={selectedRange}
+                      onSelect={handleRangeSelect}
+                    />
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>
