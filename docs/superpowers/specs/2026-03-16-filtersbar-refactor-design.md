@@ -14,11 +14,11 @@ The card wrapper (`bg-card rounded-xl border p-4`) is removed. `FiltersBar` rend
 
 **Toolbar row (single line):**
 ```
-[Search input]  [Filters button (+ badge)]  ───────  [Sort select]  [Sort direction toggle]  [Clear button]
+[Search input]  [Filters button (+ badge)]  [Clear button]  ───────  [Sort select]  [Sort direction toggle]
 ```
 
-- Search and Filters button on the left
-- Sort controls and Clear pushed to the right via `ml-auto`
+- Search, Filters button, and Clear button on the left
+- Sort controls pushed to the right via `ml-auto`
 - Clear button only visible when `hasActiveFilters === true`
 
 ## Filters Button
