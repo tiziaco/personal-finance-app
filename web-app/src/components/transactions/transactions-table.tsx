@@ -89,6 +89,7 @@ export interface TransactionsTableProps {
   onEditTransaction: (transaction: TransactionResponse) => void
   onDeleteTransaction: (transaction: TransactionResponse) => void
   onBulkRecategorize: (transactions: TransactionResponse[], resetSelection: () => void) => void
+  onBulkDelete?: (transactions: TransactionResponse[], resetSelection: () => void) => void
   isLoading?: boolean
 }
 
@@ -105,6 +106,7 @@ export function TransactionsTable({
   onEditTransaction,
   onDeleteTransaction,
   onBulkRecategorize,
+  onBulkDelete,
   isLoading,
 }: TransactionsTableProps) {
   const formatDate = useFormatDate()
@@ -337,6 +339,14 @@ export function TransactionsTable({
             label: 'Recategorize',
             onClick: (selectedRows, resetSelection) => {
               onBulkRecategorize(selectedRows, resetSelection)
+            },
+          },
+          {
+            label: 'Delete',
+            variant: 'destructive',
+            icon: <Trash2 className="size-4" />,
+            onClick: (selectedRows, resetSelection) => {
+              onBulkDelete?.(selectedRows, resetSelection)
             },
           },
         ]}

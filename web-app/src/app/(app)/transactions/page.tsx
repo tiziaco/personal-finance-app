@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useDebounce } from '@/hooks/use-debounce'
-import { useBatchUpdateTransactions, useDeleteTransaction } from '@/hooks/use-transaction-mutations'
+import { useBatchUpdateTransactions, useBulkDeleteTransactions, useDeleteTransaction } from '@/hooks/use-transaction-mutations'
 import { FiltersBar } from '@/components/transactions/filters-bar'
 import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
@@ -13,6 +13,7 @@ import { useUploadStore } from '@/lib/stores/upload-store'
 import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
 import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
 import { BulkCategoryModal } from '@/components/transactions/bulk-category-modal'
+import { BulkDeleteConfirmDialog } from '@/components/transactions/bulk-delete-confirm-dialog'
 import { Loader2, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
@@ -52,6 +53,9 @@ export default function TransactionsPage() {
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [bulkTransactions, setBulkTransactions] = useState<TransactionResponse[]>([])
   const [bulkResetFn, setBulkResetFn] = useState<(() => void) | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleteTransactions, setBulkDeleteTransactions] = useState<TransactionResponse[]>([])
+  const [bulkDeleteResetFn, setBulkDeleteResetFn] = useState<(() => void) | null>(null)
 
   // CRITICAL: filter reset helper — any filter change resets page to 0 to avoid stale offset
   function updateFilter(update: {
@@ -113,6 +117,25 @@ export default function TransactionsPage() {
 
   function handleDeleteTransaction(transaction: TransactionResponse) {
     deleteMutation.mutate(transaction.id)
+  }
+
+  // Bulk delete
+  const bulkDeleteMutation = useBulkDeleteTransactions()
+
+  function handleBulkDelete(transactions: TransactionResponse[], resetSelection: () => void) {
+    setBulkDeleteTransactions(transactions)
+    setBulkDeleteResetFn(() => resetSelection)
+    setBulkDeleteOpen(true)
+  }
+
+  function handleBulkDeleteConfirm() {
+    const ids = bulkDeleteTransactions.map((t) => t.id)
+    bulkDeleteMutation.mutate(ids, {
+      onSuccess: () => {
+        bulkDeleteResetFn?.()
+        setBulkDeleteOpen(false)
+      },
+    })
   }
 
   // Bulk recategorize
@@ -248,6 +271,7 @@ export default function TransactionsPage() {
               onEditTransaction={setEditingTransaction}
               onDeleteTransaction={handleDeleteTransaction}
               onBulkRecategorize={handleBulkRecategorize}
+              onBulkDelete={handleBulkDelete}
               isLoading={isLoading}
             />
           </ErrorBoundary>
@@ -275,6 +299,14 @@ export default function TransactionsPage() {
           transactions={bulkTransactions}
           onSave={handleBulkSave}
           isPending={batchMutation.isPending}
+        />
+
+        <BulkDeleteConfirmDialog
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          count={bulkDeleteTransactions.length}
+          onConfirm={handleBulkDeleteConfirm}
+          isPending={bulkDeleteMutation.isPending}
         />
 
         <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />

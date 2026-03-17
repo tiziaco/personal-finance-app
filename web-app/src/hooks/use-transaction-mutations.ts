@@ -186,3 +186,30 @@ export function useDeleteTransaction() {
     },
   })
 }
+
+export function useBulkDeleteTransactions() {
+  const { getToken } = useAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (ids: number[]) => {
+      const token = await getToken()
+      const chunkSize = 100
+      const chunks: number[][] = []
+      for (let i = 0; i < ids.length; i += chunkSize) {
+        chunks.push(ids.slice(i, i + chunkSize))
+      }
+      const results = await Promise.all(
+        chunks.map((chunk) => batchDeleteTransactions(token, { ids: chunk }))
+      )
+      return results.reduce((sum, r) => sum + r.deleted, 0)
+    },
+    onSuccess: (deleted) => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      toast.success(`${deleted} ${deleted === 1 ? 'transaction' : 'transactions'} deleted`)
+    },
+    onError: () => {
+      toast.error('Failed to delete transactions')
+    },
+  })
+}
