@@ -171,12 +171,13 @@ export function TransactionsTable({
     columnHelper.accessor('category', {
       header: 'Category',
       cell: (info) => (
-        <span
+        <button
+          type="button"
           className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors"
           onClick={() => onEditCategory(info.row.original)}
         >
           {info.getValue()}
-        </span>
+        </button>
       ),
     }),
     // 6. Confidence score column
