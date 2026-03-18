@@ -199,17 +199,29 @@ export function useBulkDeleteTransactions() {
       for (let i = 0; i < ids.length; i += chunkSize) {
         chunks.push(ids.slice(i, i + chunkSize))
       }
-      const results = await Promise.all(
+      const results = await Promise.allSettled(
         chunks.map((chunk) => batchDeleteTransactions(token, { ids: chunk }))
       )
-      return results.reduce((sum, r) => sum + r.deleted, 0)
+      let deleted = 0
+      let hasFailure = false
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          deleted += result.value.deleted
+        } else {
+          hasFailure = true
+        }
+      }
+      if (hasFailure) throw new Error('Some transaction deletions failed.')
+      return deleted
     },
     onSuccess: (deleted) => {
-      queryClient.invalidateQueries({ queryKey: ['transactions'] })
       toast.success(`${deleted} ${deleted === 1 ? 'transaction' : 'transactions'} deleted`)
     },
     onError: () => {
       toast.error('Failed to delete transactions')
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['transactions'] })
     },
   })
 }
