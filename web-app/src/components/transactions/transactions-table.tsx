@@ -9,8 +9,16 @@ import {
   flexRender,
   type RowSelectionState,
 } from '@tanstack/react-table'
-import { ChevronLeft, ChevronRight, Edit2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Trash2 } from 'lucide-react'
+import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+} from '@/components/ui/dropdown-menu'
 import { Checkbox } from '@/components/ui/checkbox'
 import { useSidebar } from '@/components/ui/sidebar'
 import { DataTableBulkActions } from '@/components/ui/data-table-bulk-actions'
@@ -22,10 +30,12 @@ import { useCurrency } from '@/providers/currency-provider'
 
 function TransactionCard({
   transaction,
-  onEdit,
+  onEditTransaction,
+  onDelete,
 }: {
   transaction: TransactionResponse
-  onEdit: (t: TransactionResponse) => void
+  onEditTransaction: (t: TransactionResponse) => void
+  onDelete: (t: TransactionResponse) => void
 }) {
   const formatDate = useFormatDate()
   const { formatAmount } = useCurrency()
@@ -41,13 +51,28 @@ function TransactionCard({
       </div>
       <div className="shrink-0 flex flex-col items-end gap-2">
         <p className="font-semibold text-sm">{formatAmount(transaction.amount)}</p>
-        <button
-          onClick={() => onEdit(transaction)}
-          className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
-          aria-label="Edit category"
-        >
-          <Edit2 className="h-4 w-4" />
-        </button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="min-h-12 min-w-12 flex items-center justify-center rounded-md hover:bg-muted"
+            aria-label="Transaction actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEditTransaction(transaction)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDelete(transaction)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </div>
   )
@@ -60,8 +85,11 @@ export interface TransactionsTableProps {
   limit: number
   page: number
   onPageChange: (page: number) => void
+  onEditCategory: (transaction: TransactionResponse) => void
   onEditTransaction: (transaction: TransactionResponse) => void
+  onDeleteTransaction: (transaction: TransactionResponse) => void
   onBulkRecategorize: (transactions: TransactionResponse[], resetSelection: () => void) => void
+  onBulkDelete: (transactions: TransactionResponse[], resetSelection: () => void) => void
   isLoading?: boolean
 }
 
@@ -74,8 +102,11 @@ export function TransactionsTable({
   limit,
   page,
   onPageChange,
+  onEditCategory,
   onEditTransaction,
+  onDeleteTransaction,
   onBulkRecategorize,
+  onBulkDelete,
   isLoading,
 }: TransactionsTableProps) {
   const formatDate = useFormatDate()
@@ -93,7 +124,7 @@ export function TransactionsTable({
     columnHelper.display({
       id: 'select',
       header: ({ table }) => (
-        <div className="flex items-center justify-center min-h-12 min-w-8">
+        <div className="flex items-center justify-center w-8">
           <Checkbox
             checked={table.getIsAllRowsSelected()}
             indeterminate={table.getIsSomeRowsSelected()}
@@ -103,7 +134,7 @@ export function TransactionsTable({
         </div>
       ),
       cell: ({ row }) => (
-        <div className="flex items-center justify-center min-h-12 min-w-8">
+        <div className="flex items-center justify-center w-8">
           <Checkbox
             checked={row.getIsSelected()}
             onCheckedChange={(checked) => row.toggleSelected(!!checked)}
@@ -127,18 +158,26 @@ export function TransactionsTable({
     // 4. Amount column
     columnHelper.accessor('amount', {
       header: 'Amount',
-      cell: (info) => formatCurrency(info.getValue()),
+      cell: (info) => {
+        const val = Number(info.getValue())
+        return (
+          <span className={cn('font-medium tabular-nums', val < 0 ? 'text-destructive' : 'text-success')}>
+            {formatCurrency(val)}
+          </span>
+        )
+      },
     }),
     // 5. Category column
     columnHelper.accessor('category', {
       header: 'Category',
       cell: (info) => (
-        <span
-          className="text-sm cursor-pointer hover:underline"
-          onClick={() => onEditTransaction(info.row.original)}
+        <button
+          type="button"
+          className="inline-block text-xs px-2 py-0.5 rounded-md bg-muted text-muted-foreground cursor-pointer hover:bg-muted/70 transition-colors"
+          onClick={() => onEditCategory(info.row.original)}
         >
           {info.getValue()}
-        </span>
+        </button>
       ),
     }),
     // 6. Confidence score column
@@ -155,17 +194,30 @@ export function TransactionsTable({
     // 7. Actions column
     columnHelper.display({
       id: 'actions',
-      header: 'Actions',
+      header: '',
       cell: ({ row }) => (
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => onEditTransaction(row.original)}
-          aria-label="Edit transaction"
-          className="min-h-12 min-w-12"
-        >
-          <Edit2 className="h-4 w-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className="h-7 w-7 flex items-center justify-center rounded-md hover:bg-muted"
+            aria-label="Transaction actions"
+          >
+            <MoreHorizontal className="h-4 w-4" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => onEditTransaction(row.original)}>
+              <Pencil className="h-4 w-4 mr-2" />
+              Edit
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => onDeleteTransaction(row.original)}
+              className="text-destructive focus:text-destructive"
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       ),
     }),
   ]
@@ -194,7 +246,7 @@ export function TransactionsTable({
   return (
     <>
       {/* === DESKTOP TABLE: hidden on mobile (< sm = 640px) === */}
-      <div className="hidden sm:block w-full overflow-auto rounded-lg border">
+      <div className="hidden sm:block w-full overflow-auto rounded-xl border border-border/60 bg-card shadow-sm">
         <table className="w-full text-sm">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -202,7 +254,7 @@ export function TransactionsTable({
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
-                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/50"
+                    className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider bg-muted/40"
                   >
                     {header.isPlaceholder
                       ? null
@@ -214,9 +266,9 @@ export function TransactionsTable({
           </thead>
           <tbody>
             {table.getRowModel().rows.map((row) => (
-              <tr key={row.id} className="border-t hover:bg-muted/30 transition-colors">
+              <tr key={row.id} className="border-t hover:bg-muted/20 transition-colors">
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id} className="px-4 py-3">
+                  <td key={cell.id} className="px-4 py-2">
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -242,7 +294,8 @@ export function TransactionsTable({
             <TransactionCard
               key={row.id}
               transaction={row.original}
-              onEdit={onEditTransaction}
+              onEditTransaction={onEditTransaction}
+              onDelete={onDeleteTransaction}
             />
           ))
         )}
@@ -259,7 +312,6 @@ export function TransactionsTable({
             size="sm"
             onClick={() => onPageChange(page - 1)}
             disabled={page === 0}
-            className="min-h-12"
           >
             <ChevronLeft className="h-4 w-4" />
             Previous
@@ -272,7 +324,6 @@ export function TransactionsTable({
             size="sm"
             onClick={() => onPageChange(page + 1)}
             disabled={to >= total}
-            className="min-h-12"
           >
             Next
             <ChevronRight className="h-4 w-4" />
@@ -289,6 +340,14 @@ export function TransactionsTable({
             label: 'Recategorize',
             onClick: (selectedRows, resetSelection) => {
               onBulkRecategorize(selectedRows, resetSelection)
+            },
+          },
+          {
+            label: 'Delete',
+            variant: 'destructive',
+            icon: <Trash2 className="size-4" />,
+            onClick: (selectedRows, resetSelection) => {
+              onBulkDelete(selectedRows, resetSelection)
             },
           },
         ]}

@@ -3,7 +3,7 @@
 import { SettingSection } from "@/components/ui/setting-section"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
-import { useDeleteAllTransactions } from "@/hooks/use-delete-all-transactions"
+import { useDeleteAllTransactions } from "@/hooks/use-transaction-mutations"
 import {
   AlertDialog,
   AlertDialogAction,

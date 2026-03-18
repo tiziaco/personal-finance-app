@@ -4,98 +4,20 @@ import { useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { useTransactions } from '@/hooks/use-transactions'
 import { useDebounce } from '@/hooks/use-debounce'
-import { useBatchUpdateTransactions } from '@/hooks/use-transaction-mutations'
+import { useBatchUpdateTransactions, useBulkDeleteTransactions, useDeleteTransaction } from '@/hooks/use-transaction-mutations'
 import { FiltersBar } from '@/components/transactions/filters-bar'
 import { TransactionsTable } from '@/components/transactions/transactions-table'
 import { CategoryEditModal } from '@/components/transactions/category-edit-modal'
 import { TransactionsEmptyState } from '@/components/transactions/transactions-empty-state'
 import { useUploadStore } from '@/lib/stores/upload-store'
-import { Loader2 } from 'lucide-react'
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import { AddTransactionDialog } from '@/components/transactions/add-transaction-dialog'
+import { EditTransactionDialog } from '@/components/transactions/edit-transaction-dialog'
+import { BulkCategoryModal } from '@/components/transactions/bulk-category-modal'
+import { BulkDeleteConfirmDialog } from '@/components/transactions/bulk-delete-confirm-dialog'
+import { Loader2, Plus, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/components/shared/error-boundary'
 import type { CategoryEnum, TransactionResponse, TransactionFilters } from '@/types/transaction'
-import { CATEGORY_OPTIONS } from '@/types/transaction'
-
-// ---------------------------------------------------------------------------
-// BulkCategoryModal — local component, not exported
-// ---------------------------------------------------------------------------
-
-interface BulkCategoryModalProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  transactions: TransactionResponse[]
-  onSave: (category: CategoryEnum) => void
-  isPending: boolean
-}
-
-function BulkCategoryModal({
-  open,
-  onOpenChange,
-  transactions,
-  onSave,
-  isPending,
-}: BulkCategoryModalProps) {
-  const [selectedCategory, setSelectedCategory] = useState<CategoryEnum | ''>('')
-
-  const handleSave = () => {
-    if (selectedCategory === '') return
-    onSave(selectedCategory)
-  }
-
-  // Reset selection when modal closes
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) setSelectedCategory('')
-    onOpenChange(nextOpen)
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Recategorize {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</DialogTitle>
-        </DialogHeader>
-
-        <Select
-          value={selectedCategory}
-          onValueChange={(value) => {
-            if (value) setSelectedCategory(value as CategoryEnum)
-          }}
-        >
-          <SelectTrigger className="w-full">
-            <SelectValue placeholder="Select a category" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_OPTIONS.map((cat) => (
-              <SelectItem key={cat} value={cat}>
-                {cat}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-
-        <DialogFooter showCloseButton>
-          <Button onClick={handleSave} disabled={isPending || selectedCategory === ''}>
-            {isPending ? 'Saving…' : 'Save'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  )
-}
 
 // ---------------------------------------------------------------------------
 // TransactionsPage — filter state owner and page composition
@@ -125,10 +47,15 @@ export default function TransactionsPage() {
   const isImporting = useUploadStore((s) => s.isImporting)
 
   // Modal state
+  const [addOpen, setAddOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState<TransactionResponse | null>(null)
   const [editingTransaction, setEditingTransaction] = useState<TransactionResponse | null>(null)
   const [bulkModalOpen, setBulkModalOpen] = useState(false)
   const [bulkTransactions, setBulkTransactions] = useState<TransactionResponse[]>([])
   const [bulkResetFn, setBulkResetFn] = useState<(() => void) | null>(null)
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false)
+  const [bulkDeleteTransactions, setBulkDeleteTransactions] = useState<TransactionResponse[]>([])
+  const [bulkDeleteResetFn, setBulkDeleteResetFn] = useState<(() => void) | null>(null)
 
   // CRITICAL: filter reset helper — any filter change resets page to 0 to avoid stale offset
   function updateFilter(update: {
@@ -185,6 +112,32 @@ export default function TransactionsPage() {
   const hasActiveFilters = !!(debouncedSearch || dateFrom || dateTo || category || amountMin || amountMax || isRecurring !== undefined)
   const isEmpty = !isLoading && data?.total === 0
 
+  // Delete transaction
+  const deleteMutation = useDeleteTransaction()
+
+  function handleDeleteTransaction(transaction: TransactionResponse) {
+    deleteMutation.mutate(transaction.id)
+  }
+
+  // Bulk delete
+  const bulkDeleteMutation = useBulkDeleteTransactions()
+
+  function handleBulkDelete(transactions: TransactionResponse[], resetSelection: () => void) {
+    setBulkDeleteTransactions(transactions)
+    setBulkDeleteResetFn(() => resetSelection)
+    setBulkDeleteOpen(true)
+  }
+
+  function handleBulkDeleteConfirm() {
+    const ids = bulkDeleteTransactions.map((t) => t.id)
+    bulkDeleteMutation.mutate(ids, {
+      onSuccess: () => {
+        bulkDeleteResetFn?.()
+        setBulkDeleteOpen(false)
+      },
+    })
+  }
+
   // Bulk recategorize
   const batchMutation = useBatchUpdateTransactions()
 
@@ -210,20 +163,32 @@ export default function TransactionsPage() {
       <div className="container max-w-6xl mx-auto py-8">
         <div className="flex items-center justify-between mb-6">
           <h1 className="text-2xl font-bold">Transactions</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setUploadOpen(true)}
-            disabled={isImporting}
-          >
-            {isImporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
-            ) : (
-              'Import CSV'
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Transaction
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-card"
+              onClick={() => setUploadOpen(true)}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+              ) : (
+                <><Upload className="h-4 w-4 mr-2" />Import CSV</>
+              )}
+            </Button>
+          </div>
         </div>
         <TransactionsEmptyState onUpload={() => setUploadOpen(true)} />
+        <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />
       </div>
     )
   }
@@ -233,18 +198,29 @@ export default function TransactionsPage() {
       <div className="container max-w-6xl mx-auto py-8 space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Transactions</h1>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setUploadOpen(true)}
-            disabled={isImporting}
-          >
-            {isImporting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
-            ) : (
-              'Import CSV'
-            )}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Transaction
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="bg-card"
+              onClick={() => setUploadOpen(true)}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Importing…</>
+              ) : (
+                <><Upload className="h-4 w-4 mr-2" />Import CSV</>
+              )}
+            </Button>
+          </div>
         </div>
 
         <ErrorBoundary>
@@ -291,14 +267,25 @@ export default function TransactionsPage() {
               limit={data?.limit ?? 25}
               page={page}
               onPageChange={setPage}
+              onEditCategory={setEditingCategory}
               onEditTransaction={setEditingTransaction}
+              onDeleteTransaction={handleDeleteTransaction}
               onBulkRecategorize={handleBulkRecategorize}
+              onBulkDelete={handleBulkDelete}
               isLoading={isLoading}
             />
           </ErrorBoundary>
         )}
 
         <CategoryEditModal
+          transaction={editingCategory}
+          open={editingCategory !== null}
+          onOpenChange={(open) => {
+            if (!open) setEditingCategory(null)
+          }}
+        />
+
+        <EditTransactionDialog
           transaction={editingTransaction}
           open={editingTransaction !== null}
           onOpenChange={(open) => {
@@ -313,6 +300,16 @@ export default function TransactionsPage() {
           onSave={handleBulkSave}
           isPending={batchMutation.isPending}
         />
+
+        <BulkDeleteConfirmDialog
+          open={bulkDeleteOpen}
+          onOpenChange={setBulkDeleteOpen}
+          count={bulkDeleteTransactions.length}
+          onConfirm={handleBulkDeleteConfirm}
+          isPending={bulkDeleteMutation.isPending}
+        />
+
+        <AddTransactionDialog open={addOpen} onOpenChange={setAddOpen} />
       </div>
     </ErrorBoundary>
   )

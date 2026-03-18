@@ -25,7 +25,7 @@ See: .planning/PROJECT.md (updated 2026-03-03)
 Phase: 7 of 7 (Polish) — **Complete ✓**
 Plan: 5 of 5 complete
 Status: All phase 07 plans complete and verified — SETT-01, DESGN-01 through DESGN-08 all resolved
-Last activity: 2026-03-03 — Phase 07 complete (semantic color tokens, currency preference, mobile sidebar, tap targets, chart sizing, mobile card-list, toast/skeleton coverage)
+Last activity: 2026-03-11 - Completed quick task 1: Replace transaction action button with 3-dot menu popover containing Edit and Delete actions, and connect Delete to backend
 
 Progress: [██████████] 100%
 
@@ -153,6 +153,12 @@ None yet.
 - **[Phase 5 — Insights]:** Confirm whether `/insights` backend endpoint generates on GET or requires a separate POST/trigger call before implementing the regenerate button flow.
 - **[Phase 3 — Transactions]:** Confirm exact request body shape for `PATCH /transactions/batch` and `DELETE /transactions/batch` before building the bulk action bar.
 - ~~**[Phase 1]:** Confirm whether `react-error-boundary` npm package is acceptable to add, or whether a custom implementation is preferred.~~ RESOLVED: Custom class component implemented (Plan 02).
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 1 | Replace transaction action button with 3-dot menu popover containing Edit and Delete actions, and connect Delete to backend | 2026-03-11 | 1204db1 | [1-replace-transaction-action-button-with-3](./quick/1-replace-transaction-action-button-with-3/) |
 
 ## Session Continuity
 

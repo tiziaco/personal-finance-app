@@ -82,7 +82,7 @@ async def get_spending_summary(
             "income_vs_expenses": overview["income_vs_expenses"].to_dicts(),
         },
         "recent_trend": {
-            "last_3_months": trends["monthly_trend"].tail(3).to_dicts(),
+            "last_3_months": monthly_stats[-3:],
             "burn_rate": trends["burn_rate"].to_dicts(),
         },
         "date_range": {
@@ -210,8 +210,22 @@ async def get_trend_insights(
         mom_values = monthly_data["monthly_trend"]["expense_mom_growth"].tail(1).to_list()
         latest_mom = mom_values[0] if mom_values else None
 
+    def _normalize_trend_row(row: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize a monthly_trend row to the shape the frontend expects."""
+        year = row.get("year")
+        month = row.get("month")
+        return {
+            "month": f"{year}-{month:02d}" if year is not None and month is not None else "",
+            "total_expense": row.get("total_expenses", 0.0),
+            "total_income": row.get("total_income", 0.0),
+            "expense_mom_growth": row.get("expense_mom_growth"),
+        }
+
     return {
-        "monthly_trend": monthly_data["monthly_trend"].tail(12).to_dicts(),
+        "monthly_trend": [
+            _normalize_trend_row(r)
+            for r in monthly_data["monthly_trend"].tail(12).to_dicts()
+        ],
         "year_comparison": (
             monthly_data["year_comparison"].to_dicts()
             if len(monthly_data["year_comparison"]) > 0
