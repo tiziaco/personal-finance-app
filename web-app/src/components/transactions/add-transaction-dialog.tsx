@@ -66,14 +66,15 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
-    if (!form.date || !form.merchant || !form.amount || !form.category) return
+    const trimmedMerchant = form.merchant.trim()
+    if (!form.date || !trimmedMerchant || !form.amount || !form.category) return
 
     const parsedAmount = parseFloat(form.amount)
     if (!isFinite(parsedAmount)) return
 
     mutate({
       date: form.date,
-      merchant: form.merchant.trim(),
+      merchant: trimmedMerchant,
       amount: form.amount,
       category: form.category,
       description: form.description.trim() || undefined,
@@ -82,7 +83,9 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     handleOpenChange(false)
   }
 
-  const isValid = !!(form.date && form.merchant && form.category) && isFinite(parseFloat(form.amount))
+  const isValid =
+    !!(form.date && form.merchant.trim() && form.category) &&
+    isFinite(parseFloat(form.amount))
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
