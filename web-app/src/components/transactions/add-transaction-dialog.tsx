@@ -72,15 +72,19 @@ export function AddTransactionDialog({ open, onOpenChange }: AddTransactionDialo
     const parsedAmount = parseFloat(form.amount)
     if (!isFinite(parsedAmount)) return
 
-    mutate({
-      date: form.date,
-      merchant: trimmedMerchant,
-      amount: form.amount,
-      category: form.category,
-      description: form.description.trim() || undefined,
-      is_recurring: form.is_recurring,
-    })
-    handleOpenChange(false)
+    mutate(
+      {
+        date: form.date,
+        merchant: trimmedMerchant,
+        amount: form.amount,
+        category: form.category,
+        description: form.description.trim() || undefined,
+        is_recurring: form.is_recurring,
+      },
+      {
+        onSuccess: () => handleOpenChange(false),
+      },
+    )
   }
 
   const isValid =
