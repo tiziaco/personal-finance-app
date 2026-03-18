@@ -94,7 +94,7 @@ async def upload_csv(
 
     # 2. Parse with Polars to get columns + row count
     try:
-        df = pl.read_csv(io.StringIO(csv_text))
+        df = pl.read_csv(io.StringIO(csv_text), infer_schema_length=10000)
     except Exception as exc:
         raise HTTPException(status_code=422, detail=f"Could not parse CSV: {exc}")
 
@@ -192,7 +192,7 @@ async def confirm_csv_upload(
         )
 
     # 3. Re-parse full CSV using confirmed mapping
-    df = pl.read_csv(io.StringIO(session.csv_content))
+    df = pl.read_csv(io.StringIO(session.csv_content), infer_schema_length=10000)
     rows_raw = df.to_dicts()
 
     # 4. Validate and transform rows — collect errors, skip bad rows
