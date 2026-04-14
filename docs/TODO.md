@@ -1,5 +1,34 @@
 # TODO
 
+## Service Pattern Violations
+
+#### [MEDIUM] `_propose_column_mapping` calls LLM directly
+**File:** `server/app/api/v1/transactions.py:39`
+
+Instantiates `ChatOpenAI` directly instead of going through `llm_service`. Bypasses retry logic, model fallback rotation, and exception translation.
+
+**Fix:** Replace with `llm_service.call(messages)`.
+
+---
+
+#### [MEDIUM] `CSVMappingService.get_session` returns `None` instead of raising
+**File:** `server/app/services/csv_mapping/service.py`
+
+Returns `None` on miss, forcing the caller (`confirm_csv_upload`) to check `if session is None: raise HTTPException(...)`. Breaks the fail-fast rule — services should raise, not return `None`.
+
+**Fix:** Raise a `CSVSessionNotFoundError(NotFoundError)` inside `get_session`, remove the null check from the route.
+
+---
+
+#### [LOW] `ConversationService.get_conversation` returns `Optional` instead of raising
+**File:** `server/app/services/conversation/service.py`
+
+Returns `Optional[Conversation]` on miss instead of raising `ConversationNotFoundError`. Inconsistent with every other service in the codebase.
+
+**Fix:** Raise `ConversationNotFoundError` when the conversation is not found.
+
+---
+
 ## Performance
 
 ### N+1 Query Issues
