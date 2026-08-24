@@ -33,8 +33,8 @@ Organization coupling is narrow — three places on the server, two on the front
 ## Standing constraints
 
 1. **Do not widen the role seam.** No service, repository, or endpoint may read `org_role` / `org_id` directly. Everything goes through `get_current_role` (server) and `getUserRole` (frontend).
-2. **Genericise naming.** `@rilevio/*`, `rilevio-network`, and hardcoded container names become a single replaceable token, so the fork is one search-replace rather than a hunt.
-3. **Version control before file moves.** `git init` this repo before WS1 executes.
+2. **Genericise naming to `@app` / `app-network`.** `@rilevio/*` → `@app/*`, `rilevio-network` → `app-network`, and container names lose the product prefix. Chosen because it is neutral enough that the B2C fork needs no rename at all — fork cost for naming drops to zero.
+3. **Version control before file moves.** ✅ Done — repo initialised on `main`, baseline commit `296c3b7`. Existing `.gitignore` files (root, `server/`, `web-app/`) were verified to cover every secret file and left unmodified.
 
 ---
 
@@ -42,7 +42,7 @@ Organization coupling is narrow — three places on the server, two on the front
 
 | # | Workstream | Status | Plan | Blocked by |
 |---|---|---|---|---|
-| 1 | Infrastructure reorganisation | Not started | — | `git init` |
+| 1 | Infrastructure reorganisation | Not started | — | — |
 | 2 | Traefik in dev compose + Dokploy labels | Not started | — | WS1 |
 | 3 | Auth middleware hardening | Not started | — | Q1 (below) |
 | 4 | Clerk webhooks + ngrok | Not started | — | WS1 |
@@ -159,3 +159,5 @@ Decides whether F1's v1 branch is a live fix or defensive insurance. Does not ch
 | Webhooks as source of truth, JIT retained | Dropped events degrade to staleness instead of hard auth failure. |
 | ngrok over cloudflared | Free static domain is permanent; already in use elsewhere. |
 | Orval last | Config unavailable; no feature work blocked by its absence. |
+| Naming token `@app` / `app-network` | Neutral enough that the B2C fork inherits the names unchanged — no post-fork rename. |
+| Keep existing `.gitignore` files | Already cover all secrets (root `.env`, `server/.env.*`, `web-app` `.env*` with `!.env.example`); verified against the staged set before the baseline commit. |
