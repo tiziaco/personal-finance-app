@@ -1,0 +1,189 @@
+# Web App — Frontend Guide
+
+pnpm monorepo containing two Next.js 16 applications backed by a shared UI package.
+
+---
+
+## Workspace Structure
+
+```
+web-app/
+├── apps/
+│   ├── internal-portal/   # Dashboard for project managers (port 3000)
+│   └── supplier-portal/   # External supplier portal (port 3002)
+└── packages/
+    └── ui/                # Shared shadcn/ui components (packages/ui)
+```
+
+Both apps share the same conventions, dependencies, and patterns described in this file.
+
+---
+
+## Dev Commands
+
+Run from `web-app/`:
+
+```bash
+pnpm install               # install all workspace dependencies
+
+pnpm dev:internal          # internal-portal → http://localhost:3000
+pnpm dev:supplier          # supplier portal  → http://localhost:3002
+
+pnpm build                 # build all apps
+pnpm type-check            # TypeScript check across workspace
+```
+
+Env files must exist before starting:
+
+```bash
+cp apps/internal-portal/.env.local.example apps/internal-portal/.env.local
+cp apps/supplier-portal/.env.local.example apps/supplier-portal/.env.local
+```
+
+---
+
+## Skills to Use
+
+Invoke these skills before starting the relevant task:
+
+| Situation | Skill |
+|-----------|-------|
+| Designing or building any UI — layouts, components, pages, visual hierarchy | `/frontend-design` |
+| Deciding where/how to fetch data from the API | `/nextjs-data-fetching-strategy` |
+| Building or refactoring React components | `/react` |
+| Adding auth, handling user input, or touching security-sensitive code | `/security-review` |
+| Performance optimization — bundle size, rendering, caching | `/vercel-react-best-practices` |
+
+---
+
+## Next.js Version Notice
+
+This project uses **Next.js 16** — APIs and conventions may differ from training data.  
+Before writing any Next.js-specific code, read the relevant guide in:
+
+```
+node_modules/next/dist/docs/
+```
+
+Heed deprecation notices. Do not assume patterns from older versions apply.
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Framework | Next.js 16 + React 19, App Router |
+| Language | TypeScript 5 (strict) |
+| Styling | Tailwind CSS v4 |
+| UI Components | shadcn/ui + **Base UI** (`@base-ui/react`) + Lucide React |
+| Auth | Clerk (`@clerk/nextjs`) |
+| Data Fetching | TanStack Query v5 |
+| Validation | Zod v4 |
+| Notifications | Sonner |
+| Package Manager | pnpm (workspaces) |
+
+---
+
+## Critical Rules
+
+### Base UI (NOT Radix)
+
+This project uses **Base UI** (`@base-ui/react`), not Radix UI. Patterns are different:
+
+- Use `render` prop instead of `asChild`
+- `DropdownMenuLabel` must be inside `DropdownMenuGroup`
+
+```tsx
+// ✅ Correct
+<DropdownMenuTrigger render={<Button />}>Trigger</DropdownMenuTrigger>
+
+// ❌ Wrong — Radix pattern, does not work here
+<DropdownMenuTrigger asChild><Button>Trigger</Button></DropdownMenuTrigger>
+```
+
+### Shared Components
+
+Always check `packages/ui` before creating a new component. Add new shared components there, not inside individual apps.
+
+### Server vs Client Components
+
+- Default to **Server Components**
+- Add `"use client"` only when needed: event handlers, hooks, browser APIs
+- File naming: **kebab-case** (`user-panel.tsx`, `app-sidebar.tsx`)
+
+### Authentication
+
+- **Clerk** handles auth — no login/register endpoints to build
+- Use `useUser()` in client components, `currentUser()` in server components
+- Trust middleware: if a protected route renders, the user is authenticated — no manual auth checks needed
+- Use embedded Clerk components (custom routes), not hosted Account Portal
+
+### Clerk RBAC — Auth Package and Role-Gated Rendering
+
+Shared auth logic lives in **`packages/auth`** (`@repo/auth`) — not in `packages/ui`. This includes the `Role` enum, `getUserRole()`, `isInternalRole()`, `ROLE_LABELS`, and the `AuthProvider` / `useAppAuth()` hook.
+
+This project is on `@clerk/nextjs` **v6 (Core 2)**. The current SDK (`<Show>`) is not available.
+
+**In client components — always use `useAppAuth()`**, never `useAuth()` or `useUser()` directly:
+
+```typescript
+import { useAppAuth, Role } from '@repo/auth'
+
+const { user, role, isLoaded } = useAppAuth()
+if (role === Role.PROJECT_MANAGER) { ... }
+```
+
+**Declarative role gates — use `<Protect>`** from `@clerk/nextjs` (Core 2):
+
+```tsx
+import { Protect } from '@clerk/nextjs'
+
+<Protect role="org:project_manager">
+  <InviteButton />
+</Protect>
+```
+
+**Middleware (`proxy.ts`):** read `orgRole` from `auth()` and pass through `getUserRole()` from `@repo/auth`:
+
+```typescript
+import { getUserRole, isInternalRole } from '@repo/auth'
+
+// correct
+const { orgRole } = await auth()
+const role = getUserRole(orgRole)
+
+// wrong — reads user metadata, not org role
+const { sessionClaims } = await auth()
+const role = sessionClaims?.metadata?.role
+```
+
+### Loading States
+
+- Use **component-level skeletons** for auth loading and data fetching
+- Use **`loading.tsx`** for route-level navigation loading
+- Never return `null` from loading states — always return a skeleton
+- Use sidebar-aware skeleton colors: `bg-sidebar-accent`, `bg-muted`, `bg-foreground/10`
+
+### Error Handling
+
+- Validate with **Zod** at the API boundary
+- Throw typed errors; let error boundaries or TanStack Query's `error` state handle display
+- Never swallow errors silently
+
+---
+
+## Common Pitfalls
+
+- Using `asChild` (Radix) instead of `render` prop (Base UI)
+- Placing `DropdownMenuLabel` outside `DropdownMenuGroup`
+- Creating new components in `apps/` that belong in `packages/ui`
+- Returning `null` from loading states
+- Using wrong skeleton colors inside sidebars
+- Forgetting `"use client"` on components with hooks or event handlers
+- Confusing `CLERK_JWT_ISSUER_DOMAIN` (token validation) with the sign-in URL
+- Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
+- Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
+- Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@repo/auth`
+- Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
+- Putting auth logic in `packages/ui` — it belongs in `packages/auth`

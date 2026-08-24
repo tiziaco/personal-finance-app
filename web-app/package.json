@@ -1,0 +1,14 @@
+{
+  "name": "rilevio-web",
+  "private": true,
+  "scripts": {
+    "dev:internal": "pnpm --filter internal-portal dev",
+    "dev:supplier": "pnpm --filter supplier-portal dev",
+    "build": "pnpm --filter \"./apps/*\" build",
+    "type-check": "pnpm -r exec tsc --noEmit"
+  },
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  }
+}

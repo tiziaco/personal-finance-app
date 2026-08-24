@@ -1,0 +1,72 @@
+services:
+  web-app:
+    container_name: web-app
+    env_file:
+      - ./web-app/.env.local
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+      args:
+        # Values inherited from env_file (./web-app/.env.local) — no duplication in root .env
+        - NEXT_PUBLIC_APP_URL
+        - NEXT_PUBLIC_API_URL
+        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        - NEXT_PUBLIC_CLERK_SIGN_IN_URL
+        - NEXT_PUBLIC_CLERK_SIGN_UP_URL
+        - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
+        - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    networks:
+      - app
+
+  server:
+    build:
+      context: ./server
+      args:
+        APP_ENV: production
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./server/logs:/app/logs
+    env_file:
+      - ./server/.env.production
+    environment:
+      - APP_ENV=production
+      - POSTGRES_HOST=db
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - app
+
+  db:
+    image: pgvector/pgvector:pg16
+    env_file:
+      - ./server/.env.production
+    # No host port binding — DB is only accessible within the Docker network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - app
+
+volumes:
+  postgres-data:
+
+networks:
+  app:
+    driver: bridge

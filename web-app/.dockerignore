@@ -1,0 +1,32 @@
+# Version control
+.git
+.gitignore
+.github
+
+# Next.js
+node_modules
+npm-debug.log
+.next
+
+
+# Development tools
+.idea
+.vscode
+
+# Logs
+logs/
+*.log
+
+# Docker
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Documentation
+docs/
+README.md
+AGENTS.md
+*.md
+
+# Build artifacts
+Makefile
