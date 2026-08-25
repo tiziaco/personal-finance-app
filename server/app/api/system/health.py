@@ -18,7 +18,7 @@ from fastapi import (
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from app.api.dependencies.auth import CurrentUser
+from app.api.dependencies.authentication import CurrentUser
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger

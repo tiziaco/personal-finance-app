@@ -1,4 +1,7 @@
-"""Authentication dependencies for FastAPI endpoints."""
+"""Authentication dependencies — identity resolution only.
+
+Resource and role-based authorization guards live in `authorization.py`.
+"""
 
 from typing import Annotated
 
@@ -11,7 +14,8 @@ from app.core.logging import bind_context, logger
 from app.exceptions.base import AuthenticationError, AuthorizationError
 from app.models.enums import Role
 from app.models.user import User
-from app.services.user import user_provider
+from app.services.user import user_service
+from app.services.user.exceptions import SupplierNotLinkedError
 
 oauth2_scheme = OAuth2AuthorizationCodeBearer(
     authorizationUrl=settings.auth.AUTHORIZE_URL,
@@ -44,7 +48,7 @@ async def get_current_user(
     """Get the current authenticated user with JIT provisioning."""
     try:
         org_id = getattr(request.state, "org_id", None)
-        user = await user_provider.get_or_create_user(clerk_id, org_id, session)
+        user = await user_service.resolve_user(clerk_id, org_id, session)
         request.state.user_id = user.id
         bind_context(user_id=user.id)
     except Exception as e:
@@ -53,8 +57,14 @@ async def get_current_user(
     return user
 
 
-def get_current_role(request: Request) -> Role:
-    """Extract the org role from request.state (set by AuthMiddleware).
+async def get_current_role(
+    request: Request,
+    _token: str = Depends(oauth2_scheme),
+) -> Role:
+    """Extract the org role from request.state, with Clerk API fallback.
+
+    For JWTs with no org context (e.g. OIDC tokens), resolves the role from
+    Clerk's org membership API (cached 5 min via UserService).
 
     This is the backend portability seam. When migrating to WorkOS or a
     DB-backed role table, only this function changes — all endpoints and
@@ -64,57 +74,58 @@ def get_current_role(request: Request) -> Role:
         AuthorizationError: If no org role is present or the role is unrecognised.
     """
     raw = getattr(request.state, "org_role", None)
+
+    if not raw:
+        clerk_id = getattr(request.state, "clerk_id", None)
+        if clerk_id:
+            raw = await user_service.resolve_org_role(clerk_id)
+            if raw:
+                request.state.org_role = raw  # keep state consistent
+
     if not raw:
         raise AuthorizationError("No organization role in token")
+
     try:
         return Role(raw)
     except ValueError:
         raise AuthorizationError(f"Unknown role: {raw}")
 
 
-def require_role(*allowed: Role):
-    """Dependency factory that enforces one of the allowed roles.
-
-    Usage:
-        @router.get("/projects", dependencies=[InternalUserRole])
-        async def list_projects(user: CurrentUser, ...): ...
-
-    Args:
-        *allowed: One or more Role values that are permitted.
-
-    Returns:
-        A FastAPI Depends object suitable for use in the dependencies list.
-    """
-    def dependency(role: Role = Depends(get_current_role)) -> None:
-        if role not in allowed:
-            raise AuthorizationError(
-                f"Role '{role}' is not permitted. Required: {[r.value for r in allowed]}"
-            )
-    return Depends(dependency)
-
-
 # ---------------------------------------------------------------------------
-# Type aliases
+# Identity type aliases
 # ---------------------------------------------------------------------------
 
-# Authenticated user — use in endpoint signatures
 CurrentUser = Annotated[User, Depends(get_current_user)]
-
-# Current role — use when you need the role value in endpoint logic
 CurrentRole = Annotated[Role, Depends(get_current_role)]
 
+
 # ---------------------------------------------------------------------------
-# Role guards — use in endpoint `dependencies=[...]` list
+# Supplier-scoped identity — resolves caller's supplier_id
 # ---------------------------------------------------------------------------
 
-# Any internal user (not a supplier)
-InternalUserRole = require_role(Role.PROJECT_MANAGER, Role.REVIEWER, Role.APPROVER)
 
-# Project managers only
-PMOnly = require_role(Role.PROJECT_MANAGER)
+async def get_supplier_id(
+    current_user: CurrentUser,
+    session: DbSession,
+) -> str:
+    """Resolve the supplier_id linked to the current user.
 
-# Reviewers and project managers (can review documents)
-ReviewerRole = require_role(Role.PROJECT_MANAGER, Role.REVIEWER)
+    Flow: UserService.get_supplier_id_for_user (cache-first; DB fallback).
+    Raises 403 SUPPLIER_NOT_LINKED if no Supplier.contact_id points at this user.
 
-# Suppliers only
-SupplierRole = require_role(Role.SUPPLIER)
+    Usage (value dep):
+        async def handler(supplier_id: SupplierID, ...): ...
+    """
+    supplier_id = await user_service.get_supplier_id_for_user(
+        user_id=current_user.id,
+        session=session,
+    )
+    if supplier_id is None:
+        raise SupplierNotLinkedError(
+            "User is not linked to a supplier — accept the invitation first",
+            user_id=current_user.id,
+        )
+    return supplier_id
+
+
+SupplierID = Annotated[str, Depends(get_supplier_id)]

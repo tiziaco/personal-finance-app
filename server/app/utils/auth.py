@@ -60,9 +60,20 @@ class ClerkJWTVerifier:
                     "verify_aud": False,
                 },
             )
-
             if not payload.get("sub"):
                 logger.warning("token_missing_subject")
+                return None
+
+            # Session tokens (frontend getToken()) carry azp = issuing origin.
+            # OAuth access tokens (Swagger's /docs Authorize flow) carry no azp
+            # at all -- they're scoped to a registered OAuth client instead.
+            azp = payload.get("azp")
+            client_id = payload.get("client_id")
+            authorized = azp in settings.cors.ALLOWED_ORIGINS or (
+                client_id is not None and client_id == settings.auth.OAUTH_CLIENT_ID
+            )
+            if not authorized:
+                logger.warning("token_party_not_allowed", azp=azp, client_id=client_id)
                 return None
 
             logger.debug("token_verified", user_id=payload["sub"])

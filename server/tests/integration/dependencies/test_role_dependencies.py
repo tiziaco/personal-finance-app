@@ -3,11 +3,11 @@
 import pytest
 from fastapi import APIRouter
 
-from app.api.dependencies.auth import (
+from app.api.dependencies.authentication import get_current_role
+from app.api.dependencies.authorization import (
     InternalUserRole,
     PMOnly,
     SupplierRole,
-    get_current_role,
 )
 from app.main import app
 from app.models.enums import Role

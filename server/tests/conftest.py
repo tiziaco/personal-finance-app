@@ -8,13 +8,13 @@ import asyncio
 import os
 from typing import AsyncGenerator
 
-import asyncpg
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import SQLModel
+from testcontainers.community.postgres import PostgresContainer
 
 # Set test environment and load .env.test into os.environ BEFORE importing app.
 # This is required because nested pydantic-settings models (DatabaseSettings, etc.)
@@ -39,55 +39,41 @@ from app.main import app
 
 
 @pytest.fixture(scope="session")
-def test_database_url() -> str:
-    """Get test database URL.
+def postgres_container():
+    """Run a throwaway PostgreSQL for the test session.
+
+    Session-scoped and lazy: only `test_engine` depends on it, and only
+    integration tests reach `test_engine` (via `db_session`), so a unit-test
+    run never starts a container.
+
+    Uses the same pgvector image as dev/prod for parity — no model declares a
+    vector column today, so the extension is not required, but the image is
+    already present locally and keeps the versions aligned.
+
+    Requires a running Docker daemon. The container gets an ephemeral host
+    port, so it can never collide with the dev database.
+    """
+    with PostgresContainer("pgvector/pgvector:pg16", driver="asyncpg") as postgres:
+        yield postgres
+
+
+@pytest.fixture(scope="session")
+def test_database_url(postgres_container) -> str:
+    """Get the connection URL of the throwaway test database.
 
     Returns:
         str: PostgreSQL connection URL for testing
     """
-    return (
-        f"postgresql+asyncpg://{settings.database.USER}:"
-        f"{settings.database.PASSWORD.get_secret_value()}@"
-        f"{settings.database.HOST}:{settings.database.PORT}/"
-        f"test_{settings.database.DB}"
-    )
+    return postgres_container.get_connection_url()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def ensure_test_database() -> None:
-    """Create the test database if it does not exist.
-
-    Connects to the postgres admin database via asyncpg and issues a
-    CREATE DATABASE when the test database is missing. Runs once per
-    session so every test run is self-contained — no manual setup needed.
-    """
-    test_db_name = f"test_{settings.database.DB}"
-
-    conn = await asyncpg.connect(
-        host=settings.database.HOST,
-        port=settings.database.PORT,
-        user=settings.database.USER,
-        password=settings.database.PASSWORD.get_secret_value(),
-        database="postgres",  # admin DB — always exists
-    )
-    try:
-        exists = await conn.fetchval(
-            "SELECT 1 FROM pg_database WHERE datname = $1",
-            test_db_name,
-        )
-        if not exists:
-            # CREATE DATABASE cannot run inside a transaction
-            await conn.execute(f'CREATE DATABASE "{test_db_name}"')
-    finally:
-        await conn.close()
-
-
-@pytest_asyncio.fixture(scope="session")
-async def test_engine(ensure_test_database: None, test_database_url: str):
+async def test_engine(test_database_url: str):
     """Create async test database engine.
 
-    Creates all tables at session start and drops them at session end.
-    Uses a separate test database to avoid interfering with development data.
+    Creates all tables at session start and drops them at session end. The
+    database lives in a throwaway container (see `postgres_container`), so it
+    starts empty every run and cannot touch development data.
 
     Args:
         test_database_url: Database connection URL

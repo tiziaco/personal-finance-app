@@ -141,7 +141,7 @@ Each service package defines its own exceptions extending these. New service exc
   ```python
   async def endpoint(user: Annotated[User, Depends(get_current_user)]):
   ```
-- Users are JIT-provisioned in the local DB on first request via `UserProvider`
+- Users are JIT-provisioned in the local DB on first request via `UserService`
 - Conversation ownership enforced by the `UserConversation` dependency
 
 ---
@@ -204,13 +204,13 @@ make test-coverage     # all tests + HTML/XML coverage report
 make test-fast         # all tests, skipping slow ones
 
 # Target a specific file or test name
-APP_ENV=test uv run pytest tests/unit/services/test_user_provider_cache.py
+APP_ENV=test uv run pytest tests/unit/services/test_user_cache.py
 APP_ENV=test uv run pytest -k "test_name"
 ```
 
 Coverage is reported automatically (`--cov=app`). HTML report written to `htmlcov/`.
 
-New tests mirror the `app/` structure: a test for `app/services/user/service.py` goes in `tests/unit/services/test_user_service.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
+New tests mirror the `app/` structure: a test for `app/services/user/cache.py` goes in `tests/unit/services/test_user_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
 
 ---
 

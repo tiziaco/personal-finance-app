@@ -4,30 +4,31 @@ This module provides endpoints for retrieving and managing the authenticated use
 Authentication is handled by Clerk - there are no register/login endpoints.
 """
 
-import asyncio
-
 from fastapi import (
     APIRouter,
     Request,
 )
 
 from app.api.dependencies.agent import ChatbotAgentDep
-from app.api.dependencies.auth import CurrentUser
+from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.database import DbSession
 from app.agents.shared.memory.factory import delete_user_memory
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.schemas.auth import UserResponse
-from app.services.clerk import clerk_service
 from app.services.conversation import conversation_service
-from app.services.user import user_provider
+from app.services.user import (
+    user_cache,
+    user_service,
+)
 
 router = APIRouter()
 
 
 @router.get(
     "/me",
+    operation_id="getMe",
     response_model=UserResponse,
     summary="Get current user profile",
     description="Retrieve the authenticated user's profile information. "
@@ -47,6 +48,7 @@ async def get_me(user: CurrentUser):
 
 @router.delete(
     "/me",
+    operation_id="deleteMe",
     status_code=204,
     summary="Delete current user account (GDPR)",
     description="Permanently delete the authenticated user's account and all associated data. "
@@ -66,8 +68,9 @@ async def delete_me(
     2. Soft-delete all conversation records + collect their IDs
     3. Clear LangGraph checkpoint data for each conversation (message PII)
     4. Delete mem0 long-term memory (extracted fact PII)
-    5. Anonymize the user record in DB
-    6. Invalidate the in-memory user cache
+    5. Unlink any supplier this user managed (Supplier.contact_id)
+    6. Anonymize the user record in DB
+    7. Invalidate the in-memory user caches (org role + supplier link)
 
     Args:
         request: The FastAPI request object for rate limiting.
@@ -78,7 +81,7 @@ async def delete_me(
     original_clerk_id = user.clerk_id  # capture before anonymize_user() replaces it
 
     # 1. Delete from Clerk so the JWT cannot be used to re-provision the account
-    await asyncio.to_thread(clerk_service.delete_user, original_clerk_id)
+    await user_service.delete_user_from_clerk(original_clerk_id)
 
     # 2. Soft-delete all active conversation records; get IDs for LangGraph cleanup
     conversation_ids = await conversation_service.soft_delete_all_user_conversations(
@@ -92,7 +95,12 @@ async def delete_me(
     # 4. Delete mem0 long-term memory (extracted user facts = PII)
     await delete_user_memory(user.id)
 
-    # 5. Anonymize the user record (clears PII fields + nulls conversation names)
+    # 5. Unlink any supplier this user managed. Supplier.contact_id would
+    #    otherwise keep pointing at the anonymised row, still recording which
+    #    supplier this individual managed.
+    await user_service.unlink_supplier_contact(user.id, db_session)
+
+    # 6. Anonymize the user record (clears PII fields + nulls conversation names)
     # Eagerly load conversations so anonymize_user() can iterate them without
     # triggering a synchronous lazy load on an async session (MissingGreenlet).
     await db_session.refresh(user, attribute_names=["conversations"])
@@ -100,8 +108,9 @@ async def delete_me(
     db_session.add(user)
     await db_session.commit()
 
-    # 6. Invalidate in-memory cache after commit
-    user_provider.invalidate_cache(original_clerk_id)
+    # 7. Invalidate in-memory caches after commit. The org role is keyed by the
+    #    pre-anonymisation clerk_id (captured above); the supplier link by user.id.
+    await user_cache.invalidate_user(clerk_id=original_clerk_id, user_id=user.id)
 
     logger.info(
         "user_deleted_gdpr_compliant",

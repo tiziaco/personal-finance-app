@@ -5,12 +5,26 @@ import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock
 
 from app.api.dependencies.agent import get_chatbot_agent
-from app.api.dependencies.auth import get_current_user
+from app.api.dependencies.authentication import get_current_user
 from app.main import app
 from app.models.user import User
 from app.schemas.chat import Message
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(autouse=True)
+def clear_user_cache():
+    """Reset every user cache before and after each test.
+
+    Sync on purpose: reset() is the non-async form. Calling the async clear()
+    here without awaiting would create a coroutine and clear nothing.
+    """
+    from app.services.user.cache import user_cache
+
+    user_cache.reset()
+    yield
+    user_cache.reset()
 
 
 @pytest_asyncio.fixture

@@ -7,7 +7,7 @@ from fastapi import (
     Path,
 )
 
-from app.api.dependencies.auth import CurrentUser
+from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.database import DbSession
 from app.models.conversation import Conversation
 from app.services.conversation import (

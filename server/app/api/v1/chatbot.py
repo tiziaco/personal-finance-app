@@ -5,7 +5,6 @@ streaming chat, message history management, and chat history clearing.
 """
 
 import json
-from typing import List
 
 from fastapi import (
     APIRouter,
@@ -14,9 +13,8 @@ from fastapi import (
 from fastapi.responses import StreamingResponse
 
 from app.api.dependencies.agent import ChatbotAgentDep
-from app.api.dependencies.auth import CurrentUser
+from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.conversation import UserConversation
-from app.api.dependencies.database import DbSession
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -34,6 +32,7 @@ router = APIRouter()
 
 @router.post(
     "/chat/{conversation_id}",
+    operation_id="sendChatMessage",
     response_model=ChatResponse,
     summary="Send a message and get a response",
     description="Process a chat message and return the AI agent's response."
@@ -74,6 +73,7 @@ async def chat(
 
 @router.post(
     "/chat/{conversation_id}/stream",
+    operation_id="streamChatMessage",
     summary="Stream chat response in real-time",
     description="Send a message and receive the AI agent's response as a server-sent event stream."
 )
@@ -142,6 +142,7 @@ async def chat_stream(
 
 @router.get(
     "/chat/{conversation_id}/messages",
+    operation_id="listChatMessages",
     response_model=ConversationHistory,
     summary="Get conversation chat history",
     description="Retrieve all messages from the specified chat conversation."
@@ -167,6 +168,7 @@ async def get_conversation_messages(
 
 @router.delete(
     "/chat/{conversation_id}/messages",
+    operation_id="clearChatHistory",
     summary="Clear chat history",
     description="Remove all messages from the specified chat conversation."
 )

@@ -2,7 +2,7 @@
 
 **Date:** 2026-08-24
 **Status:** In progress
-**Scope:** Five workstreams to bring the B2B template to a forkable state, ahead of a hard fork into a B2C (social network) project.
+**Scope:** Seven workstreams to bring the B2B template to a forkable state, ahead of a hard fork into a B2C (social network) project.
 
 ---
 
@@ -12,7 +12,7 @@ This repo is the B2B template (Rilevio: multi-tenant, Clerk Organizations, two p
 
 That decision has one consequence that shapes everything below: **any fix worth having in both projects must land here, before the fork.** After the fork, the same fix costs twice.
 
-All five workstreams sit in the part of the stack that is *not* organization-specific. None of them are B2B logic.
+All workstreams sit in the part of the stack that is *not* organization-specific. None of them are B2B logic.
 
 ### Current coupling surface (measured, not assumed)
 
@@ -45,10 +45,11 @@ Organization coupling is narrow — three places on the server, two on the front
 |---|---|---|---|---|
 | 1 | Infrastructure reorganisation | ✅ Complete — 1 blocker outstanding | `plans/2026-08-24-ws1-infra-reorg.md` | — |
 | 2 | Traefik in dev compose + Dokploy labels | Not started | — | — |
-| 3 | Auth middleware hardening | Not started | — | Q1 (below) |
+| 3 | Auth middleware hardening | ✅ F3, F5 shipped; F1, F2 descoped; F4 superseded by WS7 | — | Q1 (below, resolved) |
 | 4 | Clerk webhooks + ngrok | Not started | — | — |
 | 5 | Orval codegen | **Parked** | — | External config not yet available |
 | 6 | Replace `starlette-prometheus` with in-house instrumentation | **Specified, not started** | — | Sequenced after WS1–WS5; **must precede** `uv lock --upgrade` |
+| 7 | SSE stream disconnect handling | Not started | — | — |
 | — | Fork to B2C | Not started | — | WS1–4 |
 
 ---
@@ -137,6 +138,8 @@ for the two portals. The server image builds and runs healthy.
 
 ## WS3 — Auth middleware hardening
 
+**Status:** F3 and F5 shipped (`feat/ws3-auth-hardening`, commits `7f813ff`/`ff12417` for F3). F1 and F2 descoped — user decision, 2026-08-25 (see below). F4 superseded by [WS7](#ws7--sse-stream-disconnect-handling) — the fix landing there is not the one originally proposed here.
+
 **Problem:** `server/app/api/middlewares/auth.py` handles only Clerk session token v2, discards most of the token, and performs no authorized-party validation.
 
 Note the drift: `docs/superpowers/specs/2026-04-11-clerk-rbac-design.md` documents the claims as `org_id` / `org_role` (**v1** shape), while the middleware reads `o.id` / `o.rol` (**v2** shape). One of the two is wrong about the live instance.
@@ -155,15 +158,25 @@ Note the drift: `docs/superpowers/specs/2026-04-11-clerk-rbac-design.md` documen
 
 The middleware docstring claims it strips the `org:` prefix. It does not strip anything — correct for v2, wrong for v1. **Fix:** branch on the `v` claim, normalise both shapes into identical `request.state` values.
 
+**Descoped — user decision, 2026-08-25.** No v1 fallback needed; Q1 (below) resolved the live instance as v2-only, and there is no plan to support a v1 deployment.
+
 **F2 — `o.per` discarded.** `packages/auth/src/permissions.ts` exists on the frontend but the server checks roles only. **Fix:** extract permissions into `request.state`; add `require_permission()` alongside `require_role()`.
+
+**Descoped — user decision, 2026-08-25.** No permission management scheme exists yet; adding `require_permission()` ahead of that would be speculative.
 
 **F3 — No `azp` validation.** `verify_token` sets `verify_aud: False` and nothing checks the authorized party, so any valid token from the Clerk instance is accepted regardless of the origin that obtained it. **Fix:** validate `azp` against an allowlist of permitted origins. *This is the only finding here that is a security bug rather than a gap.*
 
-**F4 — `BaseHTTPMiddleware` with an SSE endpoint.** `AuthMiddleware` extends `BaseHTTPMiddleware`; `server/app/api/v1/chatbot.py:140` returns a `StreamingResponse` with `text/event-stream`. `BaseHTTPMiddleware` pumps responses through an anyio memory stream — the known source of SSE buffering and mishandled client disconnects. **Fix:** convert to pure ASGI middleware.
+**✅ Shipped.** `ClerkJWTVerifier.verify_token()` now accepts either `azp ∈ settings.cors.ALLOWED_ORIGINS` (session tokens from the frontend `getToken()` flow) or `client_id == settings.auth.OAUTH_CLIENT_ID` (Swagger's `/docs` OAuth 2.0 + PKCE flow, which carries no `azp` at all — a structurally different Clerk token type, discovered via live testing, not assumed upfront). No new config — reuses the two settings already populated for CORS and Swagger's OAuth init. Commits `7f813ff` (implementation) / `ff12417` (tests) on `feat/ws3-auth-hardening`.
+
+**F4 — `BaseHTTPMiddleware` with an SSE endpoint.** `AuthMiddleware` extends `BaseHTTPMiddleware`; `server/app/api/v1/chatbot.py:140` returns a `StreamingResponse` with `text/event-stream`. `BaseHTTPMiddleware` pumps responses through an anyio memory stream — the known source of SSE buffering and mishandled client disconnects. **Fix (originally proposed):** convert to pure ASGI middleware.
+
+**Superseded by WS7 — user decision, 2026-08-25: keep `BaseHTTPMiddleware`.** Converting `AuthMiddleware` alone would have been a partial fix regardless — `LoggingContextMiddleware`, `SecurityHeadersMiddleware`, and `MetricsMiddleware` are also `BaseHTTPMiddleware` and each adds its own anyio-stream hop around the SSE response; a real fix would mean rewriting all four as pure ASGI. More directly: the actual risk in this codebase is that `chatbot.py`'s `event_generator()` never checks for client disconnect, so a client leaving mid-stream doesn't stop the LLM call — that gap exists independent of the middleware base class. [WS7](#ws7--sse-stream-disconnect-handling) fixes that gap directly instead.
 
 **F5 — `org_id` nullability bug (adjacent, in the model).** `User.org_id` is `str`, non-nullable (`user.py:43`), but `anonymize_user` assigns `self.org_id = None` (`user.py:65`). The GDPR deletion path raises a NOT NULL violation on flush. The field must become nullable for B2C regardless. **Fix:** make nullable + Alembic migration.
 
-**Acceptance:** unit tests cover v1 and v2 token shapes producing identical `request.state`; `azp` rejection is tested; SSE endpoint streams without buffering; `anonymize_user` round-trips against a real session.
+**✅ Shipped** (prior to this tracker update). `User.org_id` is `Optional[str]` (`app/models/user.py:46`).
+
+**Acceptance (as scoped after descoping/superseding above):** unit tests cover `azp`/`client_id` token-party validation (done, 13 tests in `test_auth_utils.py`); `anonymize_user` round-trips against a real session (done, F5). SSE streaming without buffering is no longer this workstream's acceptance criterion — see WS7.
 
 ---
 
@@ -283,10 +296,34 @@ This matters disproportionately for the B2C project, whose per-user and per-post
 - `packageManager` is unpinned in `web-app/package.json`; local pnpm is 11.21.0 while the container's corepack resolved 11.23.0. Same class of drift as the server lockfile bypass fixed in Task 3c.
 
 
+## WS7 — SSE stream disconnect handling
+
+**Status:** Not started. Grew out of WS3/F4 — see that finding for the middleware analysis that led here.
+
+**Problem:** `server/app/api/v1/chatbot.py`'s `event_generator()` (used by the `StreamingResponse(..., media_type="text/event-stream")` chat endpoint) never checks whether the client is still connected. If a client navigates away or drops the connection mid-stream, nothing stops the loop — it keeps calling `agent.get_stream_response()` and consuming LLM output for a listener that no longer exists, burning tokens and time for nothing.
+
+**Decision — keep `BaseHTTPMiddleware`; do not rewrite the middleware stack.** WS3/F4 originally proposed converting `AuthMiddleware` to pure ASGI. Rejected:
+- Every `BaseHTTPMiddleware` in the stack (`AuthMiddleware`, `LoggingContextMiddleware`, `SecurityHeadersMiddleware`, `MetricsMiddleware`) contributes its own anyio-stream hop around a streamed response — converting only `AuthMiddleware` would not have removed the indirection, only reduced it by one layer of four.
+- The disconnect-propagation bug historically associated with `BaseHTTPMiddleware` was substantially fixed upstream; this repo runs a recent Starlette (`0.52.1`, checked against PyPI's latest `1.6.0` — this repo is behind current but not on an old, bug-era release).
+- The actual gap — `event_generator()` never checking for disconnect — exists regardless of the middleware base class. Fixing the middleware layer would not have fixed it.
+
+**Decision — `sse-starlette`, not a hand-rolled disconnect check.** `sse-starlette`'s `EventSourceResponse` checks `request.is_disconnected()` internally and stops the generator when the client leaves, plus handles ping/keepalive framing — a purpose-built replacement for the raw `StreamingResponse` currently used, rather than reimplementing disconnect polling by hand.
+
+**Scope:**
+- Add `sse-starlette` dependency to `server/pyproject.toml`.
+- Replace `StreamingResponse(event_generator(), media_type="text/event-stream")` in `chatbot.py` with `EventSourceResponse(event_generator())`.
+- Confirm `event_generator()`'s existing `data: {json}\n\n` formatting is compatible with (or adapted to) `sse-starlette`'s event yielding convention.
+
+**Acceptance:** a client disconnecting mid-stream stops the underlying LLM call/loop promptly (not after full completion); normal (non-disconnected) streaming behavior and event shape are unchanged for existing consumers; no regression in `AuthMiddleware`/`AccessLogMiddleware`/etc. behavior on this route.
+
+---
+
 ## Open questions
 
-**Q1 — Is the live Clerk instance emitting v1 or v2 session tokens?** *(blocks WS3)*
+**Q1 — Is the live Clerk instance emitting v1 or v2 session tokens?** *(blocked WS3, now resolved)*
 Decides whether F1's v1 branch is a live fix or defensive insurance. Does not change the shape of the fix, only its priority.
+
+**Resolved 2026-08-25:** confirmed **v2** — a real decoded session token from the browser during WS3/F3 work carries `"v": 2` and the `o.{id,rol,slg}` claim shape. Moot in practice now that F1 is descoped, but recorded for the record.
 
 ---
 
@@ -302,3 +339,6 @@ Decides whether F1's v1 branch is a live fix or defensive insurance. Does not ch
 | Orval last | Config unavailable; no feature work blocked by its absence. |
 | Naming token `@app` / `app-network` | Neutral enough that the B2C fork inherits the names unchanged — no post-fork rename. |
 | Keep existing `.gitignore` files | Already cover all secrets (root `.env`, `server/.env.*`, `web-app` `.env*` with `!.env.example`); verified against the staged set before the baseline commit. |
+| WS3/F1, F2 descoped | No v1 Clerk deployment planned (Q1 resolved v2-only); no permission scheme exists yet to hang `require_permission()` off of. |
+| WS3/F4 superseded by WS7 | Converting `AuthMiddleware` alone was a partial fix (3 other `BaseHTTPMiddleware` classes remain in the stack) and didn't address the actual gap — `chatbot.py`'s stream generator never checks for client disconnect. |
+| WS7: `sse-starlette` over ASGI middleware rewrite | User decision: keep `BaseHTTPMiddleware`. Fixes the real disconnect gap directly at the response layer instead of rewriting four middleware classes for a smaller, more diffuse benefit. |

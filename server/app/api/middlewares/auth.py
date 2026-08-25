@@ -30,6 +30,12 @@ class AuthMiddleware(BaseHTTPMiddleware):
         request.state.org_id = None
         request.state.org_role = None
 
+        # PUBLIC ROUTES (Phase 7, D-04): skip Clerk parsing entirely.
+        # No identity is needed for /public/* endpoints — link_token is the credential.
+        # Mirrors the /health, /metrics log-silence carve-out below but is a *literal skip*.
+        if request.url.path.startswith("/public/"):
+            return await call_next(request)
+
         auth_header = request.headers.get("authorization")
         if auth_header and auth_header.startswith("Bearer "):
             try:
@@ -42,7 +48,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     # Clerk JWT v2 (SDK ≥ v5): org claims nested under "o"
                     org_data = payload.get("o") or {}
                     request.state.org_id = org_data.get("id")
-                    request.state.org_role = org_data.get("rol") or None
+                    raw_role = org_data.get("rol") or ""
+                    request.state.org_role = raw_role.removeprefix("org:") or None
 
                     logger.debug(
                         "token_verified_in_middleware",

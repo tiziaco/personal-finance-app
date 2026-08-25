@@ -1,5 +1,11 @@
 # GDPR Compliance Guide for B2C Applications
 
+> **Open findings.** A review of the implemented erasure flow found gaps this
+> guide does not cover — most importantly that Langfuse retains message content
+> keyed by the `user.id` that survives erasure. See
+> [`gdpr-erasure-findings.md`](./gdpr-erasure-findings.md). That doc also records
+> that this guide's B2C framing is wrong for the current B2B template.
+
 ## Overview
 
 For B2C applications serving European users, GDPR (General Data Protection Regulation) compliance is **mandatory**, not optional. This guide explains how to handle user data deletion properly.
@@ -62,8 +68,27 @@ class User(BaseModel, AnonymizableMixin, table=True):
         self.first_name = None
         self.last_name = None
         self.avatar_url = None
+        self.org_id = None
         self.mark_anonymized()
 ```
+
+**Why `org_id` is cleared.** It looks like organisation-level data that
+identifies nobody, but `Supplier.contact_id` links a supplier company to a
+*single* portal user. Retaining `org_id` on an anonymised record would still
+mean "the one person from supplier org X" — singling that individual out at
+k=1, which fails the singling-out limb of the Art 29 WP 05/2014 tests carried
+into EDPB Guidelines 04/2025. The column is nullable for this reason.
+
+For the same reason the deletion flow also clears `Supplier.contact_id`
+(`UserService.unlink_supplier_contact`), which would otherwise keep recording
+which supplier the erased individual managed.
+
+> **Terminology caution.** The end state is strong *pseudonymisation*, not
+> anonymisation: the row keeps its `id`, still referenced by
+> `Conversation.user_id`, so records remain linkable. The EDPB's 2025
+> Coordinated Enforcement Action on the right to erasure specifically
+> criticised controllers who present this as anonymisation. Do not claim
+> anonymisation in compliance documentation without a fuller review.
 
 ### 2. GDPR-Compliant Deletion Service
 
@@ -84,8 +109,10 @@ async def delete_user_gdpr_compliant(
     Steps:
     1. Hard delete all chat messages from LangGraph checkpointing
     2. Soft delete conversation metadata
-    3. Anonymize user personal data
-    4. Log deletion for audit trail
+    3. Unlink any supplier this user managed (Supplier.contact_id)
+    4. Anonymize user personal data
+    5. Invalidate the in-memory user caches (org role + supplier link)
+    6. Log deletion for audit trail
     
     Args:
         user_id: ID of user to delete

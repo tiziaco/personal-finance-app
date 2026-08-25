@@ -55,17 +55,16 @@ Two dependencies, used together:
 
 The type alias `CurrentUser = Annotated[User, Depends(get_current_user)]` is used in route signatures.
 
-### 4. JIT User Provisioning — `app/services/user/provider.py`
+### 4. JIT User Provisioning — `app/services/user/service.py`
 
-`UserProvider.get_or_create_user(clerk_id, session)` follows this flow:
+`UserService.resolve_user(clerk_id, org_id, session)` follows this flow:
 
-1. **Cache hit** — in-memory `clerk_id -> user_id` mapping (5-min TTL), then fetch from DB by `user_id`
-2. **DB lookup** — query by `clerk_id`
-3. **Clerk API** — fetch user from Clerk, create in DB, cache the mapping
+1. **DB lookup** — query by `clerk_id` (unique + indexed, so a single index scan)
+2. **Clerk API** — fetch user from Clerk, create in DB
 
 Race condition handling: if two concurrent requests try to create the same user, the `IntegrityError` on the unique `clerk_id` constraint is caught, and the existing user is fetched instead.
 
-The cache stores only `clerk_id -> user_id` strings (not ORM objects) to avoid detached session issues.
+There is deliberately **no `clerk_id -> user_id` cache**. A hit would still cost one indexed lookup, and FastAPI caches each `Depends` result per request (`use_cache=True` by default), so a single request never resolves the user twice anyway.
 
 ### 5. Clerk Service — `app/services/clerk.py`
 
@@ -75,24 +74,45 @@ The cache stores only `clerk_id -> user_id` strings (not ORM objects) to avoid d
 
 Called via `asyncio.to_thread()` since the SDK is synchronous.
 
-### 6. User Repository — `app/services/user/service.py`
+### 6. User Repository — `app/services/user/repository.py`
 
 `UserRepository` handles all user DB operations via SQLModel/SQLAlchemy:
 - `get_by_id()`, `get_by_clerk_id()`, `get_by_email()`
 - `create()` — creates a user from Clerk data
 - `update_from_clerk()` — syncs profile changes
+- `update_org_id()` — syncs org_id when the JWT's org context changes
 - `delete()`
 
-## In-Memory Cache
+### 7. Supplier Repository — `app/services/user/supplier_repository.py`
+
+`SupplierRepository` handles the `Supplier.contact_id` DB operations used for supplier-linking during JIT provisioning and GDPR erasure:
+- `get_by_id()`, `get_by_contact_id()` (any deletion state), `get_id_by_contact_id()` (non-deleted only)
+- `set_contact_id()` — links or unlinks a supplier's contact
+
+## In-Memory Caches — `app/services/user/cache.py`
+
+`UserCache` holds two independent caches, backed by `cachetools.TTLCache`:
+
+| Cache | Key → Value | TTL | Why that TTL |
+|-------|-------------|-----|--------------|
+| `org_role` | `clerk_id -> role` | 60s | Feeds `get_current_role()` → `require_role()`, so a stale entry keeps a revoked permission alive |
+| `supplier_id` | `user_id -> supplier_id \| None` | 300s | Saves an indexed query; not authorization-critical |
 
 | Property | Value |
 |----------|-------|
-| Storage | Python dict (`clerk_id -> (user_id, timestamp)`) |
-| TTL | 5 minutes |
-| Scope | Single process (not shared across workers) |
-| Invalidation | `UserProvider.invalidate_cache(clerk_id)` / `clear_cache()` |
+| Bounds | `maxsize=10_000` per cache, LRU eviction |
+| Scope | Single process — under N workers a TTL is a per-worker staleness bound, not a global one |
+| Invalidation | `user_cache.invalidate_user(clerk_id=..., user_id=...)` |
 
-**Performance**: cached requests skip the Clerk API call and do a single DB lookup by primary key.
+A cached `None` supplier id means "known not linked" and short-circuits the DB, so reads return a `_MISS` sentinel for absence rather than `None`.
+
+Every method is `async` even though the in-memory implementation never awaits — that is the seam for a future Redis backend, so swapping it requires no call-site changes.
+
+**Invalidation points:**
+- Supplier re-link (`resolve_user`) — clears both the new contact and the displaced previous one
+- GDPR account deletion — clears both caches for the erased user
+
+**Known gap:** nothing invalidates `org_role` when a role changes in Clerk, so a demotion is honoured for up to 60s. A `organizationMembership.updated/deleted` webhook would close this; no webhook infrastructure exists yet.
 
 ## Swagger UI OAuth2
 

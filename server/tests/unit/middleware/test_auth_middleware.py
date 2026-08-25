@@ -95,10 +95,10 @@ class TestAuthMiddleware:
     @pytest.mark.asyncio
     @patch("app.api.middlewares.auth.clerk_jwt_verifier")
     async def test_org_claims_extracted_from_token(self, mock_verifier, app):
+        # Clerk JWT v2 (SDK >= v5) nests org claims under "o"
         mock_verifier.verify_token.return_value = {
             "sub": "user_abc123",
-            "org_id": "org_xyz",
-            "org_role": "org:project_manager",
+            "o": {"id": "org_xyz", "rol": "org:project_manager"},
         }
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
@@ -114,8 +114,7 @@ class TestAuthMiddleware:
         """'org:supplier' should be stored as 'supplier'."""
         mock_verifier.verify_token.return_value = {
             "sub": "user_s1",
-            "org_id": "org_abc",
-            "org_role": "org:supplier",
+            "o": {"id": "org_abc", "rol": "org:supplier"},
         }
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:

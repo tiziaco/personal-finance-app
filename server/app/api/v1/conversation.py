@@ -8,7 +8,7 @@ from fastapi import (
 )
 
 from app.api.dependencies.agent import ChatbotAgentDep
-from app.api.dependencies.auth import CurrentUser
+from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.conversation import UserConversation
 from app.api.dependencies.database import DbSession
 from app.core.config import settings
@@ -23,6 +23,7 @@ router = APIRouter()
 
 @router.post(
     "/conversation",
+    operation_id="createConversation",
     response_model=ConversationResponse,
     summary="Create a new chat conversation",
     description="Initialize a new chat conversation for the authenticated user with a unique conversation ID."
@@ -61,6 +62,7 @@ async def create_conversation(request: Request, db_session: DbSession, user: Cur
 
 @router.patch(
     "/conversation/{conversation_id}/name",
+    operation_id="renameConversation",
     response_model=ConversationResponse,
     summary="Rename a chat conversation",
     description="Update the display name of an existing chat conversation."
@@ -98,6 +100,7 @@ async def update_conversation_name(
 
 @router.delete(
     "/conversation/{conversation_id}",
+    operation_id="deleteConversation",
     summary="Delete a chat conversation",
     description="Remove a chat conversation and permanently delete all associated messages."
 )
@@ -135,6 +138,7 @@ async def delete_conversation(
 
 @router.get(
     "/conversations",
+    operation_id="listConversations",
     response_model=List[ConversationResponse],
     summary="List all user chat conversations",
     description="Retrieve all chat conversations created by the authenticated user."

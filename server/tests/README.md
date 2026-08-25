@@ -8,7 +8,7 @@ This directory contains the test suite for the FastAPI server application. The t
 tests/
 ├── conftest.py                          # Shared fixtures (DB, clients, auth helpers)
 ├── unit/
-│   ├── conftest.py                      # Unit fixtures (no DB, clears user cache)
+│   ├── conftest.py                      # Unit fixtures (no DB, resets user caches)
 │   ├── schemas/test_schemas.py          # Pydantic validation
 │   ├── utils/
 │   │   ├── test_sanitization.py         # XSS prevention, email/password validation
@@ -18,7 +18,7 @@ tests/
 │   │   ├── test_clerk_service.py        # Clerk API error mapping
 │   │   ├── test_llm_registry.py         # Model registry lookups
 │   │   ├── test_llm_service.py          # Fallback chain, retry logic
-│   │   └── test_user_provider_cache.py  # In-memory cache TTL/invalidation
+│   │   └── test_user_cache.py           # UserCache TTLs/eviction/invalidation
 │   ├── config/test_settings.py          # Environment resolution, AuthSettings
 │   ├── exceptions/test_exceptions.py    # Exception hierarchy, status/error codes
 │   └── middleware/test_auth_middleware.py # Permissive JWT extraction
@@ -26,8 +26,9 @@ tests/
     ├── conftest.py                      # Auth override, mock agent, test_user fixture
     ├── services/
     │   ├── test_user_repository.py      # UserRepository CRUD, constraints
+    │   ├── test_supplier_repository.py  # SupplierRepository CRUD, contact linking
     │   ├── test_conversation_service.py # ConversationService CRUD, ordering
-    │   └── test_user_provider.py        # JIT provisioning (mock Clerk, real DB)
+    │   └── test_user_service.py         # JIT provisioning (mock Clerk, real DB)
     ├── api/
     │   ├── test_health.py               # /, /health, /ready
     │   ├── test_auth.py                 # /api/v1/auth/me — 401, profile response
@@ -46,11 +47,17 @@ tests/
 # Install dependencies
 uv sync --group test
 
-# Configure test environment (edit if needed)
-# server/.env.test — APP_ENV=test, POSTGRES_DB=cool_db → becomes test_cool_db automatically
+# Integration tests additionally need a running Docker daemon
 ```
 
-The test DB is created automatically on first run — no manual `createdb` needed.
+The test database runs in a throwaway container started by
+[testcontainers](https://testcontainers.com/) (`postgres_container` in
+`tests/conftest.py`) — no `createdb`, no `.env.test` database settings, and no
+port to configure. It gets an ephemeral host port, so it never collides with
+the dev database on 5434, and it is torn down at the end of the session.
+
+The fixture is lazy: only integration tests reach it (via `test_engine` →
+`db_session`), so `make test-unit` starts no container.
 
 ## Running Tests
 
@@ -95,7 +102,7 @@ python -m pytest --lf
 **Integration tests** — real test DB (savepoint rollback — all writes auto-undone after each test). External services mocked:
 - **Auth**: `get_current_user` overridden via `app.dependency_overrides` → returns `test_user` directly, bypassing JWT + JIT provisioning
 - **Agent**: `get_chatbot_agent` overridden with `AsyncMock` → no OpenAI calls
-- **Clerk**: patched at `app.services.user.provider.clerk_service` where needed
+- **Clerk**: patched at `app.services.user.service.clerk_service` where needed
 
 ## Fixtures
 

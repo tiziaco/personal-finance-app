@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
-from app.services.user.service import UserRepository
+from app.services.user.exceptions import UserAlreadyExistsError
+from app.services.user.repository import UserRepository
 
 pytestmark = pytest.mark.integration
 
@@ -73,6 +74,48 @@ class TestCreateUser:
             )
 
 
+class TestCreateOrGetUser:
+    """Tests for UserRepository.create_or_get()."""
+
+    async def test_no_existing_row_creates_user(self, db_session):
+        user = await UserRepository.create_or_get(
+            db_session,
+            clerk_id="clerk_cog_001",
+            org_id="test_org_123",
+            email="cog@example.com",
+        )
+        assert user.id is not None
+        assert user.clerk_id == "clerk_cog_001"
+
+    async def test_clerk_id_race_returns_existing_user(self, db_session, saved_user):
+        """A same-clerk_id conflict is a benign race — return the winner's row.
+
+        Commit first so the "winner" row survives create_or_get's internal
+        rollback, the way it would if a concurrent session had already
+        committed it.
+        """
+        await db_session.commit()
+
+        user = await UserRepository.create_or_get(
+            db_session,
+            clerk_id=saved_user.clerk_id,  # duplicate — simulates the losing request
+            org_id="test_org_123",
+            email="different@example.com",
+        )
+        assert user.id == saved_user.id
+        assert user.email == saved_user.email  # untouched, not overwritten
+
+    async def test_genuine_conflict_raises_user_already_exists(self, db_session, saved_user):
+        """A different clerk_id colliding on email is not the race this recovers from."""
+        with pytest.raises(UserAlreadyExistsError):
+            await UserRepository.create_or_get(
+                db_session,
+                clerk_id="clerk_cog_never_created",
+                org_id="test_org_123",
+                email=saved_user.email,  # duplicate, but clerk_id differs
+            )
+
+
 class TestGetUser:
     """Tests for UserRepository.get_by_id/clerk_id/email."""
 
@@ -127,6 +170,19 @@ class TestUpdateUser:
             db_session, saved_user, first_name=None
         )
         assert updated.first_name == original_first_name  # None → no change
+
+
+class TestUpdateOrgId:
+    """Tests for UserRepository.update_org_id()."""
+
+    async def test_update_org_id_changes_org(self, db_session, saved_user):
+        updated = await UserRepository.update_org_id(db_session, saved_user, "new_org_456")
+        assert updated.org_id == "new_org_456"
+
+    async def test_update_org_id_persists(self, db_session, saved_user):
+        await UserRepository.update_org_id(db_session, saved_user, "new_org_789")
+        found = await UserRepository.get_by_id(db_session, saved_user.id)
+        assert found.org_id == "new_org_789"
 
 
 class TestDeleteUser:

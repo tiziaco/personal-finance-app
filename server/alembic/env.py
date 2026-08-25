@@ -25,6 +25,7 @@ from app.core.config import settings
 from app.models.conversation import Conversation
 
 # Import all models to register with SQLModel metadata
+from app.models.supplier import Supplier
 from app.models.user import User
 
 # this is the Alembic Config object, which provides

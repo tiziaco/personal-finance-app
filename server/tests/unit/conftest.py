@@ -5,9 +5,14 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def clear_user_cache():
-    """Clear the user provider cache before/after each test."""
-    from app.services.user.provider import _clerk_id_cache
+    """Reset every user cache before and after each test.
 
-    _clerk_id_cache.clear()
+    Sync on purpose: reset() is the non-async form. Calling the async clear()
+    here without awaiting would create a coroutine, clear nothing, and leak
+    cache state into every other unit test.
+    """
+    from app.services.user.cache import user_cache
+
+    user_cache.reset()
     yield
-    _clerk_id_cache.clear()
+    user_cache.reset()
