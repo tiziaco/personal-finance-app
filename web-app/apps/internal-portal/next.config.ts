@@ -2,7 +2,7 @@ import path from "path"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@rilevio/ui", "@rilevio/types", "@rilevio/auth"],
+  transpilePackages: ["@app/ui", "@app/types", "@app/auth"],
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
   async headers() {

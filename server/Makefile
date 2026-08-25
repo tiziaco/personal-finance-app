@@ -3,6 +3,9 @@ install:
 	uv sync
 
 DOCKER_COMPOSE ?= docker-compose
+# Root compose file lives one level up; docker-compose.dev.yml is not a
+# Compose *default* filename, so it will not be found by implicit lookup.
+COMPOSE_FILE ?= ../docker-compose.dev.yml
 
 set-env:
 	@if [ -z "$(ENV)" ]; then \
@@ -105,7 +108,7 @@ docker-run:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=development $(DOCKER_COMPOSE) --env-file $$ENV_FILE up -d --build db app
+	APP_ENV=development $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --build db app
 
 docker-run-env:
 	@if [ -z "$(ENV)" ]; then \
@@ -121,7 +124,7 @@ docker-run-env:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE up -d --build db app
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --build db app
 	# @./scripts/ensure-db-user.sh $(ENV)
 
 docker-logs:
@@ -138,7 +141,7 @@ docker-logs:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE logs -f app db
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE logs -f app db
 
 docker-stop:
 	@if [ -z "$(ENV)" ]; then \
@@ -154,7 +157,7 @@ docker-stop:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE down
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE down
 
 docker-run-db:
 	@if [ -z "$(ENV)" ]; then \
@@ -170,7 +173,7 @@ docker-run-db:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) --env-file $$ENV_FILE up -d db
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d db
 
 # Migrations
 migrate:

@@ -2,8 +2,8 @@
 
 import { cn } from "@/lib/utils"
 import { useServerStatus } from "@/hooks/use-server-status"
-import { HoverCard, HoverCardTrigger, HoverCardContent } from "@rilevio/ui/hover-card"
-import { Badge } from "@rilevio/ui/badge"
+import { HoverCard, HoverCardTrigger, HoverCardContent } from "@app/ui/hover-card"
+import { Badge } from "@app/ui/badge"
 import { isDevelopment } from "@/lib/env-helpers"
 
 export function ServerHealthIndicator() {

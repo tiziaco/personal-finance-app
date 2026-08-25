@@ -1,8 +1,8 @@
 "use client"
 
-import { SettingSection } from "@rilevio/ui/setting-section"
-import { Label } from "@rilevio/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@rilevio/ui/select"
+import { SettingSection } from "@app/ui/setting-section"
+import { Label } from "@app/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@app/ui/select"
 import { useTheme } from "next-themes"
 import { Sun, Moon, Monitor } from "lucide-react"
 

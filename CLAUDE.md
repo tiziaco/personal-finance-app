@@ -11,17 +11,20 @@ Document compliance management platform built for Fincantieri to replace a manua
 ## Repo Structure
 
 ```
-rilevio-app/
+app/
 ├── server/               # FastAPI backend (Python 3.13, uv)
 ├── web-app/              # Next.js monorepo (pnpm workspaces)
 │   ├── apps/
 │   │   ├── internal-portal/   # Dashboard for project managers (port 3000)
 │   │   └── supplier-portal/   # External supplier portal (port 3002)
 │   └── packages/
-│       └── ui/                # Shared component library (shadcn/ui)
-├── prometheus/           # Prometheus config
-├── grafana/              # Grafana dashboards and datasources
-├── docker-compose.yml    # Development stack
+│       ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
+│       ├── types/             # @app/types — shared TypeScript types
+│       └── ui/                # @app/ui — shared component library (shadcn/ui)
+├── infra/                # Infrastructure config
+│   ├── prometheus/            # Prometheus scrape config
+│   └── grafana/               # Grafana datasources and dashboards
+├── docker-compose.dev.yml     # Development stack
 └── docker-compose.prod.yml
 ```
 
@@ -66,7 +69,7 @@ make rebuild-core       # clean + core stack
 | Prometheus        | http://localhost:9090      |
 | Grafana           | http://localhost:3001      |
 | cAdvisor          | http://localhost:8080      |
-| PostgreSQL        | localhost:5432             |
+| PostgreSQL        | localhost:5434             |
 
 ---
 
@@ -75,9 +78,10 @@ make rebuild-core       # clean + core stack
 Each service has its own env file. Copy examples and fill in values before first run:
 
 ```bash
-cp server/.env.development.example server/.env.development
-cp web-app/apps/internal-portal/.env.local.example web-app/apps/internal-portal/.env.local
-cp web-app/apps/supplier-portal/.env.local.example web-app/apps/supplier-portal/.env.local
+cp .env.example .env   # required by the root Makefile (APP_ENV, GRAFANA_ADMIN_PASSWORD, etc.)
+cp server/.env.example server/.env.development
+cp web-app/apps/internal-portal/.env.example web-app/apps/internal-portal/.env.local
+cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.local
 ```
 
 Required secrets: Clerk API keys, database credentials, OpenAI key, Langfuse key.

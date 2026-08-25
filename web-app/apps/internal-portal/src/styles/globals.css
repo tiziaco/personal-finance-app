@@ -6,4 +6,4 @@
 
 @custom-variant dark (&:is(.dark *));
 
-@import "@rilevio/ui/styles/globals.css";
+@import "@app/ui/styles/globals.css";

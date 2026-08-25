@@ -1,5 +1,5 @@
 {
-  "name": "rilevio-web",
+  "name": "web-app",
   "private": true,
   "scripts": {
     "dev:internal": "pnpm --filter internal-portal dev",

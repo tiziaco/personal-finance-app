@@ -1,4 +1,4 @@
-import { Skeleton } from "@rilevio/ui/skeleton"
+import { Skeleton } from "@app/ui/skeleton"
 
 export default function AppLoading() {
   return (

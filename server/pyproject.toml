@@ -1,5 +1,5 @@
 [project]
-name = "rilevio-server"
+name = "server"
 version = "0.1.0"
 description = "Rilevio Server - A backend server for Rilevio application"
 readme = "README.md"

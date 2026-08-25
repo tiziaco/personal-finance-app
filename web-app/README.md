@@ -10,8 +10,9 @@ web-app/
 │   ├── internal-portal/   # Dashboard for project managers (port 3000)
 │   └── supplier-portal/   # Supplier-facing portal (port 3002)
 └── packages/
-    ├── types/             # @rilevio/types — shared TypeScript types
-    └── ui/                # @rilevio/ui — shared UI utilities (cn())
+    ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
+    ├── types/             # @app/types — shared TypeScript types
+    └── ui/                # @app/ui — shared UI utilities (cn())
 ```
 
 ## Tech Stack
@@ -31,8 +32,8 @@ web-app/
 pnpm install
 
 # Copy and fill in environment variables for each app
-cp apps/internal-portal/.env.local.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.local.example apps/supplier-portal/.env.local
+cp apps/internal-portal/.env.example apps/internal-portal/.env.local
+cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
 
 Key variables in each `.env.local`:
@@ -72,7 +73,7 @@ pnpm --filter internal-portal add <package>
 pnpm --filter supplier-portal add <package>
 
 # Add to the shared UI package
-pnpm --filter @rilevio/ui add <package>
+pnpm --filter @app/ui add <package>
 
 # Add to the workspace root (tooling only)
 pnpm add -w <package>
@@ -88,7 +89,7 @@ shadcn components that are shared belong in `packages/ui`. Run from that directo
 cd packages/ui && pnpm dlx shadcn@latest add button dialog table
 ```
 
-Components land in `packages/ui/src/components/ui/` and are exported from `packages/ui/src/index.ts`. Import them in apps via `@rilevio/ui`.
+Components land in `packages/ui/src/components/ui/` and are exported from `packages/ui/src/index.ts`. Import them in apps via `@app/ui`.
 
 If a component is only used in one app, add it directly inside that app instead.
 

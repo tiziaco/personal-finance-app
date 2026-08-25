@@ -1,5 +1,5 @@
-import { AppSidebar } from "@rilevio/ui/layout/app-sidebar"
-import { SidebarInset, SidebarProvider, SidebarMenuButton, SidebarTrigger } from "@rilevio/ui/sidebar"
+import { AppSidebar } from "@app/ui/layout/app-sidebar"
+import { SidebarInset, SidebarProvider, SidebarMenuButton, SidebarTrigger } from "@app/ui/sidebar"
 import { HUB_NAV } from "@/lib/hub-nav"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { GeneralSection } from "@/components/settings/sections/general-section"

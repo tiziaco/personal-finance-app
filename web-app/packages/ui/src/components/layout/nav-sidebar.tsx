@@ -12,7 +12,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "../ui/sidebar"
-import type { NavItem } from "@rilevio/types"
+import type { NavItem } from "@app/types"
 
 export function MenuNavigator({ items }: { items: NavItem[] }) {
   const pathname = usePathname() || "/"

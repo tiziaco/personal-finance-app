@@ -19,7 +19,7 @@ services:
     ports:
       - "3000:3000"
     networks:
-      - app
+      - app-network
 
   server:
     build:
@@ -46,7 +46,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - app
+      - app-network
 
   db:
     image: pgvector/pgvector:pg16
@@ -62,11 +62,11 @@ services:
       retries: 5
     restart: unless-stopped
     networks:
-      - app
+      - app-network
 
 volumes:
   postgres-data:
 
 networks:
-  app:
+  app-network:
     driver: bridge

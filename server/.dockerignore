@@ -43,7 +43,7 @@ logs/
 # Docker
 Dockerfile
 .dockerignore
-docker-compose.yml
+docker-compose.dev.yml
 
 # Documentation
 docs/
@@ -53,8 +53,6 @@ AGENTS.md
 
 # Database and config files
 schema.sql
-grafana/
-prometheus/
 
 # Scripts not needed in container
 scripts/build-docker.sh

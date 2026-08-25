@@ -11,6 +11,7 @@ RUN corepack enable pnpm
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 
 # Copy package manifests for all workspace packages (for layer caching)
+COPY packages/auth/package.json ./packages/auth/
 COPY packages/types/package.json ./packages/types/
 COPY packages/ui/package.json ./packages/ui/
 
@@ -30,6 +31,7 @@ WORKDIR /app
 
 RUN corepack enable pnpm
 
+COPY --from=deps /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/internal-portal/node_modules ./apps/internal-portal/node_modules
 COPY --from=deps /app/apps/supplier-portal/node_modules ./apps/supplier-portal/node_modules

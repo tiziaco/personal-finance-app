@@ -1,4 +1,4 @@
-import type { HealthResponse } from "@rilevio/types"
+import type { HealthResponse } from "@app/types"
 
 export async function fetchHealthStatus(token: string | null): Promise<HealthResponse> {
   const url = `${process.env.NEXT_PUBLIC_API_URL}/ready`

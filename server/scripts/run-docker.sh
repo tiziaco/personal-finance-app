@@ -33,9 +33,14 @@ fi
 
 cd "$PROJECT_ROOT"
 
+# PROJECT_ROOT here is server/ (SCRIPT_DIR/..), not the monorepo root — the
+# root docker-compose.dev.yml lives one level further up. It is also not a
+# Compose *default* filename, so it must be passed explicitly.
+COMPOSE_FILE="$PROJECT_ROOT/../docker-compose.dev.yml"
+
 if [ -f "$ENV_FILE" ]; then
   echo "Running docker compose with env file $ENV_FILE"
-  APP_ENV=$ENV docker compose --env-file "$ENV_FILE" up -d --build db app
+  APP_ENV=$ENV docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build db app
 else
-  APP_ENV=$ENV docker compose up -d --build db app
+  APP_ENV=$ENV docker compose -f "$COMPOSE_FILE" up -d --build db app
 fi

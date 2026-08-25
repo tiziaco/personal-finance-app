@@ -1,7 +1,7 @@
 # ==========================================
 # Stage 1: Builder - Install dependencies
 # ==========================================
-FROM python:3.12-slim AS builder
+FROM python:3.13-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -17,14 +17,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast dependency resolution
-RUN pip install --no-cache-dir uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.6 /uv /usr/local/bin/uv
 
 # Copy only dependency files to leverage Docker cache
-COPY pyproject.toml .
+COPY pyproject.toml uv.lock ./
 
 # Export requirements and install to a custom prefix
 # This creates a clean, portable Python environment
-RUN uv pip compile pyproject.toml -o requirements.txt && \
+RUN uv export --frozen --no-dev --format requirements-txt -o requirements.txt && \
     uv pip install --no-cache-dir --python /usr/local/bin/python --prefix=/install -r requirements.txt && \
     # Remove unnecessary files to reduce size
     find /install -type d -name "tests" -o -name "test" -o -name "__pycache__" | xargs rm -rf && \
@@ -35,7 +35,7 @@ RUN uv pip compile pyproject.toml -o requirements.txt && \
 # ==========================================
 # Stage 2: Runtime - Minimal final image
 # ==========================================
-FROM python:3.12-slim AS runtime
+FROM python:3.13-slim AS runtime
 
 ARG APP_ENV=production
 

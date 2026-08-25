@@ -1,0 +1,176 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    // ── Dev (local, no Docker) ────────────────────────────────────────────────
+    {
+      "label": "Dev: API Server",
+      "detail": "Run FastAPI server locally with hot-reload (uv + uvicorn)",
+      "type": "shell",
+      "command": "make dev",
+      "options": { "cwd": "${workspaceFolder}/server" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Internal Portal",
+      "detail": "Run internal-portal Next.js dev server (port 3000)",
+      "type": "shell",
+      "command": "pnpm dev:internal",
+      "options": { "cwd": "${workspaceFolder}/web-app" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Supplier Portal",
+      "detail": "Run supplier-portal Next.js dev server (port 3002)",
+      "type": "shell",
+      "command": "pnpm dev:supplier",
+      "options": { "cwd": "${workspaceFolder}/web-app" },
+      "isBackground": true,
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: All",
+      "detail": "Start API server + both portals locally (3 terminals)",
+      "dependsOn": ["Dev: API Server", "Dev: Internal Portal", "Dev: Supplier Portal"],
+      "dependsOrder": "parallel",
+      "group": { "kind": "build", "isDefault": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: Kill All",
+      "detail": "Kill any process on ports 8000, 3000, 3002",
+      "type": "shell",
+      "command": "for port in 8000 3000 3002; do pids=$(lsof -ti :$port 2>/dev/null); if [ -n \"$pids\" ]; then echo \"Killing port $port (PIDs: $pids)\"; echo \"$pids\" | xargs kill -9; else echo \"Port $port: nothing running\"; fi; done; echo 'Done'",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Run ──────────────────────────────────────────────────────────────────
+    {
+      "label": "Run: Full Stack",
+      "detail": "Start all services (portals, server, db, prometheus, grafana, cadvisor)",
+      "type": "shell",
+      "command": "make docker-run",
+      "group": { "kind": "build", "isDefault": false },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: Core",
+      "detail": "Start core services only (portals, server, db)",
+      "type": "shell",
+      "command": "make docker-run-core",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Run: DB Only",
+      "detail": "Start database only (ENV=development)",
+      "type": "shell",
+      "command": "make docker-run-db ENV=${input:dbEnv}",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Stop / Clean ─────────────────────────────────────────────────────────
+    {
+      "label": "Stop: All Services",
+      "detail": "Stop all running Docker services",
+      "type": "shell",
+      "command": "make docker-stop",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Clean: Full",
+      "detail": "Stop services and remove containers, volumes, networks",
+      "type": "shell",
+      "command": "make clean",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Rebuild ───────────────────────────────────────────────────────────────
+    {
+      "label": "Rebuild: Full Stack",
+      "detail": "Clean + build + start full stack",
+      "type": "shell",
+      "command": "make rebuild",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Rebuild: Core",
+      "detail": "Clean + build + start core stack",
+      "type": "shell",
+      "command": "make rebuild-core",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Build ─────────────────────────────────────────────────────────────────
+    {
+      "label": "Build: All",
+      "detail": "Build all Docker images (portals + server)",
+      "type": "shell",
+      "command": "make docker-build",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: Web Apps",
+      "detail": "Build internal-portal and supplier-portal images",
+      "type": "shell",
+      "command": "make docker-build-web",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build: API Server",
+      "detail": "Build server image only",
+      "type": "shell",
+      "command": "make docker-build-api",
+      "group": "build",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
+    // ── Logs ──────────────────────────────────────────────────────────────────
+    {
+      "label": "Logs: All Services",
+      "detail": "Follow logs for all services",
+      "type": "shell",
+      "command": "make docker-logs",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": [],
+      "isBackground": true
+    },
+    {
+      "label": "Logs: Core Services",
+      "detail": "Follow logs for portals, server, and db",
+      "type": "shell",
+      "command": "make docker-logs-core",
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": [],
+      "isBackground": true
+    }
+  ],
+
+  "inputs": [
+    {
+      "id": "dbEnv",
+      "type": "pickString",
+      "description": "Select environment",
+      "options": ["development", "staging", "production"],
+      "default": "development"
+    }
+  ]
+}

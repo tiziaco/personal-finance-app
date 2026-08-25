@@ -12,6 +12,8 @@ web-app/
 │   ├── internal-portal/   # Dashboard for project managers (port 3000)
 │   └── supplier-portal/   # External supplier portal (port 3002)
 └── packages/
+    ├── auth/              # Role enum, useAppAuth(), getUserRole() (packages/auth)
+    ├── types/             # Shared TypeScript types (packages/types)
     └── ui/                # Shared shadcn/ui components (packages/ui)
 ```
 
@@ -36,8 +38,8 @@ pnpm type-check            # TypeScript check across workspace
 Env files must exist before starting:
 
 ```bash
-cp apps/internal-portal/.env.local.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.local.example apps/supplier-portal/.env.local
+cp apps/internal-portal/.env.example apps/internal-portal/.env.local
+cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
 
 ---
@@ -121,14 +123,14 @@ Always check `packages/ui` before creating a new component. Add new shared compo
 
 ### Clerk RBAC — Auth Package and Role-Gated Rendering
 
-Shared auth logic lives in **`packages/auth`** (`@repo/auth`) — not in `packages/ui`. This includes the `Role` enum, `getUserRole()`, `isInternalRole()`, `ROLE_LABELS`, and the `AuthProvider` / `useAppAuth()` hook.
+Shared auth logic lives in **`packages/auth`** (`@app/auth`) — not in `packages/ui`. This includes the `Role` enum, `getUserRole()`, `isInternalRole()`, `ROLE_LABELS`, and the `AuthProvider` / `useAppAuth()` hook.
 
 This project is on `@clerk/nextjs` **v6 (Core 2)**. The current SDK (`<Show>`) is not available.
 
 **In client components — always use `useAppAuth()`**, never `useAuth()` or `useUser()` directly:
 
 ```typescript
-import { useAppAuth, Role } from '@repo/auth'
+import { useAppAuth, Role } from '@app/auth'
 
 const { user, role, isLoaded } = useAppAuth()
 if (role === Role.PROJECT_MANAGER) { ... }
@@ -144,10 +146,10 @@ import { Protect } from '@clerk/nextjs'
 </Protect>
 ```
 
-**Middleware (`proxy.ts`):** read `orgRole` from `auth()` and pass through `getUserRole()` from `@repo/auth`:
+**Middleware (`proxy.ts`):** read `orgRole` from `auth()` and pass through `getUserRole()` from `@app/auth`:
 
 ```typescript
-import { getUserRole, isInternalRole } from '@repo/auth'
+import { getUserRole, isInternalRole } from '@app/auth'
 
 // correct
 const { orgRole } = await auth()
@@ -184,6 +186,6 @@ const role = sessionClaims?.metadata?.role
 - Confusing `CLERK_JWT_ISSUER_DOMAIN` (token validation) with the sign-in URL
 - Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
 - Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
-- Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@repo/auth`
+- Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@app/auth`
 - Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
 - Putting auth logic in `packages/ui` — it belongs in `packages/auth`

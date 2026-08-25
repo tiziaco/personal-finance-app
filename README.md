@@ -81,17 +81,18 @@ Built for compliance with D.Lgs. 81/2008 (workplace safety) and D.Lgs. 36/2023 (
 ## Project Structure
 
 ```
-rilevio-app/
+app/
 ├── web-app/          # Next.js frontend (dashboard + supplier portal)
 ├── server/           # FastAPI backend
 │   ├── app/          # Application source
 │   ├── tests/        # Unit and integration tests
 │   ├── Makefile      # Dev commands
 │   └── pyproject.toml
-├── prometheus/       # Prometheus config
-├── grafana/          # Grafana dashboards and datasources
-├── docker-compose.yml          # Development stack
-└── docker-compose.prod.yml     # Production stack
+├── infra/                    # Infrastructure config
+│   ├── prometheus/           # Prometheus config
+│   └── grafana/               # Grafana dashboards and datasources
+├── docker-compose.dev.yml    # Development stack
+└── docker-compose.prod.yml   # Production stack
 ```
 
 ---
@@ -110,11 +111,15 @@ rilevio-app/
 Copy the example env files and fill in your values:
 
 ```bash
+# Root (required by the Makefile — provides APP_ENV, GRAFANA_ADMIN_PASSWORD, etc.)
+cp .env.example .env
+
 # Backend
-cp server/.env.development.example server/.env.development
+cp server/.env.example server/.env.development
 
 # Frontend
-cp web-app/.env.local.example web-app/.env.local
+cp web-app/apps/internal-portal/.env.example web-app/apps/internal-portal/.env.local
+cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.local
 ```
 
 Required variables include Clerk API keys, database credentials, and OpenAI/Langfuse keys.
@@ -183,7 +188,7 @@ pnpm dev:internal    # http://localhost:3000
 pnpm dev:supplier    # http://localhost:3002
 
 # Copy and fill env files before starting
-cp apps/internal-portal/.env.local.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.local.example apps/supplier-portal/.env.local
+cp apps/internal-portal/.env.example apps/internal-portal/.env.local
+cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
 

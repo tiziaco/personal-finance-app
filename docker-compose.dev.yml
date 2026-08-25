@@ -16,7 +16,7 @@ services:
     ports:
       - 3000:3000
     networks:
-      - rilevio-network
+      - app-network
 
   supplier-portal:
     container_name: supplier-portal
@@ -35,9 +35,10 @@ services:
     ports:
       - 3002:3000
     networks:
-      - rilevio-network
+      - app-network
   
   server:
+    container_name: server
     build:
       context: ./server
       args:
@@ -52,6 +53,11 @@ services:
     environment:
       - APP_ENV=${APP_ENV:-development}
       - POSTGRES_HOST=db  # Override for Docker networking
+      # The env file's POSTGRES_PORT is the HOST port (for running the
+      # server outside Docker). On the compose network the server reaches
+      # db on its CONTAINER port, which is always 5432 regardless of the
+      # host binding above.
+      - POSTGRES_PORT=5432
     depends_on:
       db:
         condition: service_healthy
@@ -63,14 +69,15 @@ services:
       start_period: 10s
     restart: on-failure
     networks:
-      - rilevio-network
+      - app-network
   
   db:
+    container_name: db
     image: pgvector/pgvector:pg16
     env_file:
       - ./server/.env.${APP_ENV:-development}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_HOST_PORT:-5434}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -80,20 +87,20 @@ services:
       retries: 5
     restart: always
     networks:
-      - rilevio-network
+      - app-network
   
   prometheus:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./infra/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=30d'
       - '--storage.tsdb.retention.size=10GB'
     networks:
-      - rilevio-network
+      - app-network
     restart: always
 
   # Grafana
@@ -103,14 +110,13 @@ services:
       - "3001:3000"
     volumes:
       - grafana-storage:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./grafana/dashboards/dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml
-      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./infra/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./infra/grafana/datasources:/etc/grafana/provisioning/datasources
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD is required}
       - GF_USERS_ALLOW_SIGN_UP=false
     networks:
-      - rilevio-network
+      - app-network
     restart: always
 
   cadvisor:
@@ -130,7 +136,7 @@ services:
     command:
       - '--docker_only=true'
     networks:
-      - rilevio-network
+      - app-network
     restart: always
 
   
@@ -139,5 +145,5 @@ volumes:
   grafana-storage:
 
 networks:
-  rilevio-network:
+  app-network:
     driver: bridge

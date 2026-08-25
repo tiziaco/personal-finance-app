@@ -29,6 +29,10 @@ POSTGRES_DB=${POSTGRES_DB:-food_order_db}
 
 DOCKER_COMPOSE_BIN=${DOCKER_COMPOSE_BIN:-docker compose}
 IFS=' ' read -r -a DC_CMD <<< "$DOCKER_COMPOSE_BIN"
+# PROJECT_ROOT here is server/ (SCRIPT_DIR/..); the root docker-compose.dev.yml
+# lives one level up and is not a Compose default filename, so it must be
+# passed explicitly.
+DC_CMD+=(-f "$PROJECT_ROOT/../docker-compose.dev.yml")
 
 echo "Waiting for PostgreSQL service to be ready..."
 MAX_ATTEMPTS=30

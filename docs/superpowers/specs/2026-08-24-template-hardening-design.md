@@ -34,6 +34,7 @@ Organization coupling is narrow — three places on the server, two on the front
 
 1. **Do not widen the role seam.** No service, repository, or endpoint may read `org_role` / `org_id` directly. Everything goes through `get_current_role` (server) and `getUserRole` (frontend).
 2. **Genericise naming to `@app` / `app-network`.** `@rilevio/*` → `@app/*`, `rilevio-network` → `app-network`, and container names lose the product prefix. Chosen because it is neutral enough that the B2C fork needs no rename at all — fork cost for naming drops to zero.
+   **Amended 2026-08-24 (user decision, WS1 Ruling 15):** the `@app` token applies to *workspace package scopes only*. The two ROOT packages take their directory's name instead — `web-app/package.json` is `web-app`, `server/pyproject.toml` is `server`. One rule: package name equals directory name. Both are private and unpublished, so the name is a local label with no resolution or collision consequences. The originally-planned `app-web` / `app-server` applied the token to two names that were already neutral, buying nothing and reading worse than the directory they name.
 3. **Version control before file moves.** ✅ Done — repo initialised on `main`, baseline commit `296c3b7`. Existing `.gitignore` files (root, `server/`, `web-app/`) were verified to cover every secret file and left unmodified.
 
 ---
@@ -42,27 +43,77 @@ Organization coupling is narrow — three places on the server, two on the front
 
 | # | Workstream | Status | Plan | Blocked by |
 |---|---|---|---|---|
-| 1 | Infrastructure reorganisation | Not started | — | — |
-| 2 | Traefik in dev compose + Dokploy labels | Not started | — | WS1 |
+| 1 | Infrastructure reorganisation | ✅ Complete — 1 blocker outstanding | `plans/2026-08-24-ws1-infra-reorg.md` | — |
+| 2 | Traefik in dev compose + Dokploy labels | Not started | — | — |
 | 3 | Auth middleware hardening | Not started | — | Q1 (below) |
-| 4 | Clerk webhooks + ngrok | Not started | — | WS1 |
+| 4 | Clerk webhooks + ngrok | Not started | — | — |
 | 5 | Orval codegen | **Parked** | — | External config not yet available |
+| 6 | Replace `starlette-prometheus` with in-house instrumentation | **Specified, not started** | — | Sequenced after WS1–WS5; **must precede** `uv lock --upgrade` |
 | — | Fork to B2C | Not started | — | WS1–4 |
 
 ---
 
 ## WS1 — Infrastructure reorganisation
 
+**Status:** ✅ Complete, with one acceptance criterion unmet — see Part 2 below.
+
 **Problem:** `prometheus/` and `grafana/` sit in the repo root alongside application code. `docker-compose.yml` mixes dev concerns with a name that implies it is the default for all environments.
 
 **Scope:**
 - Move `prometheus/` and `grafana/` under a single `infra/` directory.
 - Rename `docker-compose.yml` → `docker-compose.dev.yml`; update `Makefile` targets and any `scripts/*.sh` references.
-- Genericise the package scope (`@rilevio/*` → single token), network name (`rilevio-network`), and `container_name` entries.
+- Genericise the package scope (`@rilevio/*` → single token), network name (`rilevio-network`), root package names (→ directory-matching `web-app` / `server`), and `container_name` entries.
 
 **Acceptance:** `make docker-run` and `make docker-run-core` start the full and core stacks unchanged; Grafana still finds its datasource and dashboards; no stale path references remain anywhere in `Makefile`, compose files, or `server/scripts/`.
 
 **Rationale for going first:** it moves files. Every later workstream adds services or edits compose; doing the move afterwards means redoing that work.
+
+### Part 1 — what shipped
+
+- `prometheus/` and `grafana/` moved under `infra/`; compose bind mounts repointed.
+- `docker-compose.yml` renamed to `docker-compose.dev.yml`; `Makefile` parameterised with `COMPOSE_FILE` threaded through all 10 compose call sites; two dead `personal-finance-app-*` image names removed from `clean`.
+- Docker network unified as `app-network` across dev and prod (they had drifted to `rilevio-network` and `app`).
+- pnpm scope `@rilevio/*` renamed to `@app/*` across 33 files; root packages renamed to directory-matching names `web-app` and `server`.
+- Documentation updated to the new layout and identifiers.
+- `scripts/verify-infra.sh` created; reports `SUMMARY: 19 passed, 0 failed, 0 skipped (19 checks)`.
+- Two build repairs made along the way that were not in the original plan: the web-app image could not build at all (pnpm `allowBuilds` plus missing root manifests in the builder stage), and the server image built irreproducibly (it ignored `uv.lock` and ran Python 3.12 against a 3.13 project). Both are fixed; the server container now reports `healthy`, which it had never done before.
+
+### Part 2 — the outstanding blocker
+
+Both web-app portal images currently **fail to build**:
+
+```
+Error: @clerk/clerk-react: The publishableKey passed to Clerk is invalid. (key="")
+Export encountered an error on /_not-found/page
+```
+
+**Root cause:** `docker-compose.dev.yml` passes the key as a build arg,
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}`, resolved by compose
+variable substitution from the root `.env`. It is not defined there, so the arg becomes the literal
+two-character string `""`. The per-app `.env.local` does define it, but `env_file:` applies at
+runtime only, and Next.js inlines `NEXT_PUBLIC_*` at build time, so a runtime value cannot substitute.
+
+**Attribution (verified, not assumed):** `git show main:docker-compose.yml` carries the identical
+`${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}` line, and `git diff main..HEAD` shows this branch changed
+no build args. The defect predates the branch. The working assessment — explicitly **not proven** —
+is that Docker layer caching masked it until the package rename invalidated the cached
+`RUN pnpm --filter $APP_NAME build` layer.
+
+**Candidate fixes (open, none chosen — each is a secrets-handling decision for the user):**
+1. Add the publishable key to root `.env` (it is a *publishable* key, designed to ship in client bundles).
+2. Make the `/_not-found` route dynamic so no key is needed at build time.
+3. Restructure how build args are sourced — cleanest, largest, arguably WS2's scope.
+
+**Consequence:** WS1's acceptance criterion "`make docker-run` starts the stack" is currently unmet
+for the two portals. The server image builds and runs healthy.
+
+### Also deferred (each already known, none are WS1 defects)
+
+- `docker-compose.prod.yml` is stale and unparseable by `docker compose config` — it declares a single `web-app` service whose `env_file` points at a nonexistent path. Deferred to WS2.
+- `web-app/package.json` does not pin `packageManager`; local pnpm and the container's corepack resolved different versions.
+- `web-app/packages/types` has no `tsconfig.json`, so the root `pnpm type-check` (`pnpm -r exec tsc --noEmit`) cannot check all packages. Pre-existing since the initial commit.
+- `/api/v1/conversation/` returns 404 — a clean unmatched route, not an exception.
+- Host port 5432 in `docker-compose.dev.yml` collides with another project the user runs; worth making configurable.
 
 ---
 
@@ -76,6 +127,7 @@ Organization coupling is narrow — three places on the server, two on the front
 - Add a Traefik service to `docker-compose.dev.yml` so the labels can be exercised locally.
 - Replace host port bindings in `docker-compose.prod.yml` with `expose` + Traefik labels.
 - Verify the labels resolve correctly against the local Traefik before they reach Dokploy.
+- **Repair prod compose staleness (inherited from WS1).** `docker-compose.prod.yml` does not currently parse: it declares a single `web-app` service pointing `env_file` at `./web-app/.env.local`, a path that has never existed. Prod compose predates the two-portal split — dev has `internal-portal` and `supplier-portal`, each with its own `apps/*/.env.local`. WS1 deliberately left this alone because fixing it means deciding the prod service topology, which is this workstream's call. Until it is fixed, `docker compose -f docker-compose.prod.yml config` fails and prod can only be validated structurally.
 
 **Acceptance:** portals and API are reachable through local Traefik by hostname, not by published port; `docker-compose.prod.yml` publishes no application ports to the host.
 
@@ -141,6 +193,95 @@ The middleware docstring claims it strips the `org:` prefix. It does not strip a
 Migration cost is at its minimum right now (one hook), and no feature work is planned in this repo before the fork — so ordering it last costs nothing.
 
 ---
+
+## WS6 — Replace `starlette-prometheus` with in-house instrumentation
+
+**Status:** Specified, not started. **Sequenced after WS1–WS5.**
+
+### Part 1 — root cause, already fixed in WS1 (Task 3c, commit `75af7a9`)
+
+`/health`, `/ready`, `/`, and every `/api/v1/*` route returned 500. The cause was not application code: `server/Dockerfile` never copied `uv.lock` and ran `uv pip compile pyproject.toml`, re-resolving on every build against unbounded lower bounds (`fastapi>=0.121.0`). The image therefore installed **fastapi 0.141.1 / starlette 1.6.0** against a lockfile pinning **0.129.0 / 0.52.1**, on **Python 3.12** despite `requires-python = ">=3.13"`.
+
+FastAPI 0.141 added `fastapi.routing._IncludedRouter`; `app.include_router()` now places that wrapper in `app.routes` rather than flattening child routes. `starlette-prometheus` 0.10.0's `get_path_template()` iterates `request.app.routes` and reads `route.path`, which the wrapper does not expose — so every included-router route raised `AttributeError` inside the middleware, before the handler ran.
+
+Task 3c changed four Dockerfile lines (copy `uv.lock`, `uv export --frozen`, `python:3.13-slim` on both stages, pinned `uv` binary) and touched no server code. Verified after: Python 3.13.15, fastapi 0.129.0, starlette 0.52.1, `_IncludedRouter` absent, `/` 200, `/health` 200, `/ready` 401 (auth required — correct), `/api/v1/auth/me` 401, zero `AttributeError` in logs, and the `server` container reporting `healthy` for the first time.
+
+### Part 2 — the deferred decision this workstream exists to make
+
+The 500s are gone **only because FastAPI is now pinned below 0.141**. The incompatibility is untouched. The planned dependency-version bump reintroduces it exactly.
+
+**⛔ Ordering constraint: this workstream MUST complete before `uv lock --upgrade`.** Bumping first reintroduces the 500s and entangles two unrelated changes.
+
+### Decision: Option A — remove the package, own the instrumentation
+
+**Evidence that decided it.** Every PromQL expression across all three dashboards in `infra/grafana/dashboards/json/` was extracted. They query `http_requests_total`, `llm_inference_duration_seconds`, `llm_stream_duration_seconds` (all in-house, from `server/app/core/metrics.py`) and cAdvisor's `container_*`. **Zero reference any `starlette_*` metric.** One panel filters on `endpoint!~"/metrics|/health"` — `endpoint` is the in-house label name; `starlette-prometheus` uses `path_template`. The dashboards were built against the in-house middleware throughout.
+
+So the package collects and ships five metric families that nothing displays, while duplicating the request-count and duration the in-house middleware already records.
+
+**Options considered:**
+
+| | Change | Why not chosen |
+|---|---|---|
+| **A — chosen** | Drop the package; keep and improve `MetricsMiddleware` | — |
+| B | Drop both middlewares; adopt `prometheus-fastapi-instrumentator` | Actively maintained and a genuine contender, but reintroduces the same coupling class that just caused this outage: a third-party package tracking FastAPI internals. Rejected for a template that will be forked, not for technical inadequacy. |
+| C | Keep the package; pin `fastapi<0.141` | Lets a dependency with a ~2-year release cadence dictate the framework version. This is the current implicit state via the lockfile — a deferral, not a decision. |
+
+**Package facts behind the choice:** `starlette-prometheus` is third-party (by PeRDy), not an Encode or FastAPI project. Latest release 0.10.0, September 2024; prior release January 2022. Not abandoned, but slow enough that a FastAPI-internals break can sit unfixed for a long time — as it has here.
+
+**Why A specifically suits this repo:** the dashboards already plot in-house metrics exclusively. The B2C fork inherits those dashboards, and Option A means everything they plot comes from code in this repo, with no third-party package able to break them on a framework bump.
+
+### Scope
+
+**1. Rewrite `server/app/api/middlewares/prometheus.py`** — keep the `/metrics` route, drop the middleware:
+
+```python
+"""Prometheus metrics endpoint."""
+
+from prometheus_client import CONTENT_TYPE_LATEST, REGISTRY, generate_latest
+from starlette.requests import Request
+from starlette.responses import Response
+
+
+def metrics(request: Request) -> Response:
+    return Response(generate_latest(REGISTRY), media_type=CONTENT_TYPE_LATEST)
+
+
+def setup_metrics(app) -> None:
+    """Expose Prometheus metrics at /metrics."""
+    app.add_route("/metrics", metrics)
+```
+
+The in-house counters in `server/app/core/metrics.py` register into `prometheus_client`'s default `REGISTRY`, which is what the replaced library route read — so the endpoint keeps serving them unchanged. The library's multiprocess branch is dropped deliberately: it activates only when `prometheus_multiproc_dir` is set, which requires multiple workers, and the container runs single-process uvicorn.
+
+**2. Fix label cardinality in `server/app/api/middlewares/metrics.py`.** It currently labels `endpoint` with `request.url.path` — the raw path. Every distinct UUID becomes a new Prometheus time series. This is the one real capability `starlette-prometheus` had that the in-house middleware lacks, and it must not be lost in the swap:
+
+```python
+route = request.scope.get("route")
+endpoint = getattr(route, "path", request.url.path)  # template when matched, raw as fallback
+```
+
+This matters disproportionately for the B2C project, whose per-user and per-post routes would otherwise explode cardinality.
+
+**3. Add the two metrics worth keeping** from the removed package — an exceptions counter by exception type, and an in-flight requests gauge — to `server/app/core/metrics.py`, using in-house names consistent with `http_requests_total`.
+
+**4. Remove `starlette-prometheus>=0.7.0`** from `server/pyproject.toml`; re-lock with `uv lock` (**not** `--upgrade`).
+
+### Acceptance
+
+- `/metrics` returns 200 and Prometheus text format; `http_requests_total`, `llm_inference_duration_seconds`, `llm_stream_duration_seconds` all still present.
+- No `starlette_*` series remain.
+- `endpoint` labels show route templates (`/api/v1/conversation/{id}`), not concrete paths.
+- Prometheus `/api/v1/targets` shows the `fastapi` job `up`.
+- All three Grafana dashboards render with data.
+- `grep -r starlette_prometheus server/` returns nothing.
+- `uv lock --check` exits 0.
+- Only then: `uv lock --upgrade` and the `uv add --bounds` pass.
+
+### Also outstanding
+
+- `/api/v1/conversation/` returns 404 — a clean unmatched-route 404, not an exception. Route-shape question, unrelated to this defect.
+- `packageManager` is unpinned in `web-app/package.json`; local pnpm is 11.21.0 while the container's corepack resolved 11.23.0. Same class of drift as the server lockfile bypass fixed in Task 3c.
+
 
 ## Open questions
 

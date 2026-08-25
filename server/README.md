@@ -27,7 +27,7 @@ Key variables in `.env.development`:
 ```bash
 APP_ENV=development
 POSTGRES_HOST=localhost
-POSTGRES_PORT=5432
+POSTGRES_PORT=5434
 POSTGRES_DB=rilevio
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres

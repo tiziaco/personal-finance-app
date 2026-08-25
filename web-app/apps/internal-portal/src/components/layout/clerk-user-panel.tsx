@@ -1,8 +1,8 @@
 "use client"
 
 import { useClerk } from "@clerk/nextjs"
-import { useAppAuth, Role } from "@rilevio/auth"
-import { UserDetailsPanel } from "@rilevio/ui/layout/user-panel"
+import { useAppAuth, Role } from "@app/auth"
+import { UserDetailsPanel } from "@app/ui/layout/user-panel"
 
 export function ClerkUserPanel() {
   const { isLoaded, user, role } = useAppAuth()

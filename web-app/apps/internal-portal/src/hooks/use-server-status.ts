@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { useAuth } from "@clerk/nextjs"
 import { fetchHealthStatus } from "../lib/api/health"
-import type { HealthResponse } from "@rilevio/types"
+import type { HealthResponse } from "@app/types"
 
 export function useServerStatus() {
   const { getToken } = useAuth()

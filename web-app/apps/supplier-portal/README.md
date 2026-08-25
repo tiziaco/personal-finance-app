@@ -102,10 +102,10 @@ src/
 
 ## Auth & Roles
 
-Authentication is handled by Clerk. Role-based access control uses org roles mapped through `@rilevio/auth`:
+Authentication is handled by Clerk. Role-based access control uses org roles mapped through `@app/auth`:
 
 ```typescript
-import { useAppAuth, Role } from '@repo/auth'
+import { useAppAuth, Role } from '@app/auth'
 
 const { user, role, isLoaded } = useAppAuth()
 if (role === Role.SUPPLIER) { ... }
@@ -117,8 +117,8 @@ Use `<Protect role="org:supplier">` from `@clerk/nextjs` for declarative role ga
 
 ## Shared Packages
 
-- **`@rilevio/ui`** — shared shadcn/ui components
-- **`@rilevio/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
-- **`@rilevio/types`** — shared TypeScript types
+- **`@app/ui`** — shared shadcn/ui components
+- **`@app/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
+- **`@app/types`** — shared TypeScript types
 
 Always check `packages/ui` before creating new components.

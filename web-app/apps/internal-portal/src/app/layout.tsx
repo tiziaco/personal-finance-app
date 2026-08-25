@@ -1,8 +1,8 @@
 import { Inter } from "next/font/google"
-import { ThemeProvider } from "@rilevio/ui/theme-provider"
-import { Toaster } from "@rilevio/ui/sonner"
+import { ThemeProvider } from "@app/ui/theme-provider"
+import { Toaster } from "@app/ui/sonner"
 import { ClerkProvider } from "@clerk/nextjs"
-import { AuthProvider } from "@rilevio/auth"
+import { AuthProvider } from "@app/auth"
 import { QueryProvider } from "@/providers/query-provider"
 
 import type { Metadata } from "next"

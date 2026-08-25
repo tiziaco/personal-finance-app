@@ -2,9 +2,9 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@rilevio/ui/dialog"
-import { Button } from "@rilevio/ui/button"
-import { Separator } from "@rilevio/ui/separator"
+import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@app/ui/dialog"
+import { Button } from "@app/ui/button"
+import { Separator } from "@app/ui/separator"
 import { Cog } from "lucide-react"
 import {
   Sidebar,
@@ -13,7 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@rilevio/ui/sidebar"
+} from "@app/ui/sidebar"
 import { ServerHealthIndicator } from "./server-status"
 
 export interface SettingsSection {
