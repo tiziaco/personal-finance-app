@@ -48,8 +48,16 @@ else
     echo "Warning: No .env file found. Using system environment variables."
 fi
 
-# Check required sensitive environment variables
-required_vars=("OPENAI_API_KEY")
+# Check required sensitive environment variables.
+# Comma-separated and overridable per-container, so one-shot jobs (the `migrate`
+# compose service) need not carry application-only secrets. Setting
+# REQUIRED_ENV_VARS to an empty value disables the check; leaving it unset keeps
+# the default. Note the single-dash ${VAR-default}, which distinguishes "unset"
+# from "set but empty".
+required_vars=()
+if [[ -n "${REQUIRED_ENV_VARS-OPENAI_API_KEY}" ]]; then
+    IFS=',' read -r -a required_vars <<<"${REQUIRED_ENV_VARS-OPENAI_API_KEY}"
+fi
 missing_vars=()
 
 for var in "${required_vars[@]}"; do
@@ -79,16 +87,11 @@ echo "Database User: $( [[ -n ${POSTGRES_USER:-${DB_USER:-}} ]] && echo 'set' ||
 echo "LLM Model: ${DEFAULT_LLM_MODEL:-Not set}"
 echo "Debug Mode: ${DEBUG:-false}"
 
-# Run database migrations
-echo -e "\n========================================="
-echo "Running database migrations..."
-echo "========================================="
-if python -m alembic upgrade head; then
-    echo "Migrations completed successfully"
-else
-    echo "ERROR: Database migrations failed"
-    exit 1
-fi
+# NOTE: migrations deliberately do NOT run here. They are a discrete release
+# phase — the `migrate` service in docker-compose.*.yml — which `server` is
+# gated on via `depends_on: condition: service_completed_successfully`.
+# Running them from this entrypoint coupled schema changes to app startup, so a
+# failed migration became an app crash-loop instead of a failed deploy step.
 
 # Execute the CMD
 exec "$@"

@@ -70,10 +70,19 @@ WORKDIR /app
 COPY --chown=appuser:appuser app/ ./app/
 COPY --chown=appuser:appuser alembic/ ./alembic/
 COPY --chown=appuser:appuser alembic.ini ./
-COPY --chown=appuser:appuser scripts/docker-entrypoint.sh ./scripts/
+# Copy the whole scripts/ dir rather than naming one file: .dockerignore
+# denylists the host-only scripts (build-docker.sh, run-docker.sh, …), so only
+# container scripts land here, and a newly added one can't be silently omitted
+# from the image. Keep that denylist accurate when adding host-only scripts.
+COPY --chown=appuser:appuser scripts/ ./scripts/
 
-# Make entrypoint executable
-RUN chmod +x /app/scripts/docker-entrypoint.sh
+# Make container scripts executable
+RUN chmod +x /app/scripts/*.sh
+
+# app.core.config creates ./logs at import time (LoggingSettings.ensure_path).
+# /app is root-owned, so appuser cannot create it — any container without a
+# logs bind mount would die with PermissionError before reaching its command.
+RUN mkdir -p /app/logs && chown appuser:appuser /app/logs
 
 # Switch to non-root user
 USER appuser

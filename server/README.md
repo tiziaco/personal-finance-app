@@ -43,7 +43,7 @@ LANGFUSE_SECRET_KEY=...
 # Start the server (hot reload)
 make dev
 
-# Run database migrations
+# Run database migrations (host / non-Docker path)
 make migrate ENV=development
 
 # Create a new migration
@@ -52,6 +52,15 @@ make migrate-create ENV=development MSG="add document table"
 # Rollback last migration
 make migrate-downgrade ENV=development
 ```
+
+The `make migrate*` targets above run on the host via `uv`. They are the path
+for **authoring** revisions.
+
+The Docker stack applies migrations itself: a one-shot `migrate` service runs
+`alembic upgrade head` and `server` will not start until it exits 0. Migrations
+no longer run from the app's entrypoint. To apply or inspect them in Docker
+without starting the app, use `make docker-migrate` / `make docker-migrate-status`
+from the repo root.
 
 ## Testing
 

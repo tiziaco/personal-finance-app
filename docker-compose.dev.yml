@@ -9,7 +9,7 @@ services:
       args:
         APP_NAME: internal-portal
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
@@ -28,7 +28,7 @@ services:
       args:
         APP_NAME: supplier-portal
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
@@ -37,8 +37,47 @@ services:
     networks:
       - app-network
   
+  # One-shot release phase: applies Alembic migrations, then exits.
+  # `server` is gated on this exiting 0, so a failed migration fails the whole
+  # `up` instead of starting an app against a stale schema.
+  # Shares `server`'s image tag by construction — keep the env config in sync.
+  migrate:
+    container_name: migrate
+    image: ${COMPOSE_PROJECT_NAME}-server
+    build:
+      context: ./server
+      args:
+        APP_ENV: ${APP_ENV:-development}
+    command: ["bash", "scripts/migrate.sh"]
+    volumes:
+      # Everything the container executes is mounted in dev, so it can never run
+      # a half-stale mix of live app code and image-baked migrations/scripts.
+      # (That mix is what produced "Can't locate revision" — models were live,
+      # the migration set was frozen at the last build.)
+      - ./server/app:/app/app
+      - ./server/alembic:/app/alembic
+      - ./server/scripts:/app/scripts
+      - ./server/logs:/app/logs
+    env_file:
+      - ./server/.env.${APP_ENV:-development}
+    environment:
+      - APP_ENV=${APP_ENV:-development}
+      - POSTGRES_HOST=db  # Override for Docker networking
+      - POSTGRES_PORT=5432
+      # Migrations don't call an LLM; a missing key must not fail a deploy.
+      - REQUIRED_ENV_VARS=
+    depends_on:
+      db:
+        condition: service_healthy
+    # Must not restart: a restarted container never reaches a completed state,
+    # so `service_completed_successfully` would never latch.
+    restart: "no"
+    networks:
+      - app-network
+
   server:
     container_name: server
+    image: ${COMPOSE_PROJECT_NAME}-server
     build:
       context: ./server
       args:
@@ -47,6 +86,8 @@ services:
       - "8000:8000"
     volumes:
       - ./server/app:/app/app
+      - ./server/alembic:/app/alembic
+      - ./server/scripts:/app/scripts
       - ./server/logs:/app/logs
     env_file:
       - ./server/.env.${APP_ENV:-development}
@@ -61,13 +102,17 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    restart: on-failure
+    # Bounded: an unbounded on-failure turns a real startup fault into a silent
+    # infinite crash-loop. After 5 attempts the container stays dead and visible.
+    restart: on-failure:5
     networks:
       - app-network
   

@@ -47,6 +47,10 @@ make docker-build       # build all services
 make docker-build-web   # build web-app (internal-portal + supplier-portal) only
 make docker-build-api   # build server only
 
+# Migrations (applied automatically on `docker-run*`; these are for on-demand use)
+make docker-migrate         # apply Alembic migrations in a one-shot container
+make docker-migrate-status  # print the database's current revision
+
 # Logs
 make docker-logs        # follow all services
 make docker-logs-core   # follow core services only

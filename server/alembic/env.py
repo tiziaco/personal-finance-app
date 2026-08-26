@@ -12,13 +12,17 @@ from sqlmodel import SQLModel
 
 from alembic import context
 
-# Load environment-specific .env file
+# Load environment-specific .env file for host-side runs (`make migrate`).
+# override=False so real environment variables always win: inside a container
+# the compose `environment:` block sets POSTGRES_HOST=db, and a stray .env file
+# (which holds the HOST-side localhost:5434 values) must never redirect
+# migrations at a different database than the one the app talks to.
 app_env = os.getenv("APP_ENV", "development")
 env_file = f".env.{app_env}"
 if os.path.exists(env_file):
-    load_dotenv(env_file, override=True)
+    load_dotenv(env_file, override=False)
 elif os.path.exists(".env"):
-    load_dotenv(".env", override=True)
+    load_dotenv(".env", override=False)
 
 # Import settings after loading .env
 from app.core.config import settings

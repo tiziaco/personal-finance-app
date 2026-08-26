@@ -1,3 +1,11 @@
+# Local env files - never copy into the build context.
+# Next.js auto-loads .env*.local at build time and inlines NEXT_PUBLIC_* into
+# the bundle, so a copied file would silently override the build args and bake
+# developer credentials (including CLERK_SECRET_KEY) into the image layers.
+.env
+.env*.local
+!.env.example
+
 # Version control
 .git
 .gitignore
