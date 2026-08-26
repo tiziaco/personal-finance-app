@@ -57,7 +57,10 @@ AGENTS.md
 # Database and config files
 schema.sql
 
-# Scripts not needed in container
+# Scripts not needed in container.
+# The Dockerfile copies scripts/ wholesale, so this denylist is what keeps
+# host-only scripts out of the image — add new ones here.
+# Container scripts (docker-entrypoint.sh, migrate.sh) are intentionally absent.
 scripts/build-docker.sh
 scripts/logs-docker.sh
 scripts/run-docker.sh

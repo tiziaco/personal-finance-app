@@ -29,6 +29,9 @@ make docker-stop ENV=development      # stop containers
 
 ### Database Migrations (Alembic)
 
+These run on the **host** via `uv`, against the DB named in `server/.env.<ENV>`.
+Use them to author revisions:
+
 ```bash
 make migrate ENV=development                          # apply all pending migrations
 make migrate-create ENV=development MSG='add orders'  # generate new migration
@@ -36,6 +39,30 @@ make migrate-downgrade ENV=development                # rollback one step (REV=-
 make migrate-history ENV=development                  # show migration history
 make migrate-current ENV=development                  # show current revision
 ```
+
+In Docker, migrations are a **discrete release phase**, not part of app startup.
+A one-shot `migrate` service runs `alembic upgrade head`, and `server` is gated
+on it via `depends_on: condition: service_completed_successfully`. A failed
+migration therefore fails the `up` and leaves any previously running container
+serving the old image, instead of crash-looping the app.
+
+The service runs `scripts/migrate.sh`. **Add further release-phase steps there**
+(seeding, backfills, first-admin bootstrap) rather than in the compose
+`command:` — one script, two compose files pointing at it. Anything added must
+be idempotent: it runs on every `up`, including a restart with nothing to do.
+
+From the repo root: `make docker-migrate` applies them on demand,
+`make docker-migrate-status` prints the current revision. Never reintroduce
+`alembic upgrade` into `scripts/docker-entrypoint.sh` — that entrypoint is
+env-prep only, for both services.
+
+Two caveats:
+- `depends_on` applies to `compose up`, not to reboots. After a Docker daemon or
+  host restart, `server` comes back under its restart policy with no `migrate`
+  run. Benign (the DB is already migrated), but it is not a startup guarantee.
+- `app/`, `alembic/`, and `scripts/` are bind-mounted in dev, so the container
+  always executes the working tree. `alembic.ini` is **not** — changes to it
+  need `make docker-build-api`.
 
 ### Linting
 

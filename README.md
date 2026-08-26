@@ -144,6 +144,9 @@ make docker-run-core    # core only: web-app, server, db (no monitoring)
 make docker-run-db      # database only (ENV=development|staging|production)
 
 # Logs
+make docker-migrate     # apply Alembic migrations (one-shot container)
+make docker-migrate-status  # show the database's current revision
+
 make docker-logs        # follow logs for all services
 make docker-logs-core   # follow logs for core services only
 
@@ -155,6 +158,23 @@ make clean              # stop + remove containers, volumes, and networks
 make rebuild            # clean + full stack
 make rebuild-core       # clean + core stack
 ```
+
+### Database migrations
+
+Migrations are a discrete release phase, not part of app startup. A one-shot
+`migrate` service runs `alembic upgrade head` and `server` will not start until
+it exits 0, so a failed migration fails the deploy and leaves the previously
+running container serving the old image. This is expressed in the compose files
+because the deploy target runs only `docker compose up -d --build` and offers no
+release-phase hook.
+
+Two consequences worth knowing:
+
+- `depends_on` applies to `compose up`, not to reboots. After a Docker daemon or
+  host restart, `server` returns under its restart policy without a `migrate` run.
+- Revisions are authored on the host (`cd server && make migrate-create ENV=…`).
+  In dev, `server/alembic/` is bind-mounted so the container sees new revisions
+  immediately; `alembic.ini` is not, so changes to it need `make docker-build-api`.
 
 For production, use the production compose file directly:
 

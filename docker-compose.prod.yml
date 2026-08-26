@@ -21,7 +21,38 @@ services:
     networks:
       - app-network
 
+  # One-shot release phase: applies Alembic migrations, then exits.
+  # Dokploy deploys with `docker compose up -d --build` and offers no
+  # release-phase hook, so the ordering has to live here. `server` is gated on
+  # this exiting 0 — a failed migration fails the deploy and leaves the
+  # previously running container serving the old image.
+  # Shares `server`'s image tag by construction — keep the env config in sync.
+  migrate:
+    image: ${COMPOSE_PROJECT_NAME}-server
+    build:
+      context: ./server
+      args:
+        APP_ENV: production
+    command: ["bash", "scripts/migrate.sh"]
+    volumes:
+      - ./server/logs:/app/logs
+    env_file:
+      - ./server/.env.production
+    environment:
+      - APP_ENV=production
+      - POSTGRES_HOST=db
+      # Migrations don't call an LLM; a missing key must not fail a deploy.
+      - REQUIRED_ENV_VARS=
+    depends_on:
+      db:
+        condition: service_healthy
+    # Must not restart, or `service_completed_successfully` never latches.
+    restart: "no"
+    networks:
+      - app-network
+
   server:
+    image: ${COMPOSE_PROJECT_NAME}-server
     build:
       context: ./server
       args:
@@ -38,6 +69,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

@@ -1,4 +1,4 @@
-.PHONY: help docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -30,6 +30,10 @@ help:
 	@echo "  make docker-run-db      - Start database only (requires ENV)"
 	@echo "  make docker-stop        - Stop all services"
 	@echo ""
+	@echo "Migrations:"
+	@echo "  make docker-migrate     - Apply Alembic migrations (one-shot container)"
+	@echo "  make docker-migrate-status - Show the database's current revision"
+	@echo ""
 	@echo "Logs & Utils:"
 	@echo "  make docker-logs        - Follow logs for all services"
 	@echo "  make docker-logs-core   - Follow logs for core services"
@@ -41,6 +45,9 @@ help:
 	@echo "  ENV=development (default) | staging | production"
 
 # Build commands
+# `migrate` is intentionally absent from these service lists: it shares
+# `server`'s image tag (${COMPOSE_PROJECT_NAME}-server), so building `server`
+# refreshes both and they can never run different code.
 docker-build:
 	@echo "🔨 Building all services..."
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal supplier-portal server
@@ -72,6 +79,9 @@ docker-run:
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 
 # Core stack - essential services only (no monitoring)
+# `migrate` is not in the service list because compose starts the full
+# depends_on closure of the requested services: it runs, and must exit 0,
+# before `server` starts.
 docker-run-core:
 	@echo "🚀 Starting core stack (essential services only)"
 	@echo "Services: internal-portal, supplier-portal, server, db"
@@ -103,6 +113,18 @@ docker-run-db:
 	@echo "✅ Database is running!"
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 
+# Migrations
+# The `docker-run*` targets already apply migrations via the `migrate` service,
+# which `server` depends on. These targets are for applying or inspecting
+# migrations on demand without starting the app.
+docker-migrate:
+	@echo "🗄  Applying database migrations..."
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) run --rm --build migrate
+	@echo "✅ Migrations applied"
+
+docker-migrate-status:
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) run --rm migrate python -m alembic current
+
 # Stop all services
 docker-stop:
 	@echo "📛 Stopping all services..."
@@ -116,7 +138,7 @@ docker-logs:
 
 docker-logs-core:
 	@echo "📋 Following logs for core stack..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f internal-portal supplier-portal server db
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f internal-portal supplier-portal server migrate db
 
 # Clean up everything
 clean:
