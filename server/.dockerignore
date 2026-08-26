@@ -8,7 +8,10 @@
 .env.example
 
 # Python
+# `__pycache__/` alone only matches at the context root — .dockerignore uses
+# filepath.Match, so nested dirs need the ** prefix.
 __pycache__/
+**/__pycache__/
 *.py[cod]
 *$py.class
 *.so
