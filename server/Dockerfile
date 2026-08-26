@@ -75,6 +75,11 @@ COPY --chown=appuser:appuser scripts/docker-entrypoint.sh ./scripts/
 # Make entrypoint executable
 RUN chmod +x /app/scripts/docker-entrypoint.sh
 
+# app.core.config creates ./logs at import time (LoggingSettings.ensure_path).
+# /app is root-owned, so appuser cannot create it — any container without a
+# logs bind mount would die with PermissionError before reaching its command.
+RUN mkdir -p /app/logs && chown appuser:appuser /app/logs
+
 # Switch to non-root user
 USER appuser
 
