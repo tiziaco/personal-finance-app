@@ -5,12 +5,13 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
 
-from app.api.dependencies.database import get_db_session
+from app.api.dependencies.database import _integrity_diagnostics, get_db_session
 from app.exceptions.base import (
     DatabaseConflictError,
     DatabaseConnectionError,
     DatabaseError,
 )
+from app.models.user import User
 
 pytestmark = pytest.mark.integration
 
@@ -86,6 +87,65 @@ class TestErrorTranslation:
 
         with pytest.raises(DatabaseError):
             await gen.athrow(DBAPIError("...", {}, orig_exc))
+
+
+class TestIntegrityDiagnostics:
+    """Tests for the constraint/SQLSTATE extraction behind the 409 log line.
+
+    The mock-based tests above pass a bare Exception as `orig`, which is what
+    let a psycopg-shaped `.diag` lookup survive on an asyncpg stack: it
+    silently returned None, and the log line read `constraint=unknown` on
+    every conflict. The first test here is therefore the load-bearing one —
+    it provokes a genuine unique violation so the assertion runs against a
+    real driver exception rather than a hand-built stand-in.
+    """
+
+    async def test_reads_the_constraint_from_a_real_asyncpg_violation(
+        self, db_session, test_user
+    ):
+        """The regression test: a real 23505 must yield a real constraint name.
+
+        postgres_container runs with driver="asyncpg" (tests/conftest.py), so
+        this reproduces production's error shape exactly. asyncpg carries the
+        PG error fields on the exception SQLAlchemy's adapter chains to, not
+        on `orig` itself.
+        """
+        duplicate = User(
+            clerk_id="user_duplicate_email",
+            org_id=test_user.org_id,
+            email=test_user.email,
+        )
+        db_session.add(duplicate)
+
+        with pytest.raises(IntegrityError) as caught:
+            await db_session.flush()
+        # A failed flush leaves the savepoint unusable for anything after it.
+        await db_session.rollback()
+
+        constraint, sqlstate = _integrity_diagnostics(caught.value)
+
+        # Loose on the name so renaming the index (ix_user_email today) fails
+        # the migration review rather than this test.
+        assert constraint is not None
+        assert "email" in constraint
+        assert sqlstate == "23505"  # unique_violation
+
+    def test_reads_the_constraint_from_the_psycopg_shape(self):
+        """The other driver's layout, kept so a driver swap stays covered."""
+        orig = MagicMock()
+        orig.diag.constraint_name = "ix_user_email"
+        orig.sqlstate = "23505"
+
+        assert _integrity_diagnostics(IntegrityError("INSERT ...", {}, orig)) == (
+            "ix_user_email",
+            "23505",
+        )
+
+    def test_returns_none_when_the_error_carries_no_diagnostics(self):
+        """Degrades to (None, None) rather than raising inside the handler."""
+        assert _integrity_diagnostics(
+            IntegrityError("INSERT ...", {}, Exception("no fields"))
+        ) == (None, None)
 
 
 class TestRLSContext:

@@ -34,11 +34,45 @@ See `server/CLAUDE.md` and `web-app/CLAUDE.md` for service-specific conventions.
 
 ## Running the Stack
 
+There are two ways to run this app, and **they are mutually exclusive**:
+
+- **Docker path** — everything in Compose (`make docker-run`). Includes ngrok.
+- **Native path** — app processes on the host, Postgres still in Docker
+  (VS Code's `Dev: *` tasks). Needs its own host-side tunnel.
+
+They collide on two resources: host ports **3000, 3002 and 8000**, which the
+compose services publish; and the single static **`NGROK_DOMAIN`**, claimed by
+both the `ngrok` compose service and `make dev-tunnel`. Stop one path before
+starting the other — `make dev-preflight` checks the ports and fails with a
+pointer rather than letting the servers die on a bind error.
+
+### Native dev
+
+```bash
+make dev-preflight      # verify ports 8000/3000/3002 are free
+make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:8000
+```
+
+`NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the
+Makefile via `-include`), not from your shell — so run the target, not `ngrok`
+directly. It passes `--authtoken` explicitly because
+`~/Library/Application Support/ngrok/ngrok.yml` takes precedence over the env
+var, and a stale token there fails the reserved domain with `ERR_NGROK_320`
+while `.env` looks correct.
+
+In VS Code, `Dev: All` (⇧⌘B) chains preflight → start db → migrate → API server
+and both portals. `Dev: All + Tunnel` adds the tunnel, for Clerk webhook work.
+Migrations are **not** applied automatically on this path the way the Docker
+`migrate` service does it — `Dev: Migrate` runs `make migrate ENV=development`
+on the host.
+
+### Docker
+
 The root `Makefile` manages the full Docker Compose stack.
 
 ```bash
 # Start
-make docker-run         # full stack: portals, server, db, prometheus, grafana, cadvisor
+make docker-run         # full stack: portals, server, db, prometheus, grafana, cadvisor, ngrok (dev)
 make docker-run-core    # core only: portals, server, db
 make docker-run-db      # database only (ENV=development|staging|production)
 
@@ -74,6 +108,10 @@ make rebuild-core       # clean + core stack
 | Grafana           | http://localhost:3001      |
 | cAdvisor          | http://localhost:8080      |
 | PostgreSQL        | localhost:5434             |
+| ngrok (dev only)  | n/a                        |
+
+`ngrok` (dev only) tunnels `server:8000` for Clerk webhook delivery. Compose
+publishes no host port for it, so its inspection dashboard has no fixed URL.
 
 ---
 

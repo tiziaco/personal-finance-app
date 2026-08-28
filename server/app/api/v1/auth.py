@@ -9,19 +9,12 @@ from fastapi import (
     Request,
 )
 
-from app.api.dependencies.agent import ChatbotAgentDep
 from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.database import DbSession
-from app.agents.shared.memory.factory import delete_user_memory
 from app.core.config import settings
 from app.core.limiter import limiter
-from app.core.logging import logger
 from app.schemas.auth import UserResponse
-from app.services.conversation import conversation_service
-from app.services.user import (
-    user_cache,
-    user_service,
-)
+from app.services.user import user_service
 
 router = APIRouter()
 
@@ -59,7 +52,6 @@ async def delete_me(
     request: Request,
     user: CurrentUser,
     db_session: DbSession,
-    agent: ChatbotAgentDep,
 ):
     """Delete the current user's account in a GDPR-compliant manner.
 
@@ -76,44 +68,11 @@ async def delete_me(
         request: The FastAPI request object for rate limiting.
         user: The authenticated user.
         db_session: Database session.
-        agent: The chatbot agent for clearing checkpoint data.
     """
-    original_clerk_id = user.clerk_id  # capture before anonymize_user() replaces it
+    original_clerk_id = user.clerk_id  # captured before erase_user anonymises it
 
-    # 1. Delete from Clerk so the JWT cannot be used to re-provision the account
+    # Delete from Clerk first so the JWT cannot re-provision the account.
+    # The webhook path skips this step — there, Clerk's deletion is the trigger.
     await user_service.delete_user_from_clerk(original_clerk_id)
 
-    # 2. Soft-delete all active conversation records; get IDs for LangGraph cleanup
-    conversation_ids = await conversation_service.soft_delete_all_user_conversations(
-        db_session, user.id
-    )
-
-    # 3. Clear LangGraph checkpoint data for each conversation (actual messages = PII)
-    for conv_id in conversation_ids:
-        await agent.clear_chat_history(conv_id)
-
-    # 4. Delete mem0 long-term memory (extracted user facts = PII)
-    await delete_user_memory(user.id)
-
-    # 5. Unlink any supplier this user managed. Supplier.contact_id would
-    #    otherwise keep pointing at the anonymised row, still recording which
-    #    supplier this individual managed.
-    await user_service.unlink_supplier_contact(user.id, db_session)
-
-    # 6. Anonymize the user record (clears PII fields + nulls conversation names)
-    # Eagerly load conversations so anonymize_user() can iterate them without
-    # triggering a synchronous lazy load on an async session (MissingGreenlet).
-    await db_session.refresh(user, attribute_names=["conversations"])
-    user.anonymize_user()
-    db_session.add(user)
-    await db_session.commit()
-
-    # 7. Invalidate in-memory caches after commit. The org role is keyed by the
-    #    pre-anonymisation clerk_id (captured above); the supplier link by user.id.
-    await user_cache.invalidate_user(clerk_id=original_clerk_id, user_id=user.id)
-
-    logger.info(
-        "user_deleted_gdpr_compliant",
-        user_id=user.id,
-        conversation_count=len(conversation_ids),
-    )
+    await user_service.erase_user(user, db_session)

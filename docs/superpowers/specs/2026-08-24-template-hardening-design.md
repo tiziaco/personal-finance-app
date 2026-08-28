@@ -43,10 +43,10 @@ Organization coupling is narrow — three places on the server, two on the front
 
 | # | Workstream | Status | Plan | Blocked by |
 |---|---|---|---|---|
-| 1 | Infrastructure reorganisation | ✅ Complete — 1 blocker outstanding | `plans/2026-08-24-ws1-infra-reorg.md` | — |
+| 1 | Infrastructure reorganisation | ✅ Complete | `plans/2026-08-24-ws1-infra-reorg.md` | — |
 | 2 | Traefik in dev compose + Dokploy labels | Not started | — | — |
 | 3 | Auth middleware hardening | ✅ F3, F5 shipped; F1, F2 descoped; F4 superseded by WS7 | — | Q1 (below, resolved) |
-| 4 | Clerk webhooks + ngrok | Not started | — | — |
+| 4 | Clerk webhooks + ngrok | ✅ Complete | `plans/2026-08-26-ws4-clerk-webhooks.md` | — |
 | 5 | Orval codegen | **Parked** | — | External config not yet available |
 | 6 | Replace `starlette-prometheus` with in-house instrumentation | **Specified, not started** | — | Sequenced after WS1–WS5; **must precede** `uv lock --upgrade` |
 | 7 | SSE stream disconnect handling | Not started | — | — |
@@ -56,7 +56,9 @@ Organization coupling is narrow — three places on the server, two on the front
 
 ## WS1 — Infrastructure reorganisation
 
-**Status:** ✅ Complete, with one acceptance criterion unmet — see Part 2 below.
+**Status:** ✅ Complete. The build blocker recorded in Part 2 was fixed in `2c0a0de` (on `main`
+via `fix/ws1-docker-hardening`); that section is kept as the record of the defect and its
+resolution.
 
 **Problem:** `prometheus/` and `grafana/` sit in the repo root alongside application code. `docker-compose.yml` mixes dev concerns with a name that implies it is the default for all environments.
 
@@ -79,34 +81,52 @@ Organization coupling is narrow — three places on the server, two on the front
 - `scripts/verify-infra.sh` created; reports `SUMMARY: 19 passed, 0 failed, 0 skipped (19 checks)`.
 - Two build repairs made along the way that were not in the original plan: the web-app image could not build at all (pnpm `allowBuilds` plus missing root manifests in the builder stage), and the server image built irreproducibly (it ignored `uv.lock` and ran Python 3.12 against a 3.13 project). Both are fixed; the server container now reports `healthy`, which it had never done before.
 
-### Part 2 — the outstanding blocker
+### Part 2 — the blocker (resolved)
 
-Both web-app portal images currently **fail to build**:
+**Resolved in `2c0a0de`** ("enforce required Clerk publishable key in build args"), which took
+candidate fix 3 below — restructuring how the arg is sourced. Two halves:
+
+- `docker-compose.dev.yml:12,31` now use compose's required-variable form,
+  `${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time …}`, so an absent key fails the
+  build with a named error instead of substituting the literal `""` that caused the original
+  failure.
+- `Makefile:16-18` adds `-include web-app/apps/internal-portal/.env.local` ahead of
+  `.EXPORT_ALL_VARIABLES:`, so the key the portals already define reaches compose's substitution
+  environment. Note the asymmetry: **both** images build with the *internal* portal's key,
+  because only that file is included. Identical in both `.env.local` files today; it would need
+  revisiting if the portals ever point at different Clerk instances.
+
+WS1's acceptance criterion "`make docker-run` starts the stack" is therefore met.
+
+#### Historical record — the defect as diagnosed on 2026-08-24
+
+Nothing below describes current behaviour; it is kept for the attribution, which took real work
+to establish.
+
+Both web-app portal images **failed to build**:
 
 ```
 Error: @clerk/clerk-react: The publishableKey passed to Clerk is invalid. (key="")
 Export encountered an error on /_not-found/page
 ```
 
-**Root cause:** `docker-compose.dev.yml` passes the key as a build arg,
+**Root cause:** `docker-compose.dev.yml` passed the key as a build arg,
 `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}`, resolved by compose
-variable substitution from the root `.env`. It is not defined there, so the arg becomes the literal
-two-character string `""`. The per-app `.env.local` does define it, but `env_file:` applies at
-runtime only, and Next.js inlines `NEXT_PUBLIC_*` at build time, so a runtime value cannot substitute.
+variable substitution from the root `.env`. It was not defined there, so the arg became the literal
+two-character string `""`. The per-app `.env.local` did define it, but `env_file:` applies at
+runtime only, and Next.js inlines `NEXT_PUBLIC_*` at build time, so a runtime value could not
+substitute.
 
-**Attribution (verified, not assumed):** `git show main:docker-compose.yml` carries the identical
-`${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}` line, and `git diff main..HEAD` shows this branch changed
-no build args. The defect predates the branch. The working assessment — explicitly **not proven** —
-is that Docker layer caching masked it until the package rename invalidated the cached
-`RUN pnpm --filter $APP_NAME build` layer.
+**Attribution (verified, not assumed):** `git show main:docker-compose.yml` carried the identical
+`${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-""}` line, and `git diff main..HEAD` showed the WS1 branch
+changed no build args. The defect predated the branch that surfaced it. The working assessment —
+explicitly **not proven** — was that Docker layer caching masked it until the package rename
+invalidated the cached `RUN pnpm --filter $APP_NAME build` layer.
 
-**Candidate fixes (open, none chosen — each is a secrets-handling decision for the user):**
+**Candidate fixes considered at the time (3 is the one taken):**
 1. Add the publishable key to root `.env` (it is a *publishable* key, designed to ship in client bundles).
 2. Make the `/_not-found` route dynamic so no key is needed at build time.
 3. Restructure how build args are sourced — cleanest, largest, arguably WS2's scope.
-
-**Consequence:** WS1's acceptance criterion "`make docker-run` starts the stack" is currently unmet
-for the two portals. The server image builds and runs healthy.
 
 ### Also deferred (each already known, none are WS1 defects)
 
@@ -181,6 +201,23 @@ The middleware docstring claims it strips the `org:` prefix. It does not strip a
 ---
 
 ## WS4 — Clerk webhooks + ngrok
+
+**Status:** ✅ Complete (`feat/ws4-clerk-webhooks`). All three acceptance criteria met: unsigned
+and replayed requests rejected, and erasure anonymising rather than hard-deleting, are both
+covered end to end in `server/tests/integration/api/test_webhooks.py`; dashboard-edit propagation
+without a login was verified manually against the live tunnel on 2026-08-28.
+
+Design decisions taken during implementation are in
+`plans/2026-08-26-ws4-execution-rulings.md` (28 rulings) and
+`specs/2026-08-26-ws4-clerk-webhooks-design.md`. One amendment to the decision below: webhooks
+own profile updates and deletions as planned, but they are **not** the authority on user
+*creation* — a webhook payload is a past-tense statement, and svix redelivers after a deletion,
+so both create paths confirm against the Clerk API before inserting a row. See
+`app/integrations/clerk/webhooks/handlers/` and `UserService.exists_in_clerk`.
+
+Carried forward, both by decision rather than oversight: no reconciliation job against the Clerk
+API (webhooks that are never delivered go unnoticed), and the `ngrok` compose service is
+unguarded by a profile, so `make docker-run` requires ngrok credentials.
 
 **Problem:** No webhook handling. User records are created only by JIT provisioning in `get_current_user` → `user_provider.get_or_create_user`, so profile edits and deletions in Clerk never reach the database.
 

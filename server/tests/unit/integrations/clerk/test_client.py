@@ -1,25 +1,25 @@
-"""Tests for app.services.clerk.service — Clerk API error mapping and email extraction."""
+"""Tests for app.integrations.clerk.client — Clerk API error mapping and email extraction."""
 
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from clerk_backend_api import ClerkErrors
 
-from app.services.clerk.exceptions import (
+from app.integrations.clerk.exceptions import (
     ClerkAPIError,
     ClerkAuthenticationError,
     ClerkRateLimitError,
     ClerkUserNotFoundError,
 )
-from app.services.clerk.service import ClerkService
+from app.integrations.clerk.client import ClerkClient
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.fixture
 def service():
-    """Fresh ClerkService with mocked client."""
-    svc = ClerkService()
+    """Fresh ClerkClient with mocked client."""
+    svc = ClerkClient()
     svc._client = MagicMock()
     return svc
 
@@ -33,7 +33,7 @@ def _make_clerk_error(status_code: int) -> ClerkErrors:
 
 
 class TestGetUser:
-    """Tests for ClerkService.get_user()."""
+    """Tests for ClerkClient.get_user()."""
 
     def test_success(self, service):
         mock_user = MagicMock()
@@ -76,7 +76,7 @@ class TestGetUser:
 
 
 class TestGetPrimaryEmail:
-    """Tests for ClerkService.get_primary_email()."""
+    """Tests for ClerkClient.get_primary_email()."""
 
     def test_primary_email_found(self, service):
         email_obj = MagicMock()

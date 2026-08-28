@@ -2,7 +2,7 @@
 
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.api.dependencies.agent import get_chatbot_agent
 from app.api.dependencies.authentication import get_current_user
@@ -67,10 +67,37 @@ def mock_agent():
         Message(role="user", content="Hello"),
         Message(role="assistant", content="Hi there!"),
     ])
-    agent.clear_chat_history = AsyncMock(return_value=None)
     agent.llm_service.get_llm.return_value.get_name.return_value = "gpt-5-mini"
     agent.is_ready.return_value = True
     return agent
+
+
+@pytest.fixture
+def stub_checkpoint_deletion():
+    """Stub LangGraph checkpoint deletion for routes that clear a conversation.
+
+    The checkpoint tables live behind the psycopg pool that agents open at
+    startup; no integration test opens it, so a real call blocks until
+    PoolTimeout. This used to be stubbed incidentally, via the mocked agent
+    that owned clear_chat_history. Now that deletion is a module-level
+    function its callers import directly, every importing module needs
+    patching by name — the two routes that clear a conversation, and
+    UserService.erase_user, which clears the checkpoints of every
+    conversation the deleted user owned.
+
+    Yields the erasure path's stub, since that is the one a test asserts on:
+    the routes' calls are incidental cleanup, while erase_user's are a
+    contractual step of the GDPR cascade.
+    """
+    with (
+        patch("app.api.v1.chatbot.delete_conversation_checkpoints", new=AsyncMock()),
+        patch("app.api.v1.conversation.delete_conversation_checkpoints", new=AsyncMock()),
+        patch(
+            "app.services.user.service.delete_conversation_checkpoints",
+            new=AsyncMock(),
+        ) as erasure_stub,
+    ):
+        yield erasure_stub
 
 
 @pytest_asyncio.fixture

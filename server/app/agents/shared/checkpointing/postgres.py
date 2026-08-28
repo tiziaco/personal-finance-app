@@ -90,6 +90,29 @@ async def create_postgres_saver() -> AsyncPostgresSaver:
         return _checkpointer
 
 
+async def delete_conversation_checkpoints(conversation_id: str) -> None:
+    """Hard-delete every checkpoint row for one conversation thread.
+
+    Checkpoints are keyed by thread_id in a single set of tables shared by
+    every agent, so this is a property of the checkpoint store rather than of
+    any agent instance. Callers that hold an agent gain nothing by going
+    through it.
+
+    Args:
+        conversation_id: The thread_id whose rows are removed.
+
+    Raises:
+        Exception: If the pool is unavailable or a DELETE fails.
+    """
+    # Singleton - already initialized at startup
+    conn_pool = await create_connection_pool()
+
+    async with conn_pool.connection() as conn:
+        for table in settings.database.CHECKPOINT_TABLES:
+            await conn.execute(f"DELETE FROM {table} WHERE thread_id = %s", (conversation_id,))
+            logger.info("cleared_table_for_conversation", table=table, conversation_id=conversation_id)
+
+
 async def close_connection_pool() -> None:
     """Close the connection pool if it exists."""
     global _connection_pool, _checkpointer

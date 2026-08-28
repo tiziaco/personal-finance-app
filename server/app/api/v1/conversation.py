@@ -7,7 +7,7 @@ from fastapi import (
     Request,
 )
 
-from app.api.dependencies.agent import ChatbotAgentDep
+from app.agents.shared.checkpointing import delete_conversation_checkpoints
 from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.conversation import UserConversation
 from app.api.dependencies.database import DbSession
@@ -110,7 +110,6 @@ async def delete_conversation(
     conversation: UserConversation,
     db_session: DbSession,
     user: CurrentUser,
-    agent: ChatbotAgentDep,
 ):
     """Delete a conversation for the authenticated user.
 
@@ -122,13 +121,12 @@ async def delete_conversation(
         conversation: The verified user conversation
         db_session: Database session
         user: The authenticated user
-        agent: The chatbot agent for clearing checkpoint data
 
     Returns:
         None
     """
     # Delete all messages from LangGraph checkpoint tables first
-    await agent.clear_chat_history(conversation.id)
+    await delete_conversation_checkpoints(conversation.id)
 
     # Soft-delete the conversation record
     await conversation_service.soft_delete_conversation(db_session, conversation.id)

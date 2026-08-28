@@ -3,9 +3,10 @@ name: fastapi-service-patterns
 description: >
   Coding patterns and conventions for this FastAPI project. Use whenever creating or modifying a service class,
   defining custom exceptions, adding error handling, writing API routes, or wrapping business logic around
-  FastAPI endpoints. Trigger on tasks like "add a service", "create an exception", "add an endpoint",
-  "handle this error", "add a new route", "implement a repository", or any feature work touching
-  app/services/, app/api/, or app/exceptions/. Use even for partial tasks like "add a method to XService" —
+  FastAPI endpoints, or integrating a third-party provider in either direction. Trigger on tasks like
+  "add a service", "create an exception", "add an endpoint", "handle this error", "add a new route",
+  "implement a repository", "wrap this SDK", "handle a webhook", or any feature work touching
+  app/services/, app/integrations/, app/api/, or app/exceptions/. Use even for partial tasks like "add a method to XService" —
   always follow the patterns below.
 ---
 
@@ -20,7 +21,8 @@ This project has consistent patterns across services, exceptions, and API routes
 | Service classes | `references/services.md` | Adding/modifying a service or its methods |
 | Exceptions | `references/exceptions.md` | Defining new exception classes |
 | Error handling | `references/error-handling.md` | Writing try/catch, retries, or fail-fast checks |
-| External API adapters | `references/client-wrappers.md` | Wrapping a third-party SDK or HTTP client |
+| External API adapters | `references/client-wrappers.md` | Wrapping a third-party SDK or HTTP client (outbound) |
+| Inbound webhooks | `references/webhooks.md` | Receiving events a provider pushes to us (signature, dispatch, handlers) |
 | API routes | `references/api-routes.md` | Adding endpoints, pagination, batch ops, or deletes |
 | Database operations | `references/database.md` | Querying, bulk ops, relationship loading, N+1 avoidance |
 
@@ -54,8 +56,9 @@ app/
       payments.py      # APIRouter with route handlers
 ```
 
-An external-API adapter folder (e.g. `app/services/stripe/`) has no `repository.py` — it has `client.py` (raw SDK
-wrapper) instead, alongside `service.py` (orchestration + error translation) and `exceptions.py`. See
-`references/client-wrappers.md`.
+An external-API adapter lives in `app/integrations/<provider>/`, not `app/services/` — and has no
+`repository.py`. It has `client.py` (SDK wrapper + error translation) and `exceptions.py`, plus `webhooks/` if the
+provider pushes events to us. See `references/client-wrappers.md` for the outbound half and
+`references/webhooks.md` for the inbound one.
 
 Register the router in `app/api/v1/api.py`.

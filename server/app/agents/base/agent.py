@@ -19,13 +19,11 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import StateSnapshot
 from mem0 import AsyncMemory
 
-from app.agents.shared.checkpointing import create_connection_pool
 from app.agents.shared.memory import (
     get_relevant_memory,
     update_memory,
 )
 from app.agents.shared.observability import create_graph_config
-from app.core.config import settings
 from app.core.logging import logger
 from app.schemas import Message
 from app.utils import dump_messages
@@ -195,24 +193,6 @@ class BaseAgent(ABC):
             config={"configurable": {"thread_id": conversation_id}}
         )
         return self._process_messages(state.values["messages"]) if state.values else []
-
-    async def clear_chat_history(self, conversation_id: str) -> None:
-        """Clear all chat history for a given conversation.
-
-        Args:
-            conversation_id: The ID of the conversation to clear history for.
-
-        Raises:
-            Exception: If there's an error clearing the chat history.
-        """
-        # Get the connection pool (singleton - already initialized at startup)
-        conn_pool = await create_connection_pool()
-
-        # Use a connection for this specific operation
-        async with conn_pool.connection() as conn:
-            for table in settings.database.CHECKPOINT_TABLES:
-                await conn.execute(f"DELETE FROM {table} WHERE thread_id = %s", (conversation_id,))
-                logger.info("cleared_table_for_conversation", table=table, conversation_id=conversation_id)
 
     def _process_messages(self, messages: list[BaseMessage]) -> list[Message]:
         """Process LangChain messages into simple message dictionaries.

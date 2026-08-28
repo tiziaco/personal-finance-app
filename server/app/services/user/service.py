@@ -4,24 +4,59 @@ Caching lives in app/services/user/cache.py — see UserCache.
 """
 
 import asyncio
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.shared.checkpointing import delete_conversation_checkpoints
+from app.agents.shared.memory.factory import delete_user_memory
 from app.exceptions.base import AuthorizationError
 from app.models.user import User
-from app.services.clerk import (
+from app.integrations.clerk import (
     ClerkUserNotFoundError,
-    clerk_service,
+    clerk_client,
 )
+from app.services.conversation import conversation_service
 from app.services.user.cache import (
     _MISS,
     user_cache,
 )
 from app.services.user.repository import user_repository
 from app.services.user.supplier_repository import supplier_repository
+from app.integrations.clerk.timestamps import clerk_timestamp_to_datetime
 
 from app.core.logging import logger
+
+
+def merge_clerk_metadata(clerk_user: Any) -> dict:
+    """Flatten a Clerk user's public metadata, top level winning over memberships.
+
+    Invitation metadata may be stamped on the user or on the organisation
+    membership, depending on how the invite was issued. Callers should not
+    have to know which, so this collapses both into one dict with top-level
+    values taking precedence.
+
+    Args:
+        clerk_user: A Clerk SDK user object.
+
+    Returns:
+        A merged metadata dict; empty if the object carries none.
+    """
+    merged: dict = {}
+
+    top_level = getattr(clerk_user, "public_metadata", None) or {}
+    if isinstance(top_level, dict):
+        merged.update(top_level)
+
+    for membership in getattr(clerk_user, "organization_memberships", None) or []:
+        membership_md = getattr(membership, "public_metadata", None) or {}
+        if not isinstance(membership_md, dict):
+            continue
+        for key in ("supplier_id", "replace"):
+            if not merged.get(key) and membership_md.get(key):
+                merged[key] = membership_md[key]
+
+    return merged
 
 
 class UserService:
@@ -69,12 +104,12 @@ class UserService:
         logger.info("jit_provisioning_user", clerk_id=clerk_id)
 
         try:
-            clerk_user = await asyncio.to_thread(clerk_service.get_user, clerk_id)
+            clerk_user = await asyncio.to_thread(clerk_client.get_user, clerk_id)
         except ClerkUserNotFoundError:
             logger.error("clerk_user_not_found_during_provisioning", clerk_id=clerk_id)
             raise
 
-        email = clerk_service.get_primary_email(clerk_user)
+        email = clerk_client.get_primary_email(clerk_user)
 
         if not email:
             logger.error("clerk_user_missing_email", clerk_id=clerk_id)
@@ -82,7 +117,7 @@ class UserService:
 
         # JWT had no org context (e.g. OIDC token) — look up the user's org from Clerk
         if not org_id:
-            membership = await asyncio.to_thread(clerk_service.get_first_org_membership, clerk_id)
+            membership = await asyncio.to_thread(clerk_client.get_first_org_membership, clerk_id)
             if not membership:
                 logger.warning("jit_provisioning_no_org_membership", clerk_id=clerk_id)
                 raise AuthorizationError("Organization membership required")
@@ -99,67 +134,68 @@ class UserService:
             last_name=clerk_user.last_name,
             avatar_url=clerk_user.image_url,
             email_verified=bool(clerk_user.primary_email_address_id),
+            last_synced_at=clerk_timestamp_to_datetime(getattr(clerk_user, "updated_at", None)),
         )
 
-        # Supplier-linking on JIT creation: read public_metadata.supplier_id,
-        # falling back to org membership metadata if not set at the user level.
-        supplier_id_from_invitation: Optional[str] = None
-        top_level_md = getattr(clerk_user, "public_metadata", None) or {}
-        if isinstance(top_level_md, dict):
-            supplier_id_from_invitation = top_level_md.get("supplier_id")
-        if not supplier_id_from_invitation:
-            memberships = getattr(clerk_user, "organization_memberships", None) or []
-            for membership in memberships:
-                md = getattr(membership, "public_metadata", None) or {}
-                if isinstance(md, dict) and md.get("supplier_id"):
-                    supplier_id_from_invitation = md["supplier_id"]
-                    break
-
-        # When public_metadata.replace is truthy, the JIT linker may overwrite
-        # an existing contact_id. Without it, only an unlinked supplier
-        # (contact_id is None) gets linked, so a normal first invite is unaffected.
-        replace_flag: bool = False
-        if isinstance(top_level_md, dict) and top_level_md.get("replace"):
-            replace_flag = True
-        if not replace_flag:
-            memberships = getattr(clerk_user, "organization_memberships", None) or []
-            for membership in memberships:
-                md = getattr(membership, "public_metadata", None) or {}
-                if isinstance(md, dict) and md.get("replace"):
-                    replace_flag = True
-                    break
-
-        if supplier_id_from_invitation:
-            supplier = await supplier_repository.get_by_id(session, supplier_id_from_invitation)
-            if supplier is not None and (
-                supplier.contact_id is None or replace_flag
-            ):
-                # Capture BEFORE overwriting. With replace_flag this is a
-                # RE-LINK: the displaced contact holds a cached
-                # user_id -> supplier_id entry that is now wrong, and once the
-                # old id is gone that entry is unreachable for invalidation.
-                previous_contact_id = supplier.contact_id
-                supplier = await supplier_repository.set_contact_id(session, supplier, user.id)
-
-                # Invalidate both sides of the re-link. Safe before commit:
-                # dropping an entry can only cost a DB read, never serve a
-                # wrong value (populating before commit would not be safe).
-                if previous_contact_id and previous_contact_id != user.id:
-                    await user_cache.invalidate_user(user_id=previous_contact_id)
-                # Not dead on the pure-JIT path: create_or_get's race branch
-                # can return an EXISTING user that falls through to here, and
-                # that user may hold a cached None from an earlier 403.
-                await user_cache.invalidate_user(user_id=user.id)
-
-                logger.info(
-                    "supplier_linked_on_jit",
-                    supplier_id=supplier.id,
-                    user_id=user.id,
-                    previous_contact_id=previous_contact_id,
-                    replace=replace_flag,
-                )
+        await self.link_supplier_from_metadata(user, merge_clerk_metadata(clerk_user), session)
 
         return user
+
+    async def link_supplier_from_metadata(
+        self,
+        user: User,
+        metadata: dict,
+        session: AsyncSession,
+    ) -> Optional[str]:
+        """Link a supplier to this user based on invitation metadata.
+
+        Called from JIT provisioning and from two webhook handlers, so it must
+        be safely repeatable. Only an unlinked supplier is claimed, unless the
+        metadata carries a truthy `replace` flag — so a retried event, or a
+        second invite for an already-linked supplier, changes nothing.
+
+        Cache invalidation is safe before the caller's commit: dropping an
+        entry can only cost a DB read, never serve a wrong value.
+
+        Args:
+            user: The user to link.
+            metadata: Merged public metadata; read for `supplier_id` and `replace`.
+            session: DB session. Flushed, not committed.
+
+        Returns:
+            The linked Supplier.id, or None if nothing was linked.
+        """
+        supplier_id = metadata.get("supplier_id")
+        if not supplier_id:
+            return None
+
+        replace_flag = bool(metadata.get("replace"))
+
+        supplier = await supplier_repository.get_by_id(session, supplier_id)
+        if supplier is None:
+            logger.warning("supplier_link_target_missing", supplier_id=supplier_id, user_id=user.id)
+            return None
+        if supplier.contact_id is not None and not replace_flag:
+            return None
+
+        # Capture BEFORE overwriting. With replace_flag this is a RE-LINK: the
+        # displaced contact holds a cached user_id -> supplier_id entry that is
+        # now wrong, and once the old id is gone that entry is unreachable.
+        previous_contact_id = supplier.contact_id
+        supplier = await supplier_repository.set_contact_id(session, supplier, user.id)
+
+        if previous_contact_id and previous_contact_id != user.id:
+            await user_cache.invalidate_user(user_id=previous_contact_id)
+        await user_cache.invalidate_user(user_id=user.id)
+
+        logger.info(
+            "supplier_linked",
+            supplier_id=supplier.id,
+            user_id=user.id,
+            previous_contact_id=previous_contact_id,
+            replace=replace_flag,
+        )
+        return supplier.id
 
     async def resolve_org_role(self, clerk_id: str) -> Optional[str]:
         """Resolve org role from cache, falling back to Clerk API.
@@ -170,15 +206,14 @@ class UserService:
         shorter than the supplier TTL, because this value feeds require_role(),
         so a demoted or revoked role stays honoured for at most that long.
 
-        TODO(follow-up): a Clerk organizationMembership.updated/deleted webhook
-        calling user_cache.invalidate_user(clerk_id=...) would make revocation
-        immediate. Out of scope for now: no webhook infrastructure exists (no
-        svix dependency, no route, no raw-body middleware).
+        Revocation is now immediate in the common case: the
+        organization_membership.updated and .deleted webhooks invalidate this
+        entry. The TTL remains the bound for a dropped or delayed event.
         """
         cached = await user_cache.get_org_role(clerk_id)
         if cached is not _MISS:
             return cached
-        membership = await asyncio.to_thread(clerk_service.get_first_org_membership, clerk_id)
+        membership = await asyncio.to_thread(clerk_client.get_first_org_membership, clerk_id)
         if membership:
             _, role = membership
             await user_cache.set_org_role(clerk_id, role)
@@ -242,19 +277,102 @@ class UserService:
         logger.info("supplier_unlinked_on_erasure", supplier_id=supplier.id, user_id=user_id)
         return supplier.id
 
+    async def erase_user(
+        self,
+        user: User,
+        session: AsyncSession,
+    ) -> None:
+        """Run the GDPR erasure cascade for one user.
+
+        Shared by DELETE /api/v1/auth/me and the user.deleted webhook. The
+        caller is responsible for deleting the user from Clerk — the webhook
+        path must not, because a Clerk-side deletion is what produced the
+        event.
+
+        Step order is contractual. Checkpoints and memories are keyed by
+        identifiers that anonymize_user() destroys, so they must be cleared
+        first. Cache invalidation happens after the commit, using the
+        clerk_id captured before anonymisation rewrote it.
+
+        Idempotent: on a second run the conversation list is empty, mem0
+        deletion is a no-op, and the row is already anonymised.
+
+        Args:
+            user: The user to erase. Must be attached to `session`.
+            session: Database session. Committed by this method.
+        """
+        original_clerk_id = user.clerk_id
+
+        conversation_ids = await conversation_service.soft_delete_all_user_conversations(
+            session, user.id
+        )
+        for conv_id in conversation_ids:
+            await delete_conversation_checkpoints(conv_id)
+
+        await delete_user_memory(user.id)
+        await self.unlink_supplier_contact(user.id, session)
+
+        # Eagerly load conversations so anonymize_user() can iterate them
+        # without a synchronous lazy load on an async session (MissingGreenlet).
+        await session.refresh(user, attribute_names=["conversations"])
+        user.anonymize_user()
+        session.add(user)
+        await session.commit()
+
+        await user_cache.invalidate_user(clerk_id=original_clerk_id, user_id=user.id)
+
+        logger.info(
+            "user_erased",
+            user_id=user.id,
+            conversation_count=len(conversation_ids),
+        )
+
+    async def exists_in_clerk(self, clerk_id: str) -> bool:
+        """Report whether Clerk still holds this user.
+
+        Thin wrapper so callers outside the user service do not import
+        clerk_client directly (CLAUDE.md auth rule).
+
+        The webhook create paths gate on this. A webhook payload is a
+        past-tense statement and svix redelivers with backoff, so a snapshot
+        taken before a deletion can land after it; Clerk is the only thing
+        that can still tell the two apart once erase_user() has rewritten
+        clerk_id. JIT provisioning already asks the same question implicitly,
+        by holding a live JWT.
+
+        Only the 404 is an answer. Every other Clerk error is inconclusive
+        and propagates, so the delivery fails and svix retries rather than a
+        row being created — or declined — on a maybe.
+
+        Args:
+            clerk_id: The Clerk user identifier.
+
+        Returns:
+            True if Clerk still holds the user, False on a 404.
+
+        Raises:
+            ClerkAuthenticationError / ClerkRateLimitError / ClerkAPIError:
+                Propagated from ClerkClient.get_user.
+        """
+        try:
+            await asyncio.to_thread(clerk_client.get_user, clerk_id)
+            return True
+        except ClerkUserNotFoundError:
+            return False
+
     async def delete_user_from_clerk(self, clerk_id: str) -> None:
         """Delete a user from Clerk by clerk_id.
 
         Thin wrapper so callers outside the user service do not import
-        clerk_service directly (CLAUDE.md auth rule).
+        clerk_client directly (CLAUDE.md auth rule).
 
         Args:
             clerk_id: The Clerk user identifier.
 
         Raises:
-            ClerkAPIError / ClerkAuthenticationError: Propagated from ClerkService.delete_user.
+            ClerkAPIError / ClerkAuthenticationError: Propagated from ClerkClient.delete_user.
         """
-        await asyncio.to_thread(clerk_service.delete_user, clerk_id)
+        await asyncio.to_thread(clerk_client.delete_user, clerk_id)
 
 
 user_service = UserService()

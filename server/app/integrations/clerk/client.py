@@ -9,7 +9,7 @@ from clerk_backend_api import (
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.services.clerk.exceptions import (
+from app.integrations.clerk.exceptions import (
     ClerkAPIError,
     ClerkAuthenticationError,
     ClerkRateLimitError,
@@ -17,7 +17,7 @@ from app.services.clerk.exceptions import (
 )
 
 
-class ClerkService:
+class ClerkClient:
     """Service for interacting with the Clerk Backend API."""
 
     def __init__(self):
@@ -213,4 +213,4 @@ class ClerkService:
                 clerk_id=clerk_id,
             ) from e
 
-clerk_service = ClerkService()
+clerk_client = ClerkClient()

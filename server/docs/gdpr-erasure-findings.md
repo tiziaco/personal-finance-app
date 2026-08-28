@@ -1,7 +1,7 @@
 # GDPR Erasure — Findings
 
 **Status:** findings only. No decisions taken, nothing implemented from this doc.
-**Date:** 2026-08-25
+**Date:** 2026-08-25 · **Re-checked:** 2026-08-27 (after WS4 Clerk webhooks)
 **Purpose:** input to a future spec + implementation plan. Written during the WS3
 auth-hardening branch, after `DELETE /api/v1/auth/me` was repaired (it had never
 completed successfully — `anonymize_user()` nulled a `NOT NULL` column).
@@ -21,6 +21,30 @@ Findings are split by **when** they need addressing, not by severity:
 - **Group B — for the B2C fork.** Concerns that only bite, or bite much harder,
   when the data subjects are consumers.
 - **Group C — framing / doc debt.**
+
+### Re-check, 2026-08-27 (after WS4)
+
+Every finding was re-verified against the code. **All ten still stand.** WS4
+(Clerk webhooks) changed the erasure cascade's *structure* and *reach*, not its
+coverage — nothing in it was aimed at these findings, and nothing in it closed
+one.
+
+| | Verdict |
+|---|---|
+| A1 pseudonymisation, not anonymisation | **Unchanged.** `anonymize_user()` (`app/models/user.py:59-73`) is untouched: `user.id` survives, and every `conversation` row still points at it |
+| A2 Langfuse retains content | **Unchanged, wider.** No masking, no deletion path; the cascade now fires from a second trigger that also skips Langfuse |
+| A3 partial-failure split state | **Partly mitigated.** The new webhook path is retryable via svix; `DELETE /api/v1/auth/me` still is not |
+| A4 silent mem0 failure | **Unchanged.** Still caught and logged at `factory.py:78-83` |
+| A5 log retention | **Unchanged.** WS4 removed PII from specific webhook log lines; no retention policy was written |
+| A6 32-bit `anonymous_id` | **Unchanged.** Still `self.id[:8]` |
+| B1–B3, C1 | **Unchanged.** Out of WS4's scope entirely |
+| C2 asymmetric user types | **Unchanged, sharper.** WS4 makes admin-initiated deletion reachable, but runs one flow for both user types |
+
+What WS4 *did* change is the call graph these findings point into: checkpoint
+deletion moved out of `BaseAgent` into
+`app/agents/shared/checkpointing/postgres.py`, and the cascade moved out of the
+route into `UserService.erase_user`. Line references below were updated to match;
+the reasoning was not.
 
 ---
 
@@ -117,21 +141,31 @@ it is a **live join key into a third-party store that still holds the person's
 conversations verbatim**. This defeats any anonymisation claim on its own,
 regardless of what the `user` row looks like.
 
-Note the asymmetry: `auth.py:92-93` hard-deletes LangGraph checkpoints — the
-correct instinct — while the same message content sits in Langfuse untouched.
+Note the asymmetry: the cascade hard-deletes LangGraph checkpoints
+(`app/services/user/service.py:310`) — the correct instinct — while the same
+message content sits in Langfuse untouched. WS4 widened the reach rather than
+the coverage: `erase_user` now also runs from the `user.deleted` webhook, so a
+dashboard-initiated deletion leaves Langfuse equally untouched.
 
 Needs: a Langfuse deletion path (API or documented retention), or masking at
 `create_graph_config`, or both.
 
 ### A3. Partial-failure ordering leaves accounts in a split state
 
-`app/api/v1/auth.py:84` deletes from Clerk **first**, before any local work.
-`clear_chat_history` (`app/agents/base/agent.py:199-215`) correctly propagates on
-failure — but by then the Clerk account is already gone, the DB transaction rolls
-back, and the caller gets a 500.
+`app/api/v1/auth.py:76` deletes from Clerk **first**, before any local work.
+`delete_conversation_checkpoints`
+(`app/agents/shared/checkpointing/postgres.py`) correctly propagates on failure —
+but by then the Clerk account is already gone, the DB transaction rolls back, and
+the caller gets a 500.
 
 Result: identity deleted upstream, local record intact, no retry path (the user
 can no longer authenticate to re-trigger the endpoint).
+
+WS4 narrows this to the self-service route only. The same cascade now also runs
+from the `user.deleted` webhook, and that path *does* have a retry path: it never
+calls Clerk (the Clerk-side deletion is what produced the event), and a raised
+exception returns non-2xx, so svix redelivers. An admin-initiated deletion is
+therefore already retryable; `DELETE /api/v1/auth/me` is not.
 
 Needs: either an idempotent/resumable flow, an outbox, or reordering so
 irreversible external calls happen last.
@@ -141,8 +175,10 @@ irreversible external calls happen last.
 `app/agents/shared/memory/factory.py:82-83` catches and logs, then returns
 normally. Erasure reports success while the extracted-fact memories remain.
 
-Contrast with `clear_chat_history`, which propagates. The two erasure steps have
-opposite failure semantics for no stated reason.
+Contrast with `delete_conversation_checkpoints`, which propagates. The two
+erasure steps have opposite failure semantics for no stated reason — and on the
+webhook path the difference is now load-bearing: only the propagating step earns
+an svix redelivery.
 
 ### A5. Logs retain both identifiers with no retention policy
 
@@ -152,6 +188,10 @@ retention period, and erasure does not touch log storage.
 
 Standard practice is a documented, time-limited retention — but it has to be
 written down to count.
+
+WS4 treated log PII as a live concern in the webhook path (dropping an email from
+`webhook_user_created`, and constraint text from 409 bodies), but wrote no
+retention policy. The gap is unchanged.
 
 ### A6. `anonymous_id` uses only 32 bits of the UUID
 
@@ -212,6 +252,12 @@ may conflict with retention obligations the platform exists to serve.
 admin-mediated process for internal users. Needs a decision before designing the
 erasure target state — it determines whether we build one path or two.
 
+WS4 supplies the mechanism for the third option without taking the decision: an
+admin deleting a user in the Clerk dashboard now triggers the same cascade via
+`user.deleted`. So "admin-mediated" is already reachable — but it runs the
+identical flow for both user types, which is exactly the symmetry this finding
+disputes.
+
 ---
 
 ## Resolving the retained `user.id`
@@ -256,7 +302,7 @@ this ticket wider than it looks.
 **Retaining conversation rows buys nothing trainable.** A `Conversation` row is
 `id`, `user_id`, `name`, and timestamps (`app/models/conversation.py:49-52`). The
 messages are in the LangGraph checkpoint tables keyed by `thread_id`, hard-deleted
-at `auth.py:92-93`; `name` is cleared at step 6. A post-erasure row contains no
+in `erase_user` (`app/services/user/service.py:310`); `name` is cleared at step 6. A post-erasure row contains no
 text. Keeping it buys a row count and costs a retained per-person activity series.
 
 **Training on a departed user's content is the thing Art 17 blocks.** Rules that

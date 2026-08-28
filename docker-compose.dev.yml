@@ -115,7 +115,24 @@ services:
     restart: on-failure:5
     networks:
       - app-network
-  
+
+  # Development-only tunnel so Clerk (public internet) can reach the local
+  # server. Bound to the account's static domain (NGROK_DOMAIN) so the
+  # endpoint URL registered in the Clerk dashboard survives restarts.
+  # ngrok's --url flag requires a full URL with scheme; NGROK_DOMAIN is
+  # stored as a bare hostname (matches the ngrok dashboard and
+  # docs/setup/clerk-webhooks.md), so the scheme is prepended here.
+  ngrok:
+    container_name: ngrok
+    image: ngrok/ngrok:latest
+    command: http server:8000 --url=https://${NGROK_DOMAIN}
+    environment:
+      NGROK_AUTHTOKEN: ${NGROK_AUTHTOKEN}
+    depends_on:
+      - server
+    networks:
+      - app-network
+
   db:
     container_name: db
     image: pgvector/pgvector:pg16

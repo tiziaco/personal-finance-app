@@ -48,7 +48,7 @@ class PaymentProcessingError(ServiceError):
 Give each external service its own base class so callers can catch all errors from that service in one clause:
 
 ```python
-# app/services/stripe/exceptions.py
+# app/integrations/stripe/exceptions.py
 
 class StripeServiceError(ServiceError):
     status_code = 502

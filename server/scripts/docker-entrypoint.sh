@@ -55,8 +55,8 @@ fi
 # the default. Note the single-dash ${VAR-default}, which distinguishes "unset"
 # from "set but empty".
 required_vars=()
-if [[ -n "${REQUIRED_ENV_VARS-OPENAI_API_KEY}" ]]; then
-    IFS=',' read -r -a required_vars <<<"${REQUIRED_ENV_VARS-OPENAI_API_KEY}"
+if [[ -n "${REQUIRED_ENV_VARS-OPENAI_API_KEY,CLERK_WEBHOOK_SIGNING_SECRET}" ]]; then
+    IFS=',' read -r -a required_vars <<<"${REQUIRED_ENV_VARS-OPENAI_API_KEY,CLERK_WEBHOOK_SIGNING_SECRET}"
 fi
 missing_vars=()
 

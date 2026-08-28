@@ -168,7 +168,7 @@ async def delete_user_gdpr_compliant(
 
     # 5. Log for audit trail (anonymized)
     logger.info(
-        "user_deleted_gdpr_compliant",
+        "user_erased",
         user_id=user_id,
         conversation_count=len(conversations),
         anonymized_at=user.anonymized_at.isoformat()

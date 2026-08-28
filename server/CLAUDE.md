@@ -90,6 +90,7 @@ server/
 │   ├── core/                # Settings (config.py), app factory
 │   ├── database/            # Async engine, session factory
 │   ├── exceptions/          # base.py — exception hierarchy
+│   ├── integrations/        # Third-party protocols: clerk/ (client + webhooks/)
 │   ├── models/              # SQLModel ORM models (user.py, conversation.py)
 │   ├── schemas/             # Pydantic request/response schemas
 │   ├── services/            # Business logic: user/, conversation/, llm/
@@ -98,6 +99,12 @@ server/
     ├── unit/                # No external deps — middleware, models, schemas, services, utils
     └── integration/         # Requires DB — dependencies, API routes, services
 ```
+
+`services/` and `integrations/` are deliberately distinct. `services/` holds domain
+logic. `integrations/` holds code that exists only because a third party does — one
+package per provider, carrying **both** directions of traffic: the outbound client we
+call, and the inbound webhook machinery they call. A provider's verification, event
+schemas, dispatch and handlers all live together so the flow reads top to bottom.
 
 ---
 
@@ -157,7 +164,7 @@ Base exceptions live in `app/exceptions/base.py`:
 | `ValidationError` | 422 |
 | `DatabaseError` | 500/503 |
 
-Each service package defines its own exceptions extending these. New service exceptions go in `app/services/<name>/exceptions.py`.
+Each service package defines its own exceptions extending these. New service exceptions go in `app/services/<name>/exceptions.py`; integration exceptions go in `app/integrations/<provider>/exceptions.py`.
 
 ---
 
@@ -193,10 +200,10 @@ All agents extend `BaseAgent` (`app/agents/base/`) and must implement `create_gr
 
 **Shared components:**
 - `app/agents/shared/memory/` — `get_relevant_memory()`, `update_memory()`, `delete_user_memory()`
-- `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence
+- `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()`
 - `app/agents/shared/observability/` — `create_graph_config()` wires Langfuse callbacks
 
-`BaseAgent` provides `get_response()`, `get_stream_response()`, `get_chat_history()`, `clear_chat_history()` with memory and tracing built in. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
+`BaseAgent` provides `get_response()`, `get_stream_response()` and `get_chat_history()` with memory and tracing built in. Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/shared/checkpointing/` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
 
 ---
 
@@ -210,6 +217,7 @@ tests/
 │   ├── api/       # Dependency logic (auth, etc.)
 │   ├── config/    # Settings loading
 │   ├── exceptions/
+│   ├── integrations/  # Provider clients, webhook verification and handlers
 │   ├── middleware/
 │   ├── models/
 │   ├── schemas/
@@ -246,7 +254,7 @@ New tests mirror the `app/` structure: a test for `app/services/user/cache.py` g
 When a user is deleted (`DELETE /api/v1/auth/me`), in order:
 
 1. Clerk deletion (JWTs immediately invalidated)
-2. LangGraph checkpoints hard-deleted (`clear_chat_history`)
+2. LangGraph checkpoints hard-deleted (`delete_conversation_checkpoints`)
 3. mem0 memories deleted (`delete_user_memory`)
 4. User PII anonymized via `AnonymizableMixin.anonymize_user()`
 5. Conversation records soft-deleted
@@ -254,4 +262,4 @@ When a user is deleted (`DELETE /api/v1/auth/me`), in order:
 Rules:
 - Never use `SoftDeleteMixin` on `User` — it leaves PII in the DB
 - New models with PII must implement `AnonymizableMixin` and an `anonymize_*()` method
-- Always call `agent.clear_chat_history()` before soft-deleting a conversation
+- Always call `delete_conversation_checkpoints()` before soft-deleting a conversation

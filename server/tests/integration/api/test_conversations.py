@@ -133,7 +133,7 @@ class TestDeleteConversation:
         assert response.status_code == 401
 
     async def test_delete_succeeds(
-        self, authenticated_client_with_agent, user_conversation
+        self, authenticated_client_with_agent, user_conversation, stub_checkpoint_deletion
     ):
         response = await authenticated_client_with_agent.delete(
             f"/api/v1/conversation/conversation/{user_conversation.id}"

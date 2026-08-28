@@ -66,11 +66,12 @@ class UserRepository:
         session: AsyncSession,
         clerk_id: str,
         email: str,
-        org_id: str,
+        org_id: Optional[str],
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
         email_verified: bool = False,
+        last_synced_at: Optional[datetime] = None,
     ) -> User:
         """Create a new user from Clerk data.
 
@@ -78,11 +79,16 @@ class UserRepository:
             session: Database session
             clerk_id: Clerk user ID
             email: User's email address
-            org_id: Clerk organisation ID (from JWT org_id claim)
+            org_id: Clerk organisation ID (from JWT org_id claim), or None —
+                Clerk's user.created payload carries no organisation, because
+                membership is a separate resource with its own events.
             first_name: User's first name
             last_name: User's last name
             avatar_url: User's avatar URL
             email_verified: Whether the email is verified
+            last_synced_at: Clerk's own timestamp for this state, used by the
+                webhook ordering guard. Falls back to our clock when absent
+                (e.g. the JIT path has no Clerk event to draw one from).
 
         Returns:
             The created User.
@@ -95,12 +101,15 @@ class UserRepository:
             last_name=last_name,
             avatar_url=avatar_url,
             email_verified=email_verified,
+            # Clerk's clock when we have it. Passing None explicitly would
+            # bypass the field default, so fall back here.
+            last_synced_at=last_synced_at or datetime.now(UTC),
         )
         session.add(user)
         await session.flush()
         await session.refresh(user)
 
-        logger.info("user_created", user_id=user.id, clerk_id=clerk_id, email=email, org_id=org_id)
+        logger.info("user_created", user_id=user.id, clerk_id=clerk_id, org_id=org_id)
         return user
 
     @staticmethod
@@ -108,11 +117,12 @@ class UserRepository:
         session: AsyncSession,
         clerk_id: str,
         email: str,
-        org_id: str,
+        org_id: Optional[str],
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
         email_verified: bool = False,
+        last_synced_at: Optional[datetime] = None,
     ) -> User:
         """Create a user, or return the existing one if a concurrent request won the race.
 
@@ -124,11 +134,12 @@ class UserRepository:
             session: Database session
             clerk_id: Clerk user ID
             email: User's email address
-            org_id: Clerk organisation ID (from JWT org_id claim)
+            org_id: Clerk organisation ID (from JWT org_id claim), or None
             first_name: User's first name
             last_name: User's last name
             avatar_url: User's avatar URL
             email_verified: Whether the email is verified
+            last_synced_at: Clerk's own timestamp for this state; see create().
 
         Returns:
             The created or already-existing User.
@@ -148,6 +159,7 @@ class UserRepository:
                 last_name=last_name,
                 avatar_url=avatar_url,
                 email_verified=email_verified,
+                last_synced_at=last_synced_at,
             )
         except IntegrityError:
             await session.rollback()
@@ -166,6 +178,7 @@ class UserRepository:
         last_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
         email_verified: Optional[bool] = None,
+        last_synced_at: Optional[datetime] = None,
     ) -> User:
         """Update a user's profile from Clerk data.
 
@@ -177,6 +190,7 @@ class UserRepository:
             last_name: New last name
             avatar_url: New avatar URL
             email_verified: New email verification status
+            last_synced_at: Clerk's own timestamp for this state; see create().
 
         Returns:
             The updated User.
@@ -193,7 +207,7 @@ class UserRepository:
         if email_verified is not None:
             user.email_verified = email_verified
         user.updated_at = now
-        user.last_synced_at = now
+        user.last_synced_at = last_synced_at or now
 
         session.add(user)
         await session.flush()

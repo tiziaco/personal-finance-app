@@ -113,6 +113,13 @@ class AuthSettings(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="CLERK_")
 
     SECRET_KEY: SecretStr = Field(default=SecretStr(""))
+    # Per-endpoint signing secret from the Clerk dashboard (whsec_...).
+    # Enforced at container start by REQUIRED_ENV_VARS in
+    # scripts/docker-entrypoint.sh, NOT by making this field required:
+    # alembic/env.py imports this module, so a required field would force the
+    # one-shot migrate service to carry a secret it never uses and would
+    # defeat its deliberate REQUIRED_ENV_VARS= opt-out.
+    WEBHOOK_SIGNING_SECRET: SecretStr = Field(default=SecretStr(""))
     ISSUER: str = ""
     OAUTH_CLIENT_ID: str = ""
     AUTHORIZE_URL: str = ""

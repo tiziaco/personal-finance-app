@@ -117,7 +117,7 @@ repositories, an external API client wrapper (`references/client-wrappers.md`), 
 that knows how they fit together. Route handlers and repositories never call each other directly.
 
 Real example from this codebase: `UserService.resolve_user()` coordinates `user_repository` (DB), `supplier_repository`
-(a second, unrelated repository), `clerk_service` (external API client wrapper), and `user_cache` (cache) in a single
+(a second, unrelated repository), `clerk_client` (external API client wrapper), and `user_cache` (cache) in a single
 JIT-provisioning flow — none of that DB or HTTP logic lives in the service itself.
 
 A payment checkout follows the same shape — charge via the external client, then persist the result:

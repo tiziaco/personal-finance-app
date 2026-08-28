@@ -38,6 +38,7 @@ dependencies = [
     "asgi-correlation-id>=4.3.4",
     "alembic>=1.18.3",
     "cachetools>=5.5.0",
+    "svix>=2.1.0",
 ]
 
 [project.optional-dependencies]

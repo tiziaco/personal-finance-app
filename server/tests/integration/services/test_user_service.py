@@ -7,7 +7,7 @@ import pytest_asyncio
 
 from app.models.supplier import Supplier
 from app.models.user import User
-from app.services.clerk.exceptions import ClerkUserNotFoundError
+from app.integrations.clerk.exceptions import ClerkUserNotFoundError
 from app.services.user.cache import (
     _MISS,
     user_cache,
@@ -44,7 +44,7 @@ class TestDbHit:
     async def test_db_hit_returns_user_without_calling_clerk(
         self, service, db_session, existing_user
     ):
-        with patch("app.services.user.service.clerk_service.get_user") as mock_get:
+        with patch("app.services.user.service.clerk_client.get_user") as mock_get:
             user = await service.resolve_user(existing_user.clerk_id, "test_org_123", db_session)
             mock_get.assert_not_called()
 
@@ -52,7 +52,7 @@ class TestDbHit:
         assert user.clerk_id == existing_user.clerk_id
 
     async def test_db_hit_syncs_org_id(self, service, db_session, existing_user):
-        with patch("app.services.user.service.clerk_service.get_user"):
+        with patch("app.services.user.service.clerk_client.get_user"):
             user = await service.resolve_user(existing_user.clerk_id, "org_moved", db_session)
 
         assert user.org_id == "org_moved"
@@ -69,8 +69,8 @@ class TestJITProvisioning:
         clerk_user.primary_email_address_id = "email_abc"
         return clerk_user
 
-    @patch("app.services.user.service.clerk_service.get_primary_email")
-    @patch("app.services.user.service.clerk_service.get_user")
+    @patch("app.services.user.service.clerk_client.get_primary_email")
+    @patch("app.services.user.service.clerk_client.get_user")
     async def test_jit_creates_user_in_db(
         self, mock_get_user, mock_get_email, service, db_session
     ):
@@ -84,7 +84,7 @@ class TestJITProvisioning:
         assert user.email == "jit_new@example.com"
         assert user.id is not None
 
-    @patch("app.services.user.service.clerk_service.get_user")
+    @patch("app.services.user.service.clerk_client.get_user")
     async def test_clerk_not_found_raises(self, mock_get_user, service, db_session):
         mock_get_user.side_effect = ClerkUserNotFoundError("not found")
 
@@ -125,8 +125,8 @@ class TestSupplierRelinkInvalidation:
         await db_session.refresh(supplier)
         return supplier
 
-    @patch("app.services.user.service.clerk_service.get_primary_email")
-    @patch("app.services.user.service.clerk_service.get_user")
+    @patch("app.services.user.service.clerk_client.get_primary_email")
+    @patch("app.services.user.service.clerk_client.get_user")
     async def test_replace_displaces_old_contact_and_clears_its_cache(
         self, mock_get_user, mock_get_email, service, db_session,
         existing_user, linked_supplier,
@@ -144,8 +144,8 @@ class TestSupplierRelinkInvalidation:
         # And re-reading goes to the DB, which now says "not linked"
         assert await service.get_supplier_id_for_user(existing_user.id, db_session) is None
 
-    @patch("app.services.user.service.clerk_service.get_primary_email")
-    @patch("app.services.user.service.clerk_service.get_user")
+    @patch("app.services.user.service.clerk_client.get_primary_email")
+    @patch("app.services.user.service.clerk_client.get_user")
     async def test_new_contact_link_is_readable(
         self, mock_get_user, mock_get_email, service, db_session,
         existing_user, linked_supplier,
@@ -157,8 +157,8 @@ class TestSupplierRelinkInvalidation:
 
         assert await service.get_supplier_id_for_user(new_user.id, db_session) == linked_supplier.id
 
-    @patch("app.services.user.service.clerk_service.get_primary_email")
-    @patch("app.services.user.service.clerk_service.get_user")
+    @patch("app.services.user.service.clerk_client.get_primary_email")
+    @patch("app.services.user.service.clerk_client.get_user")
     async def test_without_replace_flag_old_contact_is_untouched(
         self, mock_get_user, mock_get_email, service, db_session,
         existing_user, linked_supplier,

@@ -66,9 +66,9 @@ Race condition handling: if two concurrent requests try to create the same user,
 
 There is deliberately **no `clerk_id -> user_id` cache**. A hit would still cost one indexed lookup, and FastAPI caches each `Depends` result per request (`use_cache=True` by default), so a single request never resolves the user twice anyway.
 
-### 5. Clerk Service — `app/services/clerk.py`
+### 5. Clerk Client — `app/integrations/clerk/client.py`
 
-`ClerkService` wraps the `clerk-backend-api` SDK:
+`ClerkClient` wraps the `clerk-backend-api` SDK:
 - `get_user(clerk_id)` — fetches user data from Clerk API
 - `get_primary_email(clerk_user)` — extracts primary email from Clerk user object
 
@@ -111,8 +111,9 @@ Every method is `async` even though the in-memory implementation never awaits �
 **Invalidation points:**
 - Supplier re-link (`resolve_user`) — clears both the new contact and the displaced previous one
 - GDPR account deletion — clears both caches for the erased user
+- Clerk membership webhooks (`app/integrations/clerk/webhooks/handlers/membership.py`) — every `organization_membership.*` event drops the user's cached auth data
 
-**Known gap:** nothing invalidates `org_role` when a role changes in Clerk, so a demotion is honoured for up to 60s. A `organizationMembership.updated/deleted` webhook would close this; no webhook infrastructure exists yet.
+The `org_role` staleness this section used to name as an open gap is closed: a role change or an offboarding in Clerk now invalidates the entry on delivery, so revocation is immediate rather than bounded by the 60s TTL. It degrades to the TTL only if the delivery fails every svix retry.
 
 ## Swagger UI OAuth2
 

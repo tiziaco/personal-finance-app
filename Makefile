@@ -1,4 +1,4 @@
-.PHONY: help docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-tunnel docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -19,13 +19,17 @@ ENV ?= development
 
 # Default target
 help:
+	@echo "Native Dev Commands (no Docker for the app processes):"
+	@echo "  make dev-preflight      - Check ports 8000/3000/3002 are free"
+	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:8000"
+	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
 	@echo "  make docker-build-web   - Build internal-portal and supplier-portal only"
 	@echo "  make docker-build-api   - Build server service only"
 	@echo ""
 	@echo "Up/Down Commands:"
-	@echo "  make docker-run         - Start full stack (web-app, server, db, prometheus, grafana, cadvisor)"
+	@echo "  make docker-run         - Start full stack (web-app, server, db, prometheus, grafana, cadvisor, ngrok)"
 	@echo "  make docker-run-core    - Start core services only (web-app, server, db)"
 	@echo "  make docker-run-db      - Start database only (requires ENV)"
 	@echo "  make docker-stop        - Stop all services"
@@ -43,6 +47,51 @@ help:
 	@echo ""
 	@echo "Environment:"
 	@echo "  ENV=development (default) | staging | production"
+
+# Native dev helpers — run the app on the host instead of in Compose.
+# Mutually exclusive with the Docker path: same host ports, same NGROK_DOMAIN.
+
+# -sTCP:LISTEN matters: a bare `lsof -ti :PORT` also matches outbound
+# connections and dead CLOSED sockets, neither of which blocks a bind.
+dev-preflight:
+	@for port in 8000 3000 3002; do \
+		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
+		if [ -n "$$pids" ]; then \
+			echo "❌ Port $$port is already in use (PIDs: $$pids)."; \
+			echo "   The Docker stack publishes 3000, 3002 and 8000 — run 'make docker-stop',"; \
+			echo "   or use the 'Dev: Kill All' task if a previous native run is still alive."; \
+			exit 1; \
+		fi; \
+	done
+	@echo "✅ Ports 8000, 3000, 3002 are free"
+
+# Host-side tunnel. The compose `ngrok` service forwards to `server:8000`,
+# which only resolves on the compose network — hence a separate target.
+# Vars come from the root .env via `-include`, not from your shell.
+# --authtoken is load-bearing: ~/Library/Application Support/ngrok/ngrok.yml
+# beats $NGROK_AUTHTOKEN, so a stale token there fails with ERR_NGROK_320.
+dev-tunnel:
+	@if [ -z "$(NGROK_DOMAIN)" ]; then \
+		echo "NGROK_DOMAIN is not set. Add it to the root .env."; \
+		echo "See docs/setup/clerk-webhooks.md for how to claim a static domain."; \
+		exit 1; \
+	fi
+	@if [ -z "$(NGROK_AUTHTOKEN)" ]; then \
+		echo "NGROK_AUTHTOKEN is not set. Add it to the root .env."; \
+		echo "Copy it from the ngrok dashboard's 'Your Authtoken' page."; \
+		exit 1; \
+	fi
+	@case "$(NGROK_AUTHTOKEN)" in \
+		rd_*|cr_*|ak_*|ep_*) \
+			echo "NGROK_AUTHTOKEN looks like a resource ID, not an authtoken."; \
+			echo "  rd_ = reserved domain, cr_ = credential, ak_ = API key, ep_ = endpoint."; \
+			echo "  The authtoken is ~49 characters with no prefix. Copy it from the"; \
+			echo "  ngrok dashboard's 'Your Authtoken' page, in the workspace that owns"; \
+			echo "  $(NGROK_DOMAIN)."; \
+			exit 1;; \
+	esac
+	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:8000"
+	@ngrok http 8000 --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
 
 # Build commands
 # `migrate` is intentionally absent from these service lists: it shares
@@ -66,7 +115,7 @@ docker-build-api:
 # Full stack - all services including monitoring
 docker-run:
 	@echo "🚀 Starting full stack (development mode)"
-	@echo "Services: internal-portal, supplier-portal, server, db, prometheus, grafana, cadvisor"
+	@echo "Services: internal-portal, supplier-portal, server, db, prometheus, grafana, cadvisor, ngrok"
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
 	@echo ""
 	@echo "✅ Full stack is running!"
@@ -94,6 +143,8 @@ docker-run-core:
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 
 # Database only - for local development
+# `--wait` blocks on the pg_isready healthcheck so callers that connect
+# immediately (e.g. `make migrate`) don't race a cold start.
 docker-run-db:
 	@if [ -z "$(ENV)" ]; then \
 		echo "ENV is not set. Usage: make docker-run-db ENV=development|staging|production"; \
@@ -108,7 +159,7 @@ docker-run-db:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d db
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --wait db
 	@echo ""
 	@echo "✅ Database is running!"
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"

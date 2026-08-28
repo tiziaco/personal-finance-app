@@ -1,31 +1,50 @@
 # Client Wrapper Services (External API Adapters)
 
-External API integrations split into two files in the same provider folder:
-
-- **`client.py`** — the raw SDK/HTTP wrapper. Owns the SDK client instance, auth, base config, retries. Knows
-  nothing about domain exceptions — it only translates transport-level failures (connection errors, timeouts) into a
-  thin set of its own low-level errors, or lets SDK exceptions surface as-is.
-- **`service.py`** — business orchestration. Calls `client.py`, translates its errors into the domain's
-  `exceptions.py` hierarchy, adds logging, and is what the rest of the app actually imports and calls.
-
-This mirrors the `repository.py` (DB access) / `service.py` (orchestration) split in `references/services.md` —
-`client.py` is a repository, just for an external system instead of the database.
-
 ## Folder placement
 
-**Default: its own top-level `app/services/<provider>/` folder**, a sibling of the domains that call it — e.g.
-`app/services/clerk/`, called from `app/services/user/`. This is the default even if only one domain calls it today:
-adapter code for an external system (auth edge cases, webhooks, admin tooling) tends to accrete over time and end up
-needed by more than the domain that first introduced it.
+**Third-party code lives in `app/integrations/<provider>/`, never in `app/services/`.**
 
-**Nested exception**: if the adapter is provably scoped to a single domain and unlikely to be reused — e.g. Stripe
-used only for payment checkout — it's fine to nest it as a sub-package of that domain instead:
-`app/services/payment/stripe/` (its own `client.py` + `service.py` + `exceptions.py`, same internal structure as the
-top-level case). The tradeoff: if it does get reused later (a separate `subscriptions/` domain also needs to charge
-cards), moving it out to top-level is a bigger refactor than importing across folders would have been from the
-start. Default to top-level unless you're confident this won't happen.
+The two trees answer different questions. `app/services/` holds *domain* logic — the things this product would do
+under any vendor (`user/`, `conversation/`, `llm/`). `app/integrations/` holds code that exists **only because a
+third party does**: if you dropped the vendor, the folder would disappear with it.
 
-Either way, the `client.py`/`service.py` split and the rules below are identical — only the folder location changes.
+One package per provider, carrying **both directions of traffic** — the outbound API we call and the inbound
+webhooks they call us with:
+
+```
+app/integrations/clerk/
+├── __init__.py            # exports the client + its exceptions
+├── client.py              # outbound: SDK wrapper + error translation
+├── exceptions.py          # the provider's exception hierarchy
+├── timestamps.py          # provider-shaped helpers (Clerk's ms-epoch format)
+└── webhooks/              # inbound
+    ├── verification.py    # signature check -> VerifiedEvent
+    ├── schemas.py         # the event envelope and what handlers receive
+    ├── dispatcher.py      # event type -> handler registry
+    └── handlers/          # translate each event into domain calls
+```
+
+Keeping both directions together is the point: everything that changes when the vendor changes its API sits under
+one directory. Nothing in `app/integrations/` should be imported by another integration.
+
+**The rest of this file covers the outbound half only.** For the inbound half — signature verification, the dispatch
+registry, handler idempotency and ordering — see `references/webhooks.md`.
+
+### `client.py` and `service.py`
+
+Start with **one `client.py`** that wraps the SDK *and* translates its errors into `exceptions.py` — that is what
+`app/integrations/clerk/client.py` does, and for a provider surface of a handful of calls the second file earns
+nothing.
+
+Split orchestration out into a `service.py` when it appears: multi-call sequences, retry/compensation logic, or
+caching that shouldn't sit next to the SDK plumbing. At that point `client.py` keeps the raw calls and transport
+errors, `service.py` composes them and owns the domain exception mapping, and it becomes the only thing other
+domains import — mirroring the `repository.py` / `service.py` split in `references/services.md`, where `client.py`
+is a repository for an external system instead of the database.
+
+Don't nest a provider under a domain (`app/services/payment/stripe/`). Even an adapter used by exactly one domain
+today accretes webhooks, admin tooling and auth edge cases, and the vendor/domain boundary is what makes the
+codebase legible.
 
 ## `client.py` — raw SDK wrapper
 
@@ -38,7 +57,7 @@ Use a **stateful class with instance methods** (not static) because it holds an 
 `@property` so the client is created on first use, not at import time.
 
 ```python
-# app/services/stripe/client.py
+# app/integrations/stripe/client.py
 
 class StripeClient:
     """Owns the Stripe SDK client. No domain exception translation here —
@@ -67,7 +86,7 @@ stripe_client = StripeClient()
 ## `service.py` — orchestration + error translation
 
 ```python
-# app/services/stripe/service.py
+# app/integrations/stripe/service.py
 
 class StripeService:
     """Anti-corruption layer over StripeClient — the only thing other domains import."""
@@ -120,9 +139,10 @@ Other domains (e.g. `PaymentService.checkout()` in `references/services.md`) imp
 
 ## Rules
 
-- `client.py` holds the SDK instance and raw calls only — no domain exception mapping, no business logic
-- `service.py` is the only thing other domains import — it calls `client.py` and translates every SDK/HTTP error
-  into the domain's `exceptions.py` hierarchy
+- Live under `app/integrations/<provider>/` — `app/services/` is for domain logic only
+- With one file, `client.py` wraps the SDK and translates every SDK/HTTP error into `exceptions.py`
+- Once `service.py` exists, `client.py` drops to raw calls only and `service.py` becomes the sole import surface for
+  other domains
 - `@property` for lazy client init on `client.py` — never instantiate SDK clients at module load time (config may
   not be ready)
 - Instance methods, not `@staticmethod`, on both classes — they hold `_client` / no-state-but-still-instance
@@ -136,5 +156,5 @@ Other domains (e.g. `PaymentService.checkout()` in `references/services.md`) imp
 
 ```python
 # In an async service or provider:
-clerk_user = await asyncio.to_thread(clerk_service.get_user, clerk_id)
+clerk_user = await asyncio.to_thread(clerk_client.get_user, clerk_id)
 ```

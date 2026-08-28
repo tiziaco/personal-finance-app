@@ -12,6 +12,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 
+from app.agents.shared.checkpointing import delete_conversation_checkpoints
 from app.api.dependencies.agent import ChatbotAgentDep
 from app.api.dependencies.authentication import CurrentUser
 from app.api.dependencies.conversation import UserConversation
@@ -176,7 +177,6 @@ async def get_conversation_messages(
 async def clear_chat_history(
     conversation: UserConversation,
     request: Request,
-    agent: ChatbotAgentDep,
 ):
     """Clear all messages for a conversation.
 
@@ -187,5 +187,5 @@ async def clear_chat_history(
     Returns:
         dict: A message indicating the chat history was cleared.
     """
-    await agent.clear_chat_history(conversation.id)
+    await delete_conversation_checkpoints(conversation.id)
     return {"message": "Chat history cleared successfully"}
