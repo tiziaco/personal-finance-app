@@ -40,7 +40,7 @@ There are two ways to run this app, and **they are mutually exclusive**:
 - **Native path** — app processes on the host, Postgres still in Docker
   (VS Code's `Dev: *` tasks). Needs its own host-side tunnel.
 
-They collide on two resources: host ports **3000, 3002 and 8000**, which the
+They collide on two resources: host ports **3000, 3002 and 8100**, which the
 compose services publish; and the single static **`NGROK_DOMAIN`**, claimed by
 both the `ngrok` compose service and `make dev-tunnel`. Stop one path before
 starting the other — `make dev-preflight` checks the ports and fails with a
@@ -49,8 +49,8 @@ pointer rather than letting the servers die on a bind error.
 ### Native dev
 
 ```bash
-make dev-preflight      # verify ports 8000/3000/3002 are free
-make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:8000
+make dev-preflight      # verify ports 8100/3000/3002 are free
+make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:8100
 ```
 
 `NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the
@@ -102,8 +102,8 @@ make rebuild-core       # clean + core stack
 |-------------------|----------------------------|
 | Internal Portal   | http://localhost:3000      |
 | Supplier Portal   | http://localhost:3002      |
-| API server        | http://localhost:8000      |
-| Swagger docs      | http://localhost:8000/docs |
+| API server        | http://localhost:8100      |
+| Swagger docs      | http://localhost:8100/docs |
 | Prometheus        | http://localhost:9090      |
 | Grafana           | http://localhost:3001      |
 | cAdvisor          | http://localhost:8080      |

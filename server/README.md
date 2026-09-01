@@ -81,4 +81,4 @@ make format     # ruff format
 
 ## API
 
-Swagger UI: `http://localhost:8000/docs`
+Swagger UI: `http://localhost:8100/docs`

@@ -5,6 +5,12 @@ COMPOSE_FILE ?= docker-compose.dev.yml
 # Host port for postgres. 5432 collides with other projects on the same
 # machine, so it is overridable: set POSTGRES_HOST_PORT in the root .env.
 POSTGRES_HOST_PORT ?= 5434
+# Host port for the API server, for the same reason: 8000 is what every other
+# FastAPI/Django project on the machine also reaches for. Inside Docker the
+# server still listens on 8000 — this is only the host-side binding, so the
+# compose healthcheck, the prometheus target and `server:8000` are unaffected.
+# Overridable: set API_HOST_PORT in the root .env.
+API_HOST_PORT ?= 8100
 ENV ?= development
 
 # Load root .env (APP_ENV, GRAFANA_ADMIN_PASSWORD, …) so Docker Compose picks
@@ -20,8 +26,8 @@ ENV ?= development
 # Default target
 help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
-	@echo "  make dev-preflight      - Check ports 8000/3000/3002 are free"
-	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:8000"
+	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/3000/3002 are free"
+	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
@@ -54,16 +60,16 @@ help:
 # -sTCP:LISTEN matters: a bare `lsof -ti :PORT` also matches outbound
 # connections and dead CLOSED sockets, neither of which blocks a bind.
 dev-preflight:
-	@for port in 8000 3000 3002; do \
+	@for port in $(API_HOST_PORT) 3000 3002; do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "❌ Port $$port is already in use (PIDs: $$pids)."; \
-			echo "   The Docker stack publishes 3000, 3002 and 8000 — run 'make docker-stop',"; \
+			echo "   The Docker stack publishes 3000, 3002 and $(API_HOST_PORT) — run 'make docker-stop',"; \
 			echo "   or use the 'Dev: Kill All' task if a previous native run is still alive."; \
 			exit 1; \
 		fi; \
 	done
-	@echo "✅ Ports 8000, 3000, 3002 are free"
+	@echo "✅ Ports $(API_HOST_PORT), 3000, 3002 are free"
 
 # Host-side tunnel. The compose `ngrok` service forwards to `server:8000`,
 # which only resolves on the compose network — hence a separate target.
@@ -90,8 +96,8 @@ dev-tunnel:
 			echo "  $(NGROK_DOMAIN)."; \
 			exit 1;; \
 	esac
-	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:8000"
-	@ngrok http 8000 --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
+	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:$(API_HOST_PORT)"
+	@ngrok http $(API_HOST_PORT) --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
 
 # Build commands
 # `migrate` is intentionally absent from these service lists: it shares
@@ -121,7 +127,7 @@ docker-run:
 	@echo "✅ Full stack is running!"
 	@echo "   Internal Portal:     http://localhost:3000"
 	@echo "   Supplier Portal:     http://localhost:3002"
-	@echo "   Server:              http://localhost:8000"
+	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Prometheus:          http://localhost:9090"
 	@echo "   Grafana:             http://localhost:3001 (admin/admin)"
 	@echo "   cAdvisor:            http://localhost:8080"
@@ -139,7 +145,7 @@ docker-run-core:
 	@echo "✅ Core stack is running!"
 	@echo "   Internal Portal:     http://localhost:3000"
 	@echo "   Supplier Portal:     http://localhost:3002"
-	@echo "   Server:              http://localhost:8000"
+	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 
 # Database only - for local development

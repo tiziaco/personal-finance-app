@@ -119,7 +119,7 @@ The `org_role` staleness this section used to name as an open gap is closed: a r
 
 The `/docs` page has an "Authorize" button that triggers Clerk's OAuth2 Authorization Code flow. Configured in `app/main.py` via `swagger_ui_init_oauth`. Requires:
 - `CLERK_OAUTH_CLIENT_ID` from Clerk dashboard (public client — no secret needed, uses PKCE)
-- Redirect URI `http://localhost:8000/oauth2-redirect` registered in Clerk's OAuth app settings
+- Redirect URI `http://localhost:8100/oauth2-redirect` registered in Clerk's OAuth app settings
 
 ## Environment Variables
 

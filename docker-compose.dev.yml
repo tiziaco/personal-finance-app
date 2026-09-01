@@ -8,7 +8,7 @@ services:
       dockerfile: Dockerfile
       args:
         APP_NAME: internal-portal
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
@@ -27,7 +27,7 @@ services:
       dockerfile: Dockerfile
       args:
         APP_NAME: supplier-portal
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
@@ -83,7 +83,11 @@ services:
       args:
         APP_ENV: ${APP_ENV:-development}
     ports:
-      - "8000:8000"
+      # Host side only. 8000 collides with other projects on the same machine,
+      # so it is overridable via API_HOST_PORT in the root .env. The container
+      # port stays 8000 — the healthcheck below, prometheus' `server:8000`
+      # target and the ngrok service all address it on the compose network.
+      - "${API_HOST_PORT:-8100}:8000"
     volumes:
       - ./server/app:/app/app
       - ./server/alembic:/app/alembic

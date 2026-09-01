@@ -10,7 +10,7 @@ All commands below run from `server/`. For the full Docker stack, use root `make
 
 ```bash
 make install          # pip install uv + uv sync
-make dev              # dev server on :8000 (hot reload, APP_ENV=development)
+make dev              # dev server on :8100 (hot reload, APP_ENV=development)
 make staging          # uvicorn in staging env
 make prod             # uvicorn in production env
 ```

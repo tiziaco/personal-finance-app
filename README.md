@@ -187,8 +187,8 @@ Services will be available at:
 | Service | URL |
 |---|---|
 | Frontend | http://localhost:3000 |
-| API server | http://localhost:8000 |
-| API docs (Swagger) | http://localhost:8000/docs |
+| API server | http://localhost:8100 |
+| API docs (Swagger) | http://localhost:8100/docs |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3001 |
 | cAdvisor | http://localhost:8080 |

@@ -7,6 +7,11 @@ DOCKER_COMPOSE ?= docker-compose
 # Compose *default* filename, so it will not be found by implicit lookup.
 COMPOSE_FILE ?= ../docker-compose.dev.yml
 
+# Host port for the native (non-Docker) server. 8000 collides with other
+# projects on the same machine; keep this in step with API_HOST_PORT in the
+# root Makefile, which publishes the same port from the container.
+PORT ?= 8100
+
 set-env:
 	@if [ -z "$(ENV)" ]; then \
 		echo "ENV is not set. Usage: make set-env ENV=development|staging|production"; \
@@ -21,15 +26,15 @@ set-env:
 
 prod:
 	@echo "Starting server in production environment"
-	@bash -c "source scripts/set_env.sh production && ./.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop uvloop"
+	@bash -c "source scripts/set_env.sh production && ./.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $(PORT) --loop uvloop"
 
 staging:
 	@echo "Starting server in staging environment"
-	@bash -c "source scripts/set_env.sh staging && ./.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --loop uvloop"
+	@bash -c "source scripts/set_env.sh staging && ./.venv/bin/python -m uvicorn app.main:app --host 0.0.0.0 --port $(PORT) --loop uvloop"
 
 dev:
 	@echo "Starting server in development environment"
-	@bash -c "source scripts/set_env.sh development && uv run uvicorn app.main:app --reload --host localhost --port 8000 --loop uvloop"
+	@bash -c "source scripts/set_env.sh development && uv run uvicorn app.main:app --reload --host localhost --port $(PORT) --loop uvloop"
 
 # Evaluation commands
 eval:
