@@ -82,3 +82,14 @@ make format     # ruff format
 ## API
 
 Swagger UI: `http://localhost:8100/docs`
+
+`openapi.json` is a committed artifact, not a build output: it generates the
+frontend's typed client. After changing any route, run `make gen-contract` from
+the repo root and commit both outputs in the same commit — `make check-contract`
+is what CI runs, and the pre-commit hook blocks a commit that touches `app/`
+without them.
+
+The schema's title, description and `/api/v1` prefix come from
+`[tool.app.metadata]` in `pyproject.toml`, and its version from `[project]`,
+loaded by `app/core/metadata.py`. They are not environment variables — see
+**Service Identity** in the root `README.md` for why.

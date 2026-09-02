@@ -25,6 +25,7 @@ from app.api.v1.api import api_router
 from app.core.config import Environment, settings
 from app.core.limiter import limiter
 from app.core.logging import logger
+from app.core.metadata import API_V1_STR, DESCRIPTION, PROJECT_NAME, VERSION
 from app.database.engine import (
     close_database_engine,
     create_session_factory,
@@ -59,9 +60,9 @@ async def lifespan(app: FastAPI):
     
     logger.info(
         "application_startup",
-        project_name=settings.PROJECT_NAME,
-        version=settings.VERSION,
-        api_prefix=settings.API_V1_STR,
+        project_name=PROJECT_NAME,
+        version=VERSION,
+        api_prefix=API_V1_STR,
     )
     
     # Initialize database
@@ -93,10 +94,11 @@ async def lifespan(app: FastAPI):
 _is_production = settings.ENVIRONMENT == Environment.PRODUCTION
 
 app = FastAPI(
-    title=settings.PROJECT_NAME,
-    version=settings.VERSION,
-    description=settings.DESCRIPTION,
-    openapi_url=None if _is_production else f"{settings.API_V1_STR}/openapi.json",
+    # Code-owned, never settings-derived — see app/core/metadata.py.
+    title=PROJECT_NAME,
+    version=VERSION,
+    description=DESCRIPTION,
+    openapi_url=None if _is_production else f"{API_V1_STR}/openapi.json",
     docs_url=None if _is_production else "/docs",
     redoc_url=None if _is_production else "/redoc",
     lifespan=lifespan,
@@ -141,4 +143,4 @@ app.add_exception_handler(Exception, global_exception_handler)  # Catch-all
 
 # Include routers
 app.include_router(system_router)  # System endpoints at root level
-app.include_router(api_router, prefix=settings.API_V1_STR)  # Versioned API endpoints
+app.include_router(api_router, prefix=API_V1_STR)  # Versioned API endpoints

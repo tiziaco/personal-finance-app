@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-tunnel docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-tunnel gen-contract check-contract docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -28,6 +28,10 @@ help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
 	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/3000/3002 are free"
 	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
+	@echo ""
+	@echo "Contract:"
+	@echo "  make gen-contract       - Re-export openapi.json and regenerate the typed API client"
+	@echo "  make check-contract     - Fail if openapi.json or the generated client is stale"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
@@ -98,6 +102,28 @@ dev-tunnel:
 	esac
 	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:$(API_HOST_PORT)"
 	@ngrok http $(API_HOST_PORT) --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
+
+# The OpenAPI spec and the generated API client are committed artifacts. This
+# regenerates both and fails if the committed versions are stale.
+gen-contract:
+	@./scripts/gen-contract.sh
+
+check-contract:
+	@./scripts/check-contract.sh
+
+# An image is a shippable artifact and must be internally consistent: the web
+# image bakes in packages/api-client/src/generated and the server image bakes in
+# server/app/, both from this working tree. If they disagree, the running stack
+# is wrong in a way nothing announces at runtime. `check-contract` rather than
+# `gen-contract` on purpose — at build time you want to be told, so the
+# regenerated files land in a commit instead of being baked in from an
+# uncommitted tree. It regenerates before failing, so on a red build the
+# corrected files are already in the tree, ready to inspect and commit.
+#
+# Deliberately NOT wired into docker-run or the VS Code "Dev:" chain: exporting
+# the spec imports app.main, so a half-finished refactor would block the stack
+# from starting. Drift is the normal state while a route is being written.
+docker-build docker-build-web: check-contract
 
 # Build commands
 # `migrate` is intentionally absent from these service lists: it shares

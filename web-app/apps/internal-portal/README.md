@@ -119,6 +119,6 @@ Use `<Protect role="org:project_manager">` from `@clerk/nextjs` for declarative 
 
 - **`@app/ui`** — shared shadcn/ui components
 - **`@app/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
-- **`@app/types`** — shared TypeScript types
+- **`@app/api-client`** — generated API client (types, endpoints, hooks) from the OpenAPI spec
 
 Always check `packages/ui` before creating new components.

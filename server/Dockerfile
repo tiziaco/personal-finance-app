@@ -70,6 +70,11 @@ WORKDIR /app
 COPY --chown=appuser:appuser app/ ./app/
 COPY --chown=appuser:appuser alembic/ ./alembic/
 COPY --chown=appuser:appuser alembic.ini ./
+# Not just a build input: app/core/metadata.py reads the service's title,
+# version, description and API prefix out of [tool.app.metadata] at import time,
+# so the file has to exist at runtime or the app cannot start. It resolves as
+# ../../pyproject.toml from app/core/, which is /app/pyproject.toml here.
+COPY --chown=appuser:appuser pyproject.toml ./
 # Copy the whole scripts/ dir rather than naming one file: .dockerignore
 # denylists the host-only scripts (build-docker.sh, run-docker.sh, …), so only
 # container scripts land here, and a newly added one can't be silently omitted

@@ -174,12 +174,11 @@ class TestClearChatHistory:
         )
         assert response.status_code == 401
 
-    async def test_clear_history_returns_200(
+    async def test_clear_history_returns_204(
         self, authenticated_client_with_agent, test_conversation, stub_checkpoint_deletion
     ):
         response = await authenticated_client_with_agent.delete(
             f"/api/v1/chatbot/chat/{test_conversation.id}/messages"
         )
-        assert response.status_code == 200
-        data = response.json()
-        assert "message" in data
+        assert response.status_code == 204
+        assert response.content == b""

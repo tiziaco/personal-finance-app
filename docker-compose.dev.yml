@@ -58,6 +58,8 @@ services:
       - ./server/alembic:/app/alembic
       - ./server/scripts:/app/scripts
       - ./server/logs:/app/logs
+      # Read at import by app/core/metadata.py, so it is executed code too.
+      - ./server/pyproject.toml:/app/pyproject.toml:ro
     env_file:
       - ./server/.env.${APP_ENV:-development}
     environment:
@@ -93,6 +95,8 @@ services:
       - ./server/alembic:/app/alembic
       - ./server/scripts:/app/scripts
       - ./server/logs:/app/logs
+      # Read at import by app/core/metadata.py, so it is executed code too.
+      - ./server/pyproject.toml:/app/pyproject.toml:ro
     env_file:
       - ./server/.env.${APP_ENV:-development}
     environment:

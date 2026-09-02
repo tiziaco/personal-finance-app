@@ -1,6 +1,9 @@
 [project]
 name = "server"
-version = "0.1.0"
+# Single source for the API's version: app/core/metadata.py reads it from here
+# and FastAPI serves it, so this is the number that appears in openapi.json and
+# in the status widget. Bumping it is a contract change — regenerate.
+version = "1.0.0"
 description = "Rilevio Server - A backend server for Rilevio application"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -58,6 +61,25 @@ test = [
     "testcontainers>=4.15.0",
 ]
 
+
+[tool.app.metadata]
+# The service's public identity, and the one place a fork changes it.
+#
+# Deliberately here rather than in server/.env.<env>: these values land verbatim
+# in the `info` block of the committed artifact server/openapi.json, api_v1_str
+# prefixes every versioned key in its `paths`, and orval stamps the title into
+# the header of every generated client file. Read from a gitignored env file
+# they would differ per machine, and `make check-contract` would then fail on CI
+# and on every fresh clone — so the parameter could never actually be used.
+# pyproject.toml is committed, so every machine and CI read the same bytes.
+#
+# The version lives in [project] above, not here, so there is one of it.
+#
+# Change any of these, then run `make gen-contract` from the repo root and
+# commit the regenerated artifacts in the same commit.
+title = "Rilevio - Server"
+description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
+api_v1_str = "/api/v1"
 
 [tool.pytest.ini_options]
 # Test discovery

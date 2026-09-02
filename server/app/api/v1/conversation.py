@@ -101,6 +101,7 @@ async def update_conversation_name(
 @router.delete(
     "/conversation/{conversation_id}",
     operation_id="deleteConversation",
+    status_code=204,
     summary="Delete a chat conversation",
     description="Remove a chat conversation and permanently delete all associated messages."
 )

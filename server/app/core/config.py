@@ -227,11 +227,12 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: Environment = Field(default_factory=get_environment)
 
-    # Application Settings
-    PROJECT_NAME: str = "FastAPI LangGraph Clerk"
-    VERSION: str = "1.0.0"
-    DESCRIPTION: str = "A production-ready FastAPI service with LangGraph and Clerk authentication"
-    API_V1_STR: str = "/api/v1"
+    # Application Settings.
+    # The service's name, version, description and versioned path prefix are NOT
+    # here: they are product identity and published interface rather than
+    # deployment configuration, and an env-overridable title or route prefix
+    # would make the exported OpenAPI artifact differ per machine. See
+    # app/core/metadata.py.
     DEBUG: bool = False
 
     # Nested Settings

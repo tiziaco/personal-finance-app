@@ -4,188 +4,146 @@ This module provides infrastructure endpoints for monitoring application health,
 status, and basic information.
 """
 
-from datetime import datetime
-from typing import (
-    Any,
-    Dict,
-)
+from datetime import UTC, datetime
 
 from fastapi import (
     APIRouter,
     Request,
+    Response,
     status,
 )
-from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app.api.dependencies.authentication import CurrentUser
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
+from app.core.metadata import PROJECT_NAME, VERSION
 from app.database.engine import health_check as db_health_check
+from app.schemas.system import (
+    AgentStatus,
+    ComponentsStatus,
+    ConnectionPoolStats,
+    DatabaseStatus,
+    HealthResponse,
+    ReadinessResponse,
+    RootResponse,
+)
 
 router = APIRouter(tags=["system"])
 
 
 @router.get(
     "/",
+    operation_id="getRoot",
+    response_model=RootResponse,
     summary="Get API information",
-    description="Retrieve basic API metadata including version, environment, and documentation URLs."
+    description="Retrieve basic API metadata including version, environment, and documentation URLs.",
 )
 @limiter.limit(settings.rate_limits.endpoints.ROOT[0])
-async def root(request: Request) -> Dict[str, Any]:
-    """Root endpoint returning basic API information.
-    
-    Returns:
-        Dict[str, Any]: Basic API information
-    """
+async def root(request: Request) -> RootResponse:
+    """Root endpoint returning basic API information."""
     logger.info("root_endpoint_called")
-    return {
-        "name": settings.PROJECT_NAME,
-        "version": settings.VERSION,
-        "status": "healthy",
-        "environment": settings.ENVIRONMENT.value,
-        "swagger_url": "/docs",
-        "redoc_url": "/redoc",
-    }
+    return RootResponse(
+        name=PROJECT_NAME,
+        version=VERSION,
+        status="healthy",
+        environment=settings.ENVIRONMENT,
+        swagger_url="/docs",
+        redoc_url="/redoc",
+    )
 
 
 @router.get(
     "/health",
+    operation_id="getHealth",
+    response_model=HealthResponse,
+    responses={503: {"model": HealthResponse, "description": "System is degraded"}},
     summary="Check API health status",
-    description="Minimal public health check endpoint for container orchestration and load balancers. Returns basic status without sensitive details."
+    description="Minimal public health check endpoint for container orchestration and load balancers. Returns basic status without sensitive details.",
 )
 @limiter.limit(settings.rate_limits.endpoints.HEALTH[0])
-async def health_check(request: Request) -> Dict[str, Any]:
-    """Minimal public health check endpoint.
-    
-    This endpoint is designed for container orchestrators (Docker, ECS, Kubernetes)
-    and load balancers. It performs actual health checks but returns minimal
-    information without exposing sensitive details about the system architecture.
-    
-    Args:
-        request: FastAPI request object
-        
-    Returns:
-        Dict[str, Any]: Minimal health status
-        
-    Status Codes:
-        200: System is healthy and ready to serve requests
-        503: System is degraded or unavailable
-    """
-
-    # Get database engine from app state
+async def health_check(request: Request, response: Response) -> HealthResponse:
+    """Minimal public health check endpoint for orchestrators and load balancers."""
     engine: AsyncEngine = request.app.state.engine
-    
-    # Check database connectivity
     db_healthy = await db_health_check(engine)
-    
-    # Check agent readiness
+
     agents_healthy = False
-    
     if hasattr(request.app.state, "agents"):
-        agents_healthy = True
-        for agent_name, agent_instance in request.app.state.agents.items():
-            if not agent_instance.is_ready():
-                agents_healthy = False
-                break
-    
-    # Overall health is healthy only if both DB and agents are healthy
+        agents_healthy = all(
+            agent.is_ready() for agent in request.app.state.agents.values()
+        )
+
     overall_healthy = db_healthy and agents_healthy
+    if not overall_healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    response = {
-        "status": "healthy" if overall_healthy else "degraded",
-        "timestamp": datetime.now().isoformat(),
-    }
-
-    # If DB or agents are unhealthy, set the appropriate status code
-    status_code = status.HTTP_200_OK if overall_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-
-    return JSONResponse(content=response, status_code=status_code)
+    return HealthResponse(
+        status="healthy" if overall_healthy else "degraded",
+        timestamp=datetime.now(UTC),
+    )
 
 
 @router.get(
     "/ready",
+    operation_id="getReadiness",
+    response_model=ReadinessResponse,
+    responses={503: {"model": ReadinessResponse, "description": "System is degraded"}},
     summary="Get detailed readiness status",
-    description="Detailed readiness check with component-level health information. Requires authentication. Use this endpoint for monitoring dashboards and operational visibility."
+    description="Detailed readiness check with component-level health information. Requires authentication. Use this endpoint for monitoring dashboards and operational visibility.",
 )
 @limiter.limit(settings.rate_limits.endpoints.READY[0])
-async def readiness_check(user: CurrentUser, request: Request) -> Dict[str, Any]:
-    """Detailed readiness check endpoint for authenticated operations teams.
-    
-    This endpoint provides comprehensive health information including:
-    - Application version and environment
-    - Database connectivity and connection pool stats
-    - Agent readiness and graph compilation status
-    - Component-level health details
-    
-    Requires authentication via JWT token.
-    
-    Args:
-        user: Authenticated user (from CurrentUser dependency)
-        request: FastAPI request object
-        
-    Returns:
-        Dict[str, Any]: Detailed readiness status information
-        
-    Status Codes:
-        200: System is healthy and ready
-        503: System is degraded or unavailable
-    """
+async def readiness_check(
+    user: CurrentUser, request: Request, response: Response
+) -> ReadinessResponse:
+    """Detailed readiness check for authenticated operations teams."""
     logger.info("readiness_check_called", user_id=user.id)
 
-    # Get database engine from app state
     engine: AsyncEngine = request.app.state.engine
-    
-    # Check database connectivity
     db_healthy = await db_health_check(engine)
-    
-    # Get connection pool stats
-    pool_stats = {
-        "size": engine.pool.size(),
-        "checked_in": engine.pool.checkedin(),
-        "checked_out": engine.pool.checkedout(),
-        "overflow": engine.pool.overflow(),
-        "total": engine.pool.size() + engine.pool.overflow(),
-    }
-    
-    # Check agent readiness
-    agents_status = {}
+
+    pool_stats = ConnectionPoolStats(
+        size=engine.pool.size(),
+        checked_in=engine.pool.checkedin(),
+        checked_out=engine.pool.checkedout(),
+        overflow=engine.pool.overflow(),
+        total=engine.pool.size() + engine.pool.overflow(),
+    )
+
+    # `agents` keeps one shape regardless of outcome: a mapping of agent name to
+    # status. The "never initialised" case is carried by agents_error, not by
+    # substituting a different value type.
+    agents: dict[str, AgentStatus] = {}
+    agents_error: str | None = None
     agents_healthy = False
-    
+
     if hasattr(request.app.state, "agents"):
         agents_healthy = True
         for agent_name, agent_instance in request.app.state.agents.items():
             is_ready = agent_instance.is_ready()
-            agents_status[agent_name] = {
-                "ready": is_ready,
-                "graph_compiled": is_ready,
-            }
+            agents[agent_name] = AgentStatus(ready=is_ready, graph_compiled=is_ready)
             if not is_ready:
                 agents_healthy = False
     else:
-        agents_healthy = False
-        agents_status["error"] = "Agents not initialized"
+        agents_error = "Agents not initialized"
 
-    # Overall health is healthy only if both DB and agents are healthy
     overall_healthy = db_healthy and agents_healthy
+    if not overall_healthy:
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
-    response = {
-        "status": "healthy" if overall_healthy else "degraded",
-        "version": settings.VERSION,
-        "environment": settings.ENVIRONMENT.value,
-        "components": {
-            "api": "healthy",
-            "database": {
-                "status": "healthy" if db_healthy else "unhealthy",
-                "connection_pool": pool_stats,
-            },
-            "agents": agents_status if agents_healthy else {"status": "unhealthy", "details": agents_status},
-        },
-        "timestamp": datetime.now().isoformat(),
-    }
-
-    # If DB or agents are unhealthy, set the appropriate status code
-    status_code = status.HTTP_200_OK if overall_healthy else status.HTTP_503_SERVICE_UNAVAILABLE
-
-    return JSONResponse(content=response, status_code=status_code)
+    return ReadinessResponse(
+        status="healthy" if overall_healthy else "degraded",
+        version=VERSION,
+        environment=settings.ENVIRONMENT,
+        components=ComponentsStatus(
+            api="healthy",
+            database=DatabaseStatus(
+                status="healthy" if db_healthy else "unhealthy",
+                connection_pool=pool_stats,
+            ),
+            agents=agents,
+            agents_healthy=agents_healthy,
+            agents_error=agents_error,
+        ),
+        timestamp=datetime.now(UTC),
+    )

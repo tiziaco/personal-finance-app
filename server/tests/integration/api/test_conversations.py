@@ -138,7 +138,7 @@ class TestDeleteConversation:
         response = await authenticated_client_with_agent.delete(
             f"/api/v1/conversation/conversation/{user_conversation.id}"
         )
-        assert response.status_code == 200
+        assert response.status_code == 204
 
     async def test_delete_nonexistent_returns_404(
         self, authenticated_client_with_agent

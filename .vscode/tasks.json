@@ -221,6 +221,33 @@
       "problemMatcher": []
     },
 
+    // ── Contract ──────────────────────────────────────────────────────────────
+    //
+    // Run "Contract: Generate" after changing a route or a response schema, and
+    // commit its output alongside that change. Deliberately not part of the Dev
+    // chain: exporting the spec imports app.main, so a half-finished refactor
+    // would stop the dev servers from starting, and drift is the normal state
+    // while a route is being written. `make docker-build*` gates on the check
+    // instead, where an inconsistent artifact would actually ship.
+    {
+      "label": "Contract: Generate",
+      "detail": "Re-export openapi.json and regenerate the typed API client",
+      "type": "shell",
+      "command": "make gen-contract",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "Contract: Check",
+      "detail": "Fail if openapi.json or the generated client is stale (the check CI runs)",
+      "type": "shell",
+      "command": "make check-contract",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
+      "problemMatcher": []
+    },
+
     // ── Logs ──────────────────────────────────────────────────────────────────
     {
       "label": "Logs: All Services",

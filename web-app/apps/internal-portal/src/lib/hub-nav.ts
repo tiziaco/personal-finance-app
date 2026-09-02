@@ -1,7 +1,7 @@
 "use client"
 
 import { HomeIcon, Building2, NotepadText } from "lucide-react"
-import type { NavItem } from "@app/types"
+import type { NavItem } from "@app/ui"
 
 /**
  * Default hub navigation (used by HubSidebar when no items prop is provided)

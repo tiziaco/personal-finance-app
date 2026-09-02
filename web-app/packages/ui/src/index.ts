@@ -1,6 +1,9 @@
 // Utilities
 export { cn } from "./lib/utils"
 
+// Types
+export type { NavItem } from "./types/nav"
+
 // Hooks
 export { useIsMobile } from "./hooks/use-mobile"
 

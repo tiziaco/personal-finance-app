@@ -119,6 +119,6 @@ Use `<Protect role="org:supplier">` from `@clerk/nextjs` for declarative role ga
 
 - **`@app/ui`** — shared shadcn/ui components
 - **`@app/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
-- **`@app/types`** — shared TypeScript types
+- **`@app/api-client`** — generated API client (types, endpoints, hooks) from the OpenAPI spec
 
 Always check `packages/ui` before creating new components.

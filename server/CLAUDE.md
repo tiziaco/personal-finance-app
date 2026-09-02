@@ -20,12 +20,24 @@ Env file is selected by `APP_ENV`. Copy `.env.development.example` → `.env.dev
 ### Server-only Docker
 
 ```bash
-make docker-run                       # dev stack: app + db (APP_ENV=development)
-make docker-run-env ENV=staging       # specific environment
-make docker-run-db ENV=development    # database only
-make docker-logs ENV=development      # follow app + db logs
-make docker-stop ENV=development      # stop containers
+make docker-run                            # dev stack: server + db (APP_ENV=development)
+make docker-run-db ENV=development         # database only
+make docker-logs ENV=development           # follow server + db logs
+make docker-stop ENV=development           # stop the stack, database included
+make docker-logs-server ENV=development    # follow the server container only
+make docker-stop-server ENV=development    # stop the server, leave the database up
 ```
+
+These all drive `../docker-compose.dev.yml`, which bind-mounts `./server/app`
+over the image's code. That is why `docker-run` takes no `ENV`: a
+`ENV=production` variant would run production secrets against your working
+tree. Production runs from `docker-compose.prod.yml`, via the root `Makefile`.
+
+`docker-logs-server` and `docker-stop-server` delegate to
+`scripts/logs-docker.sh` and `scripts/stop-docker.sh`, which address the
+Compose *service* rather than a container name — `docker-compose.dev.yml` pins
+`container_name: server` while the prod file does not, so the name is Compose's
+to resolve.
 
 ### Database Migrations (Alembic)
 
@@ -165,6 +177,54 @@ Base exceptions live in `app/exceptions/base.py`:
 | `DatabaseError` | 500/503 |
 
 Each service package defines its own exceptions extending these. New service exceptions go in `app/services/<name>/exceptions.py`; integration exceptions go in `app/integrations/<provider>/exceptions.py`.
+
+---
+
+## API Contract
+
+`server/openapi.json` is a committed artifact. It generates the frontend's
+TanStack Query hooks, TypeScript types and Zod validators, so the schema is a
+published interface, not a by-product.
+
+The schema's `info` block and its `/api/v1` prefix come from
+`[tool.app.metadata]` and `[project]` in `pyproject.toml`, loaded by
+`app/core/metadata.py`. Never move them into `Settings`: an env-derived title or
+prefix makes the exported artifact machine-dependent, which
+`tests/unit/scripts/test_export_openapi.py` asserts against.
+
+Every route must therefore declare:
+
+- **An explicit tag.** Tags become directory names and module boundaries in the
+  generated client. Untagged routes collapse into a `default` bucket.
+- **An explicit camelCase `operation_id`** — `getMe`, `listConversations`.
+  FastAPI's auto-generated ids (`health_check_health_get`) become hook names
+  like `useHealthCheckHealthGet`.
+- **Either a `response_model` or `status_code=204`.** A route with neither
+  generates `unknown` on the client. `Dict[str, Any]` is not a response model:
+  it emits `additionalProperties: true` and generates
+  `{[key: string]: unknown}`.
+
+Two further rules:
+
+- **Server-to-server routes declare `include_in_schema=False`.** The Clerk
+  webhook receiver already does; the frontend must never get a hook for it.
+- **Streaming routes declare `tags=["streaming"]`** and are exempt from the
+  response-body rule. They have no JSON body, and orval excludes the tag. They
+  remain visible in Swagger.
+
+**`operation_id` is a public frontend symbol.** Renaming a handler renames a
+hook. Treat it as a breaking change.
+
+**Regenerate in the same commit.** After changing any route, run
+`make gen-contract` from the repo root — it re-exports the spec and regenerates
+the client — and commit both outputs alongside the route change.
+`make check-contract` does the same and then fails on drift; that is what CI
+runs, and what `make docker-build*` gates on. With `core.hooksPath` configured
+(root `CLAUDE.md`), the pre-commit hook regenerates and blocks any commit that
+touches `app/` without them.
+
+`tests/unit/api/test_openapi_contract.py` enforces the three per-route rules
+mechanically. It needs no database.
 
 ---
 

@@ -72,7 +72,9 @@ echo -e "\n${GREEN}======= ENVIRONMENT SUMMARY =======${NC}"
 echo -e "${GREEN}Environment:     ${YELLOW}$ENV${NC}"
 echo -e "${GREEN}Project root:    ${YELLOW}$PROJECT_ROOT${NC}"
 echo -e "${GREEN}Project name:    ${YELLOW}${PROJECT_NAME:-Not set}${NC}"
-echo -e "${GREEN}API version:     ${YELLOW}${VERSION:-Not set}${NC}"
+# The API's version is deliberately absent: it comes from [project] in
+# pyproject.toml (via app/core/metadata.py), not from the environment, so this
+# summary of environment variables has nothing to report for it.
 
 echo -e "${GREEN}Database host:   ${YELLOW}${POSTGRES_HOST:-${DB_HOST:-Not set}}${NC}"
 echo -e "${GREEN}Database port:   ${YELLOW}${POSTGRES_PORT:-${DB_PORT:-Not set}}${NC}"

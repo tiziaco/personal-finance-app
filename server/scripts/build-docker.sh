@@ -38,8 +38,7 @@ set -a
 source "$ENV_FILE"
 set +a
 
-# Normalize project name for Docker (lowercase, replace spaces and special chars with hyphens)
-DOCKER_IMAGE_NAME=$(echo "$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
+DOCKER_IMAGE_NAME=$("$(dirname "${BASH_SOURCE[0]}")/docker-image-name.sh" "$ENV")
 
 # Print confirmation with masked values
 echo "Environment: $ENV"

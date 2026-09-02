@@ -7,6 +7,18 @@ DOCKER_COMPOSE ?= docker-compose
 # Compose *default* filename, so it will not be found by implicit lookup.
 COMPOSE_FILE ?= ../docker-compose.dev.yml
 
+# That compose file is the whole stack, and Compose interpolates every service
+# in it before it selects the one or two asked for below. grafana and the two
+# portals require variables that live in the root .env and the portal's
+# .env.local, and the --env-file flag on the targets below points at
+# server/.env.<env> *instead of* the root .env, not in addition to it. Load them
+# here, as the root Makefile does: the shell environment outranks --env-file, so
+# exported values win. Without this, `docker-run` dies on
+# "GRAFANA_ADMIN_PASSWORD is required" without ever reaching db or server.
+-include ../.env
+-include ../web-app/apps/internal-portal/.env.local
+.EXPORT_ALL_VARIABLES:
+
 # Host port for the native (non-Docker) server. 8000 collides with other
 # projects on the same machine; keep this in step with API_HOST_PORT in the
 # root Makefile, which publishes the same port from the container.
@@ -81,20 +93,28 @@ lint:
 format:
 	ruff format .
 
+# The OpenAPI spec is a committed artifact: it generates the frontend client.
+# Needs no database, no network and no secrets — app.openapi() builds the schema
+# from registered routes.
+export-openapi:
+	@echo "Exporting OpenAPI spec to server/openapi.json"
+	@APP_ENV=$${APP_ENV:-development} PYTHONPATH=. uv run python scripts/export_openapi.py
+
 clean:
 	rm -rf .venv
 	rm -rf __pycache__
 	rm -rf .pytest_cache
 
+# Fast cached build of the development image. docker-build-env does the same
+# through scripts/build-docker.sh, which forces --no-cache and passes the secret
+# build args; use that one for staging and production. Both take the tag from
+# scripts/docker-image-name.sh, so they cannot disagree on <name>:<env>.
+#
+# The docker-run/logs/stop targets below do not use this image name at all —
+# Compose builds and names their containers itself.
 docker-build:
-	@if [ -f .env.development ]; then \
-		source .env.development && \
-		DOCKER_IMAGE=$$(echo "$$PROJECT_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$$//') && \
-		docker build -t "$$DOCKER_IMAGE" .; \
-	else \
-		echo ".env.development not found"; \
-		exit 1; \
-	fi
+	@DOCKER_IMAGE=$$(./scripts/docker-image-name.sh development) && \
+		docker build -t "$$DOCKER_IMAGE:development" .
 
 docker-build-env:
 	@if [ -z "$(ENV)" ]; then \
@@ -107,30 +127,18 @@ docker-build-env:
 	fi
 	@./scripts/build-docker.sh $(ENV)
 
+# Development only, and deliberately not parameterised by ENV. COMPOSE_FILE is
+# the dev compose file, which bind-mounts ./server/app over the image's code, so
+# an `ENV=production` variant would pair production secrets with your working
+# tree — dev topology, prod config. Production runs from
+# docker-compose.prod.yml, which these targets never touch.
 docker-run:
 	@ENV_FILE=.env.development; \
 	if [ ! -f $$ENV_FILE ]; then \
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=development $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --build db app
-
-docker-run-env:
-	@if [ -z "$(ENV)" ]; then \
-		echo "ENV is not set. Usage: make docker-run-env ENV=development|staging|production"; \
-		exit 1; \
-	fi
-	@if [ "$(ENV)" != "development" ] && [ "$(ENV)" != "staging" ] && [ "$(ENV)" != "production" ]; then \
-		echo "ENV is not valid. Must be one of: development, staging, production"; \
-		exit 1; \
-	fi
-	@ENV_FILE=.env.$(ENV); \
-	if [ ! -f $$ENV_FILE ]; then \
-		echo "Environment file $$ENV_FILE not found. Please create it."; \
-		exit 1; \
-	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --build db app
-	# @./scripts/ensure-db-user.sh $(ENV)
+	APP_ENV=development $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --build db server
 
 docker-logs:
 	@if [ -z "$(ENV)" ]; then \
@@ -146,7 +154,7 @@ docker-logs:
 		echo "Environment file $$ENV_FILE not found. Please create it."; \
 		exit 1; \
 	fi; \
-	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE logs -f app db
+	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE logs -f server db
 
 docker-stop:
 	@if [ -z "$(ENV)" ]; then \
@@ -163,6 +171,24 @@ docker-stop:
 		exit 1; \
 	fi; \
 	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE down
+
+# Server-scoped counterparts to docker-logs and docker-stop above, which act on
+# the whole stack (docker-stop takes the database down with it). They delegate,
+# so each behaviour has one implementation: the target checks that ENV was
+# passed, the script validates its value and talks to Compose.
+docker-logs-server:
+	@if [ -z "$(ENV)" ]; then \
+		echo "ENV is not set. Usage: make docker-logs-server ENV=development|staging|production"; \
+		exit 1; \
+	fi
+	@./scripts/logs-docker.sh $(ENV)
+
+docker-stop-server:
+	@if [ -z "$(ENV)" ]; then \
+		echo "ENV is not set. Usage: make docker-stop-server ENV=development|staging|production"; \
+		exit 1; \
+	fi
+	@./scripts/stop-docker.sh $(ENV)
 
 docker-run-db:
 	@if [ -z "$(ENV)" ]; then \
@@ -277,12 +303,15 @@ help:
 	@echo "  clean: Clean up"
 	@echo "  docker-build: Build default Docker image"
 	@echo "  docker-build-env ENV=<environment>: Build Docker image for specific environment"
-	@echo "  docker-run: Run default Docker container"
-	@echo "  docker-run-env ENV=<environment>: Run Docker container for specific environment"
-	@echo "  docker-logs ENV=<environment>: View logs from running container"
-	@echo "  docker-stop ENV=<environment>: Stop and remove container"
+	@echo "  docker-run: Start the development stack (server + db)"
+	@echo "  docker-run-db ENV=<environment>: Start the database only"
+	@echo "  docker-logs ENV=<environment>: Follow logs from the server and db containers"
+	@echo "  docker-stop ENV=<environment>: Stop the whole stack, database included"
+	@echo "  docker-logs-server ENV=<environment>: Follow logs from the server container only"
+	@echo "  docker-stop-server ENV=<environment>: Stop and remove the server container only"
 	@echo "  migrate ENV=<environment>: Run database migrations"
 	@echo "  migrate-create ENV=<environment> MSG='message': Create new migration"
 	@echo "  migrate-downgrade ENV=<environment> [REV=-1]: Downgrade migrations"
 	@echo "  migrate-history ENV=<environment>: Show migration history"
 	@echo "  migrate-current ENV=<environment>: Show current migration version"
+	@echo "  export-openapi: Export the OpenAPI spec to server/openapi.json"

@@ -75,6 +75,7 @@ async def chat(
 @router.post(
     "/chat/{conversation_id}/stream",
     operation_id="streamChatMessage",
+    tags=["streaming"],
     summary="Stream chat response in real-time",
     description="Send a message and receive the AI agent's response as a server-sent event stream."
 )
@@ -170,6 +171,7 @@ async def get_conversation_messages(
 @router.delete(
     "/chat/{conversation_id}/messages",
     operation_id="clearChatHistory",
+    status_code=204,
     summary="Clear chat history",
     description="Remove all messages from the specified chat conversation."
 )
@@ -185,7 +187,6 @@ async def clear_chat_history(
         request: The FastAPI request object for rate limiting.
 
     Returns:
-        dict: A message indicating the chat history was cleared.
+        None
     """
     await delete_conversation_checkpoints(conversation.id)
-    return {"message": "Chat history cleared successfully"}

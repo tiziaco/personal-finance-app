@@ -124,6 +124,39 @@ cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.l
 
 Required variables include Clerk API keys, database credentials, and OpenAI/Langfuse keys.
 
+### Service Identity (renaming a fork)
+
+The API's title, description and versioned path prefix are **not** environment
+variables. They live in `server/pyproject.toml`, and the version alongside them
+in `[project]`:
+
+```toml
+[project]
+version = "1.0.0"
+
+[tool.app.metadata]
+title = "Rilevio - Server"
+description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
+api_v1_str = "/api/v1"
+```
+
+Change them there, then regenerate the committed contract and commit the result:
+
+```bash
+make gen-contract
+```
+
+They are kept out of `.env` on purpose. All four land in the committed
+`server/openapi.json` — the first three verbatim in its `info` block,
+`api_v1_str` as the prefix on every versioned path — and orval stamps the title
+into the header of every generated API client file. Read from a gitignored
+`.env.<env>` they would differ per machine, so `make check-contract` would fail
+on CI and on every fresh clone the moment anyone set one.
+
+`PROJECT_NAME` in `server/.env.example` is a different thing despite the name:
+it only tags the Docker image built by `make -C server docker-build`, and has no
+effect on the API's title.
+
 ---
 
 ## Running the Application

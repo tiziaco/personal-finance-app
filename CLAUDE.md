@@ -18,8 +18,8 @@ app/
 │   │   ├── internal-portal/   # Dashboard for project managers (port 3000)
 │   │   └── supplier-portal/   # External supplier portal (port 3002)
 │   └── packages/
+│       ├── api-client/        # @app/api-client — generated API client from the OpenAPI spec
 │       ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
-│       ├── types/             # @app/types — shared TypeScript types
 │       └── ui/                # @app/ui — shared component library (shadcn/ui)
 ├── infra/                # Infrastructure config
 │   ├── prometheus/            # Prometheus scrape config
@@ -129,6 +129,55 @@ cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.l
 Required secrets: Clerk API keys, database credentials, OpenAI key, Langfuse key.
 
 The `server/.env.<ENV>` file is selected by the `APP_ENV` variable (default: `development`).
+
+Install the repo's git hooks once per clone (see **API Contract** below):
+
+```bash
+git config core.hooksPath .githooks
+```
+
+---
+
+## API Contract
+
+`server/openapi.json` and `web-app/packages/api-client/src/generated/` are
+generated from `server/app/` and **committed**. They are a published interface,
+not a build artifact: the generated tree is what both portals compile against.
+
+```bash
+make gen-contract     # re-export the spec and regenerate the client
+make check-contract   # regenerate, then fail if anything moved (what CI runs)
+```
+
+### Renaming the service (forks)
+
+The API's title, description and `/api/v1` prefix live in `[tool.app.metadata]`
+in `server/pyproject.toml`, its version in that file's `[project]`. Change them
+there, run `make gen-contract`, and commit the regenerated artifacts.
+
+They are **not** env variables on purpose: they land in the committed
+`openapi.json` and in the header of every generated client file, so reading them
+from a gitignored `.env.<env>` would make the artifact differ per machine and
+fail `check-contract` for everyone else the moment anyone set one.
+`server/.env.example`'s `PROJECT_NAME` is unrelated — it only names Docker
+images and containers.
+
+Four checkpoints, each catching what the last one lets through:
+
+| When | What | On drift |
+|---|---|---|
+| You change a route | `make gen-contract`, or the **Contract: Generate** VS Code task | regenerates |
+| You commit | `.githooks/pre-commit`, if the commit touches `server/app/` | regenerates, then blocks |
+| You build an image | `make docker-build` / `docker-build-web` gate on `check-contract` | fails the build |
+| You push | `.github/workflows/api-contract.yml` | fails CI |
+
+Nothing runs on save, and nothing is wired into the `Dev:` task chain.
+Exporting the spec imports `app.main`, so a half-finished refactor would stop
+the dev servers from starting — and drift is the normal state while a route is
+being written. The gates sit where an inconsistent artifact would actually
+escape: a commit, an image, a push.
+
+`git commit --no-verify` bypasses the hook for a single commit; CI still holds.
 
 ---
 

@@ -20,6 +20,7 @@ from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.tools import tools
 from app.core.config import settings
 from app.core.logging import logger
+from app.core.metadata import PROJECT_NAME
 from app.core.metrics import llm_inference_duration_seconds
 from app.services.llm import llm_service
 from app.utils import (
@@ -147,12 +148,12 @@ class ChatbotAgent(BaseAgent):
 
             self._graph = graph_builder.compile(
                 checkpointer=checkpointer,
-                name=f"{settings.PROJECT_NAME} Agent ({settings.ENVIRONMENT.value})",
+                name=f"{PROJECT_NAME} Agent ({settings.ENVIRONMENT.value})",
             )
 
             logger.info(
                 "graph_created",
-                graph_name=f"{settings.PROJECT_NAME} Agent",
+                graph_name=f"{PROJECT_NAME} Agent",
                 environment=settings.ENVIRONMENT.value,
                 has_checkpointer=checkpointer is not None,
             )

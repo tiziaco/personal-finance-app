@@ -2,7 +2,7 @@ import path from "path"
 import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  transpilePackages: ["@app/ui", "@app/types", "@app/auth"],
+  transpilePackages: ["@app/ui", "@app/auth", "@app/api-client"],
   output: "standalone",
   outputFileTracingRoot: path.join(__dirname, "../../"),
   async headers() {

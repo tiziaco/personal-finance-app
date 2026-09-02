@@ -47,7 +47,7 @@ Organization coupling is narrow — three places on the server, two on the front
 | 2 | Traefik in dev compose + Dokploy labels | Not started | — | — |
 | 3 | Auth middleware hardening | ✅ F3, F5 shipped; F1, F2 descoped; F4 superseded by WS7 | — | Q1 (below, resolved) |
 | 4 | Clerk webhooks + ngrok | ✅ Complete | `plans/2026-08-26-ws4-clerk-webhooks.md` | — |
-| 5 | Orval codegen | **Parked** | — | External config not yet available |
+| 5 | Orval codegen | ✅ Complete | `plans/2026-09-01-ws5-api-client-codegen.md` | — |
 | 6 | Replace `starlette-prometheus` with in-house instrumentation | **Specified, not started** | — | Sequenced after WS1–WS5; **must precede** `uv lock --upgrade` |
 | 7 | SSE stream disconnect handling | Not started | — | — |
 | — | Fork to B2C | Not started | — | WS1–4 |
@@ -234,11 +234,14 @@ unguarded by a profile, so `make docker-run` requires ngrok credentials.
 
 ---
 
-## WS5 — Orval codegen (parked)
+## WS5 — Orval codegen
+
+**Superseded by `specs/2026-09-01-ws5-api-client-codegen-design.md`.** Unparked on
+2026-09-01: the orval configuration from the other project arrived as
+`docs/api-client-codegen-setup.md`, was reviewed against this repo, and the WS5 design
+now records where it holds and where it does not.
 
 **Problem:** API access is hand-written — `lib/api/health.ts` plus `hooks/use-server-status.ts` is currently the entire surface.
-
-**Parked pending** the orval configuration from the user's other project. Matching that existing setup is worth more than inventing a second convention that would later have to be reconciled.
 
 Migration cost is at its minimum right now (one hook), and no feature work is planned in this repo before the fork — so ordering it last costs nothing.
 

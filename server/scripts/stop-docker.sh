@@ -1,7 +1,10 @@
 #!/bin/bash
 set -e
 
-# Script to stop and remove Docker containers
+# Script to stop and remove the server container.
+#
+# Scoped to the server service on purpose: `make docker-stop ENV=<env>` runs a
+# full `compose down`, which also takes the database with it.
 
 if [ $# -ne 1 ]; then
     echo "Usage: $0 <environment>"
@@ -17,31 +20,13 @@ if [[ ! "$ENV" =~ ^(development|staging|production)$ ]]; then
     exit 1
 fi
 
-# Load PROJECT_NAME from env file
-ENV_FILE=".env.$ENV"
-if [ -f "$ENV_FILE" ]; then
-    set -a
-    source "$ENV_FILE"
-    set +a
-fi
+# shellcheck source=compose-env.sh
+source "$(dirname "${BASH_SOURCE[0]}")/compose-env.sh"
 
-# Normalize project name for Docker
-DOCKER_IMAGE_NAME=$(echo "${PROJECT_NAME:-fastapi-app}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g' | sed 's/^-//' | sed 's/-$//')
-CONTAINER_NAME="$DOCKER_IMAGE_NAME-$ENV"
+echo "Stopping $SERVICE for the $ENV environment"
 
-echo "Stopping container for $ENV environment"
+# Both are no-ops when nothing is running, so there is nothing to probe for.
+compose stop "$SERVICE"
+compose rm -f "$SERVICE"
 
-# Check if container exists
-if [ ! "$(docker ps -a -q -f name=$CONTAINER_NAME)" ]; then
-    echo "Container $CONTAINER_NAME does not exist. Nothing to do."
-    exit 0
-fi
-
-# Stop and remove container
-echo "Stopping container $CONTAINER_NAME..."
-docker stop $CONTAINER_NAME >/dev/null 2>&1 || echo "Container was not running"
-
-echo "Removing container $CONTAINER_NAME..."
-docker rm $CONTAINER_NAME >/dev/null 2>&1
-
-echo "Container $CONTAINER_NAME stopped and removed successfully"
+echo "$SERVICE stopped and removed successfully"

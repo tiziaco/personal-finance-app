@@ -10,8 +10,8 @@ web-app/
 │   ├── internal-portal/   # Dashboard for project managers (port 3000)
 │   └── supplier-portal/   # Supplier-facing portal (port 3002)
 └── packages/
+    ├── api-client/        # @app/api-client — generated API client from the OpenAPI spec
     ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
-    ├── types/             # @app/types — shared TypeScript types
     └── ui/                # @app/ui — shared UI utilities (cn())
 ```
 
