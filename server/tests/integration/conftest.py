@@ -67,7 +67,7 @@ def mock_agent():
         Message(role="user", content="Hello"),
         Message(role="assistant", content="Hi there!"),
     ])
-    agent.llm_service.get_llm.return_value.get_name.return_value = "gpt-5-mini"
+    agent.llm_service.current_model_name.return_value = "gpt-5-mini"
     agent.is_ready.return_value = True
     return agent
 

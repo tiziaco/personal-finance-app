@@ -15,7 +15,6 @@ from app.api.middlewares import (
     AccessLogMiddleware,
     AuthMiddleware,
     LoggingContextMiddleware,
-    MetricsMiddleware,
     SecurityHeadersMiddleware,
     setup_cors,
     setup_metrics,
@@ -110,11 +109,8 @@ app = FastAPI(
     },
 )
 
-# Set up Prometheus metrics
+# Set up Prometheus metrics (instruments the app and exposes /metrics)
 setup_metrics(app)
-
-# Add custom metrics middleware
-app.add_middleware(MetricsMiddleware)
 
 # Add logging context middleware (binds clerk_id to logging context)
 app.add_middleware(LoggingContextMiddleware)

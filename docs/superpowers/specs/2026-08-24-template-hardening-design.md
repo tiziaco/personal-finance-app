@@ -48,7 +48,7 @@ Organization coupling is narrow — three places on the server, two on the front
 | 3 | Auth middleware hardening | ✅ F3, F5 shipped; F1, F2 descoped; F4 superseded by WS7 | — | Q1 (below, resolved) |
 | 4 | Clerk webhooks + ngrok | ✅ Complete | `plans/2026-08-26-ws4-clerk-webhooks.md` | — |
 | 5 | Orval codegen | ✅ Complete | `plans/2026-09-01-ws5-api-client-codegen.md` | — |
-| 6 | Replace `starlette-prometheus` with in-house instrumentation | **Specified, not started** | — | Sequenced after WS1–WS5; **must precede** `uv lock --upgrade` |
+| 6 | Replace `starlette-prometheus` with in-house instrumentation | ✅ Complete, as **Option B** not A — see [As built](#as-built-2026-09-03) | — | — |
 | 7 | SSE stream disconnect handling | Not started | — | — |
 | — | Fork to B2C | Not started | — | WS1–4 |
 
@@ -249,7 +249,7 @@ Migration cost is at its minimum right now (one hook), and no feature work is pl
 
 ## WS6 — Replace `starlette-prometheus` with in-house instrumentation
 
-**Status:** Specified, not started. **Sequenced after WS1–WS5.**
+**Status:** ✅ Complete on `refactor/ws6-in-house-metrics` — but **built as Option B, not the Option A specified below**. The decision record in this section is what was planned; [As built](#as-built-2026-09-03) is what shipped and why. Read both before forking.
 
 ### Part 1 — root cause, already fixed in WS1 (Task 3c, commit `75af7a9`)
 
@@ -330,6 +330,64 @@ This matters disproportionately for the B2C project, whose per-user and per-post
 - `uv lock --check` exits 0.
 - Only then: `uv lock --upgrade` and the `uv add --bounds` pass.
 
+### As built (2026-09-03)
+
+**Option B was chosen during implementation, reversing the decision above.**
+`628c7ba` deleted `app/api/middlewares/metrics.py` and adopted
+`prometheus-fastapi-instrumentator`. The rejection of B rested on "a third-party
+package tracking FastAPI internals", which conflated two different couplings:
+`starlette-prometheus` broke because `get_path_template()` walks `app.routes`
+and reads `route.path`, reimplementing route resolution. The instrumentator
+reads `scope["route"]`, which is ASGI-level state FastAPI populates for anyone —
+the same lookup Option A's own scope item 2 prescribed. Owning ~40 lines of
+middleware to reach the identical scope key was cost without insulation.
+
+`app/api/middlewares/prometheus.py` carries the non-default settings that keep
+the dashboards' label contract, each with the reason it is not the library
+default; `tests/unit/middleware/test_metrics_setup.py` pins that contract so a
+dependency bump cannot silently blank a panel — which is the protection Option A
+was actually after.
+
+**Scope item 2** landed as specified in effect but not in name: the label is
+`handler`, the library's name, not `endpoint`. All dashboard queries were
+migrated. The acceptance criterion below still says `endpoint`; read it as
+satisfied.
+
+**Scope item 3 is half delivered, half descoped.**
+
+- The exceptions counter shipped in `510d425` as
+  `app_exceptions_total{error_code, exception_type}`, incremented in
+  `service_exception_handler` and `global_exception_handler`, with a
+  "Failures by Cause" panel on `API Overview`. It is labelled by the existing
+  `ServiceError.error_code` taxonomy rather than by exception type alone — the
+  five LLM failure modes all carry status 503, so the code is what tells them
+  apart.
+- **The in-flight gauge was dropped** — user decision, 2026-09-03, on value.
+  Worth recording for anyone who tries to add it later:
+  `should_instrument_requests_inprogress=True` is not a one-line change.
+  In `prometheus_fastapi_instrumentator` 8.x, `middleware.py` builds that gauge
+  without passing `registry=`, unlike every other metric it creates, so it
+  always lands on the global default `REGISTRY`. `setup_metrics(app, registry=…)`
+  exists precisely so each test gets clean series, and the metrics tests build a
+  fresh app per test — the second one raises
+  `DuplicateTimeseries: {'http_requests_inprogress'}`. Reproduced. An in-house
+  gauge plus a small ASGI middleware is the way in, not the flag.
+
+**Acceptance, verified 2026-09-03 against the running dev stack:** `/metrics`
+200 with all families present; zero `starlette_*` series; labels are route
+templates; the `fastapi` Prometheus job `up`; `uv lock --check` clean;
+`grep -r starlette_prometheus server/` finds only a docstring and a test name.
+The ordering constraint held — `628c7ba` precedes the bulk upgrade in `812fdf2`.
+
+One criterion does **not** pass: *"All three Grafana dashboards render with
+data."* `Infrastructure` returns zero series on every panel. Not caused by this
+workstream — cAdvisor exposes only the root cgroup (`id="/"`) with no `name`,
+`image` or `container_label_*` labels at all, so the panels' grouping by
+`container_label_com_docker_compose_service` matches nothing. Cause is
+`--docker_only=true` against Docker Desktop on Darwin, where the mounted `/sys`
+and `/var/lib/docker` belong to the LinuxKit VM rather than to the daemon's
+container cgroups. Expected to work on a Linux host; unverified there.
+
 ### Also outstanding
 
 - `/api/v1/conversation/` returns 404 — a clean unmatched-route 404, not an exception. Route-shape question, unrelated to this defect.
@@ -382,3 +440,5 @@ Decides whether F1's v1 branch is a live fix or defensive insurance. Does not ch
 | WS3/F1, F2 descoped | No v1 Clerk deployment planned (Q1 resolved v2-only); no permission scheme exists yet to hang `require_permission()` off of. |
 | WS3/F4 superseded by WS7 | Converting `AuthMiddleware` alone was a partial fix (3 other `BaseHTTPMiddleware` classes remain in the stack) and didn't address the actual gap — `chatbot.py`'s stream generator never checks for client disconnect. |
 | WS7: `sse-starlette` over ASGI middleware rewrite | User decision: keep `BaseHTTPMiddleware`. Fixes the real disconnect gap directly at the response layer instead of rewriting four middleware classes for a smaller, more diffuse benefit. |
+| WS6 built as Option B, reversing the spec | The rejection of B assumed the same coupling that broke `starlette-prometheus`. It walked `app.routes` reimplementing route resolution; the instrumentator reads `scope["route"]`, the same ASGI key Option A's own scope prescribed. A pinned label contract in tests gives the insulation that owning the middleware was meant to buy. |
+| WS6 in-flight gauge descoped | User decision, 2026-09-03: low value. Also not free — the library registers that one gauge on the default registry regardless of `registry=`, breaking test isolation; it would need an in-house gauge and middleware. |

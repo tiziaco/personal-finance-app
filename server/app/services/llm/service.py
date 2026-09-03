@@ -38,64 +38,61 @@ from app.services.llm.exceptions import (
 
 
 class LLMRegistry:
-    """Registry of available LLM models with pre-initialized instances.
+    """Registry of available LLM models, built on first use and cached.
 
     This class maintains a list of LLM configurations and provides
     methods to retrieve them by name with optional argument overrides.
     """
 
-    # Class-level variable containing all available LLM models
+    # Model configuration only — no live clients. Constructing a ChatOpenAI
+    # builds an openai.OpenAI (plus an AsyncOpenAI and two httpx clients), and
+    # since openai 2.34 that raises on an empty api_key rather than deferring
+    # the failure to the first call. Doing it in this class body would make
+    # importing this module — and so app.main, and so `make check-contract` —
+    # require a real secret, which CI deliberately runs without.
     LLMS: List[Dict[str, Any]] = [
-        {
-            "name": "gpt-5-mini",
-            "llm": ChatOpenAI(
-                model="gpt-5-mini",
-                api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "low"},
-            ),
-        },
-        {
-            "name": "gpt-5",
-            "llm": ChatOpenAI(
-                model="gpt-5",
-                api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "medium"},
-            ),
-        },
-        {
-            "name": "gpt-5-nano",
-            "llm": ChatOpenAI(
-                model="gpt-5-nano",
-                api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                reasoning={"effort": "minimal"},
-            ),
-        },
+        {"name": "gpt-5-mini", "params": {"reasoning": {"effort": "low"}}},
+        {"name": "gpt-5", "params": {"reasoning": {"effort": "medium"}}},
+        {"name": "gpt-5-nano", "params": {"reasoning": {"effort": "minimal"}}},
         {
             "name": "gpt-4o",
-            "llm": ChatOpenAI(
-                model="gpt-4o",
-                temperature=settings.llm.DEFAULT_LLM_TEMPERATURE,
-                api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                top_p=0.95 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
-                presence_penalty=0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
-                frequency_penalty=0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
-            ),
+            "params": {
+                "temperature": settings.llm.DEFAULT_LLM_TEMPERATURE,
+                "top_p": 0.95 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
+                "presence_penalty": 0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
+                "frequency_penalty": 0.1 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.0,
+            },
         },
         {
             "name": "gpt-4o-mini",
-            "llm": ChatOpenAI(
-                model="gpt-4o-mini",
-                temperature=settings.llm.DEFAULT_LLM_TEMPERATURE,
-                api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
-                max_tokens=settings.llm.MAX_TOKENS,
-                top_p=0.9 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
-            ),
+            "params": {
+                "temperature": settings.llm.DEFAULT_LLM_TEMPERATURE,
+                "top_p": 0.9 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
+            },
         },
     ]
+
+    # Clients built by `get()`, keyed by model name. A plain dict is enough:
+    # the process is single-threaded asyncio, and a lost race would cost one
+    # redundant client, not a correctness bug.
+    _instances: Dict[str, BaseChatModel] = {}
+
+    @classmethod
+    def _build(cls, model_name: str, **params) -> BaseChatModel:
+        """Construct a chat model. The one site that reads the credential.
+
+        Args:
+            model_name: Model to construct
+            **params: Model arguments
+
+        Returns:
+            A new BaseChatModel instance
+        """
+        return ChatOpenAI(
+            model=model_name,
+            api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
+            **params,
+        )
 
     @classmethod
     def get(cls, model_name: str, **kwargs) -> BaseChatModel:
@@ -124,14 +121,20 @@ class LLMRegistry:
                 f"model '{model_name}' not found in registry. available models: {', '.join(available_models)}"
             )
 
-        # If user provides kwargs, create a new instance with those args
+        # If user provides kwargs, create a new instance with those args.
+        # As before, overrides replace the entry's configuration rather than
+        # layering onto it — only the model and credential carry over.
         if kwargs:
             logger.debug("creating_llm_with_custom_args", model_name=model_name, custom_args=list(kwargs.keys()))
-            return ChatOpenAI(model=model_name, api_key=settings.llm.OPENAI_API_KEY.get_secret_value(), **kwargs)
+            return cls._build(model_name, **kwargs)
 
-        # Return the default instance
+        # Return the default instance, building it the first time it is asked for
+        if model_name not in cls._instances:
+            cls._instances[model_name] = cls._build(
+                model_name, max_tokens=settings.llm.MAX_TOKENS, **model_entry["params"]
+            )
         logger.debug("using_default_llm_instance", model_name=model_name)
-        return model_entry["llm"]
+        return cls._instances[model_name]
 
     @classmethod
     def get_all_names(cls) -> List[str]:
@@ -165,15 +168,20 @@ class LLMService:
     """
 
     def __init__(self):
-        """Initialize the LLM service."""
+        """Initialize the LLM service.
+
+        No client is constructed here. `llm_service` below is a module-level
+        singleton, so anything built in this method runs at import; `get_llm()`
+        resolves the client on first use instead.
+        """
         self._llm: Optional[BaseChatModel] = None
+        self._tools: Optional[List] = None
         self._current_model_index: int = 0
 
         # Find index of default model in registry
         all_names = LLMRegistry.get_all_names()
         try:
             self._current_model_index = all_names.index(settings.llm.DEFAULT_LLM_MODEL)
-            self._llm = LLMRegistry.get(settings.llm.DEFAULT_LLM_MODEL)
             logger.info(
                 "llm_service_initialized",
                 default_model=settings.llm.DEFAULT_LLM_MODEL,
@@ -184,13 +192,37 @@ class LLMService:
         except (ValueError, Exception) as e:
             # Default model not found, use first model
             self._current_model_index = 0
-            self._llm = LLMRegistry.LLMS[0]["llm"]
             logger.warning(
                 "default_model_not_found_using_first",
                 requested=settings.llm.DEFAULT_LLM_MODEL,
                 using=all_names[0] if all_names else "none",
                 error=str(e),
             )
+
+    def _resolve(self, model_name: str, **kwargs) -> BaseChatModel:
+        """Build the client for `model_name` with the registered tools bound.
+
+        Every assignment to `_llm` goes through here. What is bound is a
+        property of the service, not of the particular client it happens to be
+        holding: `_switch_to_next_model` and `call(model_name=...)` both used to
+        overwrite `_llm` with a bare registry client, and since ChatbotAgent
+        binds once at construction and never re-binds, the first fallback
+        rotation left the agent toolless for the rest of the process. It did not
+        raise — the graph routes on `tool_calls`, which was simply always empty.
+
+        Resolving from the registry rather than from `self._llm` is what makes
+        this correct for a *switch*: binding onto the current client would bind
+        onto the model we are leaving.
+
+        Args:
+            model_name: Model to resolve
+            **kwargs: Optional arguments overriding the registry configuration
+
+        Returns:
+            A client for `model_name`, tool-bound if `bind_tools` was called
+        """
+        llm = LLMRegistry.get(model_name, **kwargs)
+        return llm.bind_tools(self._tools) if self._tools else llm
 
     def _get_next_model_index(self) -> int:
         """Get the next model index in circular fashion.
@@ -220,7 +252,7 @@ class LLMService:
             )
 
             self._current_model_index = next_index
-            self._llm = next_model_entry["llm"]
+            self._llm = self._resolve(next_model_entry["name"])
 
             logger.info("model_switched", new_model=next_model_entry["name"], new_index=next_index)
             return True
@@ -247,11 +279,12 @@ class LLMService:
         Raises:
             OpenAIError: If all retries fail
         """
-        if not self._llm:
+        llm = self.get_llm()
+        if not llm:
             raise RuntimeError("llm not initialized")
 
         try:
-            response = await self._llm.ainvoke(messages)
+            response = await llm.ainvoke(messages)
             logger.debug("llm_call_successful", message_count=len(messages))
             return response
         except (RateLimitError, APITimeoutError, APIError) as e:
@@ -280,30 +313,61 @@ class LLMService:
 
         Args:
             messages: List of messages to send to the LLM
-            model_name: Optional specific model to use. If None, uses current model.
+            model_name: Optional specific model to use for this call only. If
+                None, uses the current model.
             **model_kwargs: Optional kwargs to override default model configuration
 
         Returns:
             BaseMessage response from the LLM
 
         Raises:
+            ValueError: If `model_name` is not in the registry
             LLMFallbackExhaustedError: If all models fail after retries
         """
-        # If user specifies a model, get it from registry
-        if model_name:
-            try:
-                self._llm = LLMRegistry.get(model_name, **model_kwargs)
-                # Update index to match the requested model
-                all_names = LLMRegistry.get_all_names()
-                try:
-                    self._current_model_index = all_names.index(model_name)
-                except ValueError:
-                    pass  # Keep current index if model name not in list
-                logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
-            except ValueError as e:
-                logger.error("requested_model_not_found", model_name=model_name, error=str(e))
-                raise
+        if not model_name:
+            return await self._call_with_fallback(messages)
 
+        # Resolved before anything is saved or assigned, so an unknown model
+        # raises without having touched the service's state.
+        try:
+            pinned = self._resolve(model_name, **model_kwargs)
+        except ValueError as e:
+            logger.error("requested_model_not_found", model_name=model_name, error=str(e))
+            raise
+
+        # Pinned for the duration of this call only. `llm_service` is a
+        # module-level singleton shared by every request, so an override left in
+        # place would retarget everyone else's traffic until the process
+        # restarted. The restore also discards any fallback rotation that
+        # happened inside the pinned call, which is the same rule applied
+        # consistently: the pin was scoped, so its consequences are too.
+        saved_llm, saved_index = self._llm, self._current_model_index
+        self._llm = pinned
+        all_names = LLMRegistry.get_all_names()
+        if model_name in all_names:
+            self._current_model_index = all_names.index(model_name)
+        logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
+
+        try:
+            return await self._call_with_fallback(messages)
+        finally:
+            self._llm, self._current_model_index = saved_llm, saved_index
+
+    async def _call_with_fallback(self, messages: List[BaseMessage]) -> BaseMessage:
+        """Call the current model, rotating through the registry on failure.
+
+        Args:
+            messages: List of messages to send to the LLM
+
+        Returns:
+            BaseMessage response from the LLM
+
+        Raises:
+            LLMRateLimitError: If every model rate-limits
+            LLMTimeoutError: If every model times out
+            LLMAPIError: If every model returns an API error
+            LLMFallbackExhaustedError: If the rotation ends without a response
+        """
         # Track which models we've tried to prevent infinite loops
         total_models = len(LLMRegistry.LLMS)
         models_tried = 0
@@ -410,12 +474,27 @@ class LLMService:
         )
 
     def get_llm(self) -> Optional[BaseChatModel]:
-        """Get the current LLM instance.
+        """Get the current LLM instance, building it on first use.
 
         Returns:
             Current BaseChatModel instance or None if not initialized
         """
+        if self._llm is None:
+            entry = LLMRegistry.get_model_at_index(self._current_model_index)
+            self._llm = self._resolve(entry["name"])
         return self._llm
+
+    def current_model_name(self) -> str:
+        """The model this service is currently pointed at.
+
+        The single answer to "which model are we on". Asking the client instead
+        gives two wrong ones: `get_name()` returns the class name, and
+        `model_name` is absent from a tool-bound client's own attributes.
+
+        Returns:
+            The registry name of the current model
+        """
+        return LLMRegistry.get_model_at_index(self._current_model_index)["name"]
 
     def bind_tools(self, tools: List) -> "LLMService":
         """Bind tools to the current LLM.
@@ -426,9 +505,15 @@ class LLMService:
         Returns:
             Self for method chaining
         """
-        if self._llm:
-            self._llm = self._llm.bind_tools(tools)
-            logger.debug("tools_bound_to_llm", tool_count=len(tools))
+        # Record the tools rather than binding them onto whatever client is
+        # currently held: `_llm` is None until first use, so binding here would
+        # have to resolve one first, and every later model change would have to
+        # remember to re-bind. Dropping the cached client instead lets
+        # `get_llm()` rebuild through `_resolve`, which is the one place that
+        # knows about tools.
+        self._tools = tools
+        self._llm = None
+        logger.debug("tools_bound_to_llm", tool_count=len(tools))
         return self
 
 

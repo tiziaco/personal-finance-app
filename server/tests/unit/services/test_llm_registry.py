@@ -26,6 +26,18 @@ class TestLLMRegistryGet:
         assert "gpt-5-mini" in error_msg
 
 
+    def test_default_instance_is_cached(self):
+        """The same object comes back on every call.
+
+        Clients are built on first use now, so the cache is what preserves the
+        shared-instance behaviour they had when built at import.
+        """
+        assert LLMRegistry.get("gpt-5-mini") is LLMRegistry.get("gpt-5-mini")
+
+    def test_overrides_get_a_separate_instance(self):
+        assert LLMRegistry.get("gpt-5-mini", temperature=0.9) is not LLMRegistry.get("gpt-5-mini")
+
+
 class TestLLMRegistryGetAllNames:
     """Tests for LLMRegistry.get_all_names()."""
 
@@ -50,7 +62,7 @@ class TestLLMRegistryGetModelAtIndex:
     def test_valid_index(self):
         entry = LLMRegistry.get_model_at_index(0)
         assert "name" in entry
-        assert "llm" in entry
+        assert "params" in entry
 
     def test_out_of_bounds_wraps_to_first(self):
         entry = LLMRegistry.get_model_at_index(999)

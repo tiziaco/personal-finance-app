@@ -430,6 +430,25 @@ def setup_logging() -> None:
         "httpcore",
         "httpcore._connection",
         "httpcore._http2",
+        # openai>=3 is backed by httpx2, which logs every request at INFO under
+        # its own logger name. Without these the OpenAI SDK's traffic lands in
+        # the app's structured logs. See langchain_openai._compat.
+        "httpx2",
+        "httpx2._client",
+        "httpcore2",
+        # The ddgs search tool calls into primp, a Rust extension that bridges
+        # the Rust `log` crate into Python logging via pyo3-log. Its HTTP, DNS
+        # and cookie tracing therefore arrives here as ordinary records, named
+        # after the crate that emitted it — a single search emits ~124 of them.
+        # Silencing the crate root is enough; the leaf loggers
+        # (hickory_net.udp.udp_stream, h2.codec.framed_read, ...) are created
+        # at NOTSET and inherit. Note primp itself logs at INFO rather than
+        # DEBUG, so it would otherwise survive production's INFO floor too.
+        "primp",
+        "h2",
+        "hickory_net",
+        "hickory_resolver",
+        "cookie_store",
         "asyncio",
         "urllib3",
         "urllib3.connectionpool",

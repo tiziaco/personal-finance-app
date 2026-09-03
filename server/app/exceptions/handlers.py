@@ -13,6 +13,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.core.logging import logger
+from app.core.metrics import app_exceptions_total
 from app.exceptions.base import ServiceError
 from app.schemas.base import ErrorResponse
 
@@ -43,6 +44,15 @@ async def service_exception_handler(request: Request, exc: ServiceError) -> JSON
         "method": request.method,
         **exc.context,  # Include exception-specific context
     }
+
+    # The status code alone cannot identify the failure: every LLM error in
+    # app/services/llm/exceptions.py carries 503, so five distinct causes —
+    # rate limit, timeout, streaming, fallback exhausted, generic API error —
+    # collapse into one indistinguishable series without this label.
+    app_exceptions_total.labels(
+        error_code=exc.error_code,
+        exception_type=exc.__class__.__name__,
+    ).inc()
 
     # Log with appropriate level based on status code
     if exc.status_code >= 500:
@@ -117,6 +127,15 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
     Returns:
         JSONResponse: A generic 500 error response
     """
+    # `UNHANDLED` rather than an error_code: nothing reaching here declared one.
+    # The response is a generic 500 that deliberately hides the cause from the
+    # client, so `exception_type` is the only record of what actually broke
+    # outside the log line.
+    app_exceptions_total.labels(
+        error_code="UNHANDLED",
+        exception_type=exc.__class__.__name__,
+    ).inc()
+
     logger.exception(
         "unhandled_exception",
         path=request.url.path,

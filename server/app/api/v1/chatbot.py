@@ -117,7 +117,7 @@ async def chat_stream(
             full_response = ""
             # Wrap single message in list for agent processing
             user_message = Message(role="user", content=chat_request.message)
-            with llm_stream_duration_seconds.labels(model=agent.llm_service.get_llm().get_name()).time():
+            with llm_stream_duration_seconds.labels(model=agent.llm_service.current_model_name()).time():
                 async for chunk in agent.get_stream_response(
                     [user_message], conversation.id, user_id=user.id
                 ):

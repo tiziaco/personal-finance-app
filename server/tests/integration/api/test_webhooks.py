@@ -133,8 +133,8 @@ async def test_handler_exception_propagates_and_is_not_swallowed(client):
     see a failure so it retries. Only an *unregistered* type is a no-op.
 
     Asserting a 500 status code here is not reliable: Starlette's
-    BaseHTTPMiddleware (used by the Prometheus middleware, see
-    app/api/middlewares/metrics.py) re-raises route exceptions through
+    BaseHTTPMiddleware (used by AuthMiddleware and the other middlewares in
+    app/api/middlewares/) re-raises route exceptions through
     call_next when driven over httpx's ASGITransport, before the registered
     ServiceError/Exception handlers get a chance to convert it to a
     response — the same limitation documented in

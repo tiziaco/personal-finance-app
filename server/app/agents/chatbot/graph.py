@@ -1,5 +1,7 @@
 """Chatbot agent implementation using LangGraph."""
 
+import json
+import time
 from typing import Optional
 
 from langchain_core.messages import ToolMessage
@@ -21,13 +23,47 @@ from app.agents.chatbot.tools import tools
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.metadata import PROJECT_NAME
-from app.core.metrics import llm_inference_duration_seconds
+from app.core.metrics import (
+    llm_inference_duration_seconds,
+    tool_call_duration_seconds,
+    tool_calls_total,
+)
 from app.services.llm import llm_service
 from app.utils import (
     dump_messages,
     prepare_messages,
     process_llm_response,
 )
+
+
+# What the model is told when a tool call does not produce a result. Fixed text
+# rather than the exception: a tool result becomes a ToolMessage in graph state,
+# which LangGraph persists to the checkpoint tables and which re-enters the
+# model's context on every later turn of the conversation. Upstream error strings
+# do not belong in either place.
+TOOL_FAILED_MESSAGE = "The tool failed to run. Tell the user this information could not be retrieved right now."
+TOOL_UNKNOWN_MESSAGE = "That tool does not exist. Answer without it."
+
+# Tool arguments are logged, so they need a ceiling. For the search tool the
+# argument is the query — the most useful field when diagnosing a bad answer —
+# but a future tool taking a large payload would otherwise dump it into every
+# line.
+TOOL_ARGS_LOG_LIMIT = 200
+
+
+def _format_tool_args(args: dict) -> str:
+    """Render tool arguments for a log line, bounded in size.
+
+    Args:
+        args: The arguments the model supplied for the tool call.
+
+    Returns:
+        A JSON rendering, truncated past `TOOL_ARGS_LOG_LIMIT`.
+    """
+    rendered = json.dumps(args, default=str, ensure_ascii=False)
+    if len(rendered) <= TOOL_ARGS_LOG_LIMIT:
+        return rendered
+    return rendered[:TOOL_ARGS_LOG_LIMIT] + "..."
 
 
 class ChatbotAgent(BaseAgent):
@@ -62,13 +98,8 @@ class ChatbotAgent(BaseAgent):
         Returns:
             Command object with updated state and next node to execute.
         """
-        # Get the current LLM instance for metrics
         current_llm = self.llm_service.get_llm()
-        model_name = (
-            current_llm.model_name
-            if current_llm and hasattr(current_llm, "model_name")
-            else settings.llm.DEFAULT_LLM_MODEL
-        )
+        model_name = self.llm_service.current_model_name()
 
         system_prompt = load_system_prompt(long_term_memory=state.long_term_memory)
 
@@ -106,6 +137,81 @@ class ChatbotAgent(BaseAgent):
             )
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
 
+    async def _invoke_tool(self, tool_call: dict) -> ToolMessage:
+        """Run one tool call, recording what happened.
+
+        This node hand-rolls the execution loop rather than using LangChain's
+        prebuilt ToolNode, so error handling belongs here rather than on the
+        tools themselves: one place covers a tool raising *and* a name the model
+        invented, and every tool added later is covered without opting in.
+
+        Args:
+            tool_call: A single tool call from the model's last message.
+
+        Returns:
+            The ToolMessage to feed back to the model, carrying `status="error"`
+            if the call did not produce a result.
+        """
+        tool_name = tool_call["name"]
+        tool = self.tools_by_name.get(tool_name)
+
+        if tool is None:
+            # A hallucinated name used to raise KeyError out of the graph and
+            # surface as a bare 500 with nothing naming the tool.
+            logger.error(
+                "tool_call_unknown_tool",
+                tool_name=tool_name,
+                known_tools=sorted(self.tools_by_name),
+            )
+            tool_calls_total.labels(tool=tool_name, outcome="unknown_tool").inc()
+            return ToolMessage(
+                content=TOOL_UNKNOWN_MESSAGE,
+                name=tool_name,
+                tool_call_id=tool_call["id"],
+                status="error",
+            )
+
+        logger.debug("tool_call_started", tool_name=tool_name, tool_args=_format_tool_args(tool_call["args"]))
+        started = time.perf_counter()
+
+        try:
+            tool_result = await tool.ainvoke(tool_call["args"])
+        except Exception as e:
+            # Timed even on failure: a tool that fails slowly is a different
+            # problem from one that fails fast.
+            duration = time.perf_counter() - started
+            tool_call_duration_seconds.labels(tool=tool_name).observe(duration)
+            tool_calls_total.labels(tool=tool_name, outcome="error").inc()
+            logger.exception(
+                "tool_call_failed",
+                tool_name=tool_name,
+                tool_args=_format_tool_args(tool_call["args"]),
+                duration_ms=round(duration * 1000),
+                error=str(e),
+            )
+            return ToolMessage(
+                content=TOOL_FAILED_MESSAGE,
+                name=tool_name,
+                tool_call_id=tool_call["id"],
+                status="error",
+            )
+
+        duration = time.perf_counter() - started
+        tool_call_duration_seconds.labels(tool=tool_name).observe(duration)
+        tool_calls_total.labels(tool=tool_name, outcome="success").inc()
+        logger.info(
+            "tool_call_completed",
+            tool_name=tool_name,
+            tool_args=_format_tool_args(tool_call["args"]),
+            duration_ms=round(duration * 1000),
+            result_chars=len(str(tool_result)),
+        )
+        return ToolMessage(
+            content=tool_result,
+            name=tool_name,
+            tool_call_id=tool_call["id"],
+        )
+
     async def _tool_call(self, state: GraphState) -> Command:
         """Process tool calls from the last message.
 
@@ -115,16 +221,7 @@ class ChatbotAgent(BaseAgent):
         Returns:
             Command object with updated messages and routing back to chat.
         """
-        outputs = []
-        for tool_call in state.messages[-1].tool_calls:
-            tool_result = await self.tools_by_name[tool_call["name"]].ainvoke(tool_call["args"])
-            outputs.append(
-                ToolMessage(
-                    content=tool_result,
-                    name=tool_call["name"],
-                    tool_call_id=tool_call["id"],
-                )
-            )
+        outputs = [await self._invoke_tool(tool_call) for tool_call in state.messages[-1].tool_calls]
         return Command(update={"messages": outputs}, goto="chat")
 
     async def create_graph(self, checkpointer: AsyncPostgresSaver) -> CompiledStateGraph:
