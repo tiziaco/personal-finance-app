@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-tunnel gen-contract check-contract docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-tunnel gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -12,6 +12,8 @@ POSTGRES_HOST_PORT ?= 5434
 # Overridable: set API_HOST_PORT in the root .env.
 API_HOST_PORT ?= 8100
 ENV ?= development
+# Which server/.env.<env> `make deploy-check` runs the deploy stack against.
+DEPLOY_ENV ?= staging
 
 # Load root .env (APP_ENV, GRAFANA_ADMIN_PASSWORD, …) so Docker Compose picks
 # them up even when --env-file points to a service-specific file. Optional:
@@ -32,6 +34,7 @@ help:
 	@echo "Contract:"
 	@echo "  make gen-contract       - Re-export openapi.json and regenerate the typed API client"
 	@echo "  make check-contract     - Fail if openapi.json or the generated client is stale"
+	@echo "  make deploy-check       - Verify docker-compose.prod.yml builds and runs (DEPLOY_ENV=staging)"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
@@ -110,6 +113,13 @@ gen-contract:
 
 check-contract:
 	@./scripts/check-contract.sh
+
+# Verify the deploy compose file without a deployment target. Runs under its
+# own compose project so a running dev stack is untouched, and tears itself
+# down. DEPLOY_ENV selects the server env file (staging by default) — note
+# this is separate from ENV, which the dev targets use.
+deploy-check:
+	@DEPLOY_ENV=$(DEPLOY_ENV) ./scripts/deploy-check.sh
 
 # An image is a shippable artifact and must be internally consistent: the web
 # image bakes in packages/api-client/src/generated and the server image bakes in

@@ -44,7 +44,7 @@ Organization coupling is narrow — three places on the server, two on the front
 | # | Workstream | Status | Plan | Blocked by |
 |---|---|---|---|---|
 | 1 | Infrastructure reorganisation | ✅ Complete | `plans/2026-08-24-ws1-infra-reorg.md` | — |
-| 2 | Traefik in dev compose + Dokploy labels | Not started | — | — |
+| 2 | Traefik in dev compose + Dokploy labels | ✅ Complete, **without the dev-compose Traefik** — labels reviewed, not exercised (D5) | `plans/2026-09-03-ws2-deploy-compose-traefik.md` | — |
 | 3 | Auth middleware hardening | ✅ F3, F5 shipped; F1, F2 descoped; F4 superseded by WS7 | — | Q1 (below, resolved) |
 | 4 | Clerk webhooks + ngrok | ✅ Complete | `plans/2026-08-26-ws4-clerk-webhooks.md` | — |
 | 5 | Orval codegen | ✅ Complete | `plans/2026-09-01-ws5-api-client-codegen.md` | — |
@@ -140,17 +140,43 @@ invalidated the cached `RUN pnpm --filter $APP_NAME build` layer.
 
 ## WS2 — Traefik in dev compose + Dokploy labels
 
+**Status:** ✅ Complete (`feat/ws2-deploy-compose-traefik`) — but **scoped down: no Traefik in
+dev compose.** The scope and acceptance below are what was planned; the two bullets and the
+acceptance clause marked *Superseded* were reversed while designing, and
+`specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md` (decision D5) is what shipped. Read both
+before forking. What landed: the deploy compose repaired into two portal services under
+`APP_ENV`, hand-written Traefik labels and `dokploy-network` membership on the three routed
+services, and `make deploy-check` (`scripts/deploy-check.sh`) as the verification.
+`docker-compose.dev.yml` is untouched.
+
+**The labels are unexercised, and that is the known gap.** Nothing routes a request through a
+proxy. `deploy-check` proves the file parses under `APP_ENV`, that both portals build as
+genuinely distinct images, that a failed migration fails the stack instead of starting the
+server against a stale schema, and that nothing publishes a host port. Routing correctness — a
+wrong container port, a router pointing at an undeclared service, a missing network — rides on
+review plus the first real deploy. Accepted trade (D5): a Dokploy staging box is the next step,
+and a redeploy costs minutes where a local stand-in costs a build.
+
 **Problem:** Deployment targets Dokploy, which routes via Traefik. `docker-compose.prod.yml` currently publishes `3000:3000` and `8000:8000` to the host — wrong shape for a Traefik-fronted deploy, and untested locally.
 
 **Decision — hand-written labels, not the Dokploy UI.** Dokploy supports two mutually exclusive approaches: native domain configuration through the UI Domains tab (Dokploy injects labels), or hand-written Traefik labels in the compose file. Mixing them produces two competing router definitions for the same service. Since the goal is to *test the routing setup locally*, hand-written labels are the only option that can be exercised outside Dokploy — so the deploy side must also use the manual approach, and the Domains tab is left alone.
 
 **Scope:**
-- Add a Traefik service to `docker-compose.dev.yml` so the labels can be exercised locally.
+- ~~Add a Traefik service to `docker-compose.dev.yml` so the labels can be exercised locally.~~
+  **Superseded — D5.** A throwaway Traefik plus `curl -H "Host: …"` was specified and then
+  dropped: it proves the labels against a stand-in, not against Dokploy's own Traefik, and the
+  dev file then carries a service no dev workflow uses. `docker-compose.dev.yml` must not
+  change became a hard constraint of the implementation plan instead.
 - Replace host port bindings in `docker-compose.prod.yml` with `expose` + Traefik labels.
-- Verify the labels resolve correctly against the local Traefik before they reach Dokploy.
+- ~~Verify the labels resolve correctly against the local Traefik before they reach Dokploy.~~
+  **Superseded — D5.** The labels are *reviewed* against the Dokploy reference in the WS2 design
+  spec, not exercised. First proven on a real deploy.
 - **Repair prod compose staleness (inherited from WS1).** `docker-compose.prod.yml` does not currently parse: it declares a single `web-app` service pointing `env_file` at `./web-app/.env.local`, a path that has never existed. Prod compose predates the two-portal split — dev has `internal-portal` and `supplier-portal`, each with its own `apps/*/.env.local`. WS1 deliberately left this alone because fixing it means deciding the prod service topology, which is this workstream's call. Until it is fixed, `docker compose -f docker-compose.prod.yml config` fails and prod can only be validated structurally.
 
-**Acceptance:** portals and API are reachable through local Traefik by hostname, not by published port; `docker-compose.prod.yml` publishes no application ports to the host.
+**Acceptance:** ~~portals and API are reachable through local Traefik by hostname, not by
+published port;~~ (**superseded — D5**, see Status) `docker-compose.prod.yml` publishes no
+application ports to the host — met, and asserted on every run of `make deploy-check`. The seven
+criteria actually verified are in `specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md`.
 
 **Rejected:** a Traefik container in the *production* compose file. Dokploy runs its own Traefik; a second one would contend for ports 80/443.
 

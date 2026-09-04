@@ -105,6 +105,15 @@ class MemorySettings(BaseSettings):
     EMBEDDER_MODEL: str = "text-embedding-3-small"
     COLLECTION_NAME: str = "longterm_memory"
 
+    # Retrieval breadth for `get_relevant_memory`. Every hit is rendered into
+    # the agent's prompt, so these bound prompt size as much as they bound
+    # recall. They restate mem0 2.0's own defaults on purpose: 2.0 already
+    # changed both under us (limit 100 -> top_k 20, threshold None -> 0.1),
+    # and passing them explicitly is what stops the next flip from silently
+    # resizing that block of prompt.
+    SEARCH_TOP_K: int = 20
+    SEARCH_THRESHOLD: float = 0.1
+
 
 # Clerk Authentication Settings
 class AuthSettings(BaseSettings):

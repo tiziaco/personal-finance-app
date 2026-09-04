@@ -123,8 +123,8 @@ async def test_search_pins_top_k_and_threshold_explicitly():
         await factory.get_relevant_memory("user-1", "who am I?")
 
     kwargs = instance.search.await_args.kwargs
-    assert kwargs["top_k"] == factory.MEMORY_SEARCH_TOP_K
-    assert kwargs["threshold"] == factory.MEMORY_SEARCH_THRESHOLD
+    assert kwargs["top_k"] == settings.memory.SEARCH_TOP_K
+    assert kwargs["threshold"] == settings.memory.SEARCH_THRESHOLD
 
 
 def test_search_signature_still_rejects_top_level_entity_ids():

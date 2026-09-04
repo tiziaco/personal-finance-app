@@ -9,11 +9,6 @@ from app.core.logging import logger
 
 _memory_instance: Optional[AsyncMemory] = None
 
-# Retrieval breadth for `get_relevant_memory`. Every hit is rendered into the
-# agent's prompt, so these bound prompt size as much as they bound recall.
-MEMORY_SEARCH_TOP_K = 20
-MEMORY_SEARCH_THRESHOLD = 0.1
-
 # Keys mem0 owns on the memory record itself. `add()` takes user_id as a named
 # argument, and since 2.0 it warns and drops any of these found in `metadata`.
 # The graph config we hand through carries user_id for Langfuse, so strip them.
@@ -98,15 +93,13 @@ async def get_relevant_memory(user_id: str, query: str) -> str:
         memory = await create_memory()
         # mem0 2.0 moved entity ids off the signature: a top-level `user_id=`
         # now raises ValueError. `top_k` and `threshold` are passed explicitly
-        # rather than inherited — 2.0 already changed both defaults under us
-        # (limit 100 -> top_k 20, threshold None -> 0.1) and every one of these
-        # memories is pasted into the agent's prompt, so the breadth of the
-        # retrieval belongs in this file rather than in the library's defaults.
+        # rather than inherited from the library's defaults — see
+        # MemorySettings for why they are ours to pin.
         results = await memory.search(
             query=query,
             filters={"user_id": str(user_id)},
-            top_k=MEMORY_SEARCH_TOP_K,
-            threshold=MEMORY_SEARCH_THRESHOLD,
+            top_k=settings.memory.SEARCH_TOP_K,
+            threshold=settings.memory.SEARCH_THRESHOLD,
         )
         
         if not results or "results" not in results or not results["results"]:

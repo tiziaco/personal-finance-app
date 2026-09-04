@@ -1,25 +1,89 @@
+# The deploy compose file. Serves staging and production both: the environment
+# is a variable, APP_ENV, exactly as Makefile's ENV and config.py's
+# `.env.{environment}` already model it. There is no second copy of this
+# topology to drift against.
+#
+# Nothing publishes a port. A reverse proxy (Traefik, on a Dokploy host) is the
+# only ingress. `make deploy-check` asserts that.
+#
+# Deliberately no container_name: a container name is host-global, and a
+# Dokploy box runs many stacks. Compose's <project>-<service>-<n> is unique.
+# docker-compose.dev.yml keeps its names — one stack per laptop.
 services:
-  web-app:
-    container_name: web-app
+  internal-portal:
     env_file:
-      - ./web-app/.env.local
+      - ./web-app/apps/internal-portal/.env.local
     build:
       context: ./web-app
       dockerfile: Dockerfile
       args:
-        # Values inherited from env_file (./web-app/.env.local) — no duplication in root .env
-        - NEXT_PUBLIC_APP_URL
-        - NEXT_PUBLIC_API_URL
-        - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
-        - NEXT_PUBLIC_CLERK_SIGN_IN_URL
-        - NEXT_PUBLIC_CLERK_SIGN_UP_URL
-        - NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL
-        - NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL
+        APP_NAME: internal-portal
+        # Every NEXT_PUBLIC_* value is inlined into the bundle at build time,
+        # so these are build args, not runtime env. Required, not defaulted:
+        # a default here bakes a wrong origin into a shipped image, and the
+        # only symptom is the browser calling the wrong host.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required at build time - Next.js inlines it. Set it to the API's public origin, e.g. https://api.example.com}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # Documentation, not a binding: the proxy reaches this on the compose
+    # network. The load-bearing part is the absence of `ports:`.
+    expose:
+      - "3000"
     networks:
       - app-network
+      - dokploy-network
+    # Router and service names are global to the Traefik instance, not scoped
+    # per compose project, so they carry the project name: a Dokploy host runs
+    # many stacks against one Traefik, and a bare `server-web` would collide.
+    labels:
+      - traefik.enable=true                       # Dokploy sets exposedByDefault: false
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-internal-portal.loadbalancer.server.port=3000
+      # HTTP router — no TLS config, so port 80 stays plain HTTP.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.rule=Host(`${INTERNAL_PORTAL_DOMAIN:?set to the internal portal hostname, e.g. app.example.com}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.service=${COMPOSE_PROJECT_NAME}-internal-portal
+      # HTTPS router — a second router rather than a conditional label, because
+      # tls.certresolver enables TLS on whatever entrypoint its router binds to,
+      # and compose cannot omit a label conditionally.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.rule=Host(`${INTERNAL_PORTAL_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.service=${COMPOSE_PROJECT_NAME}-internal-portal
+
+  supplier-portal:
+    env_file:
+      - ./web-app/apps/supplier-portal/.env.local
+    build:
+      context: ./web-app
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: supplier-portal
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required at build time - Next.js inlines it. Set it to the API's public origin, e.g. https://api.example.com}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
+        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
+    restart: unless-stopped
+    # 3000, not 3002: that is the container port (web-app/Dockerfile:80-81).
+    # 3002 is a host mapping that exists only in the dev file.
+    expose:
+      - "3000"
+    networks:
+      - app-network
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-supplier-portal.loadbalancer.server.port=3000
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.rule=Host(`${SUPPLIER_PORTAL_DOMAIN:?set to the supplier portal hostname, e.g. suppliers.example.com}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.service=${COMPOSE_PROJECT_NAME}-supplier-portal
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.rule=Host(`${SUPPLIER_PORTAL_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.service=${COMPOSE_PROJECT_NAME}-supplier-portal
 
   # One-shot release phase: applies Alembic migrations, then exits.
   # Dokploy deploys with `docker compose up -d --build` and offers no
@@ -32,15 +96,19 @@ services:
     build:
       context: ./server
       args:
-        APP_ENV: production
+        APP_ENV: ${APP_ENV:-production}
     command: ["bash", "scripts/migrate.sh"]
     volumes:
       - ./server/logs:/app/logs
     env_file:
-      - ./server/.env.production
+      - ./server/.env.${APP_ENV:-production}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_HOST=db
+      # The env file's POSTGRES_PORT is the HOST port (for running the server
+      # outside Docker). On the compose network db is reached on its CONTAINER
+      # port, which is always 5432 — this file publishes no host binding at all.
+      - POSTGRES_PORT=5432
       # Migrations don't call an LLM; a missing key must not fail a deploy.
       - REQUIRED_ENV_VARS=
     depends_on:
@@ -56,16 +124,19 @@ services:
     build:
       context: ./server
       args:
-        APP_ENV: production
-    ports:
-      - "8000:8000"
+        APP_ENV: ${APP_ENV:-production}
+    expose:
+      - "8000"
     volumes:
       - ./server/logs:/app/logs
     env_file:
-      - ./server/.env.production
+      - ./server/.env.${APP_ENV:-production}
     environment:
-      - APP_ENV=production
+      - APP_ENV=${APP_ENV:-production}
       - POSTGRES_HOST=db
+      # See the migrate service: the env file's POSTGRES_PORT is the host port,
+      # and on the compose network db always listens on 5432.
+      - POSTGRES_PORT=5432
     depends_on:
       db:
         condition: service_healthy
@@ -80,11 +151,23 @@ services:
     restart: unless-stopped
     networks:
       - app-network
+      - dokploy-network
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=dokploy-network
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-server.loadbalancer.server.port=8000
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.rule=Host(`${API_DOMAIN:?set to the API hostname, e.g. api.example.com}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.service=${COMPOSE_PROJECT_NAME}-server
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.service=${COMPOSE_PROJECT_NAME}-server
 
   db:
     image: pgvector/pgvector:pg16
     env_file:
-      - ./server/.env.production
+      - ./server/.env.${APP_ENV:-production}
     # No host port binding — DB is only accessible within the Docker network
     volumes:
       - postgres-data:/var/lib/postgresql/data
@@ -103,3 +186,10 @@ volumes:
 networks:
   app-network:
     driver: bridge
+  # Provided by the Dokploy host, where Traefik is pinned to it. A compose
+  # deployment lands only in its own project network unless it joins this
+  # explicitly (Dokploy issue #3435) — which is the single most common cause
+  # of a deploy that builds cleanly and then 404s.
+  # Locally: docker network create dokploy-network
+  dokploy-network:
+    external: true

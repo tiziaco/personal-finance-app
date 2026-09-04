@@ -115,6 +115,53 @@ publishes no host port for it, so its inspection dashboard has no fixed URL.
 
 ---
 
+## Deploying
+
+`docker-compose.prod.yml` is the deploy file, and it serves **both** staging
+and production — the environment is `APP_ENV`, not a second file. It publishes
+no ports: a reverse proxy is the only ingress, and on a Dokploy host that proxy
+is Traefik, discovering the containers through the labels in the file.
+
+```bash
+make deploy-check                     # staging (default)
+make deploy-check DEPLOY_ENV=production
+```
+
+It runs under its own compose project, so a running dev stack is untouched, and
+it tears itself down afterwards. It needs `server/.env.<env>` (gitignored, never
+committed) and, once per machine, `docker network create dokploy-network` — the
+deploy file declares that network `external` because a Dokploy host provides it.
+
+**What it proves:** the file parses under `APP_ENV`; both portals build as
+genuinely distinct images with their own `APP_NAME`; a failed migration fails the
+stack instead of starting the server against a stale schema; the server reaches
+healthy with no ingress but its own healthcheck; nothing publishes a host port.
+
+**What it does not prove: the Traefik labels.** Nothing routes a request through
+a proxy. A wrong container port, a router pointing at a service that isn't
+declared, a missing `dokploy-network` — each surfaces on the first real deploy,
+not here. Reviewing them is the substitute, and the checklist is in
+`docs/superpowers/specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md`.
+
+Also unproven, and worth knowing before a first deploy: `ALLOWED_ORIGINS`
+(`server/app/core/config.py:208`) gates **both** CORS and the Clerk `azp`
+token-party check (`server/app/utils/auth.py:72`). The browser calls the API
+cross-origin — there is no server-side proxy hop — so every portal origin must
+be listed for the deploying environment. A missing entry does not look like a
+config error; it looks like broken auth.
+
+Also unproven: both portal images are built with the internal portal's
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `NEXT_PUBLIC_API_URL`. Compose resolves
+`build.args` from the invoking shell's environment, never from a service's own
+`env_file:`, and the Makefile's `-include` exports only
+`web-app/apps/internal-portal/.env.local`. Harmless while both portals share
+one Clerk instance and one API origin. The day they must differ, both images
+ship the internal portal's values with nothing warning — `deploy-check` only
+asserts each image baked its own `APP_NAME`, not which portal's other values
+it baked.
+
+---
+
 ## Environment Setup
 
 Each service has its own env file. Copy examples and fill in values before first run:
