@@ -7,13 +7,13 @@ import pytest
 from clerk_backend_api import Clerk
 from clerk_backend_api.models import SDKError
 
+from app.integrations.clerk.client import ClerkClient
 from app.integrations.clerk.exceptions import (
     ClerkAPIError,
     ClerkAuthenticationError,
     ClerkRateLimitError,
     ClerkUserNotFoundError,
 )
-from app.integrations.clerk.client import ClerkClient
 
 pytestmark = pytest.mark.unit
 
@@ -140,9 +140,7 @@ class TestGetFirstOrgMembership:
         membership = MagicMock()
         membership.organization.id = "org_abc"
         membership.role = "org:project_manager"
-        service._client.users.get_organization_memberships.return_value = MagicMock(
-            data=[membership]
-        )
+        service._client.users.get_organization_memberships.return_value = MagicMock(data=[membership])
 
         assert service.get_first_org_membership("user_123") == ("org_abc", "project_manager")
 

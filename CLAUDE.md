@@ -1,6 +1,12 @@
-# Rilevio — Monorepo Guide
+# Template App — Monorepo Guide
 
-Document compliance management platform built for Fincantieri to replace a manual SharePoint + Excel workflow for tracking supplier documentation across projects and purchase orders.
+Template for a multi-tenant B2B platform with two portals — one internal, one for
+external partners — backed by a single FastAPI server. Multi-tenancy is Clerk
+Organizations; the org id arrives on the JWT and scopes queries.
+
+The shipped example domain is **supplier document compliance**. It is illustrative, not
+load-bearing: the `Supplier` model, the `supplier-portal/` app, the role names and the
+Italian UI labels are all meant to be renamed or replaced for your domain.
 
 **Two user types:**
 - **Internal project managers** — manage projects, suppliers, orders, document compliance, and expiry tracking
@@ -54,11 +60,9 @@ make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:8100
 ```
 
 `NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the
-Makefile via `-include`), not from your shell — so run the target, not `ngrok`
-directly. It passes `--authtoken` explicitly because
-`~/Library/Application Support/ngrok/ngrok.yml` takes precedence over the env
-var, and a stale token there fails the reserved domain with `ERR_NGROK_320`
-while `.env` looks correct.
+Makefile via `-include`), not from your shell — so run the target rather than
+`ngrok` directly. It passes `--authtoken` explicitly, for the reason in
+[`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md).
 
 In VS Code, `Dev: All` (⇧⌘B) chains preflight → start db → migrate → API server
 and both portals. `Dev: All + Tunnel` adds the tunnel, for Clerk webhook work.
@@ -177,11 +181,19 @@ Required secrets: Clerk API keys, database credentials, OpenAI key, Langfuse key
 
 The `server/.env.<ENV>` file is selected by the `APP_ENV` variable (default: `development`).
 
-Install the repo's git hooks once per clone (see **API Contract** below):
+Install the repo's git hooks once per clone:
 
 ```bash
 git config core.hooksPath .githooks
 ```
+
+Two hooks live there. `pre-commit` keeps the API contract in sync (see **API
+Contract** below). `pre-push` runs `make check-server` and `make check-web`
+for whichever side changed since the upstream branch: ruff and Prettier in
+check mode, plus ESLint. There is no CI for these, so the hook is the gate;
+`make check` runs both by hand and `git push --no-verify` skips it once.
+`.vscode/settings.json` formats on save with the same tools, so the hook
+rarely has anything to say.
 
 ---
 

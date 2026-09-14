@@ -1,5 +1,7 @@
 """Tests for app.models.enums."""
+
 import pytest
+
 from app.models.enums import Role
 
 pytestmark = pytest.mark.unit

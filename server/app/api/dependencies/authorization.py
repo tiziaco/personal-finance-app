@@ -25,11 +25,11 @@ def require_role(*allowed: Role):
     Returns:
         A FastAPI Depends object suitable for use in the dependencies list.
     """
+
     def dependency(role: Role = Depends(get_current_role)) -> None:
         if role not in allowed:
-            raise AuthorizationError(
-                f"Role '{role}' is not permitted. Required: {[r.value for r in allowed]}"
-            )
+            raise AuthorizationError(f"Role '{role}' is not permitted. Required: {[r.value for r in allowed]}")
+
     return Depends(dependency)
 
 

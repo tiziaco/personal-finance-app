@@ -41,16 +41,13 @@ async def get_user_conversation(
     conversation = await conversation_service.get_conversation(db_session, sanitized_id)
 
     if not conversation or conversation.deleted_at is not None:
-        raise ConversationNotFoundError(
-            f"Conversation {sanitized_id} not found",
-            conversation_id=sanitized_id
-        )
+        raise ConversationNotFoundError(f"Conversation {sanitized_id} not found", conversation_id=sanitized_id)
 
     if conversation.user_id != user.id:
         raise ConversationAccessDeniedError(
             f"User {user.id} does not have access to conversation {sanitized_id}",
             conversation_id=sanitized_id,
-            user_id=user.id
+            user_id=user.id,
         )
 
     return conversation

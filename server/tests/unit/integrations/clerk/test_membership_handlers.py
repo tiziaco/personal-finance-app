@@ -10,7 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.user import User
 from app.integrations.clerk import ClerkRateLimitError
 from app.integrations.clerk.webhooks.handlers.membership import (
     UNSYNCED_EPOCH,
@@ -23,6 +22,7 @@ from app.integrations.clerk.webhooks.schemas import (
     ClerkEvent,
     WebhookContext,
 )
+from app.models.user import User
 
 pytestmark = pytest.mark.unit
 

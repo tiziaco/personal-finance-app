@@ -14,13 +14,13 @@ from svix.webhooks import WebhookVerificationError as SvixWebhookVerificationErr
 
 from app.core.config import settings
 from app.core.logging import logger
-from app.integrations.clerk.webhooks.schemas import (
-    ClerkEvent,
-    VerifiedEvent,
-)
 from app.integrations.clerk.webhooks.exceptions import (
     InvalidWebhookSignatureError,
     WebhookPayloadTooLargeError,
+)
+from app.integrations.clerk.webhooks.schemas import (
+    ClerkEvent,
+    VerifiedEvent,
 )
 
 # Clerk payloads are a few KB. Nothing upstream bounds the request body — no

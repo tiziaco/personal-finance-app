@@ -39,9 +39,7 @@ class TestDeleteMeCacheInvalidation:
     by user_id — so clearing one is not enough.
     """
 
-    async def test_clears_both_caches(
-        self, authenticated_client_with_agent, test_user, mocked_externals
-    ):
+    async def test_clears_both_caches(self, authenticated_client_with_agent, test_user, mocked_externals):
         await user_cache.set_org_role(test_user.clerk_id, "supplier")
         await user_cache.set_supplier_id(test_user.id, "supplier_42")
         original_clerk_id = test_user.clerk_id
@@ -52,9 +50,7 @@ class TestDeleteMeCacheInvalidation:
         assert await user_cache.get_org_role(original_clerk_id) is _MISS
         assert await user_cache.get_supplier_id(test_user.id) is _MISS
 
-    async def test_uses_pre_anonymisation_clerk_id(
-        self, authenticated_client_with_agent, test_user, mocked_externals
-    ):
+    async def test_uses_pre_anonymisation_clerk_id(self, authenticated_client_with_agent, test_user, mocked_externals):
         """The role is cached under the ORIGINAL clerk_id.
 
         anonymize_user() rewrites user.clerk_id during the flow, so invalidating
@@ -89,18 +85,14 @@ class TestDeleteMeCacheInvalidation:
         await db_session.refresh(supplier)
         assert supplier.contact_id is None
 
-    async def test_org_id_is_cleared(
-        self, authenticated_client_with_agent, test_user, mocked_externals
-    ):
+    async def test_org_id_is_cleared(self, authenticated_client_with_agent, test_user, mocked_externals):
         """org_id is dropped so a single-contact supplier org cannot single the user out."""
         response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
 
         assert response.status_code == 204
         assert test_user.org_id is None
 
-    async def test_unrelated_users_are_untouched(
-        self, authenticated_client_with_agent, test_user, mocked_externals
-    ):
+    async def test_unrelated_users_are_untouched(self, authenticated_client_with_agent, test_user, mocked_externals):
         await user_cache.set_org_role("clerk_someone_else", "reviewer")
         await user_cache.set_supplier_id("user_someone_else", "supplier_99")
 
@@ -128,10 +120,7 @@ class TestDeleteMeCheckpointCleanup:
         self, authenticated_client_with_agent, test_user, db_session, mocked_externals
     ):
         """One call per conversation the user owned — none may be skipped."""
-        conversations = [
-            Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name=f"Chat {i}")
-            for i in range(2)
-        ]
+        conversations = [Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name=f"Chat {i}") for i in range(2)]
         db_session.add_all(conversations)
         await db_session.flush()
 

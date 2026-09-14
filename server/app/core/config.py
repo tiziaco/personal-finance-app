@@ -220,7 +220,7 @@ class CORSSettings(BaseSettings):
 # Main Settings Class
 class Settings(BaseSettings):
     """Main application settings with nested configuration models.
-    
+
     This class uses Pydantic Settings for type-safe configuration management,
     automatic validation, and loading from environment variables and .env files.
     All settings are organized into nested models by domain (database, auth, etc.)

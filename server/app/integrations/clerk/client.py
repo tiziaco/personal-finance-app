@@ -31,20 +31,7 @@ class ClerkClient:
         return self._client
 
     def get_user(self, clerk_id: str):
-        """Fetch a user from Clerk by their clerk_id.
-
-        Args:
-            clerk_id: The Clerk user ID (e.g., "user_2abc123xyz").
-
-        Returns:
-            The Clerk user object.
-
-        Raises:
-            ClerkUserNotFoundError: If user not found in Clerk.
-            ClerkAuthenticationError: If authentication with Clerk API fails.
-            ClerkRateLimitError: If Clerk API rate limit is exceeded.
-            ClerkAPIError: If any other Clerk API error occurs.
-        """
+        """Fetch a user from Clerk. Every failure raises a Clerk* exception."""
         try:
             user = self.client.users.get(user_id=clerk_id)
             logger.debug("clerk_user_fetched", clerk_id=clerk_id)
@@ -79,7 +66,6 @@ class ClerkClient:
                     clerk_id=clerk_id,
                 ) from e
 
-            # Generic API error for other cases
             logger.error("clerk_api_error", clerk_id=clerk_id, status_code=status_code, error=str(e))
             raise ClerkAPIError(
                 f"Clerk API error: {str(e)}",
@@ -94,16 +80,7 @@ class ClerkClient:
             ) from e
 
     def delete_user(self, clerk_id: str) -> None:
-        """Delete a user from Clerk.
-
-        Args:
-            clerk_id: The Clerk user ID to delete.
-
-        Raises:
-            ClerkAuthenticationError: If authentication with Clerk API fails.
-            ClerkRateLimitError: If Clerk API rate limit is exceeded.
-            ClerkAPIError: If any other Clerk API error occurs.
-        """
+        """Delete a user from Clerk. A 404 is a success — they are already gone."""
         try:
             self.client.users.delete(user_id=clerk_id)
             logger.info("clerk_user_deleted", clerk_id=clerk_id)
@@ -141,14 +118,7 @@ class ClerkClient:
             ) from e
 
     def get_primary_email(self, clerk_user) -> Optional[str]:
-        """Extract the primary email address from a Clerk user.
-
-        Args:
-            clerk_user: The Clerk user object.
-
-        Returns:
-            The primary email address, or None if not found.
-        """
+        """The user's primary email address, falling back to the first one."""
         if not clerk_user.email_addresses:
             logger.warning("clerk_user_no_emails", clerk_id=getattr(clerk_user, "id", None))
             return None
@@ -157,7 +127,6 @@ class ClerkClient:
             if email.id == clerk_user.primary_email_address_id:
                 return email.email_address
 
-        # Fallback to first email if primary not found
         fallback_email = clerk_user.email_addresses[0].email_address
         logger.debug(
             "clerk_using_fallback_email",
@@ -166,28 +135,14 @@ class ClerkClient:
         )
         return fallback_email
 
-
     def get_first_org_membership(self, clerk_id: str) -> Optional[tuple[str, str]]:
         """Return (org_id, role) for a user's first org membership, or None.
 
-        Used as a fallback when the JWT carries no org context (e.g. OIDC tokens).
-        Role has the 'org:' prefix stripped to match Role enum values.
-
-        Args:
-            clerk_id: The Clerk user ID.
-
-        Returns:
-            Tuple of (org_id, role) e.g. ("org_abc", "project_manager"), or None.
-
-        Raises:
-            ClerkAuthenticationError: If authentication with Clerk API fails.
-            ClerkRateLimitError: If Clerk API rate limit is exceeded.
-            ClerkAPIError: If any other Clerk API error occurs.
+        The fallback for a JWT carrying no org context (e.g. an OIDC token).
+        Role has the 'org:' prefix stripped, to match the Role enum values.
         """
         try:
-            memberships = self.client.users.get_organization_memberships(
-                user_id=clerk_id, limit=1
-            )
+            memberships = self.client.users.get_organization_memberships(user_id=clerk_id, limit=1)
             if memberships.data:
                 m = memberships.data[0]
                 org_id = m.organization.id
@@ -225,5 +180,6 @@ class ClerkClient:
                 f"Unexpected error fetching org membership from Clerk: {str(e)}",
                 clerk_id=clerk_id,
             ) from e
+
 
 clerk_client = ClerkClient()

@@ -70,10 +70,11 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             refetchOnWindowFocus: false,
             // Retrying a 4xx burns a request for an answer that will not change.
             retry: (failureCount, error) =>
-              failureCount < 1 && !(error instanceof ApiError && error.status < 500),
+              failureCount < 1 &&
+              !(error instanceof ApiError && error.status < 500),
           },
         },
-      })
+      }),
   )
 
   return (

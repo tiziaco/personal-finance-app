@@ -16,10 +16,22 @@ export function CompanyLogo({ src, alt = "Logo" }: CompanyLogoProps) {
       <SidebarMenuItem>
         <div className="flex items-center gap-2">
           {state === "collapsed" && (
-            <Image src={src} alt={alt} width={40} height={40} className="h-10 w-10 object-contain" />
+            <Image
+              src={src}
+              alt={alt}
+              width={40}
+              height={40}
+              className="h-10 w-10 object-contain"
+            />
           )}
           {state !== "collapsed" && (
-            <Image src={src} alt={alt} width={250} height={40} className="h-10 w-auto object-contain" />
+            <Image
+              src={src}
+              alt={alt}
+              width={250}
+              height={40}
+              className="h-10 w-auto object-contain"
+            />
           )}
         </div>
       </SidebarMenuItem>

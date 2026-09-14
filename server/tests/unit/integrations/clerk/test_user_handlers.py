@@ -16,8 +16,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from app.models.user import User
 from app.integrations.clerk import ClerkRateLimitError
+from app.integrations.clerk.timestamps import UNSYNCED_EPOCH
 from app.integrations.clerk.webhooks.handlers.user import (
     handle_user_created,
     handle_user_deleted,
@@ -25,11 +25,11 @@ from app.integrations.clerk.webhooks.handlers.user import (
     is_primary_email_verified,
     primary_email_from_payload,
 )
-from app.integrations.clerk.timestamps import UNSYNCED_EPOCH
 from app.integrations.clerk.webhooks.schemas import (
     ClerkEvent,
     WebhookContext,
 )
+from app.models.user import User
 
 pytestmark = pytest.mark.unit
 
@@ -112,9 +112,7 @@ def test_email_verified_reads_the_primary_address_only():
     assert is_primary_email_verified(USER_PAYLOAD) is True
     unverified = {
         **USER_PAYLOAD,
-        "email_addresses": [
-            {"id": "idn_1", "email_address": "a@b.c", "verification": {"status": "unverified"}}
-        ],
+        "email_addresses": [{"id": "idn_1", "email_address": "a@b.c", "verification": {"status": "unverified"}}],
     }
     assert is_primary_email_verified(unverified) is False
 
@@ -171,9 +169,7 @@ async def test_user_created_insert_seeds_epoch_when_timestamp_unusable(session):
     assert kwargs["last_synced_at"] is not None
 
 
-async def test_user_created_declines_when_clerk_no_longer_has_the_user(
-    session, clerk_has_the_user
-):
+async def test_user_created_declines_when_clerk_no_longer_has_the_user(session, clerk_has_the_user):
     """The resurrection guard: a delivery retried after the user was erased.
 
     anonymize_user() rewrites clerk_id, so the erased row is unreachable by
@@ -412,9 +408,7 @@ async def test_no_handler_populates_the_role_cache(session):
             "app.integrations.clerk.webhooks.handlers.user.user_repository.update_from_clerk",
             new=AsyncMock(return_value=user),
         ),
-        patch(
-            "app.services.user.cache.UserCache.set_org_role", new=AsyncMock()
-        ) as set_role,
+        patch("app.services.user.cache.UserCache.set_org_role", new=AsyncMock()) as set_role,
     ):
         await handle_user_updated(ctx(USER_PAYLOAD, session))
 

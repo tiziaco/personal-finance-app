@@ -30,7 +30,7 @@ fi
 
 # Lowercase, and collapse anything Docker will not accept in a repository name
 # into single hyphens.
-echo "${PROJECT_NAME:-rilevio-server}" |
+echo "${PROJECT_NAME:-template-app-server}" |
     tr '[:upper:]' '[:lower:]' |
     sed 's/[^a-z0-9]/-/g' |
     sed 's/--*/-/g' |

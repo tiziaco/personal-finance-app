@@ -8,13 +8,13 @@ from langchain_core.runnables import RunnableBinding
 from langchain_core.tools import tool
 from openai import APIError, APITimeoutError, RateLimitError
 
+from app.core.config import settings
 from app.services.llm.exceptions import (
     LLMAPIError,
     LLMFallbackExhaustedError,
     LLMRateLimitError,
     LLMTimeoutError,
 )
-from app.core.config import settings
 from app.services.llm.service import LLMRegistry, LLMService
 
 pytestmark = pytest.mark.unit

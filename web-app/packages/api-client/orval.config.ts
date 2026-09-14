@@ -19,7 +19,7 @@ export default defineConfig({
       httpClient: "fetch",
       clean: true,
       // orval 8.x names this `formatter`; the older `prettier: true` is not a
-      // valid OutputOptions key and is silently ignored, leaving the tree unformatted.
+      // valid OutputOptions key and is silently ignored, leaving it unformatted.
       formatter: "prettier",
       override: {
         // Without this, the generated types describe an { data, status, headers }
@@ -52,9 +52,7 @@ export default defineConfig({
       target: "./src/generated/zod",
       client: "zod",
       clean: true,
-      // orval 8.x names this `formatter`; the older `prettier: true` is not a
-      // valid OutputOptions key and is silently ignored, leaving the tree unformatted.
-      formatter: "prettier",
+      formatter: "prettier", // see appApi above
     },
   },
 })

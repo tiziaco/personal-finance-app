@@ -4,8 +4,8 @@
 OpenAPI spec into committed, type-safe TanStack Query hooks, TypeScript types, and Zod
 schemas — plus the conventions for consuming them in a Next.js App Router app.
 
-**Status:** extracted from the Rilevio monorepo (working implementation). Written to be
-transplanted into a fresh template repo.
+**Status:** extracted from this monorepo (working implementation). Written to be
+transplanted into a fresh repo.
 
 **Revised:** 2026-09-01, reconciled against the implementation in
 `docs/superpowers/specs/2026-09-01-ws5-api-client-codegen-design.md`. Four of

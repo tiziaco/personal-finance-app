@@ -27,12 +27,6 @@ check "old grafana/ dir is gone"                        bash -c '! test -d grafa
 check "old docker-compose.yml is gone"                  bash -c '! test -f docker-compose.yml'
 
 # --- identifiers ----------------------------------------------------------
-# Product/brand strings are deliberately out of scope; only identifiers are checked.
-check "no @rilevio/ scope in web-app sources" \
-  bash -c '! grep -rq "@rilevio/" web-app --include="*.ts" --include="*.tsx" --include="*.css" --include="package.json" --exclude-dir=node_modules --exclude-dir=.next'
-# Verified: BSD grep reports match found before file missing; correctly exits 0 when no rilevio-network found in existing prod file or missing dev file.
-check "no rilevio-network in compose files" \
-  bash -c '! grep -rq "rilevio-network" docker-compose.dev.yml docker-compose.prod.yml'
 check "no bare 'app' network in prod compose" \
   bash -c '! grep -qE "^\s+- app$" docker-compose.prod.yml'
 check "app-network declared in dev compose"  grep -q "app-network:" docker-compose.dev.yml
@@ -52,13 +46,9 @@ check "server package name is server"        grep -q 'name = "server"' server/py
 check "Makefile defines COMPOSE_FILE"        grep -q "COMPOSE_FILE" Makefile
 check "no stale personal-finance-app images" bash -c '! grep -q "personal-finance-app" Makefile'
 
-# Regression guard: docker-compose.dev.yml is not a Compose *default* filename
-# (unlike the old docker-compose.yml), so any compose invocation without an
-# explicit -f silently fails once run outside the repo root — exactly what
-# broke server/Makefile and server/scripts/run-docker.sh on this branch.
-# Flag any line that actually invokes a compose subcommand ($(DOCKER_COMPOSE)
-# or a literal `docker compose`, followed by up/down/logs/config/ps/build/exec/
-# pull/restart/stop/start) with no standalone -f token on that line.
+# docker-compose.dev.yml is not a Compose *default* filename, so any invocation
+# without an explicit -f silently fails when run outside the repo root. Flag any
+# line invoking a compose subcommand with no standalone -f token.
 check "server/ compose invocations all pass -f" python3 -c '
 import re, sys, glob
 pattern = re.compile(r"(\$\(DOCKER_COMPOSE\)|docker compose).*\b(up|down|logs|config|ps|build|exec|pull|restart|stop|start)\b")
@@ -75,12 +65,9 @@ if bad:
     sys.exit(1)
 '
 
-# The check above only sees DIRECT invocations. server/scripts/ensure-db-user.sh
-# builds its command in a bash array (DC_CMD+=(-f ...)) and calls "${DC_CMD[@]}",
-# which matches no literal invocation pattern -- so the check above silently
-# covers nothing there despite the glob appearing to include it. This second
-# check is indirection-proof: any server/ file that talks to Compose at all must
-# also name the compose file, however it builds the command.
+# The check above only sees DIRECT invocations; ensure-db-user.sh builds its
+# command in a bash array, which matches no literal pattern. This one is
+# indirection-proof: any server/ file talking to Compose must name the file.
 check "server/ compose entry points name the compose file" python3 -c '
 import glob, sys
 # Comments are stripped first: the filename appearing only in a comment must not
@@ -128,9 +115,7 @@ else
 fi
 
 echo
-# Print every count. The pass total used to be absent here, so readers had to
-# hand-count PASS lines to report a result -- and three separate reports got it
-# wrong that way. Anything a reader is expected to report, this script prints.
+# Print every count, so a result never has to be reported by hand-counting.
 echo "SUMMARY: $passes passed, $fails failed, $skips skipped ($((passes+fails+skips)) checks)"
 if [ "$fails" -eq 0 ]; then
   echo "All infra checks passed."

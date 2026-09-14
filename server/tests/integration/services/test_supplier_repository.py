@@ -55,9 +55,7 @@ class TestGetById:
 class TestGetIdByContactId:
     """Tests for SupplierRepository.get_id_by_contact_id()."""
 
-    async def test_linked_non_deleted_supplier_returns_id(
-        self, db_session, saved_supplier, contact_user
-    ):
+    async def test_linked_non_deleted_supplier_returns_id(self, db_session, saved_supplier, contact_user):
         saved_supplier.contact_id = contact_user.id
         db_session.add(saved_supplier)
         await db_session.flush()
@@ -69,9 +67,7 @@ class TestGetIdByContactId:
         found_id = await SupplierRepository.get_id_by_contact_id(db_session, contact_user.id)
         assert found_id is None
 
-    async def test_linked_but_soft_deleted_supplier_returns_none(
-        self, db_session, saved_supplier, contact_user
-    ):
+    async def test_linked_but_soft_deleted_supplier_returns_none(self, db_session, saved_supplier, contact_user):
         saved_supplier.contact_id = contact_user.id
         saved_supplier.deleted_at = datetime.now(UTC)
         db_session.add(saved_supplier)
@@ -84,9 +80,7 @@ class TestGetIdByContactId:
 class TestGetByContactId:
     """Tests for SupplierRepository.get_by_contact_id()."""
 
-    async def test_linked_supplier_returns_full_row(
-        self, db_session, saved_supplier, contact_user
-    ):
+    async def test_linked_supplier_returns_full_row(self, db_session, saved_supplier, contact_user):
         saved_supplier.contact_id = contact_user.id
         db_session.add(saved_supplier)
         await db_session.flush()
@@ -99,9 +93,7 @@ class TestGetByContactId:
         found = await SupplierRepository.get_by_contact_id(db_session, contact_user.id)
         assert found is None
 
-    async def test_returns_supplier_even_if_soft_deleted(
-        self, db_session, saved_supplier, contact_user
-    ):
+    async def test_returns_supplier_even_if_soft_deleted(self, db_session, saved_supplier, contact_user):
         saved_supplier.contact_id = contact_user.id
         saved_supplier.deleted_at = datetime.now(UTC)
         db_session.add(saved_supplier)
@@ -116,9 +108,7 @@ class TestSetContactId:
     """Tests for SupplierRepository.set_contact_id()."""
 
     async def test_sets_contact_id(self, db_session, saved_supplier, contact_user):
-        updated = await SupplierRepository.set_contact_id(
-            db_session, saved_supplier, contact_user.id
-        )
+        updated = await SupplierRepository.set_contact_id(db_session, saved_supplier, contact_user.id)
         assert updated.contact_id == contact_user.id
 
     async def test_clears_contact_id(self, db_session, saved_supplier, contact_user):

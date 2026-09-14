@@ -56,13 +56,9 @@ class ComponentsStatus(BaseModel):
 
     api: Literal["healthy"] = Field(..., description="The API itself is serving")
     database: DatabaseStatus = Field(..., description="Database component")
-    agents: Dict[str, AgentStatus] = Field(
-        default_factory=dict, description="Agent name to readiness status"
-    )
+    agents: Dict[str, AgentStatus] = Field(default_factory=dict, description="Agent name to readiness status")
     agents_healthy: bool = Field(..., description="Every registered agent is ready")
-    agents_error: Optional[str] = Field(
-        None, description="Set when the agent registry was never initialised"
-    )
+    agents_error: Optional[str] = Field(None, description="Set when the agent registry was never initialised")
 
 
 class RootResponse(BaseModel):

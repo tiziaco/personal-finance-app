@@ -35,7 +35,6 @@ from app.utils import (
     process_llm_response,
 )
 
-
 # What the model is told when a tool call does not produce a result. Fixed text
 # rather than the exception: a tool result becomes a ToolMessage in graph state,
 # which LangGraph persists to the checkpoint tables and which re-enters the
@@ -52,14 +51,7 @@ TOOL_ARGS_LOG_LIMIT = 200
 
 
 def _format_tool_args(args: dict) -> str:
-    """Render tool arguments for a log line, bounded in size.
-
-    Args:
-        args: The arguments the model supplied for the tool call.
-
-    Returns:
-        A JSON rendering, truncated past `TOOL_ARGS_LOG_LIMIT`.
-    """
+    """Render tool arguments as JSON, truncated past `TOOL_ARGS_LOG_LIMIT`."""
     rendered = json.dumps(args, default=str, ensure_ascii=False)
     if len(rendered) <= TOOL_ARGS_LOG_LIMIT:
         return rendered
@@ -67,21 +59,15 @@ def _format_tool_args(args: dict) -> str:
 
 
 class ChatbotAgent(BaseAgent):
-    """Chatbot agent that handles conversational interactions.
-    
-    This agent uses LangGraph to manage a conversational workflow with
-    tool calling capabilities, long-term memory, and checkpointing.
-    """
+    """A LangGraph conversational workflow with tools, memory and checkpointing."""
 
     def __init__(self):
-        """Initialize the chatbot agent with LLM service and tools."""
         super().__init__()
-        
-        # Use the LLM service with tools bound
+
         self.llm_service = llm_service
         self.llm_service.bind_tools(tools)
         self.tools_by_name = {tool.name: tool for tool in tools}
-        
+
         logger.info(
             "chatbot_agent_initialized",
             model=settings.llm.DEFAULT_LLM_MODEL,
@@ -89,29 +75,18 @@ class ChatbotAgent(BaseAgent):
         )
 
     async def _chat(self, state: GraphState, config: RunnableConfig) -> Command:
-        """Process the chat state and generate a response.
-
-        Args:
-            state: The current state of the conversation.
-            config: Runtime configuration including thread_id and callbacks.
-
-        Returns:
-            Command object with updated state and next node to execute.
-        """
+        """Process the chat state and generate a response."""
         current_llm = self.llm_service.get_llm()
         model_name = self.llm_service.current_model_name()
 
         system_prompt = load_system_prompt(long_term_memory=state.long_term_memory)
 
-        # Prepare messages with system prompt
         messages = prepare_messages(state.messages, current_llm, system_prompt)
 
         try:
-            # Use LLM service with automatic retries and circular fallback
             with llm_inference_duration_seconds.labels(model=model_name).time():
                 response_message = await self.llm_service.call(dump_messages(messages))
 
-            # Process response to handle structured content blocks
             response_message = process_llm_response(response_message)
 
             logger.info(
@@ -121,7 +96,6 @@ class ChatbotAgent(BaseAgent):
                 environment=settings.ENVIRONMENT.value,
             )
 
-            # Determine next node based on whether there are tool calls
             if response_message.tool_calls:
                 goto = "tool_call"
             else:
@@ -141,16 +115,10 @@ class ChatbotAgent(BaseAgent):
         """Run one tool call, recording what happened.
 
         This node hand-rolls the execution loop rather than using LangChain's
-        prebuilt ToolNode, so error handling belongs here rather than on the
-        tools themselves: one place covers a tool raising *and* a name the model
-        invented, and every tool added later is covered without opting in.
-
-        Args:
-            tool_call: A single tool call from the model's last message.
-
-        Returns:
-            The ToolMessage to feed back to the model, carrying `status="error"`
-            if the call did not produce a result.
+        prebuilt ToolNode, so error handling belongs here and not on the tools:
+        one place covers a tool raising *and* a name the model invented, and
+        every tool added later is covered without opting in. The returned
+        ToolMessage carries `status="error"` if there was no result.
         """
         tool_name = tool_call["name"]
         tool = self.tools_by_name.get(tool_name)
@@ -213,29 +181,12 @@ class ChatbotAgent(BaseAgent):
         )
 
     async def _tool_call(self, state: GraphState) -> Command:
-        """Process tool calls from the last message.
-
-        Args:
-            state: The current agent state containing messages and tool calls.
-
-        Returns:
-            Command object with updated messages and routing back to chat.
-        """
+        """Run every tool call on the last message, then route back to chat."""
         outputs = [await self._invoke_tool(tool_call) for tool_call in state.messages[-1].tool_calls]
         return Command(update={"messages": outputs}, goto="chat")
 
     async def create_graph(self, checkpointer: AsyncPostgresSaver) -> CompiledStateGraph:
-        """Create and configure the chatbot LangGraph workflow.
-        
-        Args:
-            checkpointer: The AsyncPostgresSaver instance for graph checkpointing.
-
-        Returns:
-            CompiledStateGraph: The configured and compiled LangGraph instance.
-            
-        Raises:
-            Exception: If graph creation or compilation fails.
-        """
+        """Create and compile the chatbot LangGraph workflow."""
         try:
             graph_builder = StateGraph(GraphState)
             graph_builder.add_node("chat", self._chat, ends=["tool_call", END])

@@ -151,24 +151,18 @@ class TestUpdateUser:
     """Tests for UserRepository.update_from_clerk()."""
 
     async def test_update_email(self, db_session, saved_user):
-        updated = await UserRepository.update_from_clerk(
-            db_session, saved_user, email="new@example.com"
-        )
+        updated = await UserRepository.update_from_clerk(db_session, saved_user, email="new@example.com")
         assert updated.email == "new@example.com"
 
     async def test_update_partial_fields(self, db_session, saved_user):
         original_email = saved_user.email
-        updated = await UserRepository.update_from_clerk(
-            db_session, saved_user, first_name="UpdatedName"
-        )
+        updated = await UserRepository.update_from_clerk(db_session, saved_user, first_name="UpdatedName")
         assert updated.first_name == "UpdatedName"
         assert updated.email == original_email  # unchanged
 
     async def test_update_none_fields_are_skipped(self, db_session, saved_user):
         original_first_name = saved_user.first_name
-        updated = await UserRepository.update_from_clerk(
-            db_session, saved_user, first_name=None
-        )
+        updated = await UserRepository.update_from_clerk(db_session, saved_user, first_name=None)
         assert updated.first_name == original_first_name  # None → no change
 
 

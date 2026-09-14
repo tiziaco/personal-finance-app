@@ -1,6 +1,8 @@
-# Rilevio — API Server
+# Template App — API Server
 
-FastAPI backend for the Rilevio document compliance platform. Handles authentication, document workflows, supplier management, and AI-assisted compliance checks.
+FastAPI backend serving both portals. Handles authentication and tenant scoping via
+Clerk, user provisioning and GDPR erasure, the LangGraph agent, and the OpenAPI contract
+the frontend client is generated from.
 
 ## Tech Stack
 
@@ -28,7 +30,7 @@ Key variables in `.env.development`:
 APP_ENV=development
 POSTGRES_HOST=localhost
 POSTGRES_PORT=5434
-POSTGRES_DB=rilevio
+POSTGRES_DB=mydb
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=postgres
 OPENAI_API_KEY=...

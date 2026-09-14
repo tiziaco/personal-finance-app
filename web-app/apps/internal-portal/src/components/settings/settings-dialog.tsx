@@ -2,7 +2,12 @@
 
 import type React from "react"
 import { useState } from "react"
-import { Dialog, DialogContent, DialogTrigger, DialogTitle } from "@app/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+  DialogTitle,
+} from "@app/ui/dialog"
 import { Button } from "@app/ui/button"
 import { Separator } from "@app/ui/separator"
 import { Cog } from "lucide-react"
@@ -37,7 +42,11 @@ export function SettingsDialog({ sections, trigger }: SettingsDialogProps) {
       <DialogTrigger
         render={
           trigger ?? (
-            <Button variant="ghost" size="default" className="w-full justify-start">
+            <Button
+              variant="ghost"
+              size="default"
+              className="w-full justify-start"
+            >
               <Cog />
               <span>Settings</span>
             </Button>

@@ -1,6 +1,8 @@
-# Rilevio — Web App
+# Template App — Web App
 
-pnpm monorepo containing two Next.js frontend apps for the Rilevio document compliance platform.
+pnpm monorepo containing the template's two Next.js frontend apps: an internal portal
+and an external partner portal, sharing one component library and one generated API
+client.
 
 ## Structure
 

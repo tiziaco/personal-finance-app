@@ -3,23 +3,16 @@
 These close the role-revocation gap: without them a revoked role stays
 honoured for up to UserCache.role_ttl seconds.
 
-There is deliberately no ordering guard here built on the membership
-payload's own timestamp, and no membership sync column. Reusing
-User.last_synced_at for that purpose would conflate two unrelated clocks — a
-fresh user.updated would begin dropping older-but-valid membership events.
-(The one place this module does touch last_synced_at is seeding it on a
-user row created from a membership event — see app.integrations.clerk.timestamps.UNSYNCED_EPOCH,
-shared with the user.* handlers — which is the opposite move: making sure a
-*real* user.* event is never mistaken for stale.)
+There is deliberately no ordering guard built on the membership payload's own
+timestamp, and no membership sync column: reusing User.last_synced_at would
+conflate two unrelated clocks, and a fresh user.updated would start dropping
+older-but-valid membership events. The one place this module touches
+last_synced_at is the opposite move — seeding UNSYNCED_EPOCH on a row created
+from a membership event, so a *real* user.* event is never mistaken for stale.
 
-`handle_membership_deleted` does guard against one specific reversal: a
-`created(org B)` / `deleted(org A)` pair for the same user arriving out of
-order. Without that guard a stray `.deleted(A)` landing after `.created(B)`
-would wipe org B — a permanent loss for the supplier link, which JIT cannot
-repair (see that handler for why). Any other reordering among these three
-events is left unguarded and self-heals: JIT re-syncs org_id from the JWT on
-the user's next request, which is the stated role of JIT in this design, not
-an accident.
+`handle_membership_deleted` guards one specific reversal; every other
+reordering is left unguarded and self-heals, because JIT re-syncs org_id from
+the JWT on the user's next request.
 """
 
 from typing import Optional
@@ -27,25 +20,18 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
+from app.integrations.clerk.timestamps import UNSYNCED_EPOCH
+from app.integrations.clerk.webhooks.schemas import WebhookContext
 from app.models.user import User
 from app.services.user import (
     user_cache,
     user_repository,
     user_service,
 )
-from app.integrations.clerk.timestamps import UNSYNCED_EPOCH
-from app.integrations.clerk.webhooks.schemas import WebhookContext
 
 
 def _organization_id(data: dict) -> Optional[str]:
-    """Read the organisation id from a membership payload.
-
-    Args:
-        data: A Clerk organization membership payload.
-
-    Returns:
-        The organisation id, or None.
-    """
+    """Read the organisation id from a membership payload."""
     return (data.get("organization") or {}).get("id")
 
 
@@ -63,21 +49,14 @@ async def _resolve_or_create_user(data: dict, session: AsyncSession) -> Optional
     other Clerk error propagates, so an inconclusive answer earns a
     redelivery rather than a row.
 
-    The new row's last_synced_at is seeded to UNSYNCED_EPOCH (the epoch), not this
-    membership event's own timestamp: the membership and the user it
-    describes are ordered by different clocks, and a membership arriving
-    before user.created means membership.updated_at > user.updated_at by
-    definition. Writing the membership's timestamp into last_synced_at would
-    make the user.created that follows look stale and get silently dropped
-    by _apply_profile's ordering guard — the exact failure this path exists
-    to avoid.
+    The new row's last_synced_at is seeded to UNSYNCED_EPOCH, not this event's
+    own timestamp: the two are ordered by different clocks, and a membership
+    arriving before user.created has the later one by definition. Writing it
+    would make the user.created that follows look stale and be dropped by
+    _apply_profile's ordering guard — the exact failure this path exists to
+    avoid.
 
-    Args:
-        data: A Clerk organization membership payload.
-        session: DB session.
-
-    Returns:
-        The user, or None if the payload lacks what a row requires.
+    Returns None if the payload lacks what a row requires.
     """
     public_user_data = data.get("public_user_data") or {}
     clerk_id = public_user_data.get("user_id")
@@ -122,15 +101,9 @@ async def _resolve_or_create_user(data: dict, session: AsyncSession) -> Optional
 async def _sync_org_and_invalidate(data: dict, session: AsyncSession, user: User) -> None:
     """Align org_id with the payload and drop the user's cached auth data.
 
-    Invalidates rather than populates. The event carries the new role, but
-    writing it before the request's commit could serve a value for a
-    transaction that later rolls back; dropping an entry can only cost a
-    DB read.
-
-    Args:
-        data: A Clerk organization membership payload.
-        session: DB session.
-        user: The membership's user.
+    Invalidates rather than populates: the event carries the new role, but
+    writing it before the request commits could serve a value for a transaction
+    that later rolls back. Dropping an entry can only cost a DB read.
     """
     org_id = _organization_id(data)
     if org_id and user.org_id != org_id:
@@ -140,11 +113,7 @@ async def _sync_org_and_invalidate(data: dict, session: AsyncSession, user: User
 
 
 async def handle_membership_created(ctx: WebhookContext) -> None:
-    """Attach a user to an organisation, creating the user row if needed.
-
-    Args:
-        ctx: The verified event, its delivery id, and the DB session.
-    """
+    """Attach a user to an organisation, creating the user row if needed."""
     data = ctx.data
     session = ctx.session
     user = await _resolve_or_create_user(data, session)
@@ -152,9 +121,7 @@ async def handle_membership_created(ctx: WebhookContext) -> None:
         return
 
     await _sync_org_and_invalidate(data, session, user)
-    await user_service.link_supplier_from_metadata(
-        user, data.get("public_metadata") or {}, session
-    )
+    await user_service.link_supplier_from_metadata(user, data.get("public_metadata") or {}, session)
     logger.info(
         "webhook_membership_created",
         user_id=user.id,
@@ -164,11 +131,7 @@ async def handle_membership_created(ctx: WebhookContext) -> None:
 
 
 async def handle_membership_updated(ctx: WebhookContext) -> None:
-    """Apply a membership change — in practice, a role change.
-
-    Args:
-        ctx: The verified event, its delivery id, and the DB session.
-    """
+    """Apply a membership change — in practice, a role change."""
     data = ctx.data
     session = ctx.session
     public_user_data = data.get("public_user_data") or {}
@@ -194,27 +157,17 @@ async def handle_membership_deleted(ctx: WebhookContext) -> None:
     drops the cached role so revocation is immediate rather than bounded by
     the cache TTL.
 
-    Guarded against a reversed created/deleted pair: an admin moving a user
-    from org A to org B emits membership.created(B) and membership.deleted(A)
-    with no ordering guarantee (see UserRepository.update_org_id's
-    reassignment note). If deleted(A) lands after created(B), acting on it
-    unconditionally would clear org B and unlink the user's supplier. The
-    org loss alone would self-heal — JIT re-syncs org_id from the JWT at the
-    user's next request — but JIT does not restore Supplier.contact_id, so an
-    unlink from the wrong event is permanent. Comparing the event's org
-    against the user's *current* org_id catches this — but only when both
-    are present: a mismatch is only conclusive when the event names an org
-    and the user has one on record. When user.org_id is NULL there is
-    nothing for the event to have been reversed against — created(B) is what
-    would have set org_id, so if it never landed there is no "B" for this
-    deleted(A) to be misread as following — so the event is a genuine
-    offboarding and must proceed rather than no-op.
+    Guarded against a reversed created/deleted pair: moving a user from org A to
+    org B emits created(B) and deleted(A) with no ordering guarantee, and acting
+    on a late deleted(A) would clear org B and unlink the supplier. The org loss
+    would self-heal via JIT, but JIT does not restore Supplier.contact_id, so a
+    wrong unlink is permanent. Comparing the event's org against the user's
+    *current* org_id catches it — but only when both are present. A NULL
+    user.org_id means created(B) never landed, so there is no "B" to have been
+    reversed against and the event is a genuine offboarding.
 
-    Unlinking the supplier leaves it contact-less with no signal to a project
+    Unlinking leaves the supplier contact-less with no signal to a project
     manager beyond this log line — a known cost, recorded in the design spec.
-
-    Args:
-        ctx: The verified event, its delivery id, and the DB session.
     """
     data = ctx.data
     session = ctx.session

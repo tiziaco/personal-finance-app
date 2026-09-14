@@ -43,10 +43,7 @@ class SupplierRepository:
             Supplier.id if a non-deleted supplier is linked, None otherwise.
         """
         statement = (
-            select(Supplier.id)
-            .where(Supplier.contact_id == user_id)
-            .where(Supplier.deleted_at.is_(None))
-            .limit(1)
+            select(Supplier.id).where(Supplier.contact_id == user_id).where(Supplier.deleted_at.is_(None)).limit(1)
         )
         result = await session.execute(statement)
         return result.scalar_one_or_none()

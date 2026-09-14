@@ -8,10 +8,10 @@ from app.core.metadata import PROJECT_NAME
 
 def load_system_prompt(**kwargs):
     """Load the system prompt from the file.
-    
+
     Args:
         **kwargs: Additional template variables to format into the prompt.
-        
+
     Returns:
         Formatted system prompt string.
     """

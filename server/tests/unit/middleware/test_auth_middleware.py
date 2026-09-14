@@ -18,12 +18,14 @@ def _make_app():
     """Create a minimal Starlette app with AuthMiddleware for testing."""
 
     async def endpoint(request: Request):
-        return JSONResponse({
-            "clerk_id": getattr(request.state, "clerk_id", None),
-            "user_id": getattr(request.state, "user_id", None),
-            "org_id": getattr(request.state, "org_id", None),
-            "org_role": getattr(request.state, "org_role", None),
-        })
+        return JSONResponse(
+            {
+                "clerk_id": getattr(request.state, "clerk_id", None),
+                "user_id": getattr(request.state, "user_id", None),
+                "org_id": getattr(request.state, "org_id", None),
+                "org_role": getattr(request.state, "org_role", None),
+            }
+        )
 
     app = Starlette(routes=[Route("/test", endpoint)])
     app.add_middleware(AuthMiddleware)

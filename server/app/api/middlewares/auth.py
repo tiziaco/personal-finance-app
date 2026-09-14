@@ -25,6 +25,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     """
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        """Parse the Clerk token, if any, and stash the identity on request.state."""
         request.state.clerk_id = None
         request.state.user_id = None
         request.state.org_id = None

@@ -11,9 +11,9 @@ import "@/styles/globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Rilevio",
+  title: "Template App",
   description:
-    "Rilevio is a compliance monitoring and reporting tool. It helps businesses to manage sub-contractors and ensure regulatory compliance with ease.",
+    "Template App is a multi-tenant B2B platform template. This is the internal portal, where staff manage projects, suppliers and orders.",
   icons: {
     icon: [
       { url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" },

@@ -8,7 +8,6 @@ from sqlmodel import Field
 from app.models.base import BaseModel, SoftDeleteMixin
 
 
-
 class Supplier(BaseModel, SoftDeleteMixin, table=True):
     """An external supplier company.
 

@@ -4,7 +4,7 @@ name = "server"
 # and FastAPI serves it, so this is the number that appears in openapi.json and
 # in the status widget. Bumping it is a contract change — regenerate.
 version = "1.0.0"
-description = "Rilevio Server - A backend server for Rilevio application"
+description = "Template App Server - A backend server for the Template App platform"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -48,7 +48,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["black", "isort", "flake8", "ruff", "djlint==1.36.4"]
+dev = ["ruff", "djlint==1.36.4"]
 eval = ["colorama>=0.4.6", "tqdm>=4.67.1"]
 
 [dependency-groups]
@@ -101,7 +101,7 @@ constraint-dependencies = [
 #
 # Change any of these, then run `make gen-contract` from the repo root and
 # commit the regenerated artifacts in the same commit.
-title = "Rilevio - Server"
+title = "Template App - Server"
 description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
 api_v1_str = "/api/v1"
 
@@ -142,55 +142,25 @@ filterwarnings = [
     "ignore::PendingDeprecationWarning",
 ]
 
-[tool.black]
-line-length = 119
-exclude = "venv|migrations"
-
-[tool.flake8]
-docstring-convention = "all"
-ignore = ["D107", "D212", "E501", "W503", "W605", "D203", "D100"]
-exclude = "venv|migrations"
-max-line-length = 119
-
-# radon
-radon-max-cc = 10
-
-[tool.isort]
-profile = "black"
-multi_line_output = "VERTICAL_HANGING_INDENT"
-force_grid_wrap = 2
-line_length = 119
-skip = ["migrations", "venv"]
-
-[tool.pylint."messages control"]
-disable = [
-    "line-too-long",
-    "trailing-whitespace",
-    "missing-function-docstring",
-    "consider-using-f-string",
-    "import-error",
-    "too-few-public-methods",
-    "redefined-outer-name",
-]
-
-[tool.pylint.master]
-ignore = "migrations"
-
 [tool.ruff]
 line-length = 119
 exclude = ["migrations", "*.ipynb", "venv"]
 
 [tool.ruff.lint]
-# Enable flake8-bugbear (`B`) rules and docstring (`D`) rules
-select = ["E", "F", "B", "ERA", "D"]
+# Bugbear (`B`), import order (`I`) and docstring (`D`) rules on top of the defaults.
+select = ["E", "F", "I", "B", "ERA", "D"]
 # Never enforce `E501` (line length violations).
-ignore = ["E501", "F401", "D203", "D213", "B904", "B008"]
+ignore = ["E501", "F401", "D107", "D203", "D213", "B904", "B008"]
 # Avoid trying to fix flake8-bugbear (`B`) violations.
 unfixable = ["B"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-# Ignore `E402` (import violations) in all `__init__.py` files
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["E402"]
+# Both must load dotenv before importing `app`.
+"alembic/env.py" = ["E402"]
+"tests/conftest.py" = ["E402"]
+# Test names are the documentation.
+"tests/**" = ["D"]

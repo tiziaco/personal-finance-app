@@ -79,9 +79,7 @@ async def service_exception_handler(request: Request, exc: ServiceError) -> JSON
     )
 
 
-async def validation_exception_handler(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """Handle validation errors from request data.
 
     Args:
@@ -102,9 +100,7 @@ async def validation_exception_handler(
     # Format the errors to be more user-friendly
     formatted_errors = []
     for error in exc.errors():
-        loc = " -> ".join(
-            [str(loc_part) for loc_part in error["loc"] if loc_part != "body"]
-        )
+        loc = " -> ".join([str(loc_part) for loc_part in error["loc"] if loc_part != "body"])
         formatted_errors.append({"field": loc, "message": error["msg"]})
 
     return JSONResponse(

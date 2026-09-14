@@ -5,7 +5,7 @@ export default function AppLoading() {
     <div className="space-y-4">
       {/* Page title skeleton */}
       <Skeleton className="h-8 w-48" />
-      
+
       {/* Content skeleton */}
       <div className="grid gap-4">
         <Skeleton className="h-32 w-full" />

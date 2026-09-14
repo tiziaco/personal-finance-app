@@ -1,8 +1,9 @@
 """Integration test fixtures — real DB, mocked external services, short-circuit auth."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
 
 from app.api.dependencies.agent import get_chatbot_agent
 from app.api.dependencies.authentication import get_current_user
@@ -59,14 +60,18 @@ async def authenticated_client(client, test_user):
 def mock_agent():
     """Mock ChatbotAgent with pre-configured async method stubs."""
     agent = MagicMock()
-    agent.get_response = AsyncMock(return_value=[
-        Message(role="user", content="Hello"),
-        Message(role="assistant", content="Hi there!"),
-    ])
-    agent.get_chat_history = AsyncMock(return_value=[
-        Message(role="user", content="Hello"),
-        Message(role="assistant", content="Hi there!"),
-    ])
+    agent.get_response = AsyncMock(
+        return_value=[
+            Message(role="user", content="Hello"),
+            Message(role="assistant", content="Hi there!"),
+        ]
+    )
+    agent.get_chat_history = AsyncMock(
+        return_value=[
+            Message(role="user", content="Hello"),
+            Message(role="assistant", content="Hi there!"),
+        ]
+    )
     agent.llm_service.current_model_name.return_value = "gpt-5-mini"
     agent.is_ready.return_value = True
     return agent

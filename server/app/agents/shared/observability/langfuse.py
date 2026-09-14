@@ -12,11 +12,11 @@ def create_graph_config(
     user_id: Optional[str] = None,
 ) -> dict:
     """Create a standard graph configuration dictionary.
-    
+
     Args:
         conversation_id: The conversation/thread ID.
         user_id: Optional user ID for tracking.
-        
+
     Returns:
         Configuration dictionary with callbacks and metadata.
     """

@@ -21,7 +21,14 @@ interface AppSidebarProps extends React.ComponentProps<typeof Sidebar> {
   userSlot?: React.ReactNode
 }
 
-export function AppSidebar({ items, logoSrc, logoAlt, settingsSlot, userSlot, ...props }: AppSidebarProps) {
+export function AppSidebar({
+  items,
+  logoSrc,
+  logoAlt,
+  settingsSlot,
+  userSlot,
+  ...props
+}: AppSidebarProps) {
   return (
     <Sidebar collapsible="icon" {...props}>
       <SidebarHeader>
@@ -33,11 +40,7 @@ export function AppSidebar({ items, logoSrc, logoAlt, settingsSlot, userSlot, ..
       <SidebarFooter>
         <SidebarGroup>
           <SidebarFooterMenu>
-            {settingsSlot && (
-              <SidebarMenuItem>
-                {settingsSlot}
-              </SidebarMenuItem>
-            )}
+            {settingsSlot && <SidebarMenuItem>{settingsSlot}</SidebarMenuItem>}
             {userSlot}
           </SidebarFooterMenu>
         </SidebarGroup>

@@ -25,9 +25,16 @@ class TestGetEnvironment:
             ("Test", Environment.TEST),
         ],
         ids=[
-            "production", "prod", "staging", "stage", "test",
-            "development", "dev-fallback", "unknown-fallback",
-            "uppercase", "mixed-case",
+            "production",
+            "prod",
+            "staging",
+            "stage",
+            "test",
+            "development",
+            "dev-fallback",
+            "unknown-fallback",
+            "uppercase",
+            "mixed-case",
         ],
     )
     def test_environment_resolution(self, monkeypatch, env_value, expected):

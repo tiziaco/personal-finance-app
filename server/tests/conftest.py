@@ -22,12 +22,12 @@ from testcontainers.community.postgres import PostgresContainer
 os.environ["APP_ENV"] = "test"
 
 from dotenv import load_dotenv
+
 load_dotenv(".env.test", override=True)
 
 from app.api.dependencies.database import get_db_session
 from app.core.config import settings
 from app.main import app
-
 
 # Event loop is managed by pytest-asyncio via asyncio_default_fixture_loop_scope = session
 # in pytest.ini. No custom event_loop fixture needed.
@@ -316,6 +316,7 @@ def reset_app_state():
 # Markers Configuration
 # ============================================================================
 
+
 def pytest_configure(config):
     """Configure pytest markers.
 
@@ -325,15 +326,7 @@ def pytest_configure(config):
     - @pytest.mark.slow - Slow tests (e.g., LLM calls)
     - @pytest.mark.asyncio - Async tests (provided by pytest-asyncio)
     """
-    config.addinivalue_line(
-        "markers", "unit: Unit tests that don't require database or external services"
-    )
-    config.addinivalue_line(
-        "markers", "integration: Integration tests that use database or external services"
-    )
-    config.addinivalue_line(
-        "markers", "slow: Slow tests that make external API calls"
-    )
-    config.addinivalue_line(
-        "markers", "asyncio: Async tests using pytest-asyncio"
-    )
+    config.addinivalue_line("markers", "unit: Unit tests that don't require database or external services")
+    config.addinivalue_line("markers", "integration: Integration tests that use database or external services")
+    config.addinivalue_line("markers", "slow: Slow tests that make external API calls")
+    config.addinivalue_line("markers", "asyncio: Async tests using pytest-asyncio")

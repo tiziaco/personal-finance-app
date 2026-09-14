@@ -1,5 +1,10 @@
 import { AppSidebar } from "@app/ui/layout/app-sidebar"
-import { SidebarInset, SidebarProvider, SidebarMenuButton, SidebarTrigger } from "@app/ui/sidebar"
+import {
+  SidebarInset,
+  SidebarProvider,
+  SidebarMenuButton,
+  SidebarTrigger,
+} from "@app/ui/sidebar"
 import { HUB_NAV } from "@/lib/hub-nav"
 import { SettingsDialog } from "@/components/settings/settings-dialog"
 import { GeneralSection } from "@/components/settings/sections/general-section"
@@ -21,13 +26,17 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar
         items={HUB_NAV}
         logoSrc="/images/logo-small.png"
-        logoAlt="Rilevio"
+        logoAlt="Template App"
         variant="floating"
         settingsSlot={
           <SettingsDialog
             sections={SETTINGS_SECTIONS}
             trigger={
-              <SidebarMenuButton size="lg" tooltip="Settings" className="cursor-pointer">
+              <SidebarMenuButton
+                size="lg"
+                tooltip="Settings"
+                className="cursor-pointer"
+              >
                 <Cog />
                 <span>Settings</span>
               </SidebarMenuButton>
@@ -36,15 +45,15 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         }
         userSlot={<ClerkUserPanel />}
       />
-      <SidebarTrigger size="icon" className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer" />
+      <SidebarTrigger
+        size="icon"
+        className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer"
+      />
       <SidebarInset className="flex flex-col overflow-hidden">
         <div className="flex-1 overflow-auto">
-          <div className="px-4 py-4 min-w-0">
-            {children}
-          </div>
+          <div className="px-4 py-4 min-w-0">{children}</div>
         </div>
       </SidebarInset>
     </SidebarProvider>
   )
 }
-

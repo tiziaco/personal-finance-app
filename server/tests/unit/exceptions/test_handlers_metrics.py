@@ -58,9 +58,7 @@ def _count(error_code: str, exception_type: str) -> float:
     `app/core/metrics.py` registers on the default registry at import, so these
     accumulate for the whole session and only deltas are meaningful.
     """
-    value = REGISTRY.get_sample_value(
-        METRIC, {"error_code": error_code, "exception_type": exception_type}
-    )
+    value = REGISTRY.get_sample_value(METRIC, {"error_code": error_code, "exception_type": exception_type})
     return value or 0.0
 
 

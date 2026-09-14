@@ -1,3 +1,5 @@
+"""Conversation CRUD endpoints for the authenticated user."""
+
 import uuid
 from typing import List
 
@@ -26,24 +28,12 @@ router = APIRouter()
     operation_id="createConversation",
     response_model=ConversationResponse,
     summary="Create a new chat conversation",
-    description="Initialize a new chat conversation for the authenticated user with a unique conversation ID."
+    description="Initialize a new chat conversation for the authenticated user with a unique conversation ID.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def create_conversation(request: Request, db_session: DbSession, user: CurrentUser):
-    """Create a new chat conversation for the authenticated user.
-
-    Args:
-        request: The FastAPI request object for rate limiting.
-        db_session: Database session
-        user: The authenticated user
-
-    Returns:
-        ConversationResponse: The conversation ID, name, and creation timestamp
-    """
-    # Generate a unique conversation ID
+    """Create a new chat conversation for the authenticated user."""
     conversation_id = str(uuid.uuid4())
-
-    # Create conversation in database
     conversation = await conversation_service.create_conversation(db_session, conversation_id, user.id)
 
     logger.info(
@@ -65,7 +55,7 @@ async def create_conversation(request: Request, db_session: DbSession, user: Cur
     operation_id="renameConversation",
     response_model=ConversationResponse,
     summary="Rename a chat conversation",
-    description="Update the display name of an existing chat conversation."
+    description="Update the display name of an existing chat conversation.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def update_conversation_name(
@@ -74,21 +64,8 @@ async def update_conversation_name(
     db_session: DbSession,
     name: str = Form(...),
 ):
-    """Update a conversation's name.
-
-    Args:
-        request: The FastAPI request object for rate limiting.
-        conversation: The verified user conversation
-        db_session: Database session
-        name: The new name for the conversation
-
-    Returns:
-        ConversationResponse: The updated conversation information
-    """
-    # Sanitize name input
+    """Update a conversation's name."""
     sanitized_name = sanitize_string(name)
-
-    # Update the conversation name
     conversation = await conversation_service.update_conversation_name(db_session, conversation.id, sanitized_name)
 
     return ConversationResponse(
@@ -103,7 +80,7 @@ async def update_conversation_name(
     operation_id="deleteConversation",
     status_code=204,
     summary="Delete a chat conversation",
-    description="Remove a chat conversation and permanently delete all associated messages."
+    description="Remove a chat conversation and permanently delete all associated messages.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def delete_conversation(
@@ -114,22 +91,10 @@ async def delete_conversation(
 ):
     """Delete a conversation for the authenticated user.
 
-    Clears all LangGraph checkpoint data (messages) then soft-deletes the
-    conversation record.
-
-    Args:
-        request: The FastAPI request object for rate limiting.
-        conversation: The verified user conversation
-        db_session: Database session
-        user: The authenticated user
-
-    Returns:
-        None
+    Checkpoint data (the messages) is hard-deleted first; the conversation row
+    is then soft-deleted.
     """
-    # Delete all messages from LangGraph checkpoint tables first
     await delete_conversation_checkpoints(conversation.id)
-
-    # Soft-delete the conversation record
     await conversation_service.soft_delete_conversation(db_session, conversation.id)
 
     logger.info("conversation_deleted", conversation_id=conversation.id, user_id=user.id)
@@ -140,20 +105,11 @@ async def delete_conversation(
     operation_id="listConversations",
     response_model=List[ConversationResponse],
     summary="List all user chat conversations",
-    description="Retrieve all chat conversations created by the authenticated user."
+    description="Retrieve all chat conversations created by the authenticated user.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def get_user_conversations(request: Request, db_session: DbSession, user: CurrentUser):
-    """Get all conversations for the authenticated user.
-
-    Args:
-        request: The FastAPI request object for rate limiting.
-        db_session: Database session
-        user: The authenticated user
-
-    Returns:
-        List[ConversationResponse]: List of conversations
-    """
+    """Get all conversations for the authenticated user."""
     conversations = await conversation_service.get_user_conversations(db_session, user.id)
     return [
         ConversationResponse(

@@ -17,17 +17,17 @@ _checkpointer_lock = asyncio.Lock()
 
 async def create_connection_pool() -> AsyncConnectionPool:
     """Create and return a PostgreSQL connection pool.
-    
+
     Uses singleton pattern - creates once and returns cached instance on subsequent calls.
-    
+
     Returns:
         AsyncConnectionPool: A connection pool for PostgreSQL database.
-        
+
     Raises:
         Exception: If pool creation or opening fails.
     """
     global _connection_pool
-    
+
     if _connection_pool is None:
         # Fixed pool size for checkpointing (total allocation: 30 max connections)
         # SQLAlchemy: 20 (15+5 overflow), Checkpointer: 5, mem0: ~5
@@ -57,35 +57,35 @@ async def create_connection_pool() -> AsyncConnectionPool:
 
 async def create_postgres_saver() -> AsyncPostgresSaver:
     """Create and setup an AsyncPostgresSaver for LangGraph checkpointing.
-    
+
     Uses singleton pattern with async lock to ensure only one setup runs.
     Safe for concurrent access - subsequent calls return the cached instance.
-    
+
     Returns:
         AsyncPostgresSaver: Configured checkpointer instance.
-        
+
     Raises:
         Exception: If checkpointer setup fails or times out.
     """
     global _checkpointer
-    
+
     # Fast path: return existing checkpointer without acquiring lock
     if _checkpointer is not None:
         return _checkpointer
-    
+
     # Slow path: acquire lock and initialize
     async with _checkpointer_lock:
         # Double-check after acquiring lock (another coroutine might have initialized it)
         if _checkpointer is not None:
             return _checkpointer
-        
+
         connection_pool = await create_connection_pool()
         checkpointer = AsyncPostgresSaver(connection_pool)
 
         # Add timeout to prevent indefinite hanging (increased to 30s for migrations)
         await asyncio.wait_for(checkpointer.setup(), timeout=30.0)
         logger.info("checkpointer_setup_completed", environment=settings.ENVIRONMENT.value)
-        
+
         _checkpointer = checkpointer
         return _checkpointer
 
@@ -116,7 +116,7 @@ async def delete_conversation_checkpoints(conversation_id: str) -> None:
 async def close_connection_pool() -> None:
     """Close the connection pool if it exists."""
     global _connection_pool, _checkpointer
-    
+
     if _connection_pool is not None:
         try:
             await _connection_pool.close()

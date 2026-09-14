@@ -56,8 +56,7 @@ def test_handler_label_keeps_the_api_version_prefix(client: TestClient) -> None:
     client.get("/api/v1/conversation/abc-123")
 
     assert any(
-        'handler="/api/v1/conversation/{conversation_id}"' in line
-        for line in _series(client, "http_requests_total")
+        'handler="/api/v1/conversation/{conversation_id}"' in line for line in _series(client, "http_requests_total")
     )
 
 

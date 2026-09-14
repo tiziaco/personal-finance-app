@@ -61,9 +61,7 @@ class TestListConversations:
         assert response.status_code == 200
         assert response.json() == []
 
-    async def test_returns_user_conversations(
-        self, authenticated_client, user_conversation
-    ):
+    async def test_returns_user_conversations(self, authenticated_client, user_conversation):
         response = await authenticated_client.get("/api/v1/conversation/conversations")
         assert response.status_code == 200
         data = response.json()
@@ -98,9 +96,7 @@ class TestRenameConversation:
         )
         assert response.status_code == 404
 
-    async def test_rename_other_users_conversation_returns_403(
-        self, db_session, authenticated_client
-    ):
+    async def test_rename_other_users_conversation_returns_403(self, db_session, authenticated_client):
         from app.models.user import User
 
         other_user = User(clerk_id="clerk_other_conv", org_id="test_org_123", email="other_conv@example.com")
@@ -127,30 +123,22 @@ class TestDeleteConversation:
     """Tests for DELETE /api/v1/conversation/conversation/{id}"""
 
     async def test_unauthenticated_returns_401(self, client, user_conversation):
-        response = await client.delete(
-            f"/api/v1/conversation/conversation/{user_conversation.id}"
-        )
+        response = await client.delete(f"/api/v1/conversation/conversation/{user_conversation.id}")
         assert response.status_code == 401
 
-    async def test_delete_succeeds(
-        self, authenticated_client_with_agent, user_conversation, stub_checkpoint_deletion
-    ):
+    async def test_delete_succeeds(self, authenticated_client_with_agent, user_conversation, stub_checkpoint_deletion):
         response = await authenticated_client_with_agent.delete(
             f"/api/v1/conversation/conversation/{user_conversation.id}"
         )
         assert response.status_code == 204
 
-    async def test_delete_nonexistent_returns_404(
-        self, authenticated_client_with_agent
-    ):
+    async def test_delete_nonexistent_returns_404(self, authenticated_client_with_agent):
         response = await authenticated_client_with_agent.delete(
             "/api/v1/conversation/conversation/nonexistent-conv-id"
         )
         assert response.status_code == 404
 
-    async def test_delete_other_users_conversation_returns_403(
-        self, db_session, authenticated_client_with_agent
-    ):
+    async def test_delete_other_users_conversation_returns_403(self, db_session, authenticated_client_with_agent):
         from app.models.user import User
 
         other_user = User(clerk_id="clerk_other_del", org_id="test_org_123", email="other_del@example.com")
@@ -166,7 +154,5 @@ class TestDeleteConversation:
         db_session.add(other_conv)
         await db_session.flush()
 
-        response = await authenticated_client_with_agent.delete(
-            f"/api/v1/conversation/conversation/{other_conv.id}"
-        )
+        response = await authenticated_client_with_agent.delete(f"/api/v1/conversation/conversation/{other_conv.id}")
         assert response.status_code == 403

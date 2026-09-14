@@ -10,13 +10,13 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
+from app.integrations.clerk.timestamps import UNSYNCED_EPOCH, clerk_timestamp_to_datetime
+from app.integrations.clerk.webhooks.schemas import WebhookContext
 from app.models.user import User
 from app.services.user import (
     user_repository,
     user_service,
 )
-from app.integrations.clerk.timestamps import UNSYNCED_EPOCH, clerk_timestamp_to_datetime
-from app.integrations.clerk.webhooks.schemas import WebhookContext
 
 
 def primary_email_from_payload(data: dict) -> Optional[str]:
@@ -166,9 +166,7 @@ async def handle_user_created(ctx: WebhookContext) -> None:
         # than conflict.
         await _apply_profile(session, user, data, event_ts)
 
-    await user_service.link_supplier_from_metadata(
-        user, data.get("public_metadata") or {}, session
-    )
+    await user_service.link_supplier_from_metadata(user, data.get("public_metadata") or {}, session)
 
 
 async def handle_user_updated(ctx: WebhookContext) -> None:

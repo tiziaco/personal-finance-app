@@ -21,9 +21,7 @@ def make_user(user_id: str = "user-uuid-1") -> User:
 
 
 def make_supplier(contact_id=None) -> Supplier:
-    return Supplier(
-        id="sup_1", name="Acme", code="ACME", vat_number="IT123", contact_id=contact_id
-    )
+    return Supplier(id="sup_1", name="Acme", code="ACME", vat_number="IT123", contact_id=contact_id)
 
 
 async def test_links_unlinked_supplier():
@@ -41,9 +39,7 @@ async def test_links_unlinked_supplier():
         ),
         patch("app.services.user.service.user_cache.invalidate_user", new=AsyncMock()),
     ):
-        result = await UserService().link_supplier_from_metadata(
-            user, {"supplier_id": "sup_1"}, session
-        )
+        result = await UserService().link_supplier_from_metadata(user, {"supplier_id": "sup_1"}, session)
 
     assert result == "sup_1"
     assert supplier.contact_id == "user-uuid-1"
@@ -57,9 +53,7 @@ async def test_does_not_steal_an_already_linked_supplier():
         "app.services.user.service.supplier_repository.get_by_id",
         new=AsyncMock(return_value=supplier),
     ):
-        result = await UserService().link_supplier_from_metadata(
-            user, {"supplier_id": "sup_1"}, session
-        )
+        result = await UserService().link_supplier_from_metadata(user, {"supplier_id": "sup_1"}, session)
 
     assert result is None
     assert supplier.contact_id == "someone-else"
@@ -130,23 +124,17 @@ async def test_calling_twice_with_same_inputs_does_not_relink_or_double_invalida
         ),
         patch(
             "app.services.user.service.supplier_repository.set_contact_id",
-            new=AsyncMock(
-                side_effect=lambda s, sup, cid: setattr(sup, "contact_id", cid) or sup
-            ),
+            new=AsyncMock(side_effect=lambda s, sup, cid: setattr(sup, "contact_id", cid) or sup),
         ) as set_contact_id,
         patch("app.services.user.service.user_cache.invalidate_user", new=AsyncMock()) as inval,
     ):
-        first = await UserService().link_supplier_from_metadata(
-            user, {"supplier_id": "sup_1"}, session
-        )
+        first = await UserService().link_supplier_from_metadata(user, {"supplier_id": "sup_1"}, session)
         assert first == "sup_1"
         assert supplier.contact_id == "user-uuid-1"
         assert set_contact_id.await_count == 1
         assert inval.await_count == 1
 
-        second = await UserService().link_supplier_from_metadata(
-            user, {"supplier_id": "sup_1"}, session
-        )
+        second = await UserService().link_supplier_from_metadata(user, {"supplier_id": "sup_1"}, session)
 
     assert second is None
     assert supplier.contact_id == "user-uuid-1"
@@ -172,9 +160,7 @@ class FakeClerkUser:
 
 
 def test_merge_prefers_top_level_over_membership_metadata():
-    clerk_user = FakeClerkUser(
-        {"supplier_id": "top"}, [FakeMembership({"supplier_id": "membership"})]
-    )
+    clerk_user = FakeClerkUser({"supplier_id": "top"}, [FakeMembership({"supplier_id": "membership"})])
     assert merge_clerk_metadata(clerk_user)["supplier_id"] == "top"
 
 

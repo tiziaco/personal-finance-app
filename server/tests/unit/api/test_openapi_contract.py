@@ -52,8 +52,7 @@ class TestOperationIds:
         ]
         assert not offenders, (
             "These routes rely on FastAPI's auto-generated operation_id. It becomes "
-            "the frontend hook name, so declare an explicit camelCase operation_id: "
-            + "; ".join(offenders)
+            "the frontend hook name, so declare an explicit camelCase operation_id: " + "; ".join(offenders)
         )
 
     def test_operation_ids_are_unique(self):
@@ -64,21 +63,15 @@ class TestOperationIds:
             if op_id in seen:
                 duplicates.append(f"{op_id!r}: {seen[op_id]} and {_label(path, method)}")
             seen[op_id] = _label(path, method)
-        assert not duplicates, (
-            "Duplicate operation ids collide into one generated symbol: "
-            + "; ".join(duplicates)
-        )
+        assert not duplicates, "Duplicate operation ids collide into one generated symbol: " + "; ".join(duplicates)
 
 
 class TestTags:
     def test_every_operation_declares_a_tag(self):
-        offenders = [
-            _label(p, m) for p, m, op in _operations() if not op.get("tags")
-        ]
+        offenders = [_label(p, m) for p, m, op in _operations() if not op.get("tags")]
         assert not offenders, (
             "Tags become the generated client's directory names and module "
-            "boundaries. Untagged routes collapse into a 'default' bucket: "
-            + ", ".join(offenders)
+            "boundaries. Untagged routes collapse into a 'default' bucket: " + ", ".join(offenders)
         )
 
 

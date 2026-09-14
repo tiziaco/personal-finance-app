@@ -10,12 +10,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.shared.checkpointing import delete_conversation_checkpoints
 from app.agents.shared.memory.factory import delete_user_memory
+from app.core.logging import logger
 from app.exceptions.base import AuthorizationError
-from app.models.user import User
 from app.integrations.clerk import (
     ClerkUserNotFoundError,
     clerk_client,
 )
+from app.integrations.clerk.timestamps import clerk_timestamp_to_datetime
+from app.models.user import User
 from app.services.conversation import conversation_service
 from app.services.user.cache import (
     _MISS,
@@ -23,9 +25,6 @@ from app.services.user.cache import (
 )
 from app.services.user.repository import user_repository
 from app.services.user.supplier_repository import supplier_repository
-from app.integrations.clerk.timestamps import clerk_timestamp_to_datetime
-
-from app.core.logging import logger
 
 
 def merge_clerk_metadata(clerk_user: Any) -> dict:
@@ -303,9 +302,7 @@ class UserService:
         """
         original_clerk_id = user.clerk_id
 
-        conversation_ids = await conversation_service.soft_delete_all_user_conversations(
-            session, user.id
-        )
+        conversation_ids = await conversation_service.soft_delete_all_user_conversations(session, user.id)
         for conv_id in conversation_ids:
             await delete_conversation_checkpoints(conv_id)
 

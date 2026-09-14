@@ -76,9 +76,7 @@ async def test_the_instance_is_built_once_and_reused():
 async def test_get_relevant_memory_formats_search_results():
     """Covers the await on `search` against a correctly-constructed instance."""
     instance = MagicMock(spec=AsyncMemory)
-    instance.search = AsyncMock(
-        return_value={"results": [{"memory": "likes tea"}, {"memory": "lives in Rome"}]}
-    )
+    instance.search = AsyncMock(return_value={"results": [{"memory": "likes tea"}, {"memory": "lives in Rome"}]})
     fake_cls = MagicMock()
     fake_cls.from_config = MagicMock(return_value=instance)
 
@@ -168,9 +166,7 @@ def test_mem0_alone_would_get_gpt5_wrong():
     If a future mem0 fixes its heuristic this fails, and the override in
     `_memory_llm_config` can be deleted.
     """
-    params = _ProbeLLM({"model": "gpt-5-nano"})._get_supported_params(
-        messages=[{"role": "user", "content": "hi"}]
-    )
+    params = _ProbeLLM({"model": "gpt-5-nano"})._get_supported_params(messages=[{"role": "user", "content": "hi"}])
     assert "temperature" in params
 
 

@@ -14,16 +14,17 @@ Revises: 9bcca25cfef3
 Create Date: 2026-08-25 09:00:00.000000
 
 """
+
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
 import sqlmodel
 
+from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = 'b3f1c27a4e18'
-down_revision: Union[str, Sequence[str], None] = '9bcca25cfef3'
+revision: str = "b3f1c27a4e18"
+down_revision: Union[str, Sequence[str], None] = "9bcca25cfef3"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
@@ -31,8 +32,8 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Upgrade schema."""
     op.alter_column(
-        'user',
-        'org_id',
+        "user",
+        "org_id",
         existing_type=sqlmodel.sql.sqltypes.AutoString(),
         nullable=True,
     )
@@ -46,8 +47,8 @@ def downgrade() -> None:
     """
     op.execute("UPDATE \"user\" SET org_id = '' WHERE org_id IS NULL")
     op.alter_column(
-        'user',
-        'org_id',
+        "user",
+        "org_id",
         existing_type=sqlmodel.sql.sqltypes.AutoString(),
         nullable=False,
     )

@@ -139,7 +139,7 @@ logger.exception("db_query_failed", table="documents")
 
 # ❌ Wrong
 logger.info(f"Document {doc_id} uploaded")  # no f-strings in events
-logger.error("something failed")            # use .exception() to preserve tracebacks
+logger.error("something failed")  # use .exception() to preserve tracebacks
 ```
 
 - Event names: `lowercase_with_underscores`
@@ -157,7 +157,9 @@ Services raise domain exceptions; the centralized handler translates them to HTT
 ```python
 # In a service
 from app.services.documents.exceptions import DocumentNotFoundError
+
 raise DocumentNotFoundError("Document not found", document_id=doc_id)
+
 
 # In a route — no try/except needed
 @router.get("/documents/{doc_id}")

@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-tunnel gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-tunnel check check-server check-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -30,6 +30,11 @@ help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
 	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/3000/3002 are free"
 	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
+	@echo ""
+	@echo "Checks:"
+	@echo "  make check              - Lint and format-check both sides (what the pre-push hook runs)"
+	@echo "  make check-server       - ruff check + ruff format --check"
+	@echo "  make check-web          - pnpm lint + pnpm format:check"
 	@echo ""
 	@echo "Contract:"
 	@echo "  make gen-contract       - Re-export openapi.json and regenerate the typed API client"
@@ -106,6 +111,17 @@ dev-tunnel:
 	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:$(API_HOST_PORT)"
 	@ngrok http $(API_HOST_PORT) --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
 
+# Read-only checks: nothing here rewrites a file. `make format` (server) and
+# `pnpm format` (web-app) are the fixers. The pre-push hook runs the side
+# whose files changed; run `make check` by hand to run both.
+check: check-server check-web
+
+check-server:
+	@cd server && uv run ruff check . && uv run ruff format --check .
+
+check-web:
+	@cd web-app && pnpm -s lint && pnpm -s format:check
+
 # The OpenAPI spec and the generated API client are committed artifacts. This
 # regenerates both and fails if the committed versions are stale.
 gen-contract:
@@ -165,7 +181,7 @@ docker-run:
 	@echo "   Supplier Portal:     http://localhost:3002"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Prometheus:          http://localhost:9090"
-	@echo "   Grafana:             http://localhost:3001 (admin/admin)"
+	@echo "   Grafana:             http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)"
 	@echo "   cAdvisor:            http://localhost:8080"
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 

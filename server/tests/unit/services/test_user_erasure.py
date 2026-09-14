@@ -42,9 +42,7 @@ async def test_erase_user_runs_full_cascade(session):
             "app.services.user.service.conversation_service.soft_delete_all_user_conversations",
             new=AsyncMock(return_value=["conv_1", "conv_2"]),
         ),
-        patch(
-            "app.services.user.service.delete_conversation_checkpoints", new=AsyncMock()
-        ) as checkpoints,
+        patch("app.services.user.service.delete_conversation_checkpoints", new=AsyncMock()) as checkpoints,
         patch("app.services.user.service.delete_user_memory", new=AsyncMock()) as mem,
         patch.object(UserService, "unlink_supplier_contact", new=AsyncMock(return_value="sup_1")),
         patch("app.services.user.service.user_cache.invalidate_user", new=AsyncMock()) as invalidate,
@@ -53,9 +51,7 @@ async def test_erase_user_runs_full_cascade(session):
 
     assert checkpoints.await_count == 2
     mem.assert_awaited_once_with("11111111-2222-3333-4444-555555555555")
-    invalidate.assert_awaited_once_with(
-        clerk_id="user_abc", user_id="11111111-2222-3333-4444-555555555555"
-    )
+    invalidate.assert_awaited_once_with(clerk_id="user_abc", user_id="11111111-2222-3333-4444-555555555555")
     session.commit.assert_awaited_once()
 
 
@@ -125,9 +121,7 @@ async def test_erase_user_clears_checkpoints_and_memory_before_anonymising(sessi
             "app.services.user.service.conversation_service.soft_delete_all_user_conversations",
             new=AsyncMock(return_value=["conv_1"]),
         ),
-        patch(
-            "app.services.user.service.delete_conversation_checkpoints", new=checkpoints_mock
-        ),
+        patch("app.services.user.service.delete_conversation_checkpoints", new=checkpoints_mock),
         patch("app.services.user.service.delete_user_memory", new=delete_memory_mock),
         patch.object(UserService, "unlink_supplier_contact", new=AsyncMock(return_value=None)),
         patch("app.services.user.service.user_cache.invalidate_user", new=AsyncMock()),

@@ -47,9 +47,7 @@ class TestServiceErrorHandler:
         db_session.add(other_conv)
         await db_session.flush()
 
-        response = await authenticated_client.delete(
-            f"/api/v1/conversation/conversation/{other_conv.id}"
-        )
+        response = await authenticated_client.delete(f"/api/v1/conversation/conversation/{other_conv.id}")
         assert response.status_code == 403
 
     async def test_unauthenticated_returns_401(self, client):
@@ -64,9 +62,7 @@ class TestServiceErrorHandler:
 class TestValidationErrorHandler:
     """Tests for validation_exception_handler — Pydantic RequestValidationError → 422."""
 
-    async def test_invalid_payload_returns_422(
-        self, authenticated_client_with_agent, db_session, test_user
-    ):
+    async def test_invalid_payload_returns_422(self, authenticated_client_with_agent, db_session, test_user):
         """Sending a message that violates schema constraints → 422."""
         conv = Conversation(
             id=str(uuid.uuid4()),
@@ -82,9 +78,7 @@ class TestValidationErrorHandler:
         )
         assert response.status_code == 422
 
-    async def test_422_response_has_field_errors(
-        self, authenticated_client_with_agent, db_session, test_user
-    ):
+    async def test_422_response_has_field_errors(self, authenticated_client_with_agent, db_session, test_user):
         conv = Conversation(
             id=str(uuid.uuid4()),
             user_id=test_user.id,
@@ -112,6 +106,7 @@ class TestGlobalExceptionHandler:
     async def test_unhandled_exception_returns_500(self):
         """RuntimeError passed to handler → 500 JSONResponse."""
         from unittest.mock import MagicMock
+
         from app.exceptions.handlers import global_exception_handler
 
         mock_request = MagicMock()
@@ -119,9 +114,7 @@ class TestGlobalExceptionHandler:
         mock_request.method = "GET"
         mock_request.client.host = "127.0.0.1"
 
-        response = await global_exception_handler(
-            mock_request, RuntimeError("unexpected internal error")
-        )
+        response = await global_exception_handler(mock_request, RuntimeError("unexpected internal error"))
 
         assert response.status_code == 500
 
@@ -129,6 +122,7 @@ class TestGlobalExceptionHandler:
         """500 response must not include Python tracebacks or internal details."""
         import json
         from unittest.mock import MagicMock
+
         from app.exceptions.handlers import global_exception_handler
 
         mock_request = MagicMock()
@@ -136,9 +130,7 @@ class TestGlobalExceptionHandler:
         mock_request.method = "GET"
         mock_request.client.host = "127.0.0.1"
 
-        response = await global_exception_handler(
-            mock_request, RuntimeError("secret internal detail")
-        )
+        response = await global_exception_handler(mock_request, RuntimeError("secret internal detail"))
 
         data = json.loads(response.body)
         response_text = str(data)

@@ -18,16 +18,15 @@ llm_inference_duration_seconds = Histogram(
     "llm_inference_duration_seconds",
     "Time spent processing LLM inference",
     ["model"],
-    buckets=[0.1, 0.3, 0.5, 1.0, 2.0, 5.0]
+    buckets=[0.1, 0.3, 0.5, 1.0, 2.0, 5.0],
 )
-
 
 
 llm_stream_duration_seconds = Histogram(
     "llm_stream_duration_seconds",
     "Time spent processing LLM stream inference",
     ["model"],
-    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0]
+    buckets=[0.1, 0.5, 1.0, 2.0, 5.0, 10.0],
 )
 
 
@@ -41,7 +40,7 @@ tool_call_duration_seconds = Histogram(
     "tool_call_duration_seconds",
     "Time spent executing an agent tool",
     ["tool"],
-    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0]
+    buckets=[0.1, 0.5, 1.0, 2.5, 5.0, 10.0],
 )
 
 

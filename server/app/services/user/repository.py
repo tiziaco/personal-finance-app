@@ -20,43 +20,19 @@ class UserRepository:
 
     @staticmethod
     async def get_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
-        """Get a user by internal ID.
-
-        Args:
-            session: Database session
-            user_id: User ID (UUID string)
-
-        Returns:
-            User if found, None otherwise.
-        """
+        """Get a user by internal ID."""
         return await session.get(User, user_id)
 
     @staticmethod
     async def get_by_clerk_id(session: AsyncSession, clerk_id: str) -> Optional[User]:
-        """Get a user by Clerk ID.
-
-        Args:
-            session: Database session
-            clerk_id: Clerk user ID (e.g., "user_2abc123xyz")
-
-        Returns:
-            User if found, None otherwise.
-        """
+        """Get a user by Clerk ID (e.g. "user_2abc123xyz")."""
         statement = select(User).where(User.clerk_id == clerk_id)
         result = await session.execute(statement)
         return result.scalar_one_or_none()
 
     @staticmethod
     async def get_by_email(session: AsyncSession, email: str) -> Optional[User]:
-        """Get a user by email.
-
-        Args:
-            session: Database session
-            email: User's email
-
-        Returns:
-            User if found, None otherwise.
-        """
+        """Get a user by email."""
         statement = select(User).where(User.email == email)
         result = await session.execute(statement)
         return result.scalar_one_or_none()
@@ -75,23 +51,10 @@ class UserRepository:
     ) -> User:
         """Create a new user from Clerk data.
 
-        Args:
-            session: Database session
-            clerk_id: Clerk user ID
-            email: User's email address
-            org_id: Clerk organisation ID (from JWT org_id claim), or None —
-                Clerk's user.created payload carries no organisation, because
-                membership is a separate resource with its own events.
-            first_name: User's first name
-            last_name: User's last name
-            avatar_url: User's avatar URL
-            email_verified: Whether the email is verified
-            last_synced_at: Clerk's own timestamp for this state, used by the
-                webhook ordering guard. Falls back to our clock when absent
-                (e.g. the JIT path has no Clerk event to draw one from).
-
-        Returns:
-            The created User.
+        `org_id` is None on the user.created path: Clerk's payload carries no
+        organisation, because membership is a separate resource with its own
+        events. `last_synced_at` is Clerk's own clock, read by the webhook
+        ordering guard; the JIT path has no Clerk event to draw one from.
         """
         user = User(
             clerk_id=clerk_id,
@@ -126,28 +89,13 @@ class UserRepository:
     ) -> User:
         """Create a user, or return the existing one if a concurrent request won the race.
 
-        Two requests JIT-provisioning the same clerk_id for the first time can
-        race; the loser's insert hits the unique constraint. Rather than surface
-        that as a conflict, roll back and return the winner's row.
+        Two requests JIT-provisioning the same clerk_id can race; the loser's
+        insert hits the unique constraint. Roll back and return the winner's row
+        rather than surfacing a conflict.
 
-        Args:
-            session: Database session
-            clerk_id: Clerk user ID
-            email: User's email address
-            org_id: Clerk organisation ID (from JWT org_id claim), or None
-            first_name: User's first name
-            last_name: User's last name
-            avatar_url: User's avatar URL
-            email_verified: Whether the email is verified
-            last_synced_at: Clerk's own timestamp for this state; see create().
-
-        Returns:
-            The created or already-existing User.
-
-        Raises:
-            UserAlreadyExistsError: The IntegrityError wasn't the clerk_id race
-                (e.g. an email collision with a different clerk_id) — re-fetching
-                by clerk_id found nothing, so this is a genuine conflict.
+        Raises UserAlreadyExistsError when the re-fetch by clerk_id finds
+        nothing: the IntegrityError was some other collision (an email already
+        held by a different clerk_id), so it is a genuine conflict.
         """
         try:
             return await UserRepository.create(
@@ -180,21 +128,7 @@ class UserRepository:
         email_verified: Optional[bool] = None,
         last_synced_at: Optional[datetime] = None,
     ) -> User:
-        """Update a user's profile from Clerk data.
-
-        Args:
-            session: Database session
-            user: The user to update
-            email: New email address
-            first_name: New first name
-            last_name: New last name
-            avatar_url: New avatar URL
-            email_verified: New email verification status
-            last_synced_at: Clerk's own timestamp for this state; see create().
-
-        Returns:
-            The updated User.
-        """
+        """Update a user's profile from Clerk data. None means "leave alone"."""
         now = datetime.now(UTC)
         if email is not None:
             user.email = email
@@ -220,16 +154,8 @@ class UserRepository:
     async def update_org_id(session: AsyncSession, user: User, org_id: str) -> User:
         """Sync a user's org_id from the JWT's org context.
 
-        Called on every resolve_user() DB hit so the DB stays aligned when an
+        Called on every resolve_user() DB hit, so the row stays aligned when an
         admin re-assigns the user to a different Clerk organisation.
-
-        Args:
-            session: Database session
-            user: The user to update
-            org_id: New Clerk organisation ID (from JWT org_id claim)
-
-        Returns:
-            The updated User.
         """
         user.org_id = org_id
         session.add(user)
@@ -238,15 +164,7 @@ class UserRepository:
 
     @staticmethod
     async def delete(session: AsyncSession, user_id: str) -> bool:
-        """Delete a user by internal ID.
-
-        Args:
-            session: Database session
-            user_id: User ID (UUID string)
-
-        Returns:
-            True if deleted, False if not found.
-        """
+        """Delete a user by internal ID. False if there is no such user."""
         user = await session.get(User, user_id)
         if not user:
             return False

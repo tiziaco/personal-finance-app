@@ -1,7 +1,8 @@
 """Tests for role-based dependencies in app.api.dependencies.auth."""
 
-import pytest
 from unittest.mock import MagicMock
+
+import pytest
 
 from app.api.dependencies.authentication import get_current_role
 from app.exceptions.base import AuthorizationError
@@ -43,5 +44,3 @@ class TestGetCurrentRole:
         request = _make_request_with_role("unknown_role")
         with pytest.raises(AuthorizationError, match="Unknown role"):
             await get_current_role(request)
-
-

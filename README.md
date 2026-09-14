@@ -1,38 +1,35 @@
-# Rilevio
+# Template App
 
-A cloud-based document compliance management platform built for Fincantieri to replace the manual SharePoint + Excel workflow used to track supplier documentation across projects and purchase orders.
+A production-ready template for **multi-tenant B2B platforms with two portals** — one
+for internal staff, one for external partners — backed by a single FastAPI server.
 
 ## Overview
 
-The platform streamlines the end-to-end supplier onboarding and document compliance process — from document collection and validation to expiry tracking and client forwarding — across multiple concurrent projects and suppliers.
+The starting point this gives you is the part that is tedious to build and easy to get
+wrong: tenant isolation, two separately-deployed frontends sharing one component
+library, an API contract that cannot silently drift from its client, and a deploy story.
 
-It consists of two client-facing interfaces backed by a single API server:
+- **Multi-tenancy via Clerk Organizations** — the org id arrives on the JWT and scopes
+  every query; role-gated routing keeps internal and external users in their own portal
+- **Two Next.js 16 portals** sharing `packages/ui`, `packages/auth` and a generated
+  API client, built as genuinely distinct images
+- **A generated, committed API contract** — `server/openapi.json` and the TanStack Query
+  hooks derived from it, with four gates that fail if they drift from the routes
+- **GDPR erasure** wired end to end, including LangGraph checkpoints and mem0 memories
+- **A LangGraph agent** with Langfuse tracing and Postgres checkpointing
+- **Observability and deploy** — Prometheus, Grafana, cAdvisor, and a Traefik/Dokploy
+  compose file that serves both staging and production
 
-- **Internal Dashboard** — for project managers to manage projects, suppliers, orders, document compliance status, and administrative document expiries
-- **Supplier Portal** — external-facing interface where suppliers upload required documents, track submission status, and receive notifications about missing or expiring files
+### The example domain
 
-## Key Features
+The template ships with a worked example rather than empty stubs: **supplier document
+compliance**. Internal staff manage projects, suppliers and orders; suppliers submit
+documents against them. That is why you will find a `Supplier` model, a
+`supplier-portal/` app, roles named `project_manager`/`reviewer`/`approver`/`supplier`,
+and some Italian UI labels.
 
-**For Project Managers**
-
-- See the compliance status of every supplier across all active projects at a glance
-- Review and approve uploaded documents, flag issues, and trigger automatic email notifications to suppliers
-- Track expiring administrative documents (DURC, Visura camerale, CCIA, White List) before they become blockers
-- Manage projects, suppliers, and purchase orders from a single dashboard
-- Monitor overall document submission progress per supplier with at-a-glance completion percentages
-- Forward approved document packages to the end client with a single action
-
-**For Suppliers**
-
-- Log in to a dedicated portal and see exactly which documents are required for each assigned order
-- Upload files directly — no SharePoint access, no email attachments
-- Get notified automatically when a document is rejected or approaching expiry
-- Track submission progress in real time
-- Add comments to document uploads to provide context or flag questions
-
-**Regulatory Context**
-
-Built for compliance with D.Lgs. 81/2008 (workplace safety) and D.Lgs. 36/2023 (public procurement), with document templates aligned to Fincantieri's existing procurement workflows.
+None of it is load-bearing. Rename or replace it to fit your domain — the multi-tenancy,
+auth, contract and deploy machinery underneath do not depend on any of it.
 
 ---
 
@@ -81,18 +78,26 @@ Built for compliance with D.Lgs. 81/2008 (workplace safety) and D.Lgs. 36/2023 (
 ## Project Structure
 
 ```
-app/
-├── web-app/          # Next.js frontend (dashboard + supplier portal)
-├── server/           # FastAPI backend
-│   ├── app/          # Application source
-│   ├── tests/        # Unit and integration tests
-│   ├── Makefile      # Dev commands
-│   └── pyproject.toml
-├── infra/                    # Infrastructure config
-│   ├── prometheus/           # Prometheus config
-│   └── grafana/               # Grafana dashboards and datasources
-├── docker-compose.dev.yml    # Development stack
-└── docker-compose.prod.yml   # Production stack
+.
+├── server/                        # FastAPI backend (Python 3.13, uv)
+│   ├── app/                       # Application source
+│   ├── alembic/                   # Migrations
+│   ├── tests/                     # Unit and integration tests
+│   ├── openapi.json               # Committed API contract — generated
+│   └── pyproject.toml             # Deps AND the service's public identity
+├── web-app/                       # Next.js monorepo (pnpm workspaces)
+│   ├── apps/
+│   │   ├── internal-portal/       # Staff dashboard (port 3000)
+│   │   └── supplier-portal/       # External partner portal (port 3002)
+│   └── packages/
+│       ├── api-client/            # @app/api-client — generated from openapi.json
+│       ├── auth/                  # @app/auth — Role, useAppAuth(), getUserRole()
+│       └── ui/                    # @app/ui — shared shadcn/ui components
+├── docs/                          # Setup guides, RBAC, design history
+├── infra/                         # Prometheus + Grafana config
+├── scripts/                       # gen-contract, check-contract, verify-infra, deploy-check
+├── docker-compose.dev.yml         # Development stack
+└── docker-compose.prod.yml        # Staging AND production (switched by APP_ENV)
 ```
 
 ---
@@ -102,9 +107,9 @@ app/
 ### Prerequisites
 
 - [Docker](https://www.docker.com/) and Docker Compose
-- [Node.js](https://nodejs.org/) 20+ and npm (for local frontend dev)
+- [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/) (for local frontend dev) — this is a pnpm workspace; npm and yarn will not resolve the `@app/*` packages
 - [uv](https://docs.astral.sh/uv/) (for local backend dev)
-- A [Clerk](https://clerk.com/) application (for auth)
+- A [Clerk](https://clerk.com/) application — see [`docs/setup/clerk.md`](docs/setup/clerk.md)
 
 ### Environment Files
 
@@ -124,6 +129,24 @@ cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.l
 
 Required variables include Clerk API keys, database credentials, and OpenAI/Langfuse keys.
 
+### Clerk
+
+Nothing authenticates until the Clerk dashboard is configured: Organizations enabled,
+four org roles created with exact slugs, and every portal origin listed in
+`ALLOWED_ORIGINS`. Miss the last one and valid tokens are rejected — it looks like broken
+auth, not a config error.
+
+Full procedure: [`docs/setup/clerk.md`](docs/setup/clerk.md).
+
+### Git hooks (once per clone)
+
+```bash
+git config core.hooksPath .githooks
+```
+
+Without this the pre-commit contract gate does not exist, and a route change committed
+without its regenerated client is caught only by CI.
+
 ### Service Identity (renaming a fork)
 
 The API's title, description and versioned path prefix are **not** environment
@@ -135,7 +158,7 @@ in `[project]`:
 version = "1.0.0"
 
 [tool.app.metadata]
-title = "Rilevio - Server"
+title = "Template App - Server"
 description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
 api_v1_str = "/api/v1"
 ```
@@ -219,12 +242,14 @@ Services will be available at:
 
 | Service | URL |
 |---|---|
-| Frontend | http://localhost:3000 |
+| Internal portal | http://localhost:3000 |
+| Supplier portal | http://localhost:3002 |
 | API server | http://localhost:8100 |
 | API docs (Swagger) | http://localhost:8100/docs |
 | Prometheus | http://localhost:9090 |
 | Grafana | http://localhost:3001 |
 | cAdvisor | http://localhost:8080 |
+| PostgreSQL | localhost:5434 |
 
 ### Frontend Development (local)
 
@@ -244,4 +269,73 @@ pnpm dev:supplier    # http://localhost:3002
 cp apps/internal-portal/.env.example apps/internal-portal/.env.local
 cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
+
+> **The Docker and native paths are mutually exclusive.** They collide on host ports
+> **3000, 3002 and 8100**, which the Compose services publish, and on the single static
+> `NGROK_DOMAIN`, claimed by both the `ngrok` compose service and `make dev-tunnel`. Stop
+> one before starting the other. `make dev-preflight` checks the ports and fails with a
+> pointer rather than letting the servers die on a bind error.
+
+Running natively also means migrations are **not** applied for you the way the Docker
+`migrate` service does it — run `make migrate ENV=development` from `server/`.
+
+For Clerk webhook work, `make dev-tunnel` exposes the local API at `https://$NGROK_DOMAIN`.
+Run the Make target rather than `ngrok` directly — it passes `--authtoken` explicitly, for
+the reason set out in [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md).
+
+---
+
+## Testing
+
+```bash
+# Backend — from server/
+make test              # all tests (APP_ENV=test)
+make test-unit         # unit tests only, no database needed
+make test-integration  # requires a live database
+make test-coverage     # HTML + XML coverage report
+
+# Frontend — from web-app/
+pnpm type-check        # tsc --noEmit across the workspace
+
+# Repo-level checks
+make check-contract              # committed API artifacts match the routes
+bash scripts/verify-infra.sh     # layout, identifiers, compose validity
+```
+
+---
+
+## Deploying
+
+`docker-compose.prod.yml` serves **both** staging and production — the environment is
+`APP_ENV`, not a second file. It publishes no ports: a reverse proxy is the only ingress,
+and on a Dokploy host that proxy is Traefik, discovering containers through the file's
+labels.
+
+```bash
+make deploy-check                      # staging (default)
+make deploy-check DEPLOY_ENV=production
+```
+
+This builds and boots the deploy stack under its own Compose project, so a running dev
+stack is untouched, then tears itself down. It proves the file parses under `APP_ENV`,
+that both portals build as genuinely distinct images, that a failed migration fails the
+stack, and that nothing publishes a host port.
+
+**It does not exercise the Traefik labels** — a wrong container port or a router pointing
+at an undeclared service surfaces on the first real deploy. Reviewing them is the
+substitute; the checklist is in
+`docs/superpowers/specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md`.
+
+---
+
+## Documentation
+
+| Where | What |
+|---|---|
+| [`docs/`](docs/) | Index of everything below |
+| [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — Clerk dashboard, roles, `ALLOWED_ORIGINS` |
+| [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md) | Webhook endpoint and the dev tunnel |
+| [`docs/setup/infrastructure.md`](docs/setup/infrastructure.md) | Root `.env`, Prometheus/Grafana/cAdvisor, and what production omits |
+| [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) | Renaming this template for your project |
+| [`CLAUDE.md`](CLAUDE.md), [`server/CLAUDE.md`](server/CLAUDE.md), [`web-app/CLAUDE.md`](web-app/CLAUDE.md) | Working conventions and the most detailed operational notes in the repo |
 

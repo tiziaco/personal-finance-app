@@ -29,7 +29,11 @@ export function MenuNavigator({ items }: { items: NavItem[] }) {
               <Collapsible key={item.title} className="group/collapsible">
                 <SidebarMenuItem>
                   <div className="relative flex items-center w-full">
-                    <SidebarMenuButton size="lg" tooltip={item.title} isActive={isActive}>
+                    <SidebarMenuButton
+                      size="lg"
+                      tooltip={item.title}
+                      isActive={isActive}
+                    >
                       <Link
                         href={item.url}
                         className={`flex items-center gap-2 w-full ${isActive ? "font-medium" : ""}`}
@@ -63,7 +67,11 @@ export function MenuNavigator({ items }: { items: NavItem[] }) {
 
           return (
             <SidebarMenuItem key={item.title}>
-              <SidebarMenuButton size="lg" tooltip={item.title} isActive={isActive}>
+              <SidebarMenuButton
+                size="lg"
+                tooltip={item.title}
+                isActive={isActive}
+              >
                 <Link
                   href={item.url}
                   className={`flex items-center gap-2 w-full ${isActive ? "font-medium" : ""}`}

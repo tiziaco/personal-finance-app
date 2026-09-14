@@ -1,6 +1,6 @@
 # Internal Portal
 
-Dashboard for Rilevio internal project managers. Provides tools to manage projects, suppliers, purchase orders, and document compliance tracking.
+The template's internal portal — the app staff sign in to. In the shipped example domain it manages projects, suppliers, purchase orders and document compliance tracking.
 
 Runs on **http://localhost:3000**.
 
@@ -33,13 +33,27 @@ cp .env.example .env.local
 Edit `.env.local` and fill in your Clerk API keys and other required values:
 
 ```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
 NEXT_PUBLIC_API_URL=http://localhost:8100
 
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
-CLERK_JWT_ISSUER_DOMAIN=https://....clerk.accounts.dev
+
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/home
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/home
 ```
+
+The `NEXT_PUBLIC_CLERK_*` values are read by the Clerk SDK straight from the
+environment, not by any code in this repo — so grepping for them finds only config and
+docs.
+
+The `NEXT_PUBLIC_*` values are **inlined at image build time**, not read at runtime, so
+changing one means rebuilding the image.
+
+Getting the keys is only half of it — Clerk also needs Organizations enabled, four org
+roles created with exact slugs, and this portal's origin listed in the server's
+`ALLOWED_ORIGINS`. See [`docs/setup/clerk.md`](../../../docs/setup/clerk.md).
 
 ### 2. Install dependencies
 
@@ -97,6 +111,18 @@ src/
 ├── proxy.ts           # Clerk middleware / RBAC proxy
 └── styles/            # Global CSS
 ```
+
+### Branding
+
+Two files carry the visual identity — swap them for your own:
+
+| File | Used by |
+|---|---|
+| `public/images/logo-small.png` | the sidebar mark, via `logoSrc` on `AppSidebar` (`@app/ui`, `packages/ui/src/components/layout/company-logo.tsx`) |
+| `public/icons/favicon.ico` | the browser tab, via `metadata.icons` in `src/app/layout.tsx` |
+
+The accompanying `logoAlt` and `metadata.title` strings live in
+`src/app/(dashboard)/layout.tsx` and `src/app/layout.tsx`.
 
 ---
 

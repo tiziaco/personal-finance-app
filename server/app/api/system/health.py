@@ -70,9 +70,7 @@ async def health_check(request: Request, response: Response) -> HealthResponse:
 
     agents_healthy = False
     if hasattr(request.app.state, "agents"):
-        agents_healthy = all(
-            agent.is_ready() for agent in request.app.state.agents.values()
-        )
+        agents_healthy = all(agent.is_ready() for agent in request.app.state.agents.values())
 
     overall_healthy = db_healthy and agents_healthy
     if not overall_healthy:
@@ -93,9 +91,7 @@ async def health_check(request: Request, response: Response) -> HealthResponse:
     description="Detailed readiness check with component-level health information. Requires authentication. Use this endpoint for monitoring dashboards and operational visibility.",
 )
 @limiter.limit(settings.rate_limits.endpoints.READY[0])
-async def readiness_check(
-    user: CurrentUser, request: Request, response: Response
-) -> ReadinessResponse:
+async def readiness_check(user: CurrentUser, request: Request, response: Response) -> ReadinessResponse:
     """Detailed readiness check for authenticated operations teams."""
     logger.info("readiness_check_called", user_id=user.id)
 

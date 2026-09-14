@@ -1,5 +1,5 @@
 /**
- * Role definitions and utilities for Rilevio RBAC.
+ * Role definitions and utilities for RBAC.
  *
  * Portability seam: getUserRole() is the only function that knows how
  * the auth provider represents roles. When migrating to WorkOS, only

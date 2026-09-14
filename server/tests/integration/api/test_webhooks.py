@@ -9,9 +9,9 @@ from httpx import AsyncClient, Response
 from sqlmodel import select
 from svix.webhooks import Webhook
 
+from app.integrations.clerk.webhooks.dispatcher import clerk_dispatcher
 from app.models.supplier import Supplier
 from app.models.user import User
-from app.integrations.clerk.webhooks.dispatcher import clerk_dispatcher
 from app.services.user.repository import UserRepository
 
 pytestmark = pytest.mark.integration
@@ -26,9 +26,7 @@ USER_DATA = {
     "image_url": "https://img.clerk.com/x",
     "public_metadata": {},
     "primary_email_address_id": "idn_1",
-    "email_addresses": [
-        {"id": "idn_1", "email_address": "ada@e2e.test", "verification": {"status": "verified"}}
-    ],
+    "email_addresses": [{"id": "idn_1", "email_address": "ada@e2e.test", "verification": {"status": "verified"}}],
     "updated_at": 1754000000000,
 }
 
@@ -79,9 +77,7 @@ async def test_unknown_event_type_returns_204(client):
 
 async def test_unsigned_request_is_rejected(client):
     body = envelope("user.created", {"id": "user_1"})
-    response = await client.post(
-        WEBHOOK_URL, content=body, headers={"content-type": "application/json"}
-    )
+    response = await client.post(WEBHOOK_URL, content=body, headers={"content-type": "application/json"})
     assert response.status_code == 401
 
 
@@ -112,9 +108,7 @@ async def test_registered_handler_is_invoked_with_the_delivery_context(client):
     clerk_dispatcher.register("test.event_ok", handler)
     try:
         body = envelope("test.event_ok", {"id": "abc123"})
-        response = await client.post(
-            WEBHOOK_URL, content=body, headers=signed(body, msg_id="msg_ctx")
-        )
+        response = await client.post(WEBHOOK_URL, content=body, headers=signed(body, msg_id="msg_ctx"))
 
         assert response.status_code == 204
         ctx = received["ctx"]
@@ -167,9 +161,7 @@ async def test_handler_exception_propagates_and_is_not_swallowed(client):
 # ============================================================================
 
 
-async def post(
-    client: AsyncClient, event_type: str, data: dict, msg_id: str = "msg_e2e"
-) -> Response:
+async def post(client: AsyncClient, event_type: str, data: dict, msg_id: str = "msg_e2e") -> Response:
     """POST one signed webhook event via the given client."""
     body = envelope(event_type, data)
     return await client.post(WEBHOOK_URL, content=body, headers=signed(body, msg_id=msg_id))
@@ -228,9 +220,7 @@ async def test_user_created_replayed_does_not_duplicate(client, db_session):
     assert len(result.scalars().all()) == 1
 
 
-async def test_create_declines_when_clerk_no_longer_has_the_user(
-    client, db_session, clerk_has_the_user
-):
+async def test_create_declines_when_clerk_no_longer_has_the_user(client, db_session, clerk_has_the_user):
     """A delivery redelivered after the user was erased must write nothing.
 
     erase_user() rewrites clerk_id and releases the email, so the erased row
@@ -242,9 +232,7 @@ async def test_create_declines_when_clerk_no_longer_has_the_user(
     clerk_has_the_user.return_value = False
 
     assert (await post(client, "user.created", USER_DATA)).status_code == 204
-    assert (
-        await post(client, "organization_membership.created", MEMBERSHIP_DATA)
-    ).status_code == 204
+    assert (await post(client, "organization_membership.created", MEMBERSHIP_DATA)).status_code == 204
 
     result = await db_session.execute(select(User).where(User.clerk_id == "user_e2e"))
     assert result.scalars().all() == []
@@ -259,9 +247,7 @@ async def test_membership_before_create_leaves_correct_state(client, db_session)
     the latter, the ordering guard in _apply_profile would see the following
     user.created as stale and silently drop it, leaving email_verified=False
     forever."""
-    assert (
-        await post(client, "organization_membership.created", MEMBERSHIP_DATA)
-    ).status_code == 204
+    assert (await post(client, "organization_membership.created", MEMBERSHIP_DATA)).status_code == 204
     assert (await post(client, "user.created", USER_DATA)).status_code == 204
 
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
@@ -287,9 +273,7 @@ async def test_stale_update_does_not_overwrite_newer_data(client, db_session):
 
 async def test_membership_deleted_clears_org(client, db_session):
     await post(client, "organization_membership.created", MEMBERSHIP_DATA)
-    assert (
-        await post(client, "organization_membership.deleted", MEMBERSHIP_DATA)
-    ).status_code == 204
+    assert (await post(client, "organization_membership.deleted", MEMBERSHIP_DATA)).status_code == 204
 
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     assert user.org_id is None
@@ -303,9 +287,7 @@ async def test_membership_deleted_for_matching_org_unlinks_supplier(client, db_s
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     assert user is not None
 
-    supplier = Supplier(
-        contact_id=user.id, name="Acme Forgings", code="ACME-MATCH", vat_number="IT12345678902"
-    )
+    supplier = Supplier(contact_id=user.id, name="Acme Forgings", code="ACME-MATCH", vat_number="IT12345678902")
     db_session.add(supplier)
     await db_session.flush()
 
@@ -334,9 +316,7 @@ async def test_membership_deleted_for_different_org_leaves_state_intact(client, 
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     assert user is not None
 
-    supplier = Supplier(
-        contact_id=user.id, name="Acme Forgings", code="ACME-E2E", vat_number="IT12345678901"
-    )
+    supplier = Supplier(contact_id=user.id, name="Acme Forgings", code="ACME-E2E", vat_number="IT12345678901")
     db_session.add(supplier)
     await db_session.flush()
 
@@ -363,9 +343,7 @@ async def test_user_deleted_anonymises_and_replay_is_a_noop(client, db_session, 
     created = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     internal_id = created.id
 
-    assert (
-        await post(client, "user.deleted", {"id": "user_e2e", "deleted": True})
-    ).status_code == 204
+    assert (await post(client, "user.deleted", {"id": "user_e2e", "deleted": True})).status_code == 204
     assert await UserRepository.get_by_clerk_id(db_session, "user_e2e") is None
 
     anonymised = await UserRepository.get_by_id(db_session, internal_id)
@@ -380,9 +358,7 @@ async def test_user_deleted_anonymises_and_replay_is_a_noop(client, db_session, 
 
     # Replay — and the echo of our own DELETE /me — must not error.
     assert (
-        await post(
-            client, "user.deleted", {"id": "user_e2e", "deleted": True}, msg_id="msg_replay"
-        )
+        await post(client, "user.deleted", {"id": "user_e2e", "deleted": True}, msg_id="msg_replay")
     ).status_code == 204
 
 
@@ -392,9 +368,7 @@ async def test_user_updated_after_deletion_does_not_resurrect(client, db_session
     await post(client, "user.created", USER_DATA)
     await post(client, "user.deleted", {"id": "user_e2e", "deleted": True})
 
-    assert (
-        await post(client, "user.updated", USER_DATA, msg_id="msg_after")
-    ).status_code == 204
+    assert (await post(client, "user.updated", USER_DATA, msg_id="msg_after")).status_code == 204
 
     result = await db_session.execute(select(User).where(User.clerk_id == "user_e2e"))
     assert result.scalars().all() == []

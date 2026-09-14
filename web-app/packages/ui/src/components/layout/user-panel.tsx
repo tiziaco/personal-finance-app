@@ -30,10 +30,18 @@ interface UserDetailsPanelProps {
 function getInitials(name: string): string {
   const parts = name.trim().split(" ")
   if (parts.length === 1) return (parts[0]?.[0] ?? "U").toUpperCase()
-  return `${parts[0]?.[0] ?? ""}${parts[parts.length - 1]?.[0] ?? ""}`.toUpperCase() || "U"
+  return (
+    `${parts[0]?.[0] ?? ""}${parts[parts.length - 1]?.[0] ?? ""}`.toUpperCase() ||
+    "U"
+  )
 }
 
-export function UserDetailsPanel({ user, onSignOut, onOpenProfile, onOpenOrganizationProfile }: UserDetailsPanelProps) {
+export function UserDetailsPanel({
+  user,
+  onSignOut,
+  onOpenProfile,
+  onOpenOrganizationProfile,
+}: UserDetailsPanelProps) {
   const { isMobile } = useSidebar()
 
   if (!user) {
@@ -68,7 +76,10 @@ export function UserDetailsPanel({ user, onSignOut, onOpenProfile, onOpenOrganiz
             <AvatarImage src={user.imageUrl} alt={user.name} />
             <AvatarFallback
               className="rounded-lg"
-              style={{ backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }}
+              style={{
+                backgroundColor: "var(--primary)",
+                color: "var(--primary-foreground)",
+              }}
             >
               {initials}
             </AvatarFallback>
@@ -92,7 +103,10 @@ export function UserDetailsPanel({ user, onSignOut, onOpenProfile, onOpenOrganiz
                   <AvatarImage src={user.imageUrl} alt={user.name} />
                   <AvatarFallback
                     className="rounded-lg"
-                    style={{ backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }}
+                    style={{
+                      backgroundColor: "var(--primary)",
+                      color: "var(--primary-foreground)",
+                    }}
                   >
                     {initials}
                   </AvatarFallback>
@@ -108,20 +122,28 @@ export function UserDetailsPanel({ user, onSignOut, onOpenProfile, onOpenOrganiz
           {(onOpenProfile || onOpenOrganizationProfile) && (
             <DropdownMenuGroup>
               {onOpenProfile && (
-                <DropdownMenuItem className="cursor-pointer" onClick={onOpenProfile}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={onOpenProfile}
+                >
                   <BadgeCheck />
                   Account
                 </DropdownMenuItem>
               )}
               {onOpenOrganizationProfile && (
-                <DropdownMenuItem className="cursor-pointer" onClick={onOpenOrganizationProfile}>
+                <DropdownMenuItem
+                  className="cursor-pointer"
+                  onClick={onOpenOrganizationProfile}
+                >
                   <Building2 />
                   Organisation
                 </DropdownMenuItem>
               )}
             </DropdownMenuGroup>
           )}
-          {(onOpenProfile || onOpenOrganizationProfile) && <DropdownMenuSeparator />}
+          {(onOpenProfile || onOpenOrganizationProfile) && (
+            <DropdownMenuSeparator />
+          )}
           <DropdownMenuItem className="cursor-pointer" onClick={onSignOut}>
             <LogOut />
             Log out

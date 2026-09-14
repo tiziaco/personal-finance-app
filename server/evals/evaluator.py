@@ -47,8 +47,7 @@ class Evaluator:
     def __init__(self):
         """Initialize Evaluator with OpenAI and Langfuse clients."""
         self.client = openai.AsyncOpenAI(
-            api_key=settings.evaluation.API_KEY.get_secret_value(),
-            base_url=settings.evaluation.BASE_URL
+            api_key=settings.evaluation.API_KEY.get_secret_value(), base_url=settings.evaluation.BASE_URL
         )
         self.langfuse = Langfuse(
             public_key=settings.langfuse.PUBLIC_KEY.get_secret_value(),

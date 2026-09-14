@@ -239,7 +239,7 @@ personal data — but the framing should follow the fork, not stay here.
 
 This is the design question that most affects any future spec.
 
-| | Internal PM (Fincantieri) | Supplier contact |
+| | Internal PM | Supplier contact |
 |---|---|---|
 | Likely processing basis | Employment / contract / legitimate interest | Contract, consent |
 | Art 17 erasure right | **Weaker** — an employee generally cannot demand deletion of a work account while employed | **Strong** |

@@ -56,34 +56,34 @@ async def lifespan(app: FastAPI):
         close_connection_pool,
         create_postgres_saver,
     )
-    
+
     logger.info(
         "application_startup",
         project_name=PROJECT_NAME,
         version=VERSION,
         api_prefix=API_V1_STR,
     )
-    
+
     # Initialize database
     engine = await initialize_database_engine()
     session_factory = create_session_factory(engine)
-    
+
     # Initialize checkpointer once at startup
     checkpointer = await create_postgres_saver()
     logger.info("checkpointer_initialized_at_startup")
-    
+
     # Initialize all agents with pre-compiled graphs
     agents = await initialize_agents(checkpointer)
     logger.info("application_ready", agent_names=list(agents.keys()))
-    
+
     # Store in app state for dependency injection
     app.state.limiter = limiter
     app.state.engine = engine
     app.state.session_factory = session_factory
     app.state.agents = agents
-    
+
     yield
-    
+
     # Cleanup
     await close_connection_pool()
     await close_database_engine(engine)

@@ -48,14 +48,13 @@ Production is publicly reachable and needs none of this.
 The static domain is the entire point: the URL registered in Clerk survives
 container and host restarts, so this step is never repeated.
 
-If you also have ngrok installed on the host (`brew install ngrok`), note that
-its config file — `~/Library/Application Support/ngrok/ngrok.yml`, written by
-`ngrok config add-authtoken` — **takes precedence over the `NGROK_AUTHTOKEN`
-environment variable**. A stale token there makes the agent authenticate as a
-different account and reject the domain with `ERR_NGROK_320`, no matter what
-`.env` says. `make dev-tunnel` sidesteps this by passing `--authtoken`
-explicitly; the compose `ngrok` service has no config file, so it uses `.env`
-directly.
+If you also have ngrok installed on the host (`brew install ngrok`), its config
+file — `~/Library/Application Support/ngrok/ngrok.yml` — **takes precedence over
+the `NGROK_AUTHTOKEN` environment variable**. A stale token there authenticates
+as a different account and rejects the domain with `ERR_NGROK_320`, whatever
+`.env` says. Both paths already avoid this: `make dev-tunnel` passes
+`--authtoken` explicitly, and the compose `ngrok` service has no config file.
+This is the canonical note — `CLAUDE.md` and `README.md` link here.
 
 ---
 

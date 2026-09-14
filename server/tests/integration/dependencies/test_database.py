@@ -40,15 +40,11 @@ class TestErrorTranslation:
 
     @patch("app.api.dependencies.database.clear_session_context", new_callable=AsyncMock)
     @patch("app.api.dependencies.database.set_session_context", new_callable=AsyncMock)
-    async def test_integrity_error_raises_database_conflict(
-        self, mock_set, mock_clear
-    ):
+    async def test_integrity_error_raises_database_conflict(self, mock_set, mock_clear):
         """IntegrityError → DatabaseConflictError (409)."""
         mock_request, mock_session = _make_mock_request()
         orig_exc = Exception("unique constraint violation")
-        mock_session.commit.side_effect = IntegrityError(
-            "INSERT ...", {}, orig_exc
-        )
+        mock_session.commit.side_effect = IntegrityError("INSERT ...", {}, orig_exc)
 
         gen = get_db_session(mock_request)
         await gen.__anext__()  # yields session
@@ -58,15 +54,11 @@ class TestErrorTranslation:
 
     @patch("app.api.dependencies.database.clear_session_context", new_callable=AsyncMock)
     @patch("app.api.dependencies.database.set_session_context", new_callable=AsyncMock)
-    async def test_operational_error_raises_database_connection_error(
-        self, mock_set, mock_clear
-    ):
+    async def test_operational_error_raises_database_connection_error(self, mock_set, mock_clear):
         """OperationalError → DatabaseConnectionError (503)."""
         mock_request, mock_session = _make_mock_request()
         orig_exc = Exception("connection refused")
-        mock_session.commit.side_effect = OperationalError(
-            "SELECT ...", {}, orig_exc
-        )
+        mock_session.commit.side_effect = OperationalError("SELECT ...", {}, orig_exc)
 
         gen = get_db_session(mock_request)
         await gen.__anext__()
@@ -100,9 +92,7 @@ class TestIntegrityDiagnostics:
     real driver exception rather than a hand-built stand-in.
     """
 
-    async def test_reads_the_constraint_from_a_real_asyncpg_violation(
-        self, db_session, test_user
-    ):
+    async def test_reads_the_constraint_from_a_real_asyncpg_violation(self, db_session, test_user):
         """The regression test: a real 23505 must yield a real constraint name.
 
         postgres_container runs with driver="asyncpg" (tests/conftest.py), so
@@ -143,9 +133,7 @@ class TestIntegrityDiagnostics:
 
     def test_returns_none_when_the_error_carries_no_diagnostics(self):
         """Degrades to (None, None) rather than raising inside the handler."""
-        assert _integrity_diagnostics(
-            IntegrityError("INSERT ...", {}, Exception("no fields"))
-        ) == (None, None)
+        assert _integrity_diagnostics(IntegrityError("INSERT ...", {}, Exception("no fields"))) == (None, None)
 
 
 class TestRLSContext:
@@ -153,9 +141,7 @@ class TestRLSContext:
 
     @patch("app.api.dependencies.database.clear_session_context", new_callable=AsyncMock)
     @patch("app.api.dependencies.database.set_session_context", new_callable=AsyncMock)
-    async def test_set_context_called_when_user_id_present(
-        self, mock_set, mock_clear
-    ):
+    async def test_set_context_called_when_user_id_present(self, mock_set, mock_clear):
         mock_request, mock_session = _make_mock_request(with_user_id=True)
 
         gen = get_db_session(mock_request)

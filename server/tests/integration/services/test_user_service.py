@@ -5,9 +5,9 @@ from unittest.mock import MagicMock, patch
 import pytest
 import pytest_asyncio
 
+from app.integrations.clerk.exceptions import ClerkUserNotFoundError
 from app.models.supplier import Supplier
 from app.models.user import User
-from app.integrations.clerk.exceptions import ClerkUserNotFoundError
 from app.services.user.cache import (
     _MISS,
     user_cache,
@@ -41,9 +41,7 @@ async def existing_user(db_session):
 class TestDbHit:
     """Tests for resolve_user when the user already exists in the DB."""
 
-    async def test_db_hit_returns_user_without_calling_clerk(
-        self, service, db_session, existing_user
-    ):
+    async def test_db_hit_returns_user_without_calling_clerk(self, service, db_session, existing_user):
         with patch("app.services.user.service.clerk_client.get_user") as mock_get:
             user = await service.resolve_user(existing_user.clerk_id, "test_org_123", db_session)
             mock_get.assert_not_called()
@@ -71,9 +69,7 @@ class TestJITProvisioning:
 
     @patch("app.services.user.service.clerk_client.get_primary_email")
     @patch("app.services.user.service.clerk_client.get_user")
-    async def test_jit_creates_user_in_db(
-        self, mock_get_user, mock_get_email, service, db_session
-    ):
+    async def test_jit_creates_user_in_db(self, mock_get_user, mock_get_email, service, db_session):
         clerk_id = "clerk_jit_new_001"
         mock_get_user.return_value = self._make_clerk_user(clerk_id)
         mock_get_email.return_value = "jit_new@example.com"
@@ -128,8 +124,13 @@ class TestSupplierRelinkInvalidation:
     @patch("app.services.user.service.clerk_client.get_primary_email")
     @patch("app.services.user.service.clerk_client.get_user")
     async def test_replace_displaces_old_contact_and_clears_its_cache(
-        self, mock_get_user, mock_get_email, service, db_session,
-        existing_user, linked_supplier,
+        self,
+        mock_get_user,
+        mock_get_email,
+        service,
+        db_session,
+        existing_user,
+        linked_supplier,
     ):
         # The displaced user has their link cached from an earlier request
         await user_cache.set_supplier_id(existing_user.id, linked_supplier.id)
@@ -147,8 +148,13 @@ class TestSupplierRelinkInvalidation:
     @patch("app.services.user.service.clerk_client.get_primary_email")
     @patch("app.services.user.service.clerk_client.get_user")
     async def test_new_contact_link_is_readable(
-        self, mock_get_user, mock_get_email, service, db_session,
-        existing_user, linked_supplier,
+        self,
+        mock_get_user,
+        mock_get_email,
+        service,
+        db_session,
+        existing_user,
+        linked_supplier,
     ):
         mock_get_user.return_value = self._make_clerk_user(linked_supplier.id, replace=True)
         mock_get_email.return_value = "new_contact@example.com"
@@ -160,8 +166,13 @@ class TestSupplierRelinkInvalidation:
     @patch("app.services.user.service.clerk_client.get_primary_email")
     @patch("app.services.user.service.clerk_client.get_user")
     async def test_without_replace_flag_old_contact_is_untouched(
-        self, mock_get_user, mock_get_email, service, db_session,
-        existing_user, linked_supplier,
+        self,
+        mock_get_user,
+        mock_get_email,
+        service,
+        db_session,
+        existing_user,
+        linked_supplier,
     ):
         await user_cache.set_supplier_id(existing_user.id, linked_supplier.id)
 

@@ -156,10 +156,14 @@ services:
       - traefik.enable=true
       - traefik.docker.network=dokploy-network
       - traefik.http.services.${COMPOSE_PROJECT_NAME}-server.loadbalancer.server.port=8000
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.rule=Host(`${API_DOMAIN:?set to the API hostname, e.g. api.example.com}`)
+      # /metrics is mounted with no auth, and a bare Host() rule would route it.
+      # Excluded here rather than unmounted, so a Prometheus service added to this
+      # file still scrapes it over app-network. Denylist: a future operational path
+      # must be added here too, and deploy-check will not notice if it isn't.
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.rule=Host(`${API_DOMAIN:?set to the API hostname, e.g. api.example.com}`) && !PathPrefix(`/metrics`)
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.entrypoints=web
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-web.service=${COMPOSE_PROJECT_NAME}-server
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.rule=Host(`${API_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.rule=Host(`${API_DOMAIN}`) && !PathPrefix(`/metrics`)
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.entrypoints=websecure
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.tls.certresolver=letsencrypt
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.service=${COMPOSE_PROJECT_NAME}-server

@@ -14,7 +14,7 @@ from app.core.logging import (
 
 class LoggingContextMiddleware(BaseHTTPMiddleware):
     """Middleware for binding user_id to logging context.
-    
+
     This middleware reads authentication context from request.state (populated by AuthMiddleware)
     and binds it to the structured logging context for all subsequent logs in the request.
     Note: conversation_id is passed as path parameter in endpoints, not via auth token.

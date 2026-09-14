@@ -17,14 +17,14 @@ from fastapi import Request
 from pydantic import SecretStr
 from svix.webhooks import Webhook
 
-from app.integrations.clerk.webhooks.verification import (
-    MAX_WEBHOOK_BODY_BYTES,
-    verify_clerk_webhook,
-)
 from app.core.config import settings
 from app.integrations.clerk.webhooks.exceptions import (
     InvalidWebhookSignatureError,
     WebhookPayloadTooLargeError,
+)
+from app.integrations.clerk.webhooks.verification import (
+    MAX_WEBHOOK_BODY_BYTES,
+    verify_clerk_webhook,
 )
 
 pytestmark = pytest.mark.unit

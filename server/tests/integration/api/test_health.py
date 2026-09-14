@@ -84,13 +84,10 @@ class TestReadyEndpoint:
         agents = response.json()["components"]["agents"]
         assert isinstance(agents, dict)
         assert all(
-            isinstance(status, dict) and "ready" in status and "graph_compiled" in status
-            for status in agents.values()
+            isinstance(status, dict) and "ready" in status and "graph_compiled" in status for status in agents.values()
         )
 
-    async def test_agents_failure_is_reported_outside_the_agents_mapping(
-        self, authenticated_client
-    ):
+    async def test_agents_failure_is_reported_outside_the_agents_mapping(self, authenticated_client):
         """The not-initialized message lives in agents_error, not inside agents."""
         components = (await authenticated_client.get("/ready")).json()["components"]
         assert components["agents_error"] == "Agents not initialized"

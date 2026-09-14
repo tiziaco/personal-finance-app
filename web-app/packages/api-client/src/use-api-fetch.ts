@@ -58,7 +58,9 @@ export function useApiFetch() {
 
   return useCallback(
     async <T>(url: string, init?: RequestInit): Promise<T> => {
-      const fullUrl = /^https?:\/\//i.test(url) ? url : `${resolveBaseUrl()}${url}`
+      const fullUrl = /^https?:\/\//i.test(url)
+        ? url
+        : `${resolveBaseUrl()}${url}`
       const headers = new Headers(init?.headers)
 
       const token = await getToken()
@@ -98,7 +100,8 @@ export function useApiFetch() {
       if (response.headers.get("content-length") === "0") return undefined as T
 
       const contentType = response.headers.get("content-type") ?? ""
-      if (contentType.includes("application/json")) return (await response.json()) as T
+      if (contentType.includes("application/json"))
+        return (await response.json()) as T
 
       return (await response.text()) as unknown as T
     },

@@ -44,6 +44,17 @@ cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 
 ---
 
+## Lint and Format
+
+```bash
+pnpm lint            # ESLint in both portals and in packages/ui, packages/auth
+pnpm format          # Prettier --write (config: .prettierrc, semicolons off)
+pnpm format:check    # what the root pre-push hook runs
+```
+
+Prettier ignores Markdown and the generated client; orval formats the latter
+through the same config, so `make gen-contract` and `pnpm format` agree.
+
 ## Skills to Use
 
 Invoke these skills before starting the relevant task:
@@ -227,7 +238,7 @@ toast.error(String(error.body))
 - Returning `null` from loading states
 - Using wrong skeleton colors inside sidebars
 - Forgetting `"use client"` on components with hooks or event handlers
-- Confusing `CLERK_JWT_ISSUER_DOMAIN` (token validation) with the sign-in URL
+- Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the portals only need the publishable key and the sign-in/sign-up URLs
 - Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
 - Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
 - Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@app/auth`

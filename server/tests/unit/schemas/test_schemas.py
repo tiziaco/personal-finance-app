@@ -1,6 +1,6 @@
 """Tests for app.schemas — Pydantic model validation, sanitization, serialization."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -135,7 +135,7 @@ class TestConversationResponse:
             name='test{name}[0]("val")',
             created_at=datetime.now(UTC),
         )
-        for char in '<>{}[]()\'"`':
+        for char in "<>{}[]()'\"`":
             assert char not in resp.name
 
     def test_empty_name_allowed(self):

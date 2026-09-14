@@ -1,6 +1,6 @@
 """Tests for app.schemas.system — the response models for /, /health and /ready."""
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
@@ -24,9 +24,7 @@ def _components(**overrides) -> ComponentsStatus:
         api="healthy",
         database=DatabaseStatus(
             status="healthy",
-            connection_pool=ConnectionPoolStats(
-                size=5, checked_in=5, checked_out=0, overflow=0, total=5
-            ),
+            connection_pool=ConnectionPoolStats(size=5, checked_in=5, checked_out=0, overflow=0, total=5),
         ),
         agents={"chatbot": AgentStatus(ready=True, graph_compiled=True)},
         agents_healthy=True,
@@ -69,9 +67,7 @@ class TestComponentsStatus:
         assert model.agents["chatbot"].graph_compiled is True
 
     def test_agents_defaults_to_empty_and_carries_an_error_string(self):
-        model = _components(
-            agents={}, agents_healthy=False, agents_error="Agents not initialized"
-        )
+        model = _components(agents={}, agents_healthy=False, agents_error="Agents not initialized")
         assert model.agents == {}
         assert model.agents_error == "Agents not initialized"
 

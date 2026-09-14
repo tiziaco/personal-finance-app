@@ -37,7 +37,10 @@ for (const area of ["endpoints", "zod"]) {
     written++
   }
 
-  writeFileSync(join(dir, "index.ts"), tags.map((t) => `export * from "./${t}/${t}"\n`).join(""))
+  writeFileSync(
+    join(dir, "index.ts"),
+    tags.map((t) => `export * from "./${t}/${t}"\n`).join(""),
+  )
   written++
 }
 
@@ -48,7 +51,10 @@ if (existsSync(typesDir)) {
     .map((file) => file.slice(0, -3))
     .sort()
 
-  writeFileSync(join(typesDir, "index.ts"), modules.map((m) => `export * from "./${m}"\n`).join(""))
+  writeFileSync(
+    join(typesDir, "index.ts"),
+    modules.map((m) => `export * from "./${m}"\n`).join(""),
+  )
   written++
 }
 

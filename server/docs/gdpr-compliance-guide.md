@@ -53,13 +53,14 @@ await session.commit()
 ```python
 from app.models.base import BaseModel, AnonymizableMixin
 
+
 class User(BaseModel, AnonymizableMixin, table=True):
     id: str = Field(primary_key=True)
     clerk_id: str
     email: str
     first_name: Optional[str]
     last_name: Optional[str]
-    
+
     def anonymize_user(self) -> None:
         """Clear all personal identifiable information."""
         anonymous_id = f"deleted_user_{self.id[:8]}"
@@ -99,13 +100,14 @@ from sqlalchemy import select, delete
 from app.models.user import User
 from app.models.conversation import Conversation
 
+
 async def delete_user_gdpr_compliant(
     user_id: str,
     session: AsyncSession,
     checkpointer: AsyncPostgresSaver,  # LangGraph checkpointer
 ) -> None:
     """Delete user account in GDPR-compliant manner.
-    
+
     Steps:
     1. Hard delete all chat messages from LangGraph checkpointing
     2. Soft delete conversation metadata
@@ -113,12 +115,12 @@ async def delete_user_gdpr_compliant(
     4. Anonymize user personal data
     5. Invalidate the in-memory user caches (org role + supplier link)
     6. Log deletion for audit trail
-    
+
     Args:
         user_id: ID of user to delete
         session: Database session
         checkpointer: LangGraph checkpointer for message storage
-    
+
     Raises:
         UserNotFoundError: If user doesn't exist
     """
@@ -126,20 +128,17 @@ async def delete_user_gdpr_compliant(
     stmt = select(User).where(User.id == user_id)
     result = await session.exec(stmt)
     user = result.first()
-    
+
     if not user:
         raise UserNotFoundError(f"User {user_id} not found")
-    
+
     if user.is_anonymized:
         # Already deleted
         return
-    
+
     # 2. Hard delete all chat messages from LangGraph checkpointing
     # This is the actual user content that MUST be deleted
-    stmt = select(Conversation).where(
-        Conversation.user_id == user_id,
-        Conversation.deleted_at.is_(None)
-    )
+    stmt = select(Conversation).where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
     result = await session.exec(stmt)
     conversations = result.all()  # Materialise before iterating
 
@@ -150,11 +149,7 @@ async def delete_user_gdpr_compliant(
             # Clear checkpoint history (messages are stored here)
             await checkpointer.delete_thread(conv.id)
         except Exception as e:
-            logger.error(
-                "failed_to_delete_conversation_messages",
-                conversation_id=conv.id,
-                error=str(e)
-            )
+            logger.error("failed_to_delete_conversation_messages", conversation_id=conv.id, error=str(e))
             # Continue with deletion even if checkpointer fails
 
         # Soft delete conversation metadata (non-personal)
@@ -171,7 +166,7 @@ async def delete_user_gdpr_compliant(
         "user_erased",
         user_id=user_id,
         conversation_count=len(conversations),
-        anonymized_at=user.anonymized_at.isoformat()
+        anonymized_at=user.anonymized_at.isoformat(),
     )
 ```
 
@@ -187,6 +182,7 @@ from app.services.user.api import delete_user_gdpr_compliant
 
 router = APIRouter()
 
+
 @router.delete("/me")
 async def delete_my_account(
     current_user: User = Depends(get_current_user),
@@ -194,20 +190,16 @@ async def delete_my_account(
     checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
 ):
     """Delete current user's account (GDPR compliant).
-    
+
     This will:
     - Permanently delete all chat messages
     - Anonymize personal information
     - Keep anonymized business records for compliance
-    
+
     This action cannot be undone.
     """
-    await delete_user_gdpr_compliant(
-        user_id=current_user.id,
-        session=session,
-        checkpointer=checkpointer
-    )
-    
+    await delete_user_gdpr_compliant(user_id=current_user.id, session=session, checkpointer=checkpointer)
+
     return {"message": "Account deleted successfully"}
 ```
 
@@ -255,18 +247,10 @@ class FraudRecord(BaseModel, table=True):
 
 ```python
 # ✅ OK: Aggregated daily statistics
-{
-    "date": "2026-02-18",
-    "new_users": 150,
-    "total_conversations": 1200
-}
+{"date": "2026-02-18", "new_users": 150, "total_conversations": 1200}
 
 # ❌ NOT OK: Individual tracking
-{
-    "user_id": "123",
-    "login_count": 50,
-    "last_login": "2026-02-18"
-}
+{"user_id": "123", "login_count": 50, "last_login": "2026-02-18"}
 ```
 
 ## Data Retention Policy
@@ -297,7 +281,7 @@ RETENTION_POLICY = {
     "anonymized_analytics": {
         "retention": "Indefinitely (not personal data)",
         "after_deletion": "N/A",
-    }
+    },
 }
 ```
 

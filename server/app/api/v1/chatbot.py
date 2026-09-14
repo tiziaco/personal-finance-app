@@ -1,8 +1,4 @@
-"""Chatbot API endpoints for handling chat interactions.
-
-This module provides endpoints for chat interactions, including regular chat,
-streaming chat, message history management, and chat history clearing.
-"""
+"""Chatbot API endpoints for handling chat interactions."""
 
 import json
 
@@ -36,7 +32,7 @@ router = APIRouter()
     operation_id="sendChatMessage",
     response_model=ChatResponse,
     summary="Send a message and get a response",
-    description="Process a chat message and return the AI agent's response."
+    description="Process a chat message and return the AI agent's response.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def chat(
@@ -46,24 +42,13 @@ async def chat(
     user: CurrentUser,
     agent: ChatbotAgentDep,
 ):
-    """Process a chat request using LangGraph.
-
-    Args:
-        conversation: The verified user conversation
-        request: The FastAPI request object for rate limiting.
-        chat_request: The chat request containing the user's message.
-        user: The authenticated user.
-
-    Returns:
-        ChatResponse: The processed chat response.
-    """
+    """Process a chat request using LangGraph."""
     logger.info(
         "chat_request_received",
         conversation_id=conversation.id,
         message_length=len(chat_request.message),
     )
 
-    # Wrap single message in list for agent processing
     user_message = Message(role="user", content=chat_request.message)
     result = await agent.get_response([user_message], conversation.id, user_id=user.id)
 
@@ -77,7 +62,7 @@ async def chat(
     operation_id="streamChatMessage",
     tags=["streaming"],
     summary="Stream chat response in real-time",
-    description="Send a message and receive the AI agent's response as a server-sent event stream."
+    description="Send a message and receive the AI agent's response as a server-sent event stream.",
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT_STREAM[0])
 async def chat_stream(
@@ -87,17 +72,7 @@ async def chat_stream(
     user: CurrentUser,
     agent: ChatbotAgentDep,
 ):
-    """Process a chat request using LangGraph with streaming response.
-
-    Args:
-        conversation: The verified user conversation
-        request: The FastAPI request object for rate limiting.
-        chat_request: The chat request containing the user's message.
-        user: The authenticated user.
-
-    Returns:
-        StreamingResponse: A streaming response of the chat completion.
-    """
+    """Process a chat request using LangGraph, streaming the response."""
     logger.info(
         "stream_chat_request_received",
         conversation_id=conversation.id,
@@ -105,27 +80,16 @@ async def chat_stream(
     )
 
     async def event_generator():
-        """Generate streaming events.
-
-        Yields:
-            str: Server-sent events in JSON format.
-
-        Raises:
-            Exception: If there's an error during streaming.
-        """
+        """Yield the response as server-sent events, one JSON payload per chunk."""
         try:
             full_response = ""
-            # Wrap single message in list for agent processing
             user_message = Message(role="user", content=chat_request.message)
             with llm_stream_duration_seconds.labels(model=agent.llm_service.current_model_name()).time():
-                async for chunk in agent.get_stream_response(
-                    [user_message], conversation.id, user_id=user.id
-                ):
+                async for chunk in agent.get_stream_response([user_message], conversation.id, user_id=user.id):
                     full_response += chunk
                     response = StreamResponse(content=chunk, done=False)
                     yield f"data: {json.dumps(response.model_dump())}\n\n"
 
-            # Send final message indicating completion
             final_response = StreamResponse(content="", done=True)
             yield f"data: {json.dumps(final_response.model_dump())}\n\n"
 
@@ -147,7 +111,7 @@ async def chat_stream(
     operation_id="listChatMessages",
     response_model=ConversationHistory,
     summary="Get conversation chat history",
-    description="Retrieve all messages from the specified chat conversation."
+    description="Retrieve all messages from the specified chat conversation.",
 )
 @limiter.limit(settings.rate_limits.endpoints.MESSAGES[0])
 async def get_conversation_messages(
@@ -155,15 +119,7 @@ async def get_conversation_messages(
     request: Request,
     agent: ChatbotAgentDep,
 ):
-    """Get all messages for a conversation.
-
-    Args:
-        conversation: The verified user conversation
-        request: The FastAPI request object for rate limiting.
-
-    Returns:
-        ConversationHistory: All messages in the conversation.
-    """
+    """Get all messages for a conversation."""
     messages = await agent.get_chat_history(conversation.id)
     return ConversationHistory(messages=messages)
 
@@ -173,20 +129,12 @@ async def get_conversation_messages(
     operation_id="clearChatHistory",
     status_code=204,
     summary="Clear chat history",
-    description="Remove all messages from the specified chat conversation."
+    description="Remove all messages from the specified chat conversation.",
 )
 @limiter.limit(settings.rate_limits.endpoints.MESSAGES[0])
 async def clear_chat_history(
     conversation: UserConversation,
     request: Request,
 ):
-    """Clear all messages for a conversation.
-
-    Args:
-        conversation: The verified user conversation
-        request: The FastAPI request object for rate limiting.
-
-    Returns:
-        None
-    """
+    """Clear all messages for a conversation."""
     await delete_conversation_checkpoints(conversation.id)

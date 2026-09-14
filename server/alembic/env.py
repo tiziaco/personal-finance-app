@@ -57,15 +57,15 @@ config.set_main_option("sqlalchemy.url", database_url)
 
 def include_name(name, type_, parent_names):
     """Exclude LangGraph checkpoint tables from autogenerate.
-    
+
     LangGraph's AsyncPostgresSaver manages its own schema through setup().
     These tables should not be managed by Alembic.
-    
+
     Args:
         name: Name of the object (table, column, etc.)
         type_: Type of the object ('table', 'column', 'index', etc.)
         parent_names: Parent object names
-        
+
     Returns:
         bool: True if object should be included, False to exclude
     """
@@ -73,7 +73,7 @@ def include_name(name, type_, parent_names):
         # Exclude LangGraph self-managed tables
         excluded_tables = {
             "checkpoints",
-            "checkpoint_blobs", 
+            "checkpoint_blobs",
             "checkpoint_writes",
             "checkpoint_migrations",
         }
@@ -109,7 +109,7 @@ def run_migrations_offline() -> None:
 
 def do_run_migrations(connection: Connection) -> None:
     """Run migrations with the given connection.
-    
+
     Args:
         connection: SQLAlchemy connection object
     """
@@ -126,7 +126,7 @@ def do_run_migrations(connection: Connection) -> None:
 
 async def run_async_migrations() -> None:
     """Run migrations in async mode.
-    
+
     Creates an async engine and runs migrations asynchronously.
     """
     connectable = async_engine_from_config(

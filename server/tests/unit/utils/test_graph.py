@@ -44,18 +44,22 @@ class TestProcessLlmResponse:
         assert result.content == "Hello world"
 
     def test_list_with_text_blocks(self):
-        response = AIMessage(content=[
-            {"type": "text", "text": "First part. "},
-            {"type": "text", "text": "Second part."},
-        ])
+        response = AIMessage(
+            content=[
+                {"type": "text", "text": "First part. "},
+                {"type": "text", "text": "Second part."},
+            ]
+        )
         result = process_llm_response(response)
         assert result.content == "First part. Second part."
 
     def test_list_with_reasoning_block_filtered(self):
-        response = AIMessage(content=[
-            {"type": "reasoning", "id": "r1", "summary": []},
-            {"type": "text", "text": "Actual answer"},
-        ])
+        response = AIMessage(
+            content=[
+                {"type": "reasoning", "id": "r1", "summary": []},
+                {"type": "text", "text": "Actual answer"},
+            ]
+        )
         result = process_llm_response(response)
         assert result.content == "Actual answer"
         assert "reasoning" not in result.content
@@ -66,11 +70,13 @@ class TestProcessLlmResponse:
         assert result.content == "Hello World"
 
     def test_mixed_blocks(self):
-        response = AIMessage(content=[
-            {"type": "reasoning", "id": "r1", "summary": []},
-            {"type": "text", "text": "Answer: "},
-            "42",
-        ])
+        response = AIMessage(
+            content=[
+                {"type": "reasoning", "id": "r1", "summary": []},
+                {"type": "text", "text": "Answer: "},
+                "42",
+            ]
+        )
         result = process_llm_response(response)
         assert result.content == "Answer: 42"
 
@@ -80,8 +86,10 @@ class TestProcessLlmResponse:
         assert result.content == ""
 
     def test_only_reasoning_blocks_produces_empty(self):
-        response = AIMessage(content=[
-            {"type": "reasoning", "id": "r1", "summary": []},
-        ])
+        response = AIMessage(
+            content=[
+                {"type": "reasoning", "id": "r1", "summary": []},
+            ]
+        )
         result = process_llm_response(response)
         assert result.content == ""

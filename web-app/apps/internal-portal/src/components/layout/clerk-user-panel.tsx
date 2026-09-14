@@ -10,14 +10,24 @@ export function ClerkUserPanel() {
 
   return (
     <UserDetailsPanel
-      user={isLoaded && user ? {
-        name: [user.firstName, user.lastName].filter(Boolean).join(" ") || "User",
-        email: user.primaryEmailAddress?.emailAddress ?? "No email",
-        imageUrl: user.imageUrl,
-      } : null}
+      user={
+        isLoaded && user
+          ? {
+              name:
+                [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+                "User",
+              email: user.primaryEmailAddress?.emailAddress ?? "No email",
+              imageUrl: user.imageUrl,
+            }
+          : null
+      }
       onSignOut={() => signOut()}
       onOpenProfile={() => openUserProfile()}
-      onOpenOrganizationProfile={role === Role.PROJECT_MANAGER ? () => openOrganizationProfile() : undefined}
+      onOpenOrganizationProfile={
+        role === Role.PROJECT_MANAGER
+          ? () => openOrganizationProfile()
+          : undefined
+      }
     />
   )
 }

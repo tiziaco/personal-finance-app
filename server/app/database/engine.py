@@ -16,16 +16,12 @@ from app.core.logging import logger
 
 
 async def initialize_database_engine() -> AsyncEngine:
-    """Initialize and configure the async database engine.
-    
-    Returns:
-        AsyncEngine: Configured async database engine
-    """
+    """Initialize and configure the async database engine."""
     connection_url = (
         f"postgresql+asyncpg://{settings.database.USER}:{settings.database.PASSWORD.get_secret_value()}"
         f"@{settings.database.HOST}:{settings.database.PORT}/{settings.database.DB}"
     )
-    
+
     engine = create_async_engine(
         connection_url,
         pool_pre_ping=True,
@@ -35,28 +31,21 @@ async def initialize_database_engine() -> AsyncEngine:
         pool_recycle=1800,
         echo=False,  # Set to True only when debugging SQL queries
     )
-    
+
     logger.info(
         "database_engine_initialized",
         pool_size=settings.database.POOL_SIZE,
         max_overflow=settings.database.MAX_OVERFLOW,
         environment=settings.ENVIRONMENT.value,
     )
-    
+
     await test_database_connection(engine)
-    
+
     return engine
 
 
 async def test_database_connection(engine: AsyncEngine) -> None:
-    """Test the database connection.
-    
-    Args:
-        engine: The async database engine to test
-        
-    Raises:
-        Exception: If connection fails
-    """
+    """Test the connection. Outside production a failure is fatal."""
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))
@@ -68,25 +57,14 @@ async def test_database_connection(engine: AsyncEngine) -> None:
 
 
 async def close_database_engine(engine: AsyncEngine) -> None:
-    """Close all database connections.
-    
-    Args:
-        engine: The async database engine to close
-    """
+    """Close all database connections."""
     if engine:
         await engine.dispose()
         logger.info("database_engine_closed")
 
 
 def create_session_factory(engine: AsyncEngine) -> async_sessionmaker:
-    """Create an async session factory.
-    
-    Args:
-        engine: The async database engine
-        
-    Returns:
-        async_sessionmaker: Factory for creating async sessions
-    """
+    """Create an async session factory."""
     return async_sessionmaker(
         bind=engine,
         class_=AsyncSession,
@@ -95,14 +73,7 @@ def create_session_factory(engine: AsyncEngine) -> async_sessionmaker:
 
 
 async def health_check(engine: AsyncEngine) -> bool:
-    """Check database connection health.
-    
-    Args:
-        engine: The async database engine
-        
-    Returns:
-        bool: True if database is healthy
-    """
+    """Check database connection health."""
     try:
         async with engine.connect() as conn:
             await conn.execute(text("SELECT 1"))

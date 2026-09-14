@@ -20,11 +20,9 @@ interface AuthContextValue {
   /** True once Clerk has finished initialising the session. */
   isLoaded: boolean
   /**
-   * Returns a fresh JWT for the current session, or null when signed out.
-   *
-   * This is the only sanctioned way to reach a bearer token. @app/api-client's
-   * mutator consumes it, which is what keeps that package dependent on this
-   * seam rather than on Clerk.
+   * A fresh JWT for the current session, or null when signed out. The only
+   * sanctioned way to reach a bearer token: @app/api-client's mutator consumes
+   * it, which is what keeps that package off Clerk and on this seam.
    */
   getToken: () => Promise<string | null>
 }
@@ -36,17 +34,7 @@ const AuthContext = createContext<AuthContextValue>({
   getToken: async () => null,
 })
 
-/**
- * Wrap inside ClerkProvider in each app's root layout.
- *
- * @example
- * // app/layout.tsx
- * <ClerkProvider>
- *   <AuthProvider>
- *     {children}
- *   </AuthProvider>
- * </ClerkProvider>
- */
+/** Wrap inside ClerkProvider in each app's root layout. */
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { isLoaded, orgRole, getToken } = useAuth()
   const { user } = useUser()
@@ -60,23 +48,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Hook for accessing the current user's identity and role.
+ * Hook for the current user's identity and role.
  *
- * Also the single source of the Clerk session token: `getToken` is exposed
- * here so @app/api-client's mutator can authenticate requests without
- * importing from @clerk/nextjs itself.
- *
- * Rules:
- * - Never call useAuth() or useUser() directly in components.
- * - Always check isLoaded before rendering role-dependent UI.
- *
- * @example
- * const { user, role, isLoaded, getToken } = useAppAuth()
- * if (!isLoaded) return <Skeleton />
- * if (role === Role.PROJECT_MANAGER) { ... }
- *
- * const token = await getToken()   // rarely needed directly — the generated
- *                                  // client already attaches it
+ * Never call useAuth() or useUser() directly in a component, and always check
+ * isLoaded before rendering role-dependent UI.
  */
 export function useAppAuth(): AuthContextValue {
   return useContext(AuthContext)

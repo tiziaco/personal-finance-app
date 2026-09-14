@@ -1,4 +1,4 @@
-"""Domain enumerations for the Rilevio application."""
+"""Domain enumerations for the application."""
 
 from enum import StrEnum
 

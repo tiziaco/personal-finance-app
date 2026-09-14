@@ -15,9 +15,9 @@ Use English slugs as technical identifiers (Clerk, code enums) and map them to I
 
 | Clerk slug | UI display (IT) | Access level | Description |
 |---|---|---|---|
-| `project_manager` | Project Manager | Full access | Fincantieri internal — manages projects, suppliers, orders, and document checklists |
-| `reviewer` | Revisore | Review access | Fincantieri internal (Ufficio Controlli Interno) — performs document due diligence alongside PM; can approve/reject documents but cannot create projects, add suppliers, or manage users |
-| `approver` | Approvatore | Read-only (demo) | Fincantieri internal (Ufficio Amministrativo) — performs final check and authorises payment once client approves |
+| `project_manager` | Project Manager | Full access | Internal — manages projects, suppliers, orders, and document checklists |
+| `reviewer` | Revisore | Review access | Internal — performs document due diligence alongside PM; can approve/reject documents but cannot create projects, add suppliers, or manage users |
+| `approver` | Approvatore | Read-only (demo) | Internal — performs final check and authorises payment once client approves |
 | `supplier` | Fornitore | Own data only | External supplier — views assigned orders, uploads/replaces/deletes own documents, submits when complete; no access to the internal platform |
 
 ---

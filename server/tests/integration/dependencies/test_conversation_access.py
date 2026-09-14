@@ -33,9 +33,7 @@ class TestConversationAccessDependency:
         assert "error" in data
         assert data["error"] == "CONVERSATION_NOT_FOUND"
 
-    async def test_other_users_conversation_returns_403(
-        self, db_session, authenticated_client
-    ):
+    async def test_other_users_conversation_returns_403(self, db_session, authenticated_client):
         """Conversation exists but belongs to different user → 403."""
         other_user = User(
             clerk_id="clerk_access_other",
@@ -60,9 +58,7 @@ class TestConversationAccessDependency:
         )
         assert response.status_code == 403
 
-    async def test_access_denied_error_code_in_response(
-        self, db_session, authenticated_client
-    ):
+    async def test_access_denied_error_code_in_response(self, db_session, authenticated_client):
         """403 response body contains CONVERSATION_ACCESS_DENIED error code."""
         other_user = User(
             clerk_id="clerk_access_denied",
@@ -88,9 +84,7 @@ class TestConversationAccessDependency:
         data = response.json()
         assert data["error"] == "CONVERSATION_ACCESS_DENIED"
 
-    async def test_own_conversation_succeeds(
-        self, authenticated_client, db_session, test_user
-    ):
+    async def test_own_conversation_succeeds(self, authenticated_client, db_session, test_user):
         """Accessing own conversation → 200, no error."""
         conv = Conversation(
             id=str(uuid.uuid4()),

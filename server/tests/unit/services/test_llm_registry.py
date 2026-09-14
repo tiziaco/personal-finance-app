@@ -25,7 +25,6 @@ class TestLLMRegistryGet:
         error_msg = str(exc_info.value)
         assert "gpt-5-mini" in error_msg
 
-
     def test_default_instance_is_cached(self):
         """The same object comes back on every call.
 

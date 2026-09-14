@@ -73,9 +73,7 @@ class TestInvokeTool:
         agent.tools_by_name["exploding_tool"] = exploding_tool
         before = _tool_calls("exploding_tool")
 
-        message = await agent._invoke_tool(
-            {"name": "exploding_tool", "args": {"text": "hi"}, "id": "call_2"}
-        )
+        message = await agent._invoke_tool({"name": "exploding_tool", "args": {"text": "hi"}, "id": "call_2"})
 
         assert message.status == "error"
         assert message.content == TOOL_FAILED_MESSAGE
@@ -89,9 +87,7 @@ class TestInvokeTool:
 
         assert message.status == "error"
         assert message.content == TOOL_UNKNOWN_MESSAGE
-        assert REGISTRY.get_sample_value(
-            "tool_calls_total", {"tool": "no_such_tool", "outcome": "unknown_tool"}
-        )
+        assert REGISTRY.get_sample_value("tool_calls_total", {"tool": "no_such_tool", "outcome": "unknown_tool"})
 
 
 class TestToolConfiguration:
@@ -114,7 +110,7 @@ class TestFormatToolArgs:
     """Tests for the log rendering of tool arguments."""
 
     def test_short_args_are_rendered_whole(self):
-        assert _format_tool_args({"query": "fincantieri"}) == '{"query": "fincantieri"}'
+        assert _format_tool_args({"query": "example query"}) == '{"query": "example query"}'
 
     def test_long_args_are_truncated(self):
         rendered = _format_tool_args({"query": "x" * 500})

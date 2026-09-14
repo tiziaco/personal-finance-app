@@ -23,5 +23,5 @@ __all__ = [
     "LLMServiceError",
     "LLMStreamingError",
     "LLMTimeoutError",
-	"llm_service",
+    "llm_service",
 ]
