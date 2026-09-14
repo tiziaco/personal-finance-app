@@ -1,7 +1,7 @@
 # Template Hardening — Design & Tracker
 
 **Date:** 2026-08-24
-**Status:** In progress
+**Status:** Complete for the fork — WS1–6 shipped, WS7 deferred past it (2026-09-14)
 **Scope:** Seven workstreams to bring the B2B template to a forkable state, ahead of a hard fork into a B2C (social network) project.
 
 ---
@@ -49,8 +49,8 @@ Organization coupling is narrow — three places on the server, two on the front
 | 4 | Clerk webhooks + ngrok | ✅ Complete | `plans/2026-08-26-ws4-clerk-webhooks.md` | — |
 | 5 | Orval codegen | ✅ Complete | `plans/2026-09-01-ws5-api-client-codegen.md` | — |
 | 6 | Replace `starlette-prometheus` with in-house instrumentation | ✅ Complete, as **Option B** not A — see [As built](#as-built-2026-09-03) | — | — |
-| 7 | SSE stream disconnect handling | Not started | — | — |
-| — | Fork to B2C | Not started | — | WS1–4 |
+| 7 | SSE stream disconnect handling | ⏸ Deferred past the fork — user decision, 2026-09-14 (see WS7) | — | — |
+| — | Fork to B2C | Unblocked | — | WS1–4 (met) |
 
 ---
 
@@ -131,7 +131,7 @@ invalidated the cached `RUN pnpm --filter $APP_NAME build` layer.
 ### Also deferred (each already known, none are WS1 defects)
 
 - `docker-compose.prod.yml` is stale and unparseable by `docker compose config` — it declares a single `web-app` service whose `env_file` points at a nonexistent path. Deferred to WS2.
-- `web-app/package.json` does not pin `packageManager`; local pnpm and the container's corepack resolved different versions.
+- ~~`web-app/package.json` does not pin `packageManager`; local pnpm and the container's corepack resolved different versions.~~ Fixed 2026-09-14, see WS6 *Also outstanding*.
 - `web-app/packages/types` has no `tsconfig.json`, so the root `pnpm type-check` (`pnpm -r exec tsc --noEmit`) cannot check all packages. Pre-existing since the initial commit.
 - `/api/v1/conversation/` returns 404 — a clean unmatched route, not an exception.
 - Host port 5432 in `docker-compose.dev.yml` collides with another project the user runs; worth making configurable.
@@ -417,12 +417,17 @@ container cgroups. Expected to work on a Linux host; unverified there.
 ### Also outstanding
 
 - `/api/v1/conversation/` returns 404 — a clean unmatched-route 404, not an exception. Route-shape question, unrelated to this defect.
-- `packageManager` is unpinned in `web-app/package.json`; local pnpm is 11.21.0 while the container's corepack resolved 11.23.0. Same class of drift as the server lockfile bypass fixed in Task 3c.
+- ~~`packageManager` is unpinned in `web-app/package.json`; local pnpm is 11.21.0 while the container's corepack resolved 11.23.0.~~ **Fixed 2026-09-14:** pinned to `pnpm@11.21.0`; the Dockerfile's `corepack enable pnpm` now resolves the same version as the host.
 
 
 ## WS7 — SSE stream disconnect handling
 
-**Status:** Not started. Grew out of WS3/F4 — see that finding for the middleware analysis that led here.
+**Status:** ⏸ Deferred past the fork — user decision, 2026-09-14. No AI feature is
+needed in the B2C project immediately, so the fix is not worth blocking the fork on. It
+breaks the spec's "fixes land here, before the fork" rule knowingly: whichever repo needs
+the chatbot first fixes it there, and the other ports it. Scope below is unchanged and small
+(one dependency, one response-class swap). Grew out of WS3/F4 — see that finding for the
+middleware analysis that led here.
 
 **Problem:** `server/app/api/v1/chatbot.py`'s `event_generator()` (used by the `StreamingResponse(..., media_type="text/event-stream")` chat endpoint) never checks whether the client is still connected. If a client navigates away or drops the connection mid-stream, nothing stops the loop — it keeps calling `agent.get_stream_response()` and consuming LLM output for a listener that no longer exists, burning tokens and time for nothing.
 
