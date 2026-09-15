@@ -107,6 +107,7 @@ Load-bearing: **all deletions before the substitution, and the rename last.**
    **in the same commit** — the one rule in `making-it-yours.md`.
 9. **Docs.** Drop `docs/superpowers/`; rewrite `CLAUDE.md`, `docs/setup/making-it-yours.md` and
    `docs/RBAC/roles_definition.md`, all written around suppliers and two portals.
+   **Before dropping, extract** — see below.
 
 **Running alongside, from step 1:** a new Clerk instance with Organizations off,
 `publicMetadata.role` set on test users, and a session-token customization adding
@@ -206,9 +207,9 @@ presents as broken authentication, not as a config error.
 
 **`deploy-check` does not prove the Traefik labels.** It proves the file parses under `APP_ENV`,
 that images build distinctly, that a failed migration fails the stack, and that nothing publishes
-a host port. Routing correctness rides on review plus the first real deploy. The checklist it
-replaces is in `2026-09-03-ws2-traefik-dokploy-deploy-design.md` — **read it before dropping
-`docs/superpowers/`**, since that directory is being removed in step 9.
+a host port. Routing correctness rides on review plus the first real deploy — and the fork
+*changes* the labels (supplier-portal removed, internal-portal renamed), so the B2C label set is
+not the one a B2B deploy would have proven.
 
 **WS7 is inherited unfixed.** `chatbot.py`'s `event_generator()` never checks for client
 disconnect, so a client leaving mid-stream keeps consuming LLM output. Deferred by standing
@@ -216,6 +217,32 @@ decision; whichever repo needs the chatbot first fixes it and the other ports it
 
 **`web-app/packages/types` has no `tsconfig.json`**, so root `pnpm type-check` cannot check all
 packages. Pre-existing since the initial commit.
+
+---
+
+## Extract before dropping `docs/superpowers/`
+
+Deployment targets Dokploy, so one section survives the directory's removal — relocated,
+not carried. `2026-09-03-ws2-traefik-dokploy-deploy-design.md` is 360 lines, ~320 of which
+are B2B history (the compose repair, WS2 decisions, acceptance for shipped work, the
+superseded tunnelled-staging appendix). Its **"How Dokploy actually configures Traefik"**
+section is not history — it is sourced operational fact:
+
+- entrypoints `web` (80) / `websecure` (443); cert resolver named `letsencrypt`, HTTP
+  challenge, applied only to `websecure` routers
+- `dokploy-network`: a Compose deployment lands only in its own project network unless the
+  file joins `dokploy-network` explicitly. Dokploy issue #3435, still open, and *the single
+  most common cause of a deploy that builds cleanly and then 404s*
+- Dokploy's Domains tab and hand-written labels are **both** labels — the risk in mixing
+  them is two routers matching one Host, not two competing systems (issue #3222)
+
+**Action:** lift it into `docs/setup/deploy-dokploy.md` in the target, next to
+`infrastructure.md` and `clerk.md`, correcting the `config.py:208` reference it shares with
+`CLAUDE.md` (see Known traps). The current home was always wrong for it — a reader asking
+"how do I deploy this" does not look in a dated workstream spec, and `infrastructure.md`
+mentions Dokploy and Traefik in three lines total.
+
+Then drop the directory.
 
 ---
 
