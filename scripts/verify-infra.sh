@@ -90,6 +90,11 @@ if bad:
 
 # --- compose validity (parse-only; needs docker CLI, not a running daemon) --
 if command -v docker >/dev/null 2>&1; then
+  # Parse-only: the key's VALUE is irrelevant here, but docker-compose.dev.yml uses
+  # compose's required-variable form (${VAR:?...}) so the file cannot be parsed with it
+  # unset. `make` supplies it via -include web-app/apps/*/.env.local; this script is run
+  # directly, and must also work on a fresh clone that has no .env.local at all.
+  NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-pk_test_parse_check}" \
   check "docker-compose.dev.yml parses"  docker compose -f docker-compose.dev.yml config
 else
   skip "docker CLI not found — dev compose parse check skipped"
