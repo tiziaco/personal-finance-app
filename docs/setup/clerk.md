@@ -63,8 +63,9 @@ role === Role.PROJECT_MANAGER          // our code — stripped
 ```
 
 A slug typo does not raise anything. `getUserRole()` returns `null` for an unrecognised
-value, `isInternalRole(null)` is `false`, and the user is bounced from every route — which
-reads exactly like a routing bug.
+value, `isInternalRole(null)` is `false`, and the user is redirected to `/unauthorized` on
+every route — which reads like a real permissions problem, not the slug typo that caused
+it.
 
 These four are the **example domain's** roles. Renaming them is a code change *and* a
 dashboard change; see [`making-it-yours.md`](./making-it-yours.md). Their meanings are
@@ -94,14 +95,20 @@ Both portals — `web-app/apps/<portal>/.env.local`:
 | `CLERK_SECRET_KEY` | same secret key |
 | `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `/sign-in` |
 | `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `/sign-up` |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL` | `/home` |
-| `NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL` | `/home` |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL` | `/home` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL` | `/home` |
 | `NEXT_PUBLIC_API_URL` | `http://localhost:8100` in dev |
 
 None of these are read by application code. The Clerk SDK picks them up from the
 environment itself — `mergeNextClerkPropsWithEnv` in `@clerk/nextjs` maps each one onto
 a `<ClerkProvider>` prop — which is why grepping the repo for them finds only config
 files and docs.
+
+`FALLBACK`, not `FORCE`, and not the older `AFTER_SIGN_IN_URL`: the legacy names
+map onto props `@clerk/nextjs` v6 deprecated, and a sign-in reached with a
+`?redirect_url=` ignores the legacy prop outright rather than falling back to it.
+The fallback form honours the requested destination and only defaults to `/home`
+when none was asked for.
 
 > **The `NEXT_PUBLIC_*` values are baked in at image build time**, not read at runtime —
 > Next.js inlines them. Changing one means rebuilding. And Compose resolves `build.args`

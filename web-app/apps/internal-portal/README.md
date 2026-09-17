@@ -19,6 +19,7 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 | `/orders` | Purchase order management |
 | `/sign-in` | Clerk-powered sign-in |
 | `/sign-up` | Clerk-powered sign-up |
+| `/unauthorized` | Shown to a signed-in user without internal-portal access |
 
 ---
 
@@ -40,8 +41,8 @@ CLERK_SECRET_KEY=sk_test_...
 
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/home
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/home
+NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/home
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home
 ```
 
 The `NEXT_PUBLIC_CLERK_*` values are read by the Clerk SDK straight from the
@@ -100,7 +101,7 @@ src/
 │   ├── (app)/         # Authenticated routes (home, projects, orders)
 │   ├── (auth)/        # Auth routes (sign-in, sign-up)
 │   ├── layout.tsx     # Root layout
-│   └── page.tsx       # Root redirect
+│   └── unauthorized/  # Wrong-role landing page
 ├── components/
 │   ├── layout/        # Sidebar, header, shell components
 │   ├── settings/      # Settings UI
