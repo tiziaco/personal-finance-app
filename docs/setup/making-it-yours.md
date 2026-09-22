@@ -60,10 +60,14 @@ Per portal, in `web-app/apps/<portal>/`:
 | Sidebar logo alt text | `src/app/(dashboard)/layout.tsx` (internal) / `src/app/(portal)/layout.tsx` (supplier) → `logoAlt` |
 | Sidebar mark | `public/images/logo-small.png` |
 | Favicon | `public/icons/favicon.ico` |
+| Settings tabs | `src/app/(dashboard)/layout.tsx` (internal) / `src/app/(portal)/layout.tsx` (supplier) → `SETTINGS_TABS` |
 
 The two image files are the only branding a text search cannot find. They are per-portal
 on purpose — the portals build as distinct images and may carry distinct branding. They
-are rendered through `packages/ui/src/components/layout/company-logo.tsx`.
+are rendered through `packages/components/src/layout/company-logo.tsx`.
+
+One piece of copy lives outside the per-portal tree because both portals share it:
+error toast text is `messages.toasts` in `web-app/packages/core/src/constants/messages.ts`.
 
 ## 3. Docker, Compose and deploy identity
 

@@ -119,7 +119,7 @@ Two files carry the visual identity — swap them for your own:
 
 | File | Used by |
 |---|---|
-| `public/images/logo-small.png` | the sidebar mark, via `logoSrc` on `AppSidebar` (`@app/ui`, `packages/ui/src/components/layout/company-logo.tsx`) |
+| `public/images/logo-small.png` | the sidebar mark, via `logoSrc` on `AppSidebar` (`@app/components`, `packages/components/src/layout/company-logo.tsx`) |
 | `public/icons/favicon.ico` | the browser tab, via `metadata.icons` in `src/app/layout.tsx` |
 
 The accompanying `logoAlt` and `metadata.title` strings live in
@@ -144,8 +144,11 @@ Use `<Protect role="org:project_manager">` from `@clerk/nextjs` for declarative 
 
 ## Shared Packages
 
-- **`@app/ui`** — shared shadcn/ui components
+- **`@app/core`** — `cn()`, `NavItem`, shared copy — no render dependency
+- **`@app/ui`** — shadcn/Base UI primitives, web-only
+- **`@app/components`** — composed chrome (sidebar, settings dialog) built on `@app/ui`
 - **`@app/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
 - **`@app/api-client`** — generated API client (types, endpoints, hooks) from the OpenAPI spec
 
-Always check `packages/ui` before creating new components.
+See `web-app/CLAUDE.md`'s "Where a new component goes" table before creating new
+components — there are five candidate homes now, not just `packages/ui`.

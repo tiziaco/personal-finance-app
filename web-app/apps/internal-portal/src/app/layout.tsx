@@ -3,7 +3,7 @@ import { ThemeProvider } from "@app/ui/theme-provider"
 import { Toaster } from "@app/ui/sonner"
 import { ClerkProvider } from "@clerk/nextjs"
 import { AuthProvider } from "@app/auth"
-import { QueryProvider } from "@/providers/query-provider"
+import { QueryProvider } from "@app/api-client/query-provider"
 
 import type { Metadata } from "next"
 import "@/styles/globals.css"

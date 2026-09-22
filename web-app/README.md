@@ -14,7 +14,9 @@ web-app/
 └── packages/
     ├── api-client/        # @app/api-client — generated API client from the OpenAPI spec
     ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
-    └── ui/                # @app/ui — shared UI utilities (cn())
+    ├── core/              # @app/core — cn(), NavItem, copy — no renderer
+    ├── ui/                # @app/ui — shadcn/Base UI primitives, WEB ONLY
+    └── components/        # @app/components — composed chrome, built on ui
 ```
 
 ## Tech Stack
@@ -66,7 +68,9 @@ pnpm type-check      # TypeScript check across all packages
 |-----------------|--------------|
 | Runtime dep used by one app | That app only |
 | Runtime dep used by both apps | Each app individually |
-| Pure UI wrapper / zero-config provider | `packages/ui` |
+| Needed by a primitive | `packages/ui` |
+| Needed by composed chrome | `packages/components` |
+| Pure helper, type or constant — no rendering | `packages/core` |
 | Tooling (eslint, typescript, etc.) | Workspace root (`-w`) |
 
 ```bash
@@ -91,7 +95,9 @@ shadcn components that are shared belong in `packages/ui`. Run from that directo
 cd packages/ui && pnpm dlx shadcn@latest add button dialog table
 ```
 
-Components land in `packages/ui/src/components/ui/` and are exported from `packages/ui/src/index.ts`. Import them in apps via `@app/ui`.
+Components land in `packages/ui/src/primitives/` and are importable as `@app/ui/<name>`
+immediately — the `exports` map is a wildcard. They are **not** in the `@app/ui` barrel
+until you add a line to `packages/ui/src/index.ts` by hand.
 
 If a component is only used in one app, add it directly inside that app instead.
 

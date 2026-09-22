@@ -13,6 +13,8 @@ COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
 # Copy package manifests for all workspace packages (for layer caching)
 COPY packages/api-client/package.json ./packages/api-client/
 COPY packages/auth/package.json ./packages/auth/
+COPY packages/components/package.json ./packages/components/
+COPY packages/core/package.json ./packages/core/
 COPY packages/ui/package.json ./packages/ui/
 
 # Copy app manifests

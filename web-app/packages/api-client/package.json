@@ -8,7 +8,9 @@
     ".": "./src/index.ts",
     "./endpoints/*": "./src/generated/endpoints/*/index.ts",
     "./types": "./src/generated/types/index.ts",
-    "./zod/*": "./src/generated/zod/*/index.ts"
+    "./zod/*": "./src/generated/zod/*/index.ts",
+    "./use-server-status": "./src/use-server-status.ts",
+    "./query-provider": "./src/query-provider.tsx"
   },
   "scripts": {
     "gen:api": "orval && node scripts/postgen.mjs",
@@ -16,7 +18,10 @@
   },
   "dependencies": {
     "@app/auth": "workspace:*",
+    "@app/core": "workspace:*",
     "@tanstack/react-query": "^5.0.0",
+    "@tanstack/react-query-devtools": "^5.97.0",
+    "sonner": "^2.0.0",
     "zod": "^4.0.0"
   },
   "peerDependencies": {

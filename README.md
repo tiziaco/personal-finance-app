@@ -11,8 +11,9 @@ library, an API contract that cannot silently drift from its client, and a deplo
 
 - **Multi-tenancy via Clerk Organizations** — the org id arrives on the JWT and scopes
   every query; role-gated routing keeps internal and external users in their own portal
-- **Two Next.js 16 portals** sharing `packages/ui`, `packages/auth` and a generated
-  API client, built as genuinely distinct images
+- **Two Next.js 16 portals** sharing `packages/core`, `packages/ui`,
+  `packages/components`, `packages/auth` and a generated API client, built as genuinely
+  distinct images
 - **A generated, committed API contract** — `server/openapi.json` and the TanStack Query
   hooks derived from it, with four gates that fail if they drift from the routes
 - **GDPR erasure** wired end to end, including LangGraph checkpoints and mem0 memories
@@ -92,7 +93,9 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 │   └── packages/
 │       ├── api-client/            # @app/api-client — generated from openapi.json
 │       ├── auth/                  # @app/auth — Role, useAppAuth(), getUserRole()
-│       └── ui/                    # @app/ui — shared shadcn/ui components
+│       ├── core/                  # @app/core — cn(), NavItem, copy — no renderer
+│       ├── ui/                    # @app/ui — shadcn/Base UI primitives, WEB ONLY
+│       └── components/            # @app/components — composed chrome, built on ui
 ├── docs/                          # Setup guides, RBAC, design history
 ├── infra/                         # Prometheus + Grafana config
 ├── scripts/                       # gen-contract, check-contract, verify-infra, deploy-check

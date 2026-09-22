@@ -1,6 +1,6 @@
 # Web App — Frontend Guide
 
-pnpm monorepo containing two Next.js 16 applications backed by a shared UI package.
+pnpm monorepo containing two Next.js 16 applications backed by shared UI packages.
 
 ---
 
@@ -14,8 +14,89 @@ web-app/
 └── packages/
     ├── api-client/        # Generated API client from the OpenAPI spec (packages/api-client)
     ├── auth/              # Role enum, useAppAuth(), getUserRole() (packages/auth)
-    └── ui/                # Shared shadcn/ui components (packages/ui)
+    ├── core/              # cn(), NavItem, copy — no renderer (packages/core)
+    ├── ui/                # shadcn/Base UI primitives, WEB ONLY (packages/ui)
+    └── components/        # Composed chrome, built on ui (packages/components)
 ```
+
+### The three UI packages, and why they are three
+
+They stack: `@app/core` ← `@app/ui` ← `@app/components` ← `apps/*`. The split is by
+what survives a React Native port, not by taste — and by what two portals can share
+without pretending they are one app.
+
+- **`@app/core`** holds everything with no render dependency. It builds with
+  `lib: ["esnext"]` and no `"dom"`, so `window` in its own source is a **type error** —
+  that is the enforcement, not a convention. `skipLibCheck` is load-bearing alongside it
+  (see the comment in its tsconfig); do not flip it off.
+- **`@app/ui`** is web-only and permanently so. Base UI, DOM elements, CSS variables,
+  `sonner` and `next-themes` do not run on React Native. A native target means a second
+  primitives package, never an adapter for this one.
+- **`@app/components`** is composed chrome that knows the app's nav shape, user model,
+  branding and settings surface. It reaches for `next/image`, `next/link` and
+  `usePathname`.
+
+**`@app/components` depends on `@app/core`, `@app/ui` and `lucide-react` — and nothing
+else, ever.** Its `package.json` is the boundary; a docs paragraph is not. Shared code
+that needs Clerk or the API client does not go there. It goes into the package it is
+already coupled to (`@app/api-client` holds `useServerStatus` and `QueryProvider`), or
+it stays in each portal.
+
+Import shapes differ on purpose — the subpath should carry information:
+
+```ts
+import { Skeleton } from "@app/ui/skeleton"                         // subpath — this is the default
+import { Button, Skeleton } from "@app/ui"                          // barrel — pulls all 19 primitives into the client graph; prefer the subpath
+import { AppSidebar } from "@app/components/layout/app-sidebar"     // no barrel
+import { cn } from "@app/core/lib/utils"                            // no barrel
+import type { NavItem } from "@app/core/types/nav"
+```
+
+`@app/ui`'s `exports` is wildcard-based, so `shadcn add` needs no `package.json` edit —
+but its barrel (`packages/ui/src/index.ts`) is still hand-maintained, so **a new
+primitive needs a line there** or it is silently missing from `@app/ui`.
+
+### Where a new component goes
+
+| The component… | Goes in |
+|---|---|
+| has no render dependency at all | `packages/core` |
+| is a shadcn/Base UI primitive | `packages/ui` |
+| composes primitives, no Clerk and no API client | `packages/components` |
+| is shared by both portals and needs the API client | `packages/api-client` |
+| is bound to **one portal's** auth, routes or payloads | that portal's `src/components/` |
+| is a shipped example a fork should **rewrite, not configure** | that portal's `src/components/`, even with no such binding |
+
+The last row is what `general-settings.tsx` is. It imports only `@app/ui`, `next-themes`
+and `lucide-react`, so the rule above says "promote" — and it stays in both portals
+anyway. Its body *is* the customization, `SETTINGS_TABS` is the extension point it hangs
+off, and duplicating it is the demonstration that each portal owns its settings surface.
+The question that decides this row is: **does a fork configure this, or rewrite it?**
+
+The slot pattern (`settingsSlot`, `userSlot`, `footerSlot`) is the promotion mechanism,
+not just a way to avoid importing `@app/auth` into `packages/components`. When one
+impure line is all that holds a component in an app, the line becomes a slot and the
+component moves up.
+
+### Failure modes with no safety net
+
+- A new package without a matching `@source` line in **both** portals' `globals.css`
+  builds clean and renders unstyled. Tailwind scans filesystem paths, not package
+  graphs. Verify against `h-125` and `max-w-2xl!` in the emitted CSS — they exist
+  nowhere else in the repo.
+- A new primitive is importable as `@app/ui/<name>` immediately, because `exports` is a
+  wildcard, but is missing from the barrel until someone edits `src/index.ts` by hand.
+  That has already happened twice — `AvatarBadge` and `SidebarFooterMenu`.
+- `packages/core` compiles without the `dom` lib, so the "no renderer" rule is enforced
+  by `tsc` rather than by review. Worth stating, because the error it produces looks
+  like a misconfiguration if you do not know it is deliberate.
+- A new workspace package needs to be added to `transpilePackages` in **both** portals'
+  `next.config.ts`. The packages ship raw TypeScript, so a package left out doesn't fail
+  at the config — it fails as a parse error somewhere inside the package itself, with
+  nothing connecting it back to `next.config.ts`.
+- A new workspace package needs its `package.json` copied in `web-app/Dockerfile`'s
+  deps stage, or `pnpm install --frozen-lockfile` fails in the container and nowhere
+  else.
 
 Both apps share the same conventions, dependencies, and patterns described in this file.
 
@@ -117,7 +198,9 @@ This project uses **Base UI** (`@base-ui/react`), not Radix UI. Patterns are dif
 
 ### Shared Components
 
-Always check `packages/ui` before creating a new component. Add new shared components there, not inside individual apps.
+Before creating a new component, check the placement table in "Where a new component
+goes" above — there are five candidate homes now, and `packages/ui` is only the one for
+shadcn/Base UI primitives.
 
 ### Server vs Client Components
 
@@ -201,8 +284,8 @@ Rules:
 - Do not create an `src/lib/api/` layer. The generated client is that layer.
 
 **Errors.** Every hook's `error` is an `ApiError` — `{ status, body, requestId }` — and
-nothing else. `QueryProvider` toasts centrally, mapping the **status** to curated copy in
-`src/lib/messages.ts`.
+nothing else. `QueryProvider` (`@app/api-client`) toasts centrally, mapping the
+**status** to curated copy in `@app/core`'s `constants/messages.ts`.
 
 ```typescript
 // ✅ Correct — a status maps to copy we wrote
@@ -234,7 +317,8 @@ toast.error(String(error.body))
 
 - Using `asChild` (Radix) instead of `render` prop (Base UI)
 - Placing `DropdownMenuLabel` outside `DropdownMenuGroup`
-- Creating new components in `apps/` that belong in `packages/ui`
+- Creating new components in `apps/` that belong in one of the shared packages — see
+  "Where a new component goes" above
 - Returning `null` from loading states
 - Using wrong skeleton colors inside sidebars
 - Forgetting `"use client"` on components with hooks or event handlers
@@ -247,4 +331,4 @@ toast.error(String(error.body))
 - Hand-editing files under `packages/api-client/src/generated/` — the next generation deletes them
 - Hand-writing a type for a request or response body — import it from `@app/api-client/types`
 - Changing a server route without running `make gen-contract` in the same commit
-- Rendering `error.message` or `error.body` — map `error.status` to copy in `src/lib/messages.ts`
+- Rendering `error.message` or `error.body` — map `error.status` to copy in `@app/core`'s `constants/messages.ts`
