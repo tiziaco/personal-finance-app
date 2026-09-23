@@ -2,11 +2,10 @@
 
 The whole inbound path reads in order from this package: `verification`
 authenticates the request and decodes the envelope, `schemas` defines what it
-produces, `dispatcher` routes it, and `handlers/` translates each event into
-domain calls.
+produces; `dispatcher` routing and the handlers live in the module that owns
+the rows — `app.modules.account.webhooks`.
 """
 
-from app.integrations.clerk.webhooks.dispatcher import clerk_dispatcher
 from app.integrations.clerk.webhooks.exceptions import (
     InvalidWebhookSignatureError,
     WebhookError,
@@ -26,6 +25,5 @@ __all__ = [
     "InvalidWebhookSignatureError",
     "WebhookError",
     "WebhookPayloadTooLargeError",
-    "clerk_dispatcher",
     "verify_clerk_webhook",
 ]

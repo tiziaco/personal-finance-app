@@ -10,6 +10,8 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-15-b2c-hard-fork-design.md` (in the **source** repo; read it alongside this plan)
 
+**Anchored to the pre-module-refactor tree.** `Source commit: fork from cfca621` below predates `refactor/server-modules` (the layer-first `app/services/`, `app/api/dependencies/` layout this plan's file paths assume). Forking from a later `main` means re-deriving those paths against `docs/architecture/server-modules.md` first.
+
 ## Global Constraints
 
 - **Source commit:** fork from `cfca621` unless a newer `main` is explicitly chosen.

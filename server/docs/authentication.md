@@ -46,7 +46,7 @@ All foreign keys (e.g., `conversation.user_id`) reference the internal `id`. The
 - Stores `clerk_id` (the JWT `sub` claim) in `request.state.clerk_id`
 - **Permissive** — never blocks requests; route dependencies enforce auth
 
-### 3. Auth Dependencies — `app/api/dependencies/auth.py`
+### 3. Auth Dependencies — `app/modules/account/dependencies.py`
 
 Two dependencies, used together:
 
@@ -55,7 +55,7 @@ Two dependencies, used together:
 
 The type alias `CurrentUser = Annotated[User, Depends(get_current_user)]` is used in route signatures.
 
-### 4. JIT User Provisioning — `app/services/user/service.py`
+### 4. JIT User Provisioning — `app/modules/account/service.py`
 
 `UserService.resolve_user(clerk_id, org_id, session)` follows this flow:
 
@@ -74,7 +74,7 @@ There is deliberately **no `clerk_id -> user_id` cache**. A hit would still cost
 
 Called via `asyncio.to_thread()` since the SDK is synchronous.
 
-### 6. User Repository — `app/services/user/repository.py`
+### 6. User Repository — `app/modules/account/repository.py`
 
 `UserRepository` handles all user DB operations via SQLModel/SQLAlchemy:
 - `get_by_id()`, `get_by_clerk_id()`, `get_by_email()`
@@ -83,35 +83,39 @@ Called via `asyncio.to_thread()` since the SDK is synchronous.
 - `update_org_id()` — syncs org_id when the JWT's org context changes
 - `delete()`
 
-### 7. Supplier Repository — `app/services/user/supplier_repository.py`
+### 7. Supplier link — `app/modules/supplier/` (`USER_SYNCED` subscriber)
 
-`SupplierRepository` handles the `Supplier.contact_id` DB operations used for supplier-linking during JIT provisioning and GDPR erasure:
+`account` cannot import `supplier` (module DAG, `docs/architecture/server-modules.md`), so linking runs as an event
+subscriber instead of a direct call. `supplier`'s `USER_SYNCED` handler (`handlers.py`) calls
+`SupplierService.link_from_metadata()`, which claims the supplier named in the invitation metadata; its
+`USER_ERASING` and `USER_OFFBOARDED` handlers call `SupplierService.unlink_contact()`. Both go through
+`SupplierRepository` for the `Supplier.contact_id` DB operations:
 - `get_by_id()`, `get_by_contact_id()` (any deletion state), `get_id_by_contact_id()` (non-deleted only)
 - `set_contact_id()` — links or unlinks a supplier's contact
 
-## In-Memory Caches — `app/services/user/cache.py`
+## In-Memory Caches — `app/modules/account/cache.py` (org role) and `app/modules/supplier/cache.py` (supplier link)
 
-`UserCache` holds two independent caches, backed by `cachetools.TTLCache`:
+Two independent caches, one per module, both backed by `cachetools.TTLCache`:
 
-| Cache | Key → Value | TTL | Why that TTL |
-|-------|-------------|-----|--------------|
-| `org_role` | `clerk_id -> role` | 60s | Feeds `get_current_role()` → `require_role()`, so a stale entry keeps a revoked permission alive |
-| `supplier_id` | `user_id -> supplier_id \| None` | 300s | Saves an indexed query; not authorization-critical |
+| Cache | Module | Key → Value | TTL | Why that TTL |
+|-------|--------|-------------|-----|--------------|
+| `org_role` | `account` (`UserCache`) | `clerk_id -> role` | 60s | Feeds `get_current_role()` → `require_role()`, so a stale entry keeps a revoked permission alive |
+| `supplier_id` | `supplier` (`SupplierCache`) | `user_id -> supplier_id \| None` | 300s | Saves an indexed query; not authorization-critical |
 
 | Property | Value |
 |----------|-------|
 | Bounds | `maxsize=10_000` per cache, LRU eviction |
 | Scope | Single process — under N workers a TTL is a per-worker staleness bound, not a global one |
-| Invalidation | `user_cache.invalidate_user(clerk_id=..., user_id=...)` |
+| Invalidation | `user_cache.invalidate_user(clerk_id=...)`; `supplier_cache.invalidate_user(user_id=...)` |
 
-A cached `None` supplier id means "known not linked" and short-circuits the DB, so reads return a `_MISS` sentinel for absence rather than `None`.
+A cached `None` supplier id means "known not linked" and short-circuits the DB, so reads return a `MISS` sentinel for absence rather than `None`.
 
 Every method is `async` even though the in-memory implementation never awaits — that is the seam for a future Redis backend, so swapping it requires no call-site changes.
 
 **Invalidation points:**
-- Supplier re-link (`resolve_user`) — clears both the new contact and the displaced previous one
-- GDPR account deletion — clears both caches for the erased user
-- Clerk membership webhooks (`app/integrations/clerk/webhooks/handlers/membership.py`) — every `organization_membership.*` event drops the user's cached auth data
+- Supplier re-link (`SupplierService.link_from_metadata`) — clears both the new contact and the displaced previous one
+- GDPR erasure and org offboarding — `account`'s own `USER_ERASING` handling clears the role cache; `supplier`'s `USER_ERASING`/`USER_OFFBOARDED` handlers clear the supplier cache
+- Clerk membership webhooks (`app/modules/account/webhooks.py`) — every `organization_membership.*` event drops the user's cached role
 
 The `org_role` staleness this section used to name as an open gap is closed: a role change or an offboarding in Clerk now invalidates the entry on delivery, so revocation is immediate rather than bounded by the 60s TTL. It degrades to the TTL only if the delivery fails every svix retry.
 

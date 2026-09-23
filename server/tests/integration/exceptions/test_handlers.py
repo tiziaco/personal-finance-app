@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-from app.models.conversation import Conversation
+from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
 
@@ -32,7 +32,7 @@ class TestServiceErrorHandler:
 
     async def test_access_denied_returns_403(self, db_session, authenticated_client):
         """ConversationAccessDeniedError (AuthorizationError subclass) → 403."""
-        from app.models.user import User
+        from app.modules.account.models import User
 
         other_user = User(clerk_id="clerk_handler_other", org_id="test_org_123", email="handler_other@example.com")
         db_session.add(other_user)

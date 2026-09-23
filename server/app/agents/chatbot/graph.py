@@ -20,6 +20,11 @@ from app.agents.base import BaseAgent
 from app.agents.chatbot.prompts import load_system_prompt
 from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.tools import tools
+from app.agents.graph import (
+    dump_messages,
+    prepare_messages,
+    process_llm_response,
+)
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.metadata import PROJECT_NAME
@@ -28,12 +33,7 @@ from app.core.metrics import (
     tool_call_duration_seconds,
     tool_calls_total,
 )
-from app.services.llm import llm_service
-from app.utils import (
-    dump_messages,
-    prepare_messages,
-    process_llm_response,
-)
+from app.integrations.llm import llm_service
 
 # What the model is told when a tool call does not produce a result. Fixed text
 # rather than the exception: a tool result becomes a ToolMessage in graph state,

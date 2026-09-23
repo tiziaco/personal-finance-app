@@ -80,8 +80,9 @@ mean "the one person from supplier org X" — singling that individual out at
 k=1, which fails the singling-out limb of the Art 29 WP 05/2014 tests carried
 into EDPB Guidelines 04/2025. The column is nullable for this reason.
 
-For the same reason the deletion flow also clears `Supplier.contact_id`
-(`UserService.unlink_supplier_contact`), which would otherwise keep recording
+For the same reason the deletion flow also clears `Supplier.contact_id` —
+`supplier`'s `USER_ERASING` subscriber (`SupplierService.unlink_contact`,
+`app/modules/supplier/handlers.py`) — which would otherwise keep recording
 which supplier the erased individual managed.
 
 > **Terminology caution.** The end state is strong *pseudonymisation*, not
@@ -91,117 +92,9 @@ which supplier the erased individual managed.
 > criticised controllers who present this as anonymisation. Do not claim
 > anonymisation in compliance documentation without a fuller review.
 
-### 2. GDPR-Compliant Deletion Service
+### 2. Deletion Cascade
 
-```python
-# app/services/user/api.py
-from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, delete
-from app.models.user import User
-from app.models.conversation import Conversation
-
-
-async def delete_user_gdpr_compliant(
-    user_id: str,
-    session: AsyncSession,
-    checkpointer: AsyncPostgresSaver,  # LangGraph checkpointer
-) -> None:
-    """Delete user account in GDPR-compliant manner.
-
-    Steps:
-    1. Hard delete all chat messages from LangGraph checkpointing
-    2. Soft delete conversation metadata
-    3. Unlink any supplier this user managed (Supplier.contact_id)
-    4. Anonymize user personal data
-    5. Invalidate the in-memory user caches (org role + supplier link)
-    6. Log deletion for audit trail
-
-    Args:
-        user_id: ID of user to delete
-        session: Database session
-        checkpointer: LangGraph checkpointer for message storage
-
-    Raises:
-        UserNotFoundError: If user doesn't exist
-    """
-    # 1. Get user
-    stmt = select(User).where(User.id == user_id)
-    result = await session.exec(stmt)
-    user = result.first()
-
-    if not user:
-        raise UserNotFoundError(f"User {user_id} not found")
-
-    if user.is_anonymized:
-        # Already deleted
-        return
-
-    # 2. Hard delete all chat messages from LangGraph checkpointing
-    # This is the actual user content that MUST be deleted
-    stmt = select(Conversation).where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
-    result = await session.exec(stmt)
-    conversations = result.all()  # Materialise before iterating
-
-    for conv in conversations:
-        # Delete all messages for this conversation from LangGraph
-        # LangGraph stores in 'checkpoints' and 'writes' tables
-        try:
-            # Clear checkpoint history (messages are stored here)
-            await checkpointer.delete_thread(conv.id)
-        except Exception as e:
-            logger.error("failed_to_delete_conversation_messages", conversation_id=conv.id, error=str(e))
-            # Continue with deletion even if checkpointer fails
-
-        # Soft delete conversation metadata (non-personal)
-        conv.soft_delete()
-
-    # 3. Anonymize user personal data (also clears conversation names)
-    user.anonymize_user()
-
-    # 4. Commit all changes
-    await session.commit()
-
-    # 5. Log for audit trail (anonymized)
-    logger.info(
-        "user_erased",
-        user_id=user_id,
-        conversation_count=len(conversations),
-        anonymized_at=user.anonymized_at.isoformat(),
-    )
-```
-
-### 3. API Endpoint
-
-```python
-# app/api/routes/user.py
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
-from app.api.dependencies.database import get_session
-from app.api.dependencies.auth import get_current_user
-from app.services.user.api import delete_user_gdpr_compliant
-
-router = APIRouter()
-
-
-@router.delete("/me")
-async def delete_my_account(
-    current_user: User = Depends(get_current_user),
-    session: AsyncSession = Depends(get_session),
-    checkpointer: AsyncPostgresSaver = Depends(get_checkpointer),
-):
-    """Delete current user's account (GDPR compliant).
-
-    This will:
-    - Permanently delete all chat messages
-    - Anonymize personal information
-    - Keep anonymized business records for compliance
-
-    This action cannot be undone.
-    """
-    await delete_user_gdpr_compliant(user_id=current_user.id, session=session, checkpointer=checkpointer)
-
-    return {"message": "Account deleted successfully"}
-```
+The current erasure cascade is `erase_user` in `app/modules/account/service.py`; see server/CLAUDE.md, *GDPR — Right to Erasure*, for the order.
 
 ## What You Can Keep (Legal Bases)
 

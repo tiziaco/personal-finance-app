@@ -15,8 +15,8 @@ from typing import Optional
 # UserRepository.create()/update_from_clerk() fall back to datetime.now(UTC)
 # for a None value, which is *newer* than any pending event and would drop
 # it as stale, defeating the point of seeding the row in the first place.
-# Shared by webhooks/handlers/user.py and webhooks/handlers/membership.py
-# so both draw on one definition.
+# Shared by the user.* and membership.* handlers in
+# app/modules/account/webhooks.py so both draw on one definition.
 UNSYNCED_EPOCH = datetime(1970, 1, 1, tzinfo=UTC)
 
 

@@ -1,7 +1,7 @@
 """Tests for the `app_exceptions_total` counter recorded by the exception handlers.
 
 `http_requests_total` records the status code, which is not enough to identify a
-failure: every exception in `app/services/llm/exceptions.py` carries 503, so
+failure: every exception in `app/integrations/llm/exceptions.py` carries 503, so
 five distinct causes share one series. These pin the labels that tell them
 apart.
 """
@@ -18,7 +18,7 @@ from app.exceptions.handlers import (
     service_exception_handler,
     validation_exception_handler,
 )
-from app.services.llm.exceptions import LLMRateLimitError
+from app.integrations.llm.exceptions import LLMRateLimitError
 
 pytestmark = pytest.mark.unit
 

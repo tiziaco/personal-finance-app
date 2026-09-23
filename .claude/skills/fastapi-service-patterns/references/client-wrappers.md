@@ -2,9 +2,9 @@
 
 ## Folder placement
 
-**Third-party code lives in `app/integrations/<provider>/`, never in `app/services/`.**
+**Third-party code lives in `app/integrations/<provider>/`, never in `app/modules/`.**
 
-The two trees answer different questions. `app/services/` holds *domain* logic — the things this product would do
+The two trees answer different questions. `app/modules/` holds *domain* logic — the things this product would do
 under any vendor (`user/`, `conversation/`, `llm/`). `app/integrations/` holds code that exists **only because a
 third party does**: if you dropped the vendor, the folder would disappear with it.
 
@@ -17,15 +17,16 @@ app/integrations/clerk/
 ├── client.py              # outbound: SDK wrapper + error translation
 ├── exceptions.py          # the provider's exception hierarchy
 ├── timestamps.py          # provider-shaped helpers (Clerk's ms-epoch format)
-└── webhooks/              # inbound
+└── webhooks/              # inbound: verify + parse only
     ├── verification.py    # signature check -> VerifiedEvent
     ├── schemas.py         # the event envelope and what handlers receive
-    ├── dispatcher.py      # event type -> handler registry
-    └── handlers/          # translate each event into domain calls
+    └── exceptions.py      # ingestion errors (401/413), separate from the client's
 ```
 
-Keeping both directions together is the point: everything that changes when the vendor changes its API sits under
-one directory. Nothing in `app/integrations/` should be imported by another integration.
+The dispatch registry and the handlers live one level up, in the module that owns the rows they write
+(`app/modules/account/webhooks.py`) — see `references/webhooks.md`. Keeping outbound and inbound together under one
+provider directory is still the point: everything that changes when the vendor changes its API sits under one
+directory. Nothing in `app/integrations/` should be imported by another integration.
 
 **The rest of this file covers the outbound half only.** For the inbound half — signature verification, the dispatch
 registry, handler idempotency and ordering — see `references/webhooks.md`.
@@ -42,7 +43,7 @@ errors, `service.py` composes them and owns the domain exception mapping, and it
 domains import — mirroring the `repository.py` / `service.py` split in `references/services.md`, where `client.py`
 is a repository for an external system instead of the database.
 
-Don't nest a provider under a domain (`app/services/payment/stripe/`). Even an adapter used by exactly one domain
+Don't nest a provider under a domain (`app/modules/payment/stripe/`). Even an adapter used by exactly one domain
 today accretes webhooks, admin tooling and auth edge cases, and the vendor/domain boundary is what makes the
 codebase legible.
 
@@ -139,7 +140,7 @@ Other domains (e.g. `PaymentService.checkout()` in `references/services.md`) imp
 
 ## Rules
 
-- Live under `app/integrations/<provider>/` — `app/services/` is for domain logic only
+- Live under `app/integrations/<provider>/` — `app/modules/` is for domain logic only
 - With one file, `client.py` wraps the SDK and translates every SDK/HTTP error into `exceptions.py`
 - Once `service.py` exists, `client.py` drops to raw calls only and `service.py` becomes the sole import surface for
   other domains

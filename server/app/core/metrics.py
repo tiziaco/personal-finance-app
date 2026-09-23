@@ -61,3 +61,13 @@ app_exceptions_total = Counter(
     "Exceptions surfaced to clients, by error code and exception class",
     ["error_code", "exception_type"],
 )
+
+# Deferred event handlers run after the publisher's commit, so a failure has
+# nothing to fail: it is logged as `event_handler_failed` and counted here.
+# `event` is a constant on a module root and `handler` a qualified function
+# name, so neither label is caller-controlled.
+app_event_handler_failures_total = Counter(
+    "app_event_handler_failures_total",
+    "Deferred event handlers that raised, by event and handler",
+    ["event", "handler"],
+)

@@ -31,10 +31,10 @@ one.
 
 | | Verdict |
 |---|---|
-| A1 pseudonymisation, not anonymisation | **Unchanged.** `anonymize_user()` (`app/models/user.py:59-73`) is untouched: `user.id` survives, and every `conversation` row still points at it |
+| A1 pseudonymisation, not anonymisation | **Unchanged.** `anonymize_user()` (`app/modules/account/models.py`) is untouched: `user.id` survives, and every `conversation` row still points at it |
 | A2 Langfuse retains content | **Unchanged, wider.** No masking, no deletion path; the cascade now fires from a second trigger that also skips Langfuse |
 | A3 partial-failure split state | **Partly mitigated.** The new webhook path is retryable via svix; `DELETE /api/v1/auth/me` still is not |
-| A4 silent mem0 failure | **Unchanged.** Still caught and logged at `factory.py:78-83` |
+| A4 silent mem0 failure | **Unchanged.** Still caught and logged at `factory.py:104-105` |
 | A5 log retention | **Unchanged.** WS4 removed PII from specific webhook log lines; no retention policy was written |
 | A6 32-bit `anonymous_id` | **Unchanged.** Still `self.id[:8]` |
 | B1–B3, C1 | **Unchanged.** Out of WS4's scope entirely |
@@ -102,7 +102,7 @@ grace window.
 
 ### A1. The end state is pseudonymisation, not anonymisation
 
-`app/models/user.py:59-73` (`anonymize_user()`) overwrites the PII fields but
+`app/modules/account/models.py` (`anonymize_user()`) overwrites the PII fields but
 leaves the record identifiable by reference.
 
 What survives erasure:
@@ -128,6 +128,9 @@ part works. The record is simply still personal data.
 **Note:** the EDPB's 2025 Coordinated Enforcement Action on the right to erasure
 specifically targeted controllers presenting this state as anonymisation.
 
+Since the modules refactor, the conversation-name blanking is done by `conversation`'s
+`USER_ERASING` handler, not by `anonymize_user()`.
+
 ### A2. Langfuse retains message content keyed by the surviving id — *highest impact*
 
 `app/agents/shared/observability/langfuse.py:33` sets `langfuse_user_id: user_id`
@@ -142,7 +145,7 @@ conversations verbatim**. This defeats any anonymisation claim on its own,
 regardless of what the `user` row looks like.
 
 Note the asymmetry: the cascade hard-deletes LangGraph checkpoints
-(`app/services/user/service.py:310`) — the correct instinct — while the same
+(`app/modules/account/service.py`) — the correct instinct — while the same
 message content sits in Langfuse untouched. WS4 widened the reach rather than
 the coverage: `erase_user` now also runs from the `user.deleted` webhook, so a
 dashboard-initiated deletion leaves Langfuse equally untouched.
@@ -152,7 +155,7 @@ Needs: a Langfuse deletion path (API or documented retention), or masking at
 
 ### A3. Partial-failure ordering leaves accounts in a split state
 
-`app/api/v1/auth.py:76` deletes from Clerk **first**, before any local work.
+`app/modules/account/router/auth.py` deletes from Clerk **first**, before any local work.
 `delete_conversation_checkpoints`
 (`app/agents/shared/checkpointing/postgres.py`) correctly propagates on failure —
 but by then the Clerk account is already gone, the DB transaction rolls back, and
@@ -172,7 +175,7 @@ irreversible external calls happen last.
 
 ### A4. mem0 deletion failure is silent
 
-`app/agents/shared/memory/factory.py:82-83` catches and logs, then returns
+`app/agents/shared/memory/factory.py:104-105` catches and logs, then returns
 normally. Erasure reports success while the extracted-fact memories remain.
 
 Contrast with `delete_conversation_checkpoints`, which propagates. The two
@@ -195,7 +198,7 @@ retention policy. The gap is unchanged.
 
 ### A6. `anonymous_id` uses only 32 bits of the UUID
 
-`app/models/user.py:61` — `f"deleted_user_{self.id[:8]}"` feeds two `unique=True`
+`app/modules/account/models.py:66` — `f"deleted_user_{self.id[:8]}"` feeds two `unique=True`
 columns (`clerk_id`, `email`). Birthday collision at ~65k anonymised users, at
 which point a second erasure raises `IntegrityError`.
 
@@ -300,9 +303,10 @@ Recorded because the instinct to retain conversations for training is what makes
 this ticket wider than it looks.
 
 **Retaining conversation rows buys nothing trainable.** A `Conversation` row is
-`id`, `user_id`, `name`, and timestamps (`app/models/conversation.py:49-52`). The
+`id`, `user_id`, `name`, and timestamps (`app/modules/conversation/models.py:37-39`). The
 messages are in the LangGraph checkpoint tables keyed by `thread_id`, hard-deleted
-in `erase_user` (`app/services/user/service.py:310`); `name` is cleared at step 6. A post-erasure row contains no
+in `erase_user` (`app/modules/account/service.py`); `name` is cleared by `conversation`'s `USER_ERASING` handler,
+not by the anonymisation step (A1). A post-erasure row contains no
 text. Keeping it buys a row count and costs a retained per-person activity series.
 
 **Training on a departed user's content is the thing Art 17 blocks.** Rules that
@@ -378,13 +382,14 @@ change to the DB row affects it.
 Findings were read from source on 2026-08-25 at commit `6c2532a`
 (`feat/ws3-auth-hardening`). Anchors cited:
 
-- `app/models/user.py:44-73` — `User` fields, `anonymize_user()`
-- `app/models/conversation.py:49-52` — retained FK
-- `app/models/supplier.py:20` — `contact_id` (nulled on erasure, correct)
-- `app/api/v1/auth.py:58-119` — `delete_me` seven-step flow
+- `app/modules/account/models.py:44-56` — `User` fields
+- `app/modules/account/models.py:58-75` — `anonymize_user()`
+- `app/modules/conversation/models.py:38` — retained FK (`user_id`)
+- `app/modules/supplier/models.py:19` — `contact_id` (nulled on erasure, correct)
+- `app/modules/account/router/auth.py` — `delete_me` seven-step flow
 - `app/agents/shared/observability/langfuse.py:23-37` — trace metadata
-- `app/agents/shared/memory/factory.py:72-83` — swallowed exception
-- `app/agents/base/agent.py:199-215` — checkpoint deletion (propagates)
+- `app/agents/shared/memory/factory.py:98-105` — swallowed exception
+- `app/agents/shared/checkpointing/postgres.py:93-113` — checkpoint deletion (propagates)
 - `app/api/middlewares/logging.py:37-40` — identifier binding
 
 `grep -rn "mask" app/` returns nothing — no Langfuse content masking.

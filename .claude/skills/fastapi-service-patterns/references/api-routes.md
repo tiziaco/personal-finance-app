@@ -5,14 +5,14 @@
 Use the project's type aliases to keep endpoint signatures clean:
 
 ```python
-from app.api.dependencies.auth import CurrentUser
-from app.api.dependencies.database import DbSession
+from app.modules.account import CurrentUser
+from app.database.dependencies import DbSession
 ```
 
 ## Route structure
 
 ```python
-# app/api/v1/payments.py
+# app/modules/payment/router.py
 
 router = APIRouter(prefix="/payments", tags=["payments"])
 

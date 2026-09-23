@@ -11,8 +11,11 @@ def clear_user_cache():
     here without awaiting would create a coroutine, clear nothing, and leak
     cache state into every other unit test.
     """
-    from app.services.user.cache import user_cache
+    from app.modules.account.cache import user_cache
+    from app.modules.supplier.cache import supplier_cache
 
     user_cache.reset()
+    supplier_cache.reset()
     yield
     user_cache.reset()
+    supplier_cache.reset()

@@ -5,11 +5,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 
-from app.api.dependencies.agent import get_chatbot_agent
-from app.api.dependencies.authentication import get_current_user
+from app.agents.messages import Message
 from app.main import app
-from app.models.user import User
-from app.schemas.chat import Message
+from app.modules.account.dependencies import get_current_user
+from app.modules.account.models import User
+from app.modules.conversation import get_chatbot_agent
 
 pytestmark = pytest.mark.integration
 
@@ -21,11 +21,14 @@ def clear_user_cache():
     Sync on purpose: reset() is the non-async form. Calling the async clear()
     here without awaiting would create a coroutine and clear nothing.
     """
-    from app.services.user.cache import user_cache
+    from app.modules.account.cache import user_cache
+    from app.modules.supplier.cache import supplier_cache
 
     user_cache.reset()
+    supplier_cache.reset()
     yield
     user_cache.reset()
+    supplier_cache.reset()
 
 
 @pytest_asyncio.fixture
@@ -91,14 +94,14 @@ def stub_checkpoint_deletion():
     conversation the deleted user owned.
 
     Yields the erasure path's stub, since that is the one a test asserts on:
-    the routes' calls are incidental cleanup, while erase_user's are a
-    contractual step of the GDPR cascade.
+    the routes' calls are incidental cleanup, while the conversation handler's
+    are a contractual step of the GDPR cascade.
     """
     with (
-        patch("app.api.v1.chatbot.delete_conversation_checkpoints", new=AsyncMock()),
-        patch("app.api.v1.conversation.delete_conversation_checkpoints", new=AsyncMock()),
+        patch("app.modules.conversation.router.chatbot.delete_conversation_checkpoints", new=AsyncMock()),
+        patch("app.modules.conversation.router.conversation.delete_conversation_checkpoints", new=AsyncMock()),
         patch(
-            "app.services.user.service.delete_conversation_checkpoints",
+            "app.modules.conversation.handlers.delete_conversation_checkpoints",
             new=AsyncMock(),
         ) as erasure_stub,
     ):

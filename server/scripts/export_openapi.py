@@ -28,7 +28,7 @@ DEFAULT_OUTPUT = Path(__file__).resolve().parent.parent / "openapi.json"
 
 # OAuth2 flow endpoints are per-Clerk-tenant deployment configuration
 # (CLERK_AUTHORIZE_URL / CLERK_TOKEN_URL, read by the OAuth2 scheme in
-# app/api/dependencies/authentication.py). The *served* schema needs the real
+# app/modules/account/dependencies.py). The *served* schema needs the real
 # values so Swagger UI's Authorize button talks to the right Clerk instance, but
 # they must never reach the *committed* artifact: whichever machine ran the
 # export would stamp its own tenant into the contract, and every other machine —

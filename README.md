@@ -96,7 +96,7 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 │       ├── core/                  # @app/core — cn(), NavItem, copy — no renderer
 │       ├── ui/                    # @app/ui — shadcn/Base UI primitives, WEB ONLY
 │       └── components/            # @app/components — composed chrome, built on ui
-├── docs/                          # Setup guides, RBAC, design history
+├── docs/                          # Setup guides, RBAC, architecture, design history
 ├── infra/                         # Prometheus + Grafana config
 ├── scripts/                       # gen-contract, check-contract, verify-infra, deploy-check
 ├── docker-compose.dev.yml         # Development stack

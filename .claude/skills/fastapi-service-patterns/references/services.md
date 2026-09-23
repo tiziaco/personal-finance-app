@@ -8,7 +8,7 @@ each exporting a **module-level singleton**.
 ## Basic case: one repository
 
 ```python
-# app/services/payment/repository.py
+# app/modules/payment/repository.py
 
 class PaymentRepository:
     """DB operations for payments."""
@@ -71,7 +71,7 @@ payment_repository = PaymentRepository()
 ```
 
 ```python
-# app/services/payment/service.py
+# app/modules/payment/service.py
 
 class PaymentService:
     """Orchestrates payment operations. Holds no DB or HTTP logic of its own —
@@ -116,14 +116,15 @@ A service is not limited to one repository. Its job is to coordinate whatever th
 repositories, an external API client wrapper (`references/client-wrappers.md`), a cache — and stay the only place
 that knows how they fit together. Route handlers and repositories never call each other directly.
 
-Real example from this codebase: `UserService.resolve_user()` coordinates `user_repository` (DB), `supplier_repository`
-(a second, unrelated repository), `clerk_client` (external API client wrapper), and `user_cache` (cache) in a single
-JIT-provisioning flow — none of that DB or HTTP logic lives in the service itself.
+Real example from this codebase: `UserService.resolve_user()` coordinates `user_repository` (DB), `clerk_client`
+(external API client wrapper), and `user_cache` (cache) in a single JIT-provisioning flow — none of that DB or HTTP
+logic lives in the service itself. (Linking a supplier used to be a fourth collaborator here; it is now `supplier`'s
+own `USER_SYNCED` subscriber — see `app/core/events.py` — because `account` may not import `supplier`.)
 
 A payment checkout follows the same shape — charge via the external client, then persist the result:
 
 ```python
-# app/services/payment/service.py
+# app/modules/payment/service.py
 
 class PaymentService:
     @staticmethod

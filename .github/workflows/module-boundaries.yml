@@ -1,0 +1,47 @@
+name: Module boundaries
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# Reads the repo and writes nothing back.
+permissions:
+  contents: read
+
+jobs:
+  import-contracts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      # --group dev pulls in import-linter and ruff, --group test pulls in
+      # pytest; the default sync installs only the base project dependencies.
+      - name: Sync Python dependencies
+        working-directory: server
+        run: uv sync --frozen --group dev --group test
+
+      # No database, no .env, no secrets: import-linter builds a static import
+      # graph, ruff reads files, and the three unit files below import the app
+      # without connecting to anything. This is `make check-server` split into
+      # named steps, so a failure says which one broke.
+      - name: Import contracts hold
+        working-directory: server
+        run: uv run lint-imports
+
+      - name: Lint
+        working-directory: server
+        run: uv run ruff check .
+
+      - name: Format
+        working-directory: server
+        run: uv run ruff format --check .
+
+      - name: Module completeness and tenancy hold
+        working-directory: server
+        run: APP_ENV=test uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_tenant_tables.py tests/unit/core/test_events.py -v

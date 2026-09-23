@@ -46,7 +46,7 @@ async def service_exception_handler(request: Request, exc: ServiceError) -> JSON
     }
 
     # The status code alone cannot identify the failure: every LLM error in
-    # app/services/llm/exceptions.py carries 503, so five distinct causes —
+    # app/integrations/llm/exceptions.py carries 503, so five distinct causes —
     # rate limit, timeout, streaming, fallback exhausted, generic API error —
     # collapse into one indistinguishable series without this label.
     app_exceptions_total.labels(

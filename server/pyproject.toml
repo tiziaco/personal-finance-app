@@ -48,12 +48,14 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "djlint==1.36.4"]
+dev = ["djlint==1.36.4"]
 eval = ["colorama>=0.4.6", "tqdm>=4.67.1"]
 
 [dependency-groups]
 dev = [
     "colorama>=0.4.6",
+    "import-linter>=2.0",
+    "ruff>=0.16.5",
 ]
 test = [
     "httpx>=0.28.1",
@@ -76,7 +78,7 @@ test = [
 #     The earlier <2.34 and <3 ceilings are both gone. LLMRegistry stores
 #     configuration and builds clients on first use, so importing app.main
 #     needs no key and `make check-contract` runs without secrets as CI
-#     expects; tests/unit/services/test_llm_service_import.py guards that.
+#     expects; tests/unit/integrations/llm/test_service_import.py guards that.
 #
 # A constraint rather than an entry in [project.dependencies]: openai is a
 # transitive dependency, so this bounds it if something pulls it in without
@@ -164,3 +166,59 @@ convention = "google"
 "tests/conftest.py" = ["E402"]
 # Test names are the documentation.
 "tests/**" = ["D"]
+
+[tool.importlinter]
+root_package = "app"
+# R4 lets a module type-hint another's model under TYPE_CHECKING.
+exclude_type_checking_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R2: layers import downward only"
+type = "layers"
+# ':' joins siblings that may import each other; '|' would forbid it.
+layers = [
+    "app.main",
+    "app.api",
+    "app.modules",
+    "app.integrations : app.agents",
+    "app.core : app.database : app.exceptions : app.models : app.schemas : app.utils",
+]
+
+[[tool.importlinter.contracts]]
+name = "R6: modules form a DAG — a module imports only those listed below it"
+type = "layers"
+layers = [
+    # '|' forbids these siblings from importing each other; ':' would permit it.
+    "app.modules.conversation | app.modules.supplier",
+    "app.modules.account",
+]
+
+# R1: one contract per module, listing every OTHER module's submodules.
+# allow_indirect_imports: a module's own __init__ re-exporting its submodules
+# (the public surface) would otherwise register as an indirect import into
+# that submodule for every consumer of the root. Direct bypass is what this
+# forbids. tests/unit/test_module_contracts.py checks the list is complete.
+# forbidden_modules' as_packages option defaults to true (import-linter), so
+# "app.modules.<name>.*" also forbids a slot that has grown into a package,
+# e.g. "app.modules.account.router" once router.py becomes router/.
+
+[[tool.importlinter.contracts]]
+name = "R1: account reaches other modules only through their package roots"
+type = "forbidden"
+source_modules = ["app.modules.account"]
+forbidden_modules = ["app.modules.conversation.*", "app.modules.supplier.*"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R1: conversation reaches other modules only through their package roots"
+type = "forbidden"
+source_modules = ["app.modules.conversation"]
+forbidden_modules = ["app.modules.account.*", "app.modules.supplier.*"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R1: supplier reaches other modules only through their package roots"
+type = "forbidden"
+source_modules = ["app.modules.supplier"]
+forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*"]
+allow_indirect_imports = true

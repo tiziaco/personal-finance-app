@@ -87,36 +87,46 @@ make format   # ruff format
 
 ## Directory Structure
 
+Module-first. The rules, the slots and the reasoning are in
+[`docs/architecture/server-modules.md`](../docs/architecture/server-modules.md); this is the map.
+
 ```
 server/
 ├── app/
+│   ├── main.py              # Assembly: middlewares, handlers, routers, and an import of every module
 │   ├── api/
-│   │   ├── v1/              # Route handlers: auth.py, chatbot.py, conversation.py
-│   │   ├── dependencies/    # FastAPI deps: db session, current user, conversation ownership
-│   │   ├── middlewares/     # Auth (JWT), access logging, correlation ID, rate limiting
-│   │   └── system/          # Health + Prometheus metrics endpoints
-│   ├── agents/
-│   │   ├── base/            # Abstract BaseAgent class
-│   │   ├── shared/          # memory/, checkpointing/, observability/
-│   │   └── chatbot/         # graph.py, state.py, prompts/, tools/
-│   ├── core/                # Settings (config.py), app factory
-│   ├── database/            # Async engine, session factory
-│   ├── exceptions/          # base.py — exception hierarchy
-│   ├── integrations/        # Third-party protocols: clerk/ (client + webhooks/)
-│   ├── models/              # SQLModel ORM models (user.py, conversation.py)
-│   ├── schemas/             # Pydantic request/response schemas
-│   ├── services/            # Business logic: user/, conversation/, llm/
-│   └── utils/               # Shared utilities
-└── tests/
-    ├── unit/                # No external deps — middleware, models, schemas, services, utils
-    └── integration/         # Requires DB — dependencies, API routes, services
+│   │   ├── v1/api.py        # include_router(<module>.router) — prefixes and tags live in the modules
+│   │   ├── system/          # Health, readiness, root — and their schemas
+│   │   └── middlewares/     # Auth (JWT), access logging, correlation ID, rate limiting, metrics
+│   ├── modules/             # One package per bounded context; import another only from its root
+│   │   ├── account/         # User row, identity/role/org dependencies, Clerk webhooks, erasure
+│   │   ├── conversation/    # Conversations and the chatbot routes; erases on USER_ERASING
+│   │   └── supplier/        # The example domain: the contact link and SupplierID
+│   ├── agents/              # LangGraph agents: base/, chatbot/, shared/, messages.py, graph.py
+│   ├── integrations/        # Third-party adapters: clerk/ (client + webhook verification), llm/
+│   ├── core/                # config, logging, metrics, limiter, events
+│   ├── database/            # engine, session factory, DbSession (app/database/dependencies.py)
+│   ├── exceptions/          # base.py — the exception hierarchy; handlers.py
+│   ├── models/base.py       # BaseModel and the mixins, TenantMixin included
+│   ├── schemas/base.py      # ErrorResponse
+│   └── utils/               # JWT verification, sanitisation, the cache-miss sentinel
+├── alembic/env.py           # Imports every module's models slot — the registry
+└── tests/                   # Mirrors app/: tests/unit/modules/<name>/test_<slot>.py
 ```
 
-`services/` and `integrations/` are deliberately distinct. `services/` holds domain
-logic. `integrations/` holds code that exists only because a third party does — one
-package per provider, carrying **both** directions of traffic: the outbound client we
-call, and the inbound webhook machinery they call. A provider's verification, event
-schemas, dispatch and handlers all live together so the flow reads top to bottom.
+A module has a fixed set of slots — `router`, `schemas`, `models`, `service`,
+`repository`, `dependencies`, `exceptions`, optionally `handlers` and `domain` —
+and a root `__init__.py` that is its whole public surface. Another module
+imports from that root and nowhere deeper; `account` cannot import
+`conversation` or `supplier`, so it publishes events (`app/core/events.py`) that
+they subscribe to. `make check-server` runs `lint-imports` over the contracts
+in `pyproject.toml`, and `tests/unit/test_module_contracts.py` fails the suite
+when a new module lacks its entries.
+
+`integrations/` holds code that exists only because a third party does — one
+package per provider, carrying the outbound client and the inbound
+verification. What a provider's event *means* for our rows is decided in the
+module that owns them: `app/modules/account/webhooks.py` for Clerk.
 
 ---
 
@@ -156,7 +166,7 @@ Services raise domain exceptions; the centralized handler translates them to HTT
 
 ```python
 # In a service
-from app.services.documents.exceptions import DocumentNotFoundError
+from app.modules.documents.exceptions import DocumentNotFoundError
 
 raise DocumentNotFoundError("Document not found", document_id=doc_id)
 
@@ -178,7 +188,7 @@ Base exceptions live in `app/exceptions/base.py`:
 | `ValidationError` | 422 |
 | `DatabaseError` | 500/503 |
 
-Each service package defines its own exceptions extending these. New service exceptions go in `app/services/<name>/exceptions.py`; integration exceptions go in `app/integrations/<provider>/exceptions.py`.
+Each module defines its own exceptions extending these, in `app/modules/<name>/exceptions.py`; integration exceptions go in `app/integrations/<provider>/exceptions.py`.
 
 ---
 
@@ -233,9 +243,9 @@ mechanically. It needs no database.
 ## Authentication
 
 - Clerk JWTs verified by `AuthMiddleware` (RS256); `clerk_id` set on `request.state`
-- Use `CurrentUser` dependency for protected endpoints:
+- Use `CurrentUser` from `app.modules.account` for protected endpoints; `CurrentRole`, `CurrentOrgId` and the `require_role(...)` guards come from the same root:
   ```python
-  async def endpoint(user: Annotated[User, Depends(get_current_user)]):
+  from app.modules.account import CurrentUser, PMOnly
   ```
 - Users are JIT-provisioned in the local DB on first request via `UserService`
 - Conversation ownership enforced by the `UserConversation` dependency
@@ -275,20 +285,14 @@ Tests live in `server/tests/` split into two layers:
 
 ```
 tests/
-├── unit/          # Pure logic, no external deps — mock everything external
-│   ├── api/       # Dependency logic (auth, etc.)
-│   ├── config/    # Settings loading
-│   ├── exceptions/
-│   ├── integrations/  # Provider clients, webhook verification and handlers
-│   ├── middleware/
-│   ├── models/
-│   ├── schemas/
-│   ├── services/  # Service logic with mocked DB/Clerk/LLM
-│   └── utils/
-└── integration/   # Requires a live DB connection
-    ├── api/       # Full route tests via TestClient
-    ├── dependencies/
-    └── services/
+├── unit/                  # Pure logic, no external deps — mock everything external
+│   ├── modules/<name>/    # One file per slot file: test_service.py, test_handlers.py, …
+│   ├── agents/  api/  config/  core/  exceptions/  integrations/  middleware/  models/  schemas/  utils/
+│   ├── test_module_contracts.py   # every module has its contracts, its alembic line, its main.py import
+│   └── models/test_tenant_tables.py  # every table carries org_id or is allowlisted with a reason
+└── integration/           # Requires a live DB (testcontainers)
+    ├── modules/<name>/    # routes under router/, then test_service.py, test_repository.py, …
+    ├── api/  database/  exceptions/
 ```
 
 Run from `server/`:
@@ -301,27 +305,29 @@ make test-coverage     # all tests + HTML/XML coverage report
 make test-fast         # all tests, skipping slow ones
 
 # Target a specific file or test name
-APP_ENV=test uv run pytest tests/unit/services/test_user_cache.py
+APP_ENV=test uv run pytest tests/unit/modules/account/test_cache.py
 APP_ENV=test uv run pytest -k "test_name"
 ```
 
 Coverage is reported automatically (`--cov=app`). HTML report written to `htmlcov/`.
 
-New tests mirror the `app/` structure: a test for `app/services/user/cache.py` goes in `tests/unit/services/test_user_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
+New tests mirror the `app/` structure: a test for `app/modules/account/cache.py` goes in `tests/unit/modules/account/test_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
 
 ---
 
 ## GDPR — Right to Erasure
 
-When a user is deleted (`DELETE /api/v1/auth/me`), in order:
+When a user is deleted (`DELETE /api/v1/auth/me`, or Clerk's `user.deleted`), `account`'s `erase_user` runs, in order:
 
-1. Clerk deletion (JWTs immediately invalidated)
-2. LangGraph checkpoints hard-deleted (`delete_conversation_checkpoints`)
+1. Clerk deletion, by the route only — on the webhook path Clerk's deletion is the trigger (JWTs immediately invalidated)
+2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes their LangGraph checkpoints, and blanks their names; `supplier` clears `Supplier.contact_id`
 3. mem0 memories deleted (`delete_user_memory`)
-4. User PII anonymized via `AnonymizableMixin.anonymize_user()`
-5. Conversation records soft-deleted
+4. User PII anonymised via `AnonymizableMixin.anonymize_user()`, then commit
+5. The role cache invalidated under the clerk_id captured before step 4
+
+Steps 2 and 3 run before step 4 because they are keyed by identifiers `anonymize_user()` destroys. The `user_erased` log line carries `subscriber_count`; a module that owns user-keyed data subscribes to `USER_ERASING` in its `handlers.py`.
 
 Rules:
 - Never use `SoftDeleteMixin` on `User` — it leaves PII in the DB
 - New models with PII must implement `AnonymizableMixin` and an `anonymize_*()` method
-- Always call `delete_conversation_checkpoints()` before soft-deleting a conversation
+- Always call `delete_conversation_checkpoints()` before blanking or soft-deleting a conversation

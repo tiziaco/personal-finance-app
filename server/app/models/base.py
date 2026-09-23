@@ -89,6 +89,19 @@ class AnonymizableMixin(SQLModel):
         self.anonymized_at = datetime.now(UTC)
 
 
+class TenantMixin(SQLModel):
+    """The tenant column for a table owned by one Clerk organisation.
+
+    `org_id` is the organisation id that arrives on the JWT and is stored on
+    the user row. A table that carries it is scoped by it in every query; a
+    table that does not must be listed, with a reason, in
+    tests/unit/models/test_tenant_tables.py. Adding the mixin to an existing
+    table is a migration with a backfill (architecture §6).
+    """
+
+    org_id: str = Field(index=True, nullable=False)
+
+
 class BaseModel(TimestampMixin, SQLModel):
     """Base for all models: created_at / updated_at tracking.
 

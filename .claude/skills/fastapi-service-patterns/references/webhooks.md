@@ -4,15 +4,14 @@ The other half of `references/client-wrappers.md`. That file covers the calls we
 the events they push to us. Both live in the same `app/integrations/<provider>/` package — see that file for why.
 
 ```
-app/integrations/clerk/webhooks/
+app/integrations/clerk/webhooks/    # verify + parse only
 ├── verification.py    # signature check -> VerifiedEvent
 ├── schemas.py         # the envelope, and what handlers receive
-├── exceptions.py      # ingestion errors (401/413), separate from the client's
-├── dispatcher.py      # event type -> handler registry
-└── handlers/          # translate each event into domain calls
-    ├── user.py
-    └── membership.py
+└── exceptions.py      # ingestion errors (401/413), separate from the client's
 ```
+
+The dispatch registry and the handlers are one level up, in the module that owns the rows they write
+(`app/modules/account/webhooks.py`) — see the **Handlers** section below.
 
 Four stages, in order: **verify → parse → dispatch → handle**. Each stage's output is the next one's only input, so
 the flow reads top to bottom and every stage is testable alone.
@@ -121,7 +120,9 @@ the provider's own docs disagree, register both.
 ## Handlers
 
 Handlers are the anti-corruption layer: they translate one provider event into domain calls and own no logic of
-their own. They call into `app/services/<domain>/`; nothing in `services/` imports them.
+their own. They live in the module that owns the rows they write (`app/modules/account/webhooks.py`), beside the
+dispatcher; the provider package under `app/integrations/` only verifies and parses, and imports nothing from
+`app/modules/`.
 
 **Every handler must be idempotent.** Delivery is at-least-once. Without a dedup table, a replay inside the
 signature's tolerance window has to converge rather than duplicate — so a create handler applies its payload as an
@@ -151,7 +152,8 @@ step that must not be silently skipped has to propagate — that is the only ret
 
 ## The route
 
-The endpoint stays in `app/api/v1/` — only the protocol machinery lives in `integrations/`. It composes the context
+The endpoint lives in the owning module's router (`app/modules/account/router/webhooks.py`) — only the protocol
+machinery lives in `integrations/`. It composes the context
 and does nothing else:
 
 ```python
@@ -182,9 +184,9 @@ and provokes further retries. The signature check is the gate and it is cheap.
 
 ## Testing
 
-- **Unit** (`tests/unit/integrations/<provider>/`) — handlers with a mocked session and a local `ctx()` helper;
-  verification with real signed bodies plus the failure modes (bad signature, missing header, stale timestamp,
-  oversized body)
-- **Integration** (`tests/integration/api/`) — the route end to end against a real DB, posting genuinely signed
-  bodies. This is the only layer that proves verification, the registry and the DB write agree
+- **Unit** — verification with real signed bodies plus the failure modes (bad signature, missing header, stale
+  timestamp, oversized body) in `tests/unit/integrations/<provider>/`; handlers and the dispatch registry, with a
+  mocked session and a local `ctx()` helper, in `tests/unit/modules/<name>/`
+- **Integration** (`tests/integration/modules/<name>/router/`) — the route end to end against a real DB, posting
+  genuinely signed bodies. This is the only layer that proves verification, the registry and the DB write agree
 - Assert **step order** where a cascade's order is contractual, not just that each step ran

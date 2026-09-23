@@ -30,7 +30,7 @@ class ServiceError(Exception):
         super().__init__(self.message)
 ```
 
-## Domain exceptions (`app/services/<domain>/exceptions.py`)
+## Domain exceptions (`app/modules/<name>/exceptions.py`)
 
 ```python
 class PaymentNotFoundError(NotFoundError):

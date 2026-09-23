@@ -26,7 +26,6 @@ tests/
     ├── conftest.py                      # Auth override, mock agent, test_user fixture
     ├── services/
     │   ├── test_user_repository.py      # UserRepository CRUD, constraints
-    │   ├── test_supplier_repository.py  # SupplierRepository CRUD, contact linking
     │   ├── test_conversation_service.py # ConversationService CRUD, ordering
     │   └── test_user_service.py         # JIT provisioning (mock Clerk, real DB)
     ├── api/
@@ -102,7 +101,7 @@ python -m pytest --lf
 **Integration tests** — real test DB (savepoint rollback — all writes auto-undone after each test). External services mocked:
 - **Auth**: `get_current_user` overridden via `app.dependency_overrides` → returns `test_user` directly, bypassing JWT + JIT provisioning
 - **Agent**: `get_chatbot_agent` overridden with `AsyncMock` → no OpenAI calls
-- **Clerk**: patched at `app.services.user.service.clerk_service` where needed
+- **Clerk**: patched at `app.modules.account.service.clerk_service` where needed
 
 ## Fixtures
 

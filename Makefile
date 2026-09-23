@@ -33,7 +33,7 @@ help:
 	@echo ""
 	@echo "Checks:"
 	@echo "  make check              - Lint and format-check both sides (what the pre-push hook runs)"
-	@echo "  make check-server       - ruff check + ruff format --check"
+	@echo "  make check-server       - ruff check + ruff format --check + lint-imports"
 	@echo "  make check-web          - pnpm lint + pnpm format:check"
 	@echo ""
 	@echo "Contract:"
@@ -117,7 +117,7 @@ dev-tunnel:
 check: check-server check-web
 
 check-server:
-	@cd server && uv run ruff check . && uv run ruff format --check .
+	@cd server && uv run ruff check . && uv run ruff format --check . && uv run lint-imports
 
 check-web:
 	@cd web-app && pnpm -s lint && pnpm -s format:check

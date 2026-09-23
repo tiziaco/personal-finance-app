@@ -24,13 +24,12 @@ if os.path.exists(env_file):
 elif os.path.exists(".env"):
     load_dotenv(".env", override=False)
 
-# Import settings after loading .env
+# Import settings after loading .env, and every model to register with SQLModel metadata
+# Every module's models slot, so SQLModel.metadata is complete (architecture R8).
+import app.modules.account.models
+import app.modules.conversation.models
+import app.modules.supplier.models
 from app.core.config import settings
-from app.models.conversation import Conversation
-
-# Import all models to register with SQLModel metadata
-from app.models.supplier import Supplier
-from app.models.user import User
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

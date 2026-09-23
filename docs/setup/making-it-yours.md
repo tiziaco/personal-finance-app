@@ -94,9 +94,8 @@ it. Replace it when it doesn't fit:
 
 | Concept | Where it lives |
 |---|---|
-| `Supplier` model | `server/app/models/supplier.py`, `server/alembic/versions/*_add_supplier_table.py`, `server/app/services/user/supplier_repository.py` |
-| Supplier-scoped identity | `get_supplier_id()` / `SupplierID` / `SupplierNotLinkedError` in `server/app/api/dependencies/authentication.py` |
-| Role names | `server/app/models/enums.py` **and** `web-app/packages/auth/src/permissions.ts` — **and the Clerk dashboard** (see [`clerk.md`](./clerk.md) §2) |
+| `Supplier` model, repository, link service and `SupplierID` | `server/app/modules/supplier/` — delete the folder, its three lines in `server/pyproject.toml` (`[tool.importlinter]`: the `R1: supplier` contract and the `app.modules.supplier` token in the R6 layers, plus the `account`/`conversation` contracts' `app.modules.supplier.*` entries), its `import` in `server/alembic/env.py`, its line in `server/app/main.py`, its row in `server/tests/unit/models/test_tenant_tables.py`, `server/tests/unit/modules/supplier/`, `server/tests/integration/modules/supplier/`, and the supplier assertions in `server/tests/integration/modules/account/router/test_auth_delete.py`; then `server/alembic/versions/*_add_supplier_table.py` |
+| Role names | `server/app/modules/account/models.py` **and** `web-app/packages/auth/src/permissions.ts` — **and the Clerk dashboard** (see [`clerk.md`](./clerk.md) §2) |
 | The external portal's name | `web-app/apps/supplier-portal/` (directory, `package.json` name, `APP_NAME` in both compose files, `SUPPLIER_PORTAL_DOMAIN`, and its Traefik labels) |
 | Italian UI labels | `ROLE_LABELS` in `packages/auth/src/permissions.ts`; `HUB_NAV` in each portal's `src/lib/hub-nav.ts` |
 

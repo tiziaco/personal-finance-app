@@ -6,7 +6,7 @@ description: >
   FastAPI endpoints, or integrating a third-party provider in either direction. Trigger on tasks like
   "add a service", "create an exception", "add an endpoint", "handle this error", "add a new route",
   "implement a repository", "wrap this SDK", "handle a webhook", or any feature work touching
-  app/services/, app/integrations/, app/api/, or app/exceptions/. Use even for partial tasks like "add a method to XService" —
+  app/modules/, app/integrations/, app/api/, or app/exceptions/. Use even for partial tasks like "add a method to XService" —
   always follow the patterns below.
 ---
 
@@ -45,20 +45,24 @@ This project has consistent patterns across services, exceptions, and API routes
 
 ```
 app/
-  services/
+  modules/
     payment/
-      __init__.py
+      __init__.py      # the public surface: what other modules may import
+      router.py        # APIRouter(prefix="/payments", tags=["payments"])
+      schemas.py
+      models.py        # tables carry TenantMixin (or a row in tests/unit/models/test_tenant_tables.py)
       service.py       # PaymentService class (orchestrator) + payment_service singleton
       repository.py    # PaymentRepository class (DB ops) + payment_repository singleton
+      dependencies.py
       exceptions.py    # Domain-specific exception classes
-  api/
-    v1/
-      payments.py      # APIRouter with route handlers
+      handlers.py      # only if it subscribes to another module's events
 ```
 
-An external-API adapter lives in `app/integrations/<provider>/`, not `app/services/` — and has no
-`repository.py`. It has `client.py` (SDK wrapper + error translation) and `exceptions.py`, plus `webhooks/` if the
-provider pushes events to us. See `references/client-wrappers.md` for the outbound half and
-`references/webhooks.md` for the inbound one.
+An external-API adapter lives in `app/integrations/<provider>/`, not `app/modules/` — and has no
+`repository.py`. It has `client.py` (SDK wrapper + error translation) and `exceptions.py`, plus `webhooks/` for
+verifying what the provider pushes to us; what those events *mean* for a module's rows is decided in that module
+(`app/modules/account/webhooks.py` for Clerk). See `references/client-wrappers.md` and `references/webhooks.md`.
 
-Register the router in `app/api/v1/api.py`.
+Then, in this order — each is a test until done: `include_router(payment.router)` in `app/api/v1/api.py`;
+`from app.modules import payment` in `app/main.py`; `import app.modules.payment.models` in `alembic/env.py`; an R1
+contract and an R6 layer entry in `pyproject.toml`. `docs/architecture/server-modules.md` has the rules.

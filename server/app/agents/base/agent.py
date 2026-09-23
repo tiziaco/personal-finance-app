@@ -19,14 +19,14 @@ from langgraph.graph.state import CompiledStateGraph
 from langgraph.types import StateSnapshot
 from mem0 import AsyncMemory
 
+from app.agents.graph import dump_messages
+from app.agents.messages import Message
 from app.agents.shared.memory import (
     get_relevant_memory,
     update_memory,
 )
 from app.agents.shared.observability import create_graph_config
 from app.core.logging import logger
-from app.schemas import Message
-from app.utils import dump_messages
 
 
 class BaseAgent(ABC):

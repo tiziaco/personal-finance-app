@@ -25,8 +25,8 @@ from dotenv import load_dotenv
 
 load_dotenv(".env.test", override=True)
 
-from app.api.dependencies.database import get_db_session
 from app.core.config import settings
+from app.database.dependencies import get_db_session
 from app.main import app
 
 # Event loop is managed by pytest-asyncio via asyncio_default_fixture_loop_scope = session

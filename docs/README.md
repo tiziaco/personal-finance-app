@@ -16,6 +16,16 @@
 | [`RBAC/roles_definition.md`](./RBAC/roles_definition.md) | What the four roles mean and why the slugs are English while the labels are Italian |
 | [`api-client-codegen-setup.md`](./api-client-codegen-setup.md) | Rebuild guide for the OpenAPI → orval → TanStack Query pipeline |
 
+## Architecture
+
+How the platform is built, and the reasoning the code can't hold. These describe
+the system as it stands and are kept current; a document that names a branch and
+plans one slice's work is a spec, and lives under **History** below.
+
+| Doc | What it covers |
+|---|---|
+| [`architecture/server-modules.md`](./architecture/server-modules.md) | How `server/app/` is partitioned — one module per bounded context, the four layers, the rules between them and how they are enforced, and what was decided against |
+
 Service-level docs live next to their code:
 
 - [`../server/docs/authentication.md`](../server/docs/authentication.md) — how the server verifies a token and provisions a user
