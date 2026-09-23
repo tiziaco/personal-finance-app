@@ -6,11 +6,10 @@ from typing import (
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
 
-from app.core.logging import logger
 from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
+from app.modules.conversation.repository import conversation_repository
 
 
 class ConversationService:
@@ -21,30 +20,17 @@ class ConversationService:
         session: AsyncSession, conversation_id: str, user_id: str, name: str = ""
     ) -> Conversation:
         """Create a new chat conversation."""
-        conversation = Conversation(id=conversation_id, user_id=user_id, name=name)
-        session.add(conversation)
-        await session.flush()
-        await session.refresh(conversation)
-
-        logger.info("conversation_created", conversation_id=conversation_id, user_id=user_id, name=name)
-        return conversation
+        return await conversation_repository.create(session, conversation_id, user_id, name)
 
     @staticmethod
     async def get_conversation(session: AsyncSession, conversation_id: str) -> Optional[Conversation]:
-        """Get a conversation by ID."""
-        conversation = await session.get(Conversation, conversation_id)
-        return conversation
+        """Get a conversation by ID, soft-deleted included."""
+        return await conversation_repository.get_by_id(session, conversation_id)
 
     @staticmethod
     async def get_user_conversations(session: AsyncSession, user_id: str) -> List[Conversation]:
         """Get a user's active conversations, oldest first."""
-        statement = (
-            select(Conversation)
-            .where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
-            .order_by(Conversation.created_at)
-        )
-        result = await session.execute(statement)
-        return list(result.scalars().all())
+        return await conversation_repository.list_active_for_user(session, user_id)
 
     @staticmethod
     async def update_conversation_name(session: AsyncSession, conversation_id: str, name: str) -> Conversation:
@@ -52,33 +38,18 @@ class ConversationService:
 
         Raises ConversationNotFoundError if there is no such conversation.
         """
-        conversation = await session.get(Conversation, conversation_id)
+        conversation = await conversation_repository.get_by_id(session, conversation_id)
         if not conversation:
             raise ConversationNotFoundError(
                 f"Conversation {conversation_id} not found", conversation_id=conversation_id
             )
 
-        conversation.name = name
-        session.add(conversation)
-        await session.flush()
-        await session.refresh(conversation)
-
-        logger.info("conversation_name_updated", conversation_id=conversation_id, name=name)
-        return conversation
+        return await conversation_repository.update_name(session, conversation, name)
 
     @staticmethod
     async def soft_delete_conversation(session: AsyncSession, conversation_id: str) -> bool:
         """Soft-delete a conversation. False if there is no such conversation."""
-        conversation = await session.get(Conversation, conversation_id)
-        if not conversation:
-            return False
-
-        conversation.soft_delete()
-        session.add(conversation)
-        await session.flush()
-
-        logger.info("conversation_soft_deleted", conversation_id=conversation_id)
-        return True
+        return await conversation_repository.soft_delete(session, conversation_id)
 
     @staticmethod
     async def soft_delete_all_user_conversations(session: AsyncSession, user_id: str) -> list[str]:
@@ -87,22 +58,7 @@ class ConversationService:
         Returns their IDs so the caller can clear each one's LangGraph
         checkpoint data.
         """
-        statement = select(Conversation).where(
-            Conversation.user_id == user_id,
-            Conversation.deleted_at.is_(None),
-        )
-        result = await session.execute(statement)
-        conversations = result.scalars().all()
-
-        for conv in conversations:
-            conv.soft_delete()
-            session.add(conv)
-
-        await session.flush()
-
-        conversation_ids = [conv.id for conv in conversations]
-        logger.info("all_user_conversations_soft_deleted", user_id=user_id, count=len(conversation_ids))
-        return conversation_ids
+        return await conversation_repository.soft_delete_active_for_user(session, user_id)
 
     @staticmethod
     async def blank_all_user_conversation_names(session: AsyncSession, user_id: str) -> int:
@@ -111,28 +67,7 @@ class ConversationService:
         Part of erasure: a name is free text and may hold PII. Returns the
         number of rows touched.
         """
-        statement = select(Conversation).where(Conversation.user_id == user_id)
-        result = await session.execute(statement)
-        conversations = result.scalars().all()
-
-        for conv in conversations:
-            conv.name = ""
-            session.add(conv)
-
-        await session.flush()
-        logger.info("all_user_conversation_names_blanked", user_id=user_id, count=len(conversations))
-        return len(conversations)
-
-    @staticmethod
-    async def delete_conversation(session: AsyncSession, conversation_id: str) -> bool:
-        """Hard-delete a conversation. False if there is no such conversation."""
-        conversation = await session.get(Conversation, conversation_id)
-        if not conversation:
-            return False
-
-        await session.delete(conversation)
-        logger.info("conversation_deleted", conversation_id=conversation_id)
-        return True
+        return await conversation_repository.blank_names_for_user(session, user_id)
 
 
 conversation_service = ConversationService()

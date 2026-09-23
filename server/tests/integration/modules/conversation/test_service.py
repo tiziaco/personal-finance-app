@@ -112,18 +112,6 @@ class TestUpdateConversationName:
             await ConversationService.update_conversation_name(db_session, "nonexistent-conv-id", "New Name")
 
 
-class TestDeleteConversation:
-    """Tests for ConversationService.delete_conversation() (hard delete)."""
-
-    async def test_delete_existing_returns_true(self, db_session, saved_conversation):
-        result = await ConversationService.delete_conversation(db_session, saved_conversation.id)
-        assert result is True
-
-    async def test_delete_nonexistent_returns_false(self, db_session):
-        result = await ConversationService.delete_conversation(db_session, "nonexistent-conv-id")
-        assert result is False
-
-
 class TestSoftDeleteConversation:
     """Tests for ConversationService.soft_delete_conversation()."""
 
