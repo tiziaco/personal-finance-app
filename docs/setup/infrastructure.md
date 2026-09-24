@@ -34,13 +34,23 @@ the root `.env`, not in addition to it.
 | `NGROK_DOMAIN` | Your reserved ngrok domain, for Clerk webhook delivery |
 | `NGROK_AUTHTOKEN` | ngrok authtoken. See [`clerk-webhooks.md`](./clerk-webhooks.md). |
 
-Two more are honoured but **not in `.env.example`**, because the defaults are usually
-right. Add them only on a machine where the defaults collide:
+Four more sit **commented out** in `.env.example`, because the defaults are usually
+right. Set them on a machine where the defaults collide — and when several projects
+built from this template share a machine, give each its own block of 100 (see
+*Parallel worktrees* in `CLAUDE.md`). A git worktree gets its own values from
+`make worktree-init`.
 
 | Variable | Default | Why you would set it |
 |---|---|---|
+| `INTERNAL_PORTAL_HOST_PORT` | `3000` | Host port for the internal portal, on both paths: Compose publishes it and `make dev-internal` runs `next dev` on it. |
+| `SUPPLIER_PORTAL_HOST_PORT` | `3002` | The same for the supplier portal (`make dev-supplier`). |
 | `API_HOST_PORT` | `8100` | 8000 is what every other FastAPI project on the machine also wants. Host-side only — the container still listens on 8000, so the healthcheck, the Prometheus target and `server:8000` are unaffected. |
 | `POSTGRES_HOST_PORT` | `5434` | 5432 collides with a local Postgres. Host-side only; on the compose network `db` is always 5432. |
+
+Two more are commented out too. `COMPOSE_PROJECT_NAME` is optional: unset, Compose
+uses the directory name, and setting it on an existing checkout points Compose at a
+new, empty database volume. `WORKTREE_SLOT` is written by `make worktree-init`; leave
+it unset in the main checkout.
 
 ---
 

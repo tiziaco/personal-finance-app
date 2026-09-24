@@ -19,10 +19,10 @@ COMPOSE_FILE ?= ../docker-compose.dev.yml
 -include ../web-app/apps/internal-portal/.env.local
 .EXPORT_ALL_VARIABLES:
 
-# Host port for the native (non-Docker) server. 8000 collides with other
-# projects on the same machine; keep this in step with API_HOST_PORT in the
-# root Makefile, which publishes the same port from the container.
-PORT ?= 8100
+# Host port for the native (non-Docker) server. Follows API_HOST_PORT from the
+# root .env (included above), the variable compose publishes the container on.
+API_HOST_PORT ?= 8100
+PORT ?= $(API_HOST_PORT)
 
 set-env:
 	@if [ -z "$(ENV)" ]; then \

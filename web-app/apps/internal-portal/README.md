@@ -2,7 +2,8 @@
 
 The template's internal portal — the app staff sign in to. In the shipped example domain it manages projects, suppliers, purchase orders and document compliance tracking.
 
-Runs on **http://localhost:3000**.
+Runs on **http://localhost:3000** in the main checkout; `make dev-internal` from the repo
+root follows the checkout's own port, which differs in a git worktree.
 
 ---
 

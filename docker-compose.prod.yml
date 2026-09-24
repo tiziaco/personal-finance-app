@@ -8,7 +8,7 @@
 #
 # Deliberately no container_name: a container name is host-global, and a
 # Dokploy box runs many stacks. Compose's <project>-<service>-<n> is unique.
-# docker-compose.dev.yml keeps its names — one stack per laptop.
+# docker-compose.dev.yml follows the same rule, for its per-worktree stacks.
 services:
   internal-portal:
     env_file:

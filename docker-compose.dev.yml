@@ -1,6 +1,9 @@
+# No container_name anywhere: a container name is host-global, and every git
+# worktree runs its own copy of this stack under its own COMPOSE_PROJECT_NAME
+# (`make worktree-init`). Service DNS (`db`, `server:8000`) is per-project
+# network, so it is unaffected. Same rule as docker-compose.prod.yml.
 services:
   internal-portal:
-    container_name: internal-portal
     env_file:
       - ./web-app/apps/internal-portal/.env.local
     build:
@@ -14,12 +17,11 @@ services:
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
     ports:
-      - 3000:3000
+      - "${INTERNAL_PORTAL_HOST_PORT:-3000}:3000"
     networks:
       - app-network
 
   supplier-portal:
-    container_name: supplier-portal
     env_file:
       - ./web-app/apps/supplier-portal/.env.local
     build:
@@ -33,7 +35,7 @@ services:
         NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
     ports:
-      - 3002:3000
+      - "${SUPPLIER_PORTAL_HOST_PORT:-3002}:3000"
     networks:
       - app-network
   
@@ -42,7 +44,6 @@ services:
   # `up` instead of starting an app against a stale schema.
   # Shares `server`'s image tag by construction — keep the env config in sync.
   migrate:
-    container_name: migrate
     image: ${COMPOSE_PROJECT_NAME}-server
     build:
       context: ./server
@@ -78,7 +79,6 @@ services:
       - app-network
 
   server:
-    container_name: server
     image: ${COMPOSE_PROJECT_NAME}-server
     build:
       context: ./server
@@ -131,7 +131,6 @@ services:
   # stored as a bare hostname (matches the ngrok dashboard and
   # docs/setup/clerk-webhooks.md), so the scheme is prepended here.
   ngrok:
-    container_name: ngrok
     image: ngrok/ngrok:latest
     command: http server:8000 --url=https://${NGROK_DOMAIN}
     environment:
@@ -142,7 +141,6 @@ services:
       - app-network
 
   db:
-    container_name: db
     image: pgvector/pgvector:pg16
     env_file:
       - ./server/.env.${APP_ENV:-development}

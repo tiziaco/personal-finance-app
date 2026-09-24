@@ -35,9 +35,9 @@ tree. Production runs from `docker-compose.prod.yml`, via the root `Makefile`.
 
 `docker-logs-server` and `docker-stop-server` delegate to
 `scripts/logs-docker.sh` and `scripts/stop-docker.sh`, which address the
-Compose *service* rather than a container name — `docker-compose.dev.yml` pins
-`container_name: server` while the prod file does not, so the name is Compose's
-to resolve.
+Compose *service* rather than a container name — neither compose file pins
+one, and in a git worktree the project, and with it the container name,
+differs.
 
 ### Database Migrations (Alembic)
 

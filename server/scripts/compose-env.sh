@@ -1,11 +1,10 @@
 # Sourced by stop-docker.sh and logs-docker.sh — not executable on its own.
 #
 # Defines compose(), which addresses the stack by *service* name. The container
-# name is Compose's to choose: docker-compose.dev.yml pins `server`,
-# docker-compose.prod.yml lets it default to <project>-server-1. Naming it in a
-# script would be a copy of a value the script does not own, and would be wrong
-# for one of the two files. PROJECT_NAME is unrelated — it names the image
-# built by build-docker.sh, via docker-image-name.sh.
+# name is Compose's to choose (<project>-server-1, and the project differs per
+# git worktree), so naming it here would copy a value this script does not own.
+# PROJECT_NAME is unrelated — it names the image built by build-docker.sh, via
+# docker-image-name.sh.
 #
 # Expects $ENV to be set and validated by the caller.
 

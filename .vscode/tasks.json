@@ -4,8 +4,10 @@
     // ── Dev (app processes on the host; db still in Docker) ───────────────────
     //
     // The Dev chain and the Run chain are mutually exclusive. Compose publishes
-    // 3000, 3002 and 8100, and its `ngrok` service claims the same static
-    // domain as "Dev: Tunnel". Stop one before starting the other.
+    // the same portal and API ports (3000, 3002 and 8100 in the main checkout),
+    // and its `ngrok` service claims the same static domain as "Dev: Tunnel".
+    // Stop one before starting the other. Ports come from the root .env via
+    // make, so these tasks work unchanged in a worktree opened as its own window.
     //
     // "Dev: All" sequences prep before servers. Everything in the sequential
     // leg must terminate — VS Code's "sequence" order waits for each task to
@@ -13,7 +15,7 @@
     // completion — so all long-running processes live in the parallel group.
     {
       "label": "Dev: Preflight",
-      "detail": "Fail early if ports 8100, 3000 or 3002 are already taken",
+      "detail": "Fail early if the API or portal ports (8100/3000/3002 in main) are taken",
       "type": "shell",
       "command": "make dev-preflight",
       "options": { "cwd": "${workspaceFolder}" },
@@ -40,7 +42,7 @@
     },
     {
       "label": "Dev: API Server",
-      "detail": "Run FastAPI server locally with hot-reload (port 8100)",
+      "detail": "Run FastAPI server locally with hot-reload (port 8100 in main)",
       "type": "shell",
       "command": "make dev",
       "options": { "cwd": "${workspaceFolder}/server" },
@@ -50,27 +52,27 @@
     },
     {
       "label": "Dev: Internal Portal",
-      "detail": "Run internal-portal Next.js dev server (port 3000)",
+      "detail": "Run internal-portal Next.js dev server (port 3000 in main)",
       "type": "shell",
-      "command": "pnpm dev:internal",
-      "options": { "cwd": "${workspaceFolder}/web-app" },
+      "command": "make dev-internal",
+      "options": { "cwd": "${workspaceFolder}" },
       "isBackground": true,
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
       "problemMatcher": []
     },
     {
       "label": "Dev: Supplier Portal",
-      "detail": "Run supplier-portal Next.js dev server (port 3002)",
+      "detail": "Run supplier-portal Next.js dev server (port 3002 in main)",
       "type": "shell",
-      "command": "pnpm dev:supplier",
-      "options": { "cwd": "${workspaceFolder}/web-app" },
+      "command": "make dev-supplier",
+      "options": { "cwd": "${workspaceFolder}" },
       "isBackground": true,
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
       "problemMatcher": []
     },
     {
       "label": "Dev: Tunnel",
-      "detail": "ngrok tunnel from the static domain to localhost:8100 (Clerk webhooks)",
+      "detail": "ngrok tunnel from the static domain to the API port (Clerk webhooks)",
       "type": "shell",
       "command": "make dev-tunnel",
       "options": { "cwd": "${workspaceFolder}" },
@@ -120,9 +122,10 @@
     },
     {
       "label": "Dev: Kill All",
-      "detail": "Kill any process on ports 8100, 3000, 3002, 4040 (ngrok inspector)",
+      "detail": "Kill any process on the API, portal and 4040 (ngrok inspector) ports",
       "type": "shell",
-      "command": "for port in 8100 3000 3002 4040; do pids=$(lsof -ti :$port -sTCP:LISTEN 2>/dev/null); if [ -n \"$pids\" ]; then echo \"Killing port $port (PIDs: $pids)\"; echo \"$pids\" | xargs kill -9; else echo \"Port $port: nothing running\"; fi; done; echo 'Done'",
+      "command": "make dev-kill",
+      "options": { "cwd": "${workspaceFolder}" },
       "presentation": { "reveal": "always", "panel": "dedicated", "clear": true },
       "problemMatcher": []
     },

@@ -3,6 +3,7 @@
 
 # Git worktrees
 .worktrees
+.claude/worktrees/
 
 # Playwright MCP session artifacts (page snapshots, console logs)
 .playwright-mcp/

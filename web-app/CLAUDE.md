@@ -116,6 +116,10 @@ pnpm build                 # build all apps
 pnpm type-check            # TypeScript check across workspace
 ```
 
+3000 and 3002 are the main checkout's defaults. From the repo root,
+`make dev-internal` / `make dev-supplier` follow the checkout's own ports, which
+differ in a git worktree (see *Parallel worktrees* in the root `CLAUDE.md`).
+
 Env files must exist before starting:
 
 ```bash

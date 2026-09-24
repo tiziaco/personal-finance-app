@@ -54,9 +54,12 @@ fi
 # REQUIRED_ENV_VARS to an empty value disables the check; leaving it unset keeps
 # the default. Note the single-dash ${VAR-default}, which distinguishes "unset"
 # from "set but empty".
+# OPENAI_API_KEY is deliberately not in the default: config.py defaults it to
+# empty and only an LLM call needs it, so requiring it made the container
+# stricter than the native server.
 required_vars=()
-if [[ -n "${REQUIRED_ENV_VARS-OPENAI_API_KEY,CLERK_WEBHOOK_SIGNING_SECRET}" ]]; then
-    IFS=',' read -r -a required_vars <<<"${REQUIRED_ENV_VARS-OPENAI_API_KEY,CLERK_WEBHOOK_SIGNING_SECRET}"
+if [[ -n "${REQUIRED_ENV_VARS-CLERK_WEBHOOK_SIGNING_SECRET}" ]]; then
+    IFS=',' read -r -a required_vars <<<"${REQUIRED_ENV_VARS-CLERK_WEBHOOK_SIGNING_SECRET}"
 fi
 missing_vars=()
 

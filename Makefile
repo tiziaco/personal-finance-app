@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-tunnel check check-server check-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -11,6 +11,14 @@ POSTGRES_HOST_PORT ?= 5434
 # compose healthcheck, the prometheus target and `server:8000` are unaffected.
 # Overridable: set API_HOST_PORT in the root .env.
 API_HOST_PORT ?= 8100
+# Host ports for the two portals, on both paths: compose publishes them, and
+# dev-internal / dev-supplier hand them to `next dev` as PORT.
+INTERNAL_PORTAL_HOST_PORT ?= 3000
+SUPPLIER_PORTAL_HOST_PORT ?= 3002
+# The ports above are slot 0's — the main checkout's. A linked worktree gets
+# slot N from `make worktree-init`, which writes base + 10·N for each (and
+# WORKTREE_SLOT) into that worktree's root .env. Absent means 0.
+WORKTREE_SLOT ?= 0
 ENV ?= development
 # Which server/.env.<env> `make deploy-check` runs the deploy stack against.
 DEPLOY_ENV ?= staging
@@ -28,8 +36,17 @@ DEPLOY_ENV ?= staging
 # Default target
 help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
-	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/3000/3002 are free"
+	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/$(INTERNAL_PORTAL_HOST_PORT)/$(SUPPLIER_PORTAL_HOST_PORT) are free"
+	@echo "  make dev-internal       - Internal portal (next dev) on port $(INTERNAL_PORTAL_HOST_PORT)"
+	@echo "  make dev-supplier       - Supplier portal (next dev) on port $(SUPPLIER_PORTAL_HOST_PORT)"
+	@echo "  make dev-kill           - Kill whatever listens on $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and 4040"
 	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
+	@echo ""
+	@echo "Parallel worktrees (one dev stack per git worktree):"
+	@echo "  make worktree-new NAME=<name> [BRANCH=<branch>]"
+	@echo "                          - Create .claude/worktrees/<name> on BRANCH (default feat/<name>), then init it"
+	@echo "  make worktree-init      - In a linked worktree: assign a slot, ports, env files, deps"
+	@echo "  make worktree-clean     - In a linked worktree: stop its dev servers, remove its containers, volume, images"
 	@echo ""
 	@echo "Checks:"
 	@echo "  make check              - Lint and format-check both sides (what the pre-push hook runs)"
@@ -72,16 +89,40 @@ help:
 # -sTCP:LISTEN matters: a bare `lsof -ti :PORT` also matches outbound
 # connections and dead CLOSED sockets, neither of which blocks a bind.
 dev-preflight:
-	@for port in $(API_HOST_PORT) 3000 3002; do \
+	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT); do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "❌ Port $$port is already in use (PIDs: $$pids)."; \
-			echo "   The Docker stack publishes 3000, 3002 and $(API_HOST_PORT) — run 'make docker-stop',"; \
-			echo "   or use the 'Dev: Kill All' task if a previous native run is still alive."; \
+			echo "   The Docker stack publishes $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and $(API_HOST_PORT) — run 'make docker-stop',"; \
+			echo "   or 'make dev-kill' if a previous native run is still alive."; \
 			exit 1; \
 		fi; \
 	done
-	@echo "✅ Ports $(API_HOST_PORT), 3000, 3002 are free"
+	@echo "✅ Ports $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) are free"
+
+# Through make rather than `pnpm dev:*` directly: only the Makefile has read
+# the root .env that says which ports this checkout owns.
+dev-internal:
+	@cd web-app && PORT=$(INTERNAL_PORTAL_HOST_PORT) pnpm dev:internal
+
+# The internal portal's .env.local is included and exported above, and an
+# exported variable beats the supplier's own .env.local in Next.js: unset its keys.
+INTERNAL_PORTAL_ENV_KEYS := $(shell sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' web-app/apps/internal-portal/.env.local 2>/dev/null)
+
+dev-supplier:
+	@cd web-app && env $(addprefix -u ,$(INTERNAL_PORTAL_ENV_KEYS)) PORT=$(SUPPLIER_PORTAL_HOST_PORT) pnpm dev:supplier
+
+# 4040 is dev-tunnel's ngrok inspector.
+dev-kill:
+	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT) 4040; do \
+		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
+		if [ -n "$$pids" ]; then \
+			echo "Killing port $$port (PIDs: $$pids)"; \
+			echo "$$pids" | xargs kill -9; \
+		else \
+			echo "Port $$port: nothing running"; \
+		fi; \
+	done
 
 # Host-side tunnel. The compose `ngrok` service forwards to `server:8000`,
 # which only resolves on the compose network — hence a separate target.
@@ -110,6 +151,17 @@ dev-tunnel:
 	esac
 	@echo "🌐 Tunnelling https://$(NGROK_DOMAIN) -> localhost:$(API_HOST_PORT)"
 	@ngrok http $(API_HOST_PORT) --url=https://$(NGROK_DOMAIN) --authtoken $(NGROK_AUTHTOKEN)
+
+# One stack per linked git worktree, under its own compose project and ports;
+# the slot logic is in scripts/worktree/init.sh.
+worktree-new:
+	@./scripts/worktree/new.sh "$(NAME)" "$(BRANCH)"
+
+worktree-init:
+	@./scripts/worktree/init.sh
+
+worktree-clean:
+	@./scripts/worktree/clean.sh
 
 # Read-only checks: nothing here rewrites a file. `make format` (server) and
 # `pnpm format` (web-app) are the fixers. The pre-push hook runs the side
@@ -170,15 +222,24 @@ docker-build-api:
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build server
 	@echo "✅ server built"
 
-# Full stack - all services including monitoring
-docker-run:
+# Full stack - all services including monitoring. Main checkout only:
+# monitoring publishes fixed ports and ngrok claims the one NGROK_DOMAIN.
+# An empty WORKTREE_SLOT (`?=` keeps a defined-but-empty value) is main too.
+guard-main:
+	@if [ "$(or $(WORKTREE_SLOT),0)" != "0" ]; then \
+		echo "❌ This is worktree slot $(WORKTREE_SLOT). The full stack (monitoring, ngrok) runs"; \
+		echo "   only in the main checkout. Use 'make docker-run-core' here."; \
+		exit 1; \
+	fi
+
+docker-run: guard-main
 	@echo "🚀 Starting full stack (development mode)"
 	@echo "Services: internal-portal, supplier-portal, server, db, prometheus, grafana, cadvisor, ngrok"
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
 	@echo ""
 	@echo "✅ Full stack is running!"
-	@echo "   Internal Portal:     http://localhost:3000"
-	@echo "   Supplier Portal:     http://localhost:3002"
+	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
+	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Prometheus:          http://localhost:9090"
 	@echo "   Grafana:             http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)"
@@ -195,8 +256,8 @@ docker-run-core:
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d internal-portal supplier-portal server db
 	@echo ""
 	@echo "✅ Core stack is running!"
-	@echo "   Internal Portal:     http://localhost:3000"
-	@echo "   Supplier Portal:     http://localhost:3002"
+	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
+	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
 
@@ -257,7 +318,8 @@ clean:
 	@docker builder prune -af
 	@echo "✅ Full cleanup complete"
 
-# Rebuild and start fresh
-rebuild: clean docker-run
+# Rebuild and start fresh. guard-main first: clean prunes the build cache every
+# checkout shares, and docker-run would refuse in a worktree only after it.
+rebuild: guard-main clean docker-run
 
 rebuild-core: clean docker-run-core

@@ -48,7 +48,7 @@ There are two ways to run this app, and **they are mutually exclusive**:
 - **Native path** — app processes on the host, Postgres still in Docker
   (VS Code's `Dev: *` tasks). Needs its own host-side tunnel.
 
-They collide on two resources: host ports **3000, 3002 and 8100**, which the
+They collide on two resources: host ports **3000, 3002 and 8100** (the main checkout's defaults), which the
 compose services publish; and the single static **`NGROK_DOMAIN`**, claimed by
 both the `ngrok` compose service and `make dev-tunnel`. Stop one path before
 starting the other — `make dev-preflight` checks the ports and fails with a
@@ -57,8 +57,8 @@ pointer rather than letting the servers die on a bind error.
 ### Native dev
 
 ```bash
-make dev-preflight      # verify ports 8100/3000/3002 are free
-make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:8100
+make dev-preflight      # verify this checkout's API and portal ports are free
+make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:$API_HOST_PORT
 ```
 
 `NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the
@@ -102,7 +102,7 @@ make rebuild            # clean + full stack
 make rebuild-core       # clean + core stack
 ```
 
-### Service URLs (Docker)
+### Service URLs (Docker, main checkout defaults)
 
 | Service           | URL                        |
 |-------------------|----------------------------|
@@ -118,6 +118,45 @@ make rebuild-core       # clean + core stack
 
 `ngrok` (dev only) tunnels `server:8000` for Clerk webhook delivery. Compose
 publishes no host port for it, so its inspection dashboard has no fixed URL.
+
+### Parallel worktrees
+
+Each linked git worktree can run its own dev stack — its own database (so its
+own migrations), containers and ports — so two branches can be built at once.
+
+```bash
+make worktree-new NAME=feed             # .claude/worktrees/feed on feat/feed, initialised
+make worktree-new NAME=x BRANCH=fix/x   # another branch; an existing one is checked out
+cd .claude/worktrees/feed && claude
+make worktree-clean                     # inside it, before `git worktree remove`
+```
+
+| Slot | Internal | Supplier | API | Postgres | Compose project |
+|---|---|---|---|---|---|
+| 0 (main checkout) | base | base | base | base | `COMPOSE_PROJECT_NAME`, else the directory name |
+| N (1–9) | base + 10N | base + 10N | base + 10N | base + 10N | `<main's project>-<worktree dir>` |
+
+Bases are the main checkout's `*_HOST_PORT`s in its root `.env`, defaulting to
+3000 / 3002 / 8100 / 5434. `make worktree-init` (which `worktree-new` runs)
+assigns the slot once, saves it as `WORKTREE_SLOT`, and writes the slot's ports,
+`ALLOWED_ORIGINS` and `NEXT_PUBLIC_API_URL` into the worktree's env files. Every
+make target and `Dev:` task then follows them.
+
+- **Use `worktree-new`, not `claude --worktree`.** The latter names the branch
+  `worktree-<name>`, bases it on `origin/main`, starts before init has run, and
+  on exit deletes the folder without `worktree-clean`, stranding the slot's
+  volume and images.
+- **Monitoring and ngrok stay in main.** `make docker-run` refuses in a
+  worktree; use `docker-run-core`. `make dev-tunnel` works from any checkout,
+  one at a time.
+- **Tear a worktree down with `make worktree-clean`**, not `make clean` or
+  `rebuild`: those prune the build cache every checkout shares.
+- **`ALLOWED_ORIGINS` is rewritten** by `worktree-init` to the slot's three
+  origins; extra origins main lists are not carried over.
+- **Several projects from this template on one machine?** Give each its own
+  block of 100: set the `*_HOST_PORT`s in its root `.env`, and `ALLOWED_ORIGINS`
+  and both `NEXT_PUBLIC_API_URL`s to match. Re-run `make worktree-init` in
+  existing worktrees to move them along.
 
 ---
 

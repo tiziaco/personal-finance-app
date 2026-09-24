@@ -2,7 +2,8 @@
 
 The template's external-facing portal — the app partners sign in to. In the shipped example domain suppliers use it to upload required documents, track submission status, and receive notifications on document compliance.
 
-Runs on **http://localhost:3002**.
+Runs on **http://localhost:3002** in the main checkout; `make dev-supplier` from the repo
+root follows the checkout's own port, which differs in a git worktree.
 
 ---
 

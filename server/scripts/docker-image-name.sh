@@ -13,7 +13,7 @@
 # Callers: Makefile's docker-build and build-docker.sh. Both tag <name>:<env>,
 # so they cannot drift apart on what the image is called. Nothing else needs
 # this: the Compose stack names its own images and containers, so stop-docker.sh
-# and logs-docker.sh address `container_name: server` instead.
+# and logs-docker.sh address the Compose service `server` instead.
 #
 #     DOCKER_IMAGE_NAME=$(scripts/docker-image-name.sh development)
 set -euo pipefail

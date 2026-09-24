@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# Env-file helpers. Sourced, never executed. Callers write into gitignored env
+# files and must leave comments, ordering and unrelated keys alone.
+#
+#     source "$(dirname "${BASH_SOURCE[0]}")/../lib/env.sh"
+
+# Replace a key in place, or append it. awk to a temp file rather than
+# `sed -i`, whose syntax differs between BSD (macOS) and GNU. The temp file
+# starts as a `cp -p` so the mv keeps a secrets file's mode, not the umask's.
+upsert() { # upsert <file> <key> <value>
+  local file=$1 key=$2 line="$2=$3"
+  if grep -qE "^[[:space:]]*(export[[:space:]]+)?${key}=" "$file" 2>/dev/null; then
+    cp -p "$file" "$file.tmp"
+    awk -v key="$key" -v line="$line" '
+      $0 ~ "^[[:space:]]*(export[[:space:]]+)?" key "=" { print line; next }
+      { print }
+    ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+  else
+    # Without a trailing newline the new key would be glued onto the last one.
+    [ -s "$file" ] && [ -n "$(tail -c 1 "$file")" ] && printf '\n' >> "$file"
+    printf '%s\n' "$line" >> "$file"
+  fi
+}
+
+# The last value of <key> in <file>, outer quotes stripped; empty if the file
+# or key is absent.
+read_key() { # read_key <file> <key>
+  [ -f "$1" ] || return 0
+  # `|| true`: under pipefail an absent key would fail the caller's assignment.
+  { grep -E "^[[:space:]]*(export[[:space:]]+)?$2=" "$1" || true; } | tail -n 1 \
+    | cut -d= -f2- | sed -e "s/^[\"']//" -e "s/[\"']$//"
+}

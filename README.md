@@ -265,7 +265,7 @@ pnpm install
 # Run the internal dashboard
 pnpm dev:internal    # http://localhost:3000
 
-# Run the supplier portal (always on 3002)
+# Run the supplier portal (3002 unless PORT is set)
 pnpm dev:supplier    # http://localhost:3002
 
 # Copy and fill env files before starting
@@ -274,10 +274,11 @@ cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
 
 > **The Docker and native paths are mutually exclusive.** They collide on host ports
-> **3000, 3002 and 8100**, which the Compose services publish, and on the single static
-> `NGROK_DOMAIN`, claimed by both the `ngrok` compose service and `make dev-tunnel`. Stop
-> one before starting the other. `make dev-preflight` checks the ports and fails with a
-> pointer rather than letting the servers die on a bind error.
+> **3000, 3002 and 8100** (the main checkout's defaults), which the Compose services
+> publish, and on the single static `NGROK_DOMAIN`, claimed by both the `ngrok` compose
+> service and `make dev-tunnel`. Stop one before starting the other. `make dev-preflight`
+> checks the ports and fails with a pointer rather than letting the servers die on a
+> bind error.
 
 Running natively also means migrations are **not** applied for you the way the Docker
 `migrate` service does it — run `make migrate ENV=development` from `server/`.
@@ -285,6 +286,74 @@ Running natively also means migrations are **not** applied for you the way the D
 For Clerk webhook work, `make dev-tunnel` exposes the local API at `https://$NGROK_DOMAIN`.
 Run the Make target rather than `ngrok` directly — it passes `--authtoken` explicitly, for
 the reason set out in [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md).
+
+### Parallel Work (git worktrees)
+
+Each linked git worktree can run its own stack — database, containers, ports —
+so two branches can be built side by side, each in its own Claude session.
+
+**Start**
+
+```bash
+make worktree-new NAME=feed                   # .claude/worktrees/feed on feat/feed
+make worktree-new NAME=cv-fix BRANCH=fix/cv   # a different branch name
+cd .claude/worktrees/feed && claude
+```
+
+An existing local branch is checked out; one that exists only as
+`origin/<branch>` is tracked (how you pick up a PR branch); otherwise the branch
+is created from the current HEAD. `worktree-new` then runs the worktree's own
+`make worktree-init`: it assigns a slot, copies the env files from the main
+checkout with the slot's values written in, and installs dependencies. For a
+worktree created some other way, run `make worktree-init` inside it.
+
+Prefer this to `claude --worktree`, which names the branch `worktree-<name>`,
+bases it on `origin/main` (without your unpushed commits), starts the session
+before init has run, and on a clean exit deletes the folder without
+`worktree-clean`.
+
+**Ports**
+
+| | Internal portal | Supplier portal | API | PostgreSQL |
+|---|---|---|---|---|
+| Main checkout (slot 0) | 3000 | 3002 | 8100 | 5434 |
+| Worktree slot N (1–9) | 3000+10N | 3002+10N | 8100+10N | 5434+10N |
+
+Those are the defaults: the bases are the main checkout's `*_HOST_PORT`s in its
+root `.env`. Running several projects built from this template on one machine?
+Give each its own block of 100 (e.g. 3200 / 3202 / 8300) and set
+`ALLOWED_ORIGINS` and both `NEXT_PUBLIC_API_URL`s to match. Re-running
+`make worktree-init` in an existing worktree moves it with its main checkout.
+
+**Run** — inside the worktree, as in main: `make docker-run-core`; or natively
+`make docker-run-db ENV=development`, `make -C server migrate ENV=development`,
+then `make -C server dev`, `make dev-internal` and `make dev-supplier` (or
+VS Code's `Dev: All` with the worktree open as its own window).
+
+**Monitoring and the tunnel** stay in the main checkout: Prometheus, Grafana and
+cAdvisor publish fixed ports, and ngrok has one static domain. `make docker-run`
+refuses in a worktree; `make dev-tunnel` works from any checkout, one at a time.
+
+**Finish**
+
+```bash
+make worktree-clean                       # inside the worktree
+cd ../../.. && git worktree remove .claude/worktrees/feed
+git branch -d feat/feed                   # once merged
+```
+
+`worktree-clean` stops the worktree's own dev servers (matched by working
+directory, not port alone) and removes its containers, database volume and
+images. It leaves the shared Docker build cache alone.
+
+**Merging parallel branches**
+
+- **Two Alembic heads.** Both branches' migrations descend from the same
+  revision. After the second merge, `cd server && uv run alembic merge heads -m
+  "merge <a> and <b>"` and commit the merge revision.
+- **Contract conflicts.** Never hand-merge `server/openapi.json` or
+  `web-app/packages/api-client/src/generated/`: take either side, run
+  `make gen-contract`, and commit what it produces.
 
 ---
 

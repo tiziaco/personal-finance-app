@@ -60,6 +60,10 @@ pnpm build           # production build for all apps
 pnpm type-check      # TypeScript check across all packages
 ```
 
+3000 and 3002 are the main checkout's defaults. From the repo root,
+`make dev-internal` / `make dev-supplier` follow the checkout's own ports, which
+differ in a git worktree.
+
 ## Managing Packages
 
 ### Where to add a dependency
