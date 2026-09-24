@@ -145,3 +145,23 @@ class TestBlankNamesForUser:
         await ConversationRepository.blank_names_for_user(db_session, owner.id)
         await db_session.refresh(theirs)
         assert theirs.name == "Theirs"
+
+
+class TestListIdsForUser:
+    async def test_includes_soft_deleted_rows(self, db_session, owner):
+        active = await _create(db_session, owner.id)
+        gone = await _create(db_session, owner.id)
+        await ConversationRepository.soft_delete(db_session, gone.id)
+
+        ids = await ConversationRepository.list_ids_for_user(db_session, owner.id)
+
+        assert sorted(ids) == sorted([active.id, gone.id])
+
+    async def test_scoped_to_user(self, db_session, owner, other_user):
+        await _create(db_session, other_user.id)
+        mine = await _create(db_session, owner.id)
+
+        assert await ConversationRepository.list_ids_for_user(db_session, owner.id) == [mine.id]
+
+    async def test_none_returns_empty(self, db_session, owner):
+        assert await ConversationRepository.list_ids_for_user(db_session, owner.id) == []

@@ -162,16 +162,5 @@ class UserRepository:
         await session.flush()
         return user
 
-    @staticmethod
-    async def delete(session: AsyncSession, user_id: str) -> bool:
-        """Delete a user by internal ID. False if there is no such user."""
-        user = await session.get(User, user_id)
-        if not user:
-            return False
-
-        await session.delete(user)
-        logger.info("user_deleted", user_id=user_id)
-        return True
-
 
 user_repository = UserRepository()

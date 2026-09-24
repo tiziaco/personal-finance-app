@@ -19,9 +19,6 @@ export interface ConversationResponse {
   conversation_id: string
   /** When the conversation was created */
   created_at: string
-  /**
-   * Name of the conversation
-   * @maxLength 100
-   */
+  /** Name of the conversation */
   name?: string
 }

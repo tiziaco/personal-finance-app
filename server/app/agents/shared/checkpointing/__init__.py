@@ -5,6 +5,7 @@ from app.agents.shared.checkpointing.postgres import (
     create_connection_pool,
     create_postgres_saver,
     delete_conversation_checkpoints,
+    delete_conversations_checkpoints,
 )
 
 __all__ = [
@@ -12,4 +13,5 @@ __all__ = [
     "create_connection_pool",
     "create_postgres_saver",
     "delete_conversation_checkpoints",
+    "delete_conversations_checkpoints",
 ]

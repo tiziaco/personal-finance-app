@@ -86,7 +86,7 @@ export const ListChatMessagesResponse = zod
               .describe("The role of the message sender"),
           })
           .describe(
-            "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user or assistant).\n    content: The content of the message.",
+            "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
           ),
       )
       .describe("List of all messages in the conversation"),

@@ -18,7 +18,6 @@ from app.modules.account import CurrentUser
 from app.modules.conversation.dependencies import UserConversation
 from app.modules.conversation.schemas import ConversationResponse
 from app.modules.conversation.service import conversation_service
-from app.utils.sanitization import sanitize_string
 
 router = APIRouter(prefix="/conversation", tags=["conversation"])
 
@@ -35,13 +34,6 @@ async def create_conversation(request: Request, db_session: DbSession, user: Cur
     """Create a new chat conversation for the authenticated user."""
     conversation_id = str(uuid.uuid4())
     conversation = await conversation_service.create_conversation(db_session, conversation_id, user.id)
-
-    logger.info(
-        "conversation_created",
-        conversation_id=conversation_id,
-        user_id=user.id,
-        name=conversation.name,
-    )
 
     return ConversationResponse(
         conversation_id=conversation_id,
@@ -62,11 +54,16 @@ async def update_conversation_name(
     request: Request,
     conversation: UserConversation,
     db_session: DbSession,
-    name: str = Form(...),
+    name: str = Form(..., max_length=100),
 ):
-    """Update a conversation's name."""
-    sanitized_name = sanitize_string(name)
-    conversation = await conversation_service.update_conversation_name(db_session, conversation.id, sanitized_name)
+    """Update a conversation's name.
+
+    Stored verbatim: JSON and React escape on output. Null bytes are dropped
+    because Postgres text columns reject them.
+    """
+    conversation = await conversation_service.update_conversation_name(
+        db_session, conversation.id, name.replace("\0", "")
+    )
 
     return ConversationResponse(
         conversation_id=conversation.id,
@@ -87,7 +84,6 @@ async def delete_conversation(
     request: Request,
     conversation: UserConversation,
     db_session: DbSession,
-    user: CurrentUser,
 ):
     """Delete a conversation for the authenticated user.
 
@@ -96,8 +92,6 @@ async def delete_conversation(
     """
     await delete_conversation_checkpoints(conversation.id)
     await conversation_service.soft_delete_conversation(db_session, conversation.id)
-
-    logger.info("conversation_deleted", conversation_id=conversation.id, user_id=user.id)
 
 
 @router.get(
@@ -113,8 +107,8 @@ async def get_user_conversations(request: Request, db_session: DbSession, user: 
     conversations = await conversation_service.get_user_conversations(db_session, user.id)
     return [
         ConversationResponse(
-            conversation_id=sanitize_string(conversation.id),
-            name=sanitize_string(conversation.name),
+            conversation_id=conversation.id,
+            name=conversation.name,
             created_at=conversation.created_at,
         )
         for conversation in conversations

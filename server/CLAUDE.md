@@ -277,7 +277,7 @@ All agents extend `BaseAgent` (`app/agents/base/`) and must implement `create_gr
 
 **Shared components:**
 - `app/agents/shared/memory/` — `get_relevant_memory()`, `update_memory()`, `delete_user_memory()`
-- `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()`
+- `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()` and its set-based `delete_conversations_checkpoints()`
 - `app/agents/shared/observability/` — `create_graph_config()` wires Langfuse callbacks
 
 `BaseAgent` provides `get_response()`, `get_stream_response()` and `get_chat_history()` with memory and tracing built in. Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/shared/checkpointing/` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
@@ -325,7 +325,7 @@ New tests mirror the `app/` structure: a test for `app/modules/account/cache.py`
 When a user is deleted (`DELETE /api/v1/auth/me`, or Clerk's `user.deleted`), `account`'s `erase_user` runs, in order:
 
 1. Clerk deletion, by the route only — on the webhook path Clerk's deletion is the trigger (JWTs immediately invalidated)
-2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes their LangGraph checkpoints, and blanks their names; `supplier` clears `Supplier.contact_id`
+2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes the LangGraph checkpoints of every conversation they own (soft-deleted ones included), and blanks their names; `supplier` clears `Supplier.contact_id`
 3. mem0 memories deleted (`delete_user_memory`)
 4. User PII anonymised via `AnonymizableMixin.anonymize_user()`
 5. The role cache invalidated under the clerk_id captured before step 4
@@ -338,3 +338,4 @@ Rules:
 - Never use `SoftDeleteMixin` on `User` — it leaves PII in the DB
 - New models with PII must implement `AnonymizableMixin` and an `anonymize_*()` method
 - Always call `delete_conversation_checkpoints()` before blanking or soft-deleting a conversation
+- Erasure clears checkpoints for every conversation the user owns, soft-deleted ones included — never only the active ones

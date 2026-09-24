@@ -57,7 +57,7 @@ The type alias `CurrentUser = Annotated[User, Depends(get_current_user)]` is use
 
 ### 4. JIT User Provisioning — `app/modules/account/service.py`
 
-`UserService.resolve_user(clerk_id, org_id, session)` follows this flow:
+`UserService.resolve_user(session, clerk_id, org_id)` follows this flow:
 
 1. **DB lookup** — query by `clerk_id` (unique + indexed, so a single index scan)
 2. **Clerk API** — fetch user from Clerk, create in DB

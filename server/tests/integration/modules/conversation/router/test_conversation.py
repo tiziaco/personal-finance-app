@@ -89,6 +89,49 @@ class TestRenameConversation:
         assert data["name"] == "Renamed Chat"
         assert data["conversation_id"] == user_conversation.id
 
+    @pytest.mark.parametrize("name", ["O'Brien's trip", "Anne & <Marie>"])
+    async def test_rename_stores_the_name_verbatim(self, authenticated_client, user_conversation, db_session, name):
+        """Escaping is the renderer's job; renaming twice must not compound it."""
+        url = f"/api/v1/conversation/conversation/{user_conversation.id}/name"
+
+        for _ in range(2):
+            response = await authenticated_client.patch(url, data={"name": name})
+            assert response.status_code == 200
+            assert response.json()["name"] == name
+            await db_session.refresh(user_conversation)
+            assert user_conversation.name == name
+
+        listed = await authenticated_client.get("/api/v1/conversation/conversations")
+        assert listed.json()[0]["name"] == name
+
+    async def test_rename_drops_null_bytes(self, authenticated_client, user_conversation):
+        """Postgres text columns reject NUL outright."""
+        response = await authenticated_client.patch(
+            f"/api/v1/conversation/conversation/{user_conversation.id}/name",
+            data={"name": "Trip\0 plan"},
+        )
+        assert response.status_code == 200
+        assert response.json()["name"] == "Trip plan"
+
+    async def test_rename_accepts_100_chars(self, authenticated_client, user_conversation):
+        response = await authenticated_client.patch(
+            f"/api/v1/conversation/conversation/{user_conversation.id}/name",
+            data={"name": "x" * 100},
+        )
+        assert response.status_code == 200
+
+    async def test_rename_over_100_chars_is_rejected_not_stored(
+        self, authenticated_client, user_conversation, db_session
+    ):
+        """Bounded on input: an over-long name stored, then refused by the response model, was a 500."""
+        response = await authenticated_client.patch(
+            f"/api/v1/conversation/conversation/{user_conversation.id}/name",
+            data={"name": "x" * 101},
+        )
+        assert response.status_code == 422
+        await db_session.refresh(user_conversation)
+        assert user_conversation.name == "Existing Chat"
+
     async def test_rename_nonexistent_returns_404(self, authenticated_client):
         response = await authenticated_client.patch(
             "/api/v1/conversation/conversation/nonexistent-id/name",

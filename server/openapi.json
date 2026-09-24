@@ -25,6 +25,7 @@
       "Body_renameConversation": {
         "properties": {
           "name": {
+            "maxLength": 100,
             "title": "Name",
             "type": "string"
           }
@@ -187,7 +188,6 @@
           "name": {
             "default": "",
             "description": "Name of the conversation",
-            "maxLength": 100,
             "title": "Name",
             "type": "string"
           }
@@ -274,7 +274,7 @@
         "type": "object"
       },
       "Message": {
-        "description": "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user or assistant).\n    content: The content of the message.",
+        "description": "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
         "properties": {
           "content": {
             "description": "The content of the message",

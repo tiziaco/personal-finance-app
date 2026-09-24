@@ -79,4 +79,4 @@ async def delete_me(
     # The webhook path skips this step — there, Clerk's deletion is the trigger.
     await user_service.delete_user_from_clerk(original_clerk_id)
 
-    await user_service.erase_user(user, db_session)
+    await user_service.erase_user(db_session, user)

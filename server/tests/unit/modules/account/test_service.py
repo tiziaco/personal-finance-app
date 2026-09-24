@@ -42,7 +42,7 @@ async def test_erase_user_runs_full_cascade(session):
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)) as publish,
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()) as invalidate,
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
 
     mem.assert_awaited_once_with("11111111-2222-3333-4444-555555555555")
     publish.assert_awaited_once_with(USER_ERASING, session=session, user_id="11111111-2222-3333-4444-555555555555")
@@ -59,7 +59,7 @@ async def test_erase_user_anonymizes_the_row(session):
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)),
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
 
     assert user.clerk_id != "user_abc"
     assert user.email.endswith("@anonymized.local")
@@ -76,7 +76,7 @@ async def test_erase_user_invalidates_with_pre_anonymisation_clerk_id(session):
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)),
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()) as invalidate,
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
 
     assert invalidate.await_args.kwargs["clerk_id"] == "user_abc"
 
@@ -111,7 +111,7 @@ async def test_erase_user_clears_checkpoints_and_memory_before_anonymising(sessi
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch.object(User, "anonymize_user", new=anonymize_mock),
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
 
     call_order = [call[0] for call in parent.mock_calls]
     assert call_order.index("delete_user_memory") < call_order.index("anonymize_user")
@@ -126,7 +126,7 @@ async def test_erase_user_logs_the_subscriber_count(session):
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch("app.modules.account.service.logger") as logger,
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
     logger.info.assert_called_once_with("user_erased", user_id=user.id, subscriber_count=2)
 
 
@@ -138,7 +138,7 @@ async def test_erase_user_logs_an_error_when_no_module_handled_the_erasure(sessi
         patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch("app.modules.account.service.logger") as logger,
     ):
-        await UserService().erase_user(user, session)
+        await UserService.erase_user(session, user)
     logger.error.assert_called_once_with("user_erasing_had_no_subscribers", user_id=user.id)
 
 

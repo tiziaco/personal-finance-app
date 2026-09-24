@@ -16,7 +16,7 @@ class Message(BaseModel):
     """Message model for chat endpoint.
 
     Attributes:
-        role: The role of the message sender (user or assistant).
+        role: The role of the message sender (user, assistant or system).
         content: The content of the message.
     """
 

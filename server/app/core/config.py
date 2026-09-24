@@ -39,18 +39,30 @@ class Environment(str, Enum):
 def get_environment() -> Environment:
     """Get the current environment.
 
+    Unset means development. A value that is set but unrecognised raises, so a
+    typo such as "production " fails at startup instead of running as development.
+
     Returns:
         Environment: The current environment (development, staging, production, or test)
+
+    Raises:
+        ValueError: If APP_ENV is set to an unrecognised value.
     """
-    match os.getenv("APP_ENV", "development").lower():
+    raw = os.getenv("APP_ENV")
+    if raw is None:
+        return Environment.DEVELOPMENT
+
+    match raw.lower():
         case "production" | "prod":
             return Environment.PRODUCTION
         case "staging" | "stage":
             return Environment.STAGING
         case "test":
             return Environment.TEST
-        case _:
+        case "development" | "dev":
             return Environment.DEVELOPMENT
+        case _:
+            raise ValueError(f"Unrecognised APP_ENV {raw!r}; expected development, staging, production or test")
 
 
 # Database Settings

@@ -7,5 +7,6 @@
  */
 
 export interface BodyRenameConversation {
+  /** @maxLength 100 */
   name: string
 }

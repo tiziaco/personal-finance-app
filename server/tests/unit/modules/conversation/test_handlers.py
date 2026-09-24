@@ -21,10 +21,12 @@ async def test_soft_deletes_clears_checkpoints_then_blanks_names_in_that_order()
     session = AsyncMock()
     session.add = MagicMock()
     parent = MagicMock()
-    soft_delete = AsyncMock(return_value=["conv_1", "conv_2"])
+    soft_delete = AsyncMock(return_value=["conv_1"])
+    list_ids = AsyncMock(return_value=["conv_1", "conv_0"])
     checkpoints = AsyncMock()
     blank = AsyncMock(return_value=2)
     parent.attach_mock(soft_delete, "soft_delete")
+    parent.attach_mock(list_ids, "list_ids")
     parent.attach_mock(checkpoints, "checkpoints")
     parent.attach_mock(blank, "blank")
 
@@ -33,11 +35,13 @@ async def test_soft_deletes_clears_checkpoints_then_blanks_names_in_that_order()
             "app.modules.conversation.handlers.conversation_service.soft_delete_all_user_conversations",
             new=soft_delete,
         ),
-        patch("app.modules.conversation.handlers.delete_conversation_checkpoints", new=checkpoints),
+        patch("app.modules.conversation.handlers.conversation_service.list_user_conversation_ids", new=list_ids),
+        patch("app.modules.conversation.handlers.delete_conversations_checkpoints", new=checkpoints),
         patch("app.modules.conversation.handlers.conversation_service.blank_all_user_conversation_names", new=blank),
     ):
         await handlers.erase_on_user_erasing(session=session, user_id="u1")
 
-    assert [c[0] for c in parent.mock_calls] == ["soft_delete", "checkpoints", "checkpoints", "blank"]
-    assert checkpoints.await_args_list == [call("conv_1"), call("conv_2")]
+    assert [c[0] for c in parent.mock_calls] == ["soft_delete", "list_ids", "checkpoints", "blank"]
+    # Every id the user owns, soft-deleted ones included — not only those just soft-deleted.
+    checkpoints.assert_awaited_once_with(["conv_1", "conv_0"])
     blank.assert_awaited_once_with(session, "u1")

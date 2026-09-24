@@ -69,7 +69,7 @@ class TestStreamResponse:
 
 
 class TestConversationResponse:
-    """Tests for ConversationResponse with sanitize_name validator."""
+    """Tests for ConversationResponse."""
 
     def test_valid_response(self):
         resp = ConversationResponse(
@@ -79,23 +79,15 @@ class TestConversationResponse:
         )
         assert resp.name == "My Chat"
 
-    def test_sanitize_name_strips_angle_brackets(self):
+    @pytest.mark.parametrize("name", ["<script>alert</script>", 'test{name}[0]("val")', "O'Brien's `trip`"])
+    def test_name_is_returned_verbatim(self, name):
+        """Escaping is the renderer's job — the response carries the stored name unchanged."""
         resp = ConversationResponse(
             conversation_id="abc-123",
-            name="<script>alert</script>",
+            name=name,
             created_at=datetime.now(UTC),
         )
-        assert "<" not in resp.name
-        assert ">" not in resp.name
-
-    def test_sanitize_name_strips_special_chars(self):
-        resp = ConversationResponse(
-            conversation_id="abc-123",
-            name='test{name}[0]("val")',
-            created_at=datetime.now(UTC),
-        )
-        for char in "<>{}[]()'\"`":
-            assert char not in resp.name
+        assert resp.name == name
 
     def test_empty_name_allowed(self):
         resp = ConversationResponse(

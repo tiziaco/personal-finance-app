@@ -67,21 +67,17 @@ class UserService:
     Flow: DB (indexed clerk_id lookup) -> Clerk API (JIT create)
     """
 
-    async def resolve_user(
-        self,
-        clerk_id: str,
-        org_id: str,
-        session: AsyncSession,
-    ) -> User:
+    @staticmethod
+    async def resolve_user(session: AsyncSession, clerk_id: str, org_id: str) -> User:
         """Resolve the current user by clerk_id, JIT-provisioning if needed.
 
         Updates org_id on every call so the DB stays in sync if the user's org
         changes (e.g. admin re-assigns to a different organisation).
 
         Args:
+            session: Database session for DB operations.
             clerk_id: The Clerk user ID.
             org_id: The Clerk organisation ID from the JWT.
-            session: Database session for DB operations.
 
         Returns:
             The User object (attached to the current session).
@@ -143,7 +139,8 @@ class UserService:
 
         return user
 
-    async def resolve_org_role(self, clerk_id: str) -> Optional[str]:
+    @staticmethod
+    async def resolve_org_role(clerk_id: str) -> Optional[str]:
         """Resolve org role from cache, falling back to Clerk API.
 
         Used by get_current_role() when the JWT carries no org context.
@@ -166,11 +163,8 @@ class UserService:
             return role
         return None
 
-    async def erase_user(
-        self,
-        user: User,
-        session: AsyncSession,
-    ) -> None:
+    @staticmethod
+    async def erase_user(session: AsyncSession, user: User) -> None:
         """Run the GDPR erasure cascade for one user.
 
         Shared by DELETE /api/v1/auth/me and the user.deleted webhook. The
@@ -195,8 +189,8 @@ class UserService:
         deletion is a no-op, and the row is already anonymised.
 
         Args:
-            user: The user to erase. Must be attached to `session`.
             session: Database session. Committed by the caller's DbSession.
+            user: The user to erase. Must be attached to `session`.
         """
         original_clerk_id = user.clerk_id
 
@@ -219,7 +213,8 @@ class UserService:
 
         logger.info("user_erased", user_id=user.id, subscriber_count=subscriber_count)
 
-    async def exists_in_clerk(self, clerk_id: str) -> bool:
+    @staticmethod
+    async def exists_in_clerk(clerk_id: str) -> bool:
         """Report whether Clerk still holds this user.
 
         Thin wrapper so callers outside the user service do not import
@@ -252,7 +247,8 @@ class UserService:
         except ClerkUserNotFoundError:
             return False
 
-    async def delete_user_from_clerk(self, clerk_id: str) -> None:
+    @staticmethod
+    async def delete_user_from_clerk(clerk_id: str) -> None:
         """Delete a user from Clerk by clerk_id.
 
         Thin wrapper so callers outside the user service do not import

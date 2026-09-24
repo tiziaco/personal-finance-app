@@ -118,7 +118,7 @@ class TestDeleteMeCheckpointCleanup:
     async def test_checkpoints_are_deleted_for_every_conversation(
         self, authenticated_client_with_agent, test_user, db_session, mocked_externals
     ):
-        """One call per conversation the user owned — none may be skipped."""
+        """One call carrying every conversation the user owned — none may be skipped."""
         conversations = [Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name=f"Chat {i}") for i in range(2)]
         db_session.add_all(conversations)
         await db_session.flush()
@@ -126,8 +126,31 @@ class TestDeleteMeCheckpointCleanup:
         response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
 
         assert response.status_code == 204
-        deleted = {call.args[0] for call in mocked_externals["checkpoints"].await_args_list}
+        mocked_externals["checkpoints"].assert_awaited_once()
+        deleted = set(mocked_externals["checkpoints"].await_args.args[0])
         assert deleted == {conv.id for conv in conversations}
+
+    async def test_checkpoints_are_deleted_for_conversations_deleted_before_erasure(
+        self, authenticated_client_with_agent, test_user, db_session, mocked_externals
+    ):
+        """The guarantee lives here, not in the delete route.
+
+        DELETE /conversation/{id} clears checkpoints before soft-deleting, so in
+        practice these are already gone. Erasure must not depend on it.
+        """
+        active = Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name="Active")
+        earlier = Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name="Deleted earlier")
+        db_session.add_all([active, earlier])
+        await db_session.flush()
+        earlier.soft_delete()
+        db_session.add(earlier)
+        await db_session.flush()
+
+        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
+
+        assert response.status_code == 204
+        deleted = set(mocked_externals["checkpoints"].await_args.args[0])
+        assert deleted == {active.id, earlier.id}
 
     async def test_checkpoints_are_deleted_before_anonymisation(
         self, authenticated_client_with_agent, test_user, db_session, mocked_externals
@@ -143,7 +166,7 @@ class TestDeleteMeCheckpointCleanup:
         await db_session.flush()
 
         recorded_names = []
-        mocked_externals["checkpoints"].side_effect = lambda _id: recorded_names.append(conv.name)
+        mocked_externals["checkpoints"].side_effect = lambda _ids: recorded_names.append(conv.name)
 
         response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
 

@@ -177,15 +177,3 @@ class TestUpdateOrgId:
         await UserRepository.update_org_id(db_session, saved_user, "new_org_789")
         found = await UserRepository.get_by_id(db_session, saved_user.id)
         assert found.org_id == "new_org_789"
-
-
-class TestDeleteUser:
-    """Tests for UserRepository.delete()."""
-
-    async def test_delete_existing_returns_true(self, db_session, saved_user):
-        result = await UserRepository.delete(db_session, saved_user.id)
-        assert result is True
-
-    async def test_delete_nonexistent_returns_false(self, db_session):
-        result = await UserRepository.delete(db_session, "nonexistent-uuid-999")
-        assert result is False

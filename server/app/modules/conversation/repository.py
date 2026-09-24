@@ -101,5 +101,11 @@ class ConversationRepository:
         logger.info("all_user_conversation_names_blanked", user_id=user_id, count=result.rowcount)
         return result.rowcount
 
+    @staticmethod
+    async def list_ids_for_user(session: AsyncSession, user_id: str) -> list[str]:
+        """Every conversation id a user owns, soft-deleted included. Ids only — no rows are loaded."""
+        result = await session.execute(select(Conversation.id).where(Conversation.user_id == user_id))
+        return list(result.scalars().all())
+
 
 conversation_repository = ConversationRepository()

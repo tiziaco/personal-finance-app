@@ -13,7 +13,6 @@ from app.modules.conversation.dependencies import (  # noqa: I001
 from app.modules.conversation.exceptions import (
     ConversationAccessDeniedError,
     ConversationNotFoundError,
-    ConversationServiceError,
 )
 from app.modules.conversation.router import router
 from app.modules.conversation.schemas import ConversationResponse
@@ -27,7 +26,6 @@ __all__ = [
     "ConversationAccessDeniedError",
     "ConversationNotFoundError",
     "ConversationResponse",
-    "ConversationServiceError",
     "UserConversation",
     "conversation_service",
     "get_chatbot_agent",

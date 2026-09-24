@@ -1,21 +1,6 @@
 """User service domain exceptions."""
 
-from app.exceptions.base import (
-    ConflictError,
-    NotFoundError,
-)
-
-
-class UserServiceError(Exception):
-    """Base exception for user service errors."""
-
-    pass
-
-
-class UserNotFoundError(NotFoundError):
-    """Exception raised when a user is not found."""
-
-    error_code = "USER_NOT_FOUND"
+from app.exceptions.base import ConflictError
 
 
 class UserAlreadyExistsError(ConflictError):

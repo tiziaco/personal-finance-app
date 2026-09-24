@@ -53,12 +53,13 @@ class ConversationService:
 
     @staticmethod
     async def soft_delete_all_user_conversations(session: AsyncSession, user_id: str) -> list[str]:
-        """Soft-delete every active conversation for a user.
-
-        Returns their IDs so the caller can clear each one's LangGraph
-        checkpoint data.
-        """
+        """Soft-delete every active conversation for a user and return their IDs."""
         return await conversation_repository.soft_delete_active_for_user(session, user_id)
+
+    @staticmethod
+    async def list_user_conversation_ids(session: AsyncSession, user_id: str) -> list[str]:
+        """Every conversation id a user owns, deleted or not."""
+        return await conversation_repository.list_ids_for_user(session, user_id)
 
     @staticmethod
     async def blank_all_user_conversation_names(session: AsyncSession, user_id: str) -> int:

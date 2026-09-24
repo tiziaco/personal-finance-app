@@ -6,12 +6,6 @@ from app.exceptions.base import (
 )
 
 
-class ConversationServiceError(Exception):
-    """Base exception for conversation service errors."""
-
-    pass
-
-
 class ConversationNotFoundError(NotFoundError):
     """Exception raised when a conversation is not found."""
 

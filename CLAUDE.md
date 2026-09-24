@@ -220,7 +220,7 @@ cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.l
 
 Required secrets: Clerk API keys, database credentials, OpenAI key, Langfuse key.
 
-The `server/.env.<ENV>` file is selected by the `APP_ENV` variable (default: `development`).
+The `server/.env.<ENV>` file is selected by the `APP_ENV` variable (default when unset: `development`). A value that is set but unrecognised — a typo, a trailing space — fails at startup rather than running as development.
 
 Install the repo's git hooks once per clone:
 

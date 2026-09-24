@@ -47,7 +47,7 @@ async def get_current_user(
     """Get the current authenticated user with JIT provisioning."""
     try:
         org_id = getattr(request.state, "org_id", None)
-        user = await user_service.resolve_user(clerk_id, org_id, session)
+        user = await user_service.resolve_user(session, clerk_id, org_id)
         request.state.user_id = user.id
         bind_context(user_id=user.id)
     except Exception as e:

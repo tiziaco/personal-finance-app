@@ -7,7 +7,7 @@ import pytest_asyncio
 
 from app.agents.messages import Message
 from app.main import app
-from app.modules.account.dependencies import get_current_user
+from app.modules.account import get_current_user
 from app.modules.account.models import User
 from app.modules.conversation import get_chatbot_agent
 
@@ -95,13 +95,14 @@ def stub_checkpoint_deletion():
 
     Yields the erasure path's stub, since that is the one a test asserts on:
     the routes' calls are incidental cleanup, while the conversation handler's
-    are a contractual step of the GDPR cascade.
+    are a contractual step of the GDPR cascade. The handler calls the plural
+    once, with every conversation id the user owns.
     """
     with (
         patch("app.modules.conversation.router.chatbot.delete_conversation_checkpoints", new=AsyncMock()),
         patch("app.modules.conversation.router.conversation.delete_conversation_checkpoints", new=AsyncMock()),
         patch(
-            "app.modules.conversation.handlers.delete_conversation_checkpoints",
+            "app.modules.conversation.handlers.delete_conversations_checkpoints",
             new=AsyncMock(),
         ) as erasure_stub,
     ):

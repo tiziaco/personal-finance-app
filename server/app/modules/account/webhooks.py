@@ -291,7 +291,7 @@ async def handle_user_deleted(ctx: WebhookContext) -> None:
         logger.info("webhook_user_deleted_noop", clerk_id=clerk_id)
         return
 
-    await user_service.erase_user(user, session)
+    await user_service.erase_user(session, user)
     logger.info("webhook_user_erased", clerk_id=clerk_id)
 
 

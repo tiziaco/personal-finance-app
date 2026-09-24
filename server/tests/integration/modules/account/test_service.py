@@ -19,7 +19,7 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture
 def service():
-    return UserService()
+    return UserService
 
 
 @pytest.fixture
@@ -43,7 +43,7 @@ class TestDbHit:
 
     async def test_db_hit_returns_user_without_calling_clerk(self, service, db_session, existing_user):
         with patch("app.modules.account.service.clerk_client.get_user") as mock_get:
-            user = await service.resolve_user(existing_user.clerk_id, "test_org_123", db_session)
+            user = await service.resolve_user(db_session, existing_user.clerk_id, "test_org_123")
             mock_get.assert_not_called()
 
         assert user.id == existing_user.id
@@ -51,7 +51,7 @@ class TestDbHit:
 
     async def test_db_hit_syncs_org_id(self, service, db_session, existing_user):
         with patch("app.modules.account.service.clerk_client.get_user"):
-            user = await service.resolve_user(existing_user.clerk_id, "org_moved", db_session)
+            user = await service.resolve_user(db_session, existing_user.clerk_id, "org_moved")
 
         assert user.org_id == "org_moved"
 
@@ -74,7 +74,7 @@ class TestJITProvisioning:
         mock_get_user.return_value = self._make_clerk_user(clerk_id)
         mock_get_email.return_value = "jit_new@example.com"
 
-        user = await service.resolve_user(clerk_id, "test_org_123", db_session)
+        user = await service.resolve_user(db_session, clerk_id, "test_org_123")
 
         assert user.clerk_id == clerk_id
         assert user.email == "jit_new@example.com"
@@ -85,7 +85,7 @@ class TestJITProvisioning:
         mock_get_user.side_effect = ClerkUserNotFoundError("not found")
 
         with pytest.raises(ClerkUserNotFoundError):
-            await service.resolve_user("clerk_nonexistent_jit", "test_org_123", db_session)
+            await service.resolve_user(db_session, "clerk_nonexistent_jit", "test_org_123")
 
 
 class TestSupplierRelinkInvalidation:
@@ -138,7 +138,7 @@ class TestSupplierRelinkInvalidation:
         mock_get_user.return_value = self._make_clerk_user(linked_supplier.id, replace=True)
         mock_get_email.return_value = "new_contact@example.com"
 
-        new_user = await service.resolve_user("clerk_replacement_001", "test_org_123", db_session)
+        new_user = await service.resolve_user(db_session, "clerk_replacement_001", "test_org_123")
 
         assert linked_supplier.contact_id == new_user.id
         assert await supplier_cache.get_supplier_id(existing_user.id) is MISS
@@ -159,7 +159,7 @@ class TestSupplierRelinkInvalidation:
         mock_get_user.return_value = self._make_clerk_user(linked_supplier.id, replace=True)
         mock_get_email.return_value = "new_contact@example.com"
 
-        new_user = await service.resolve_user("clerk_replacement_002", "test_org_123", db_session)
+        new_user = await service.resolve_user(db_session, "clerk_replacement_002", "test_org_123")
 
         assert await supplier_service.get_id_for_user(db_session, new_user.id) == linked_supplier.id
 
@@ -179,7 +179,7 @@ class TestSupplierRelinkInvalidation:
         mock_get_user.return_value = self._make_clerk_user(linked_supplier.id, replace=False)
         mock_get_email.return_value = "hopeful@example.com"
 
-        await service.resolve_user("clerk_no_replace_001", "test_org_123", db_session)
+        await service.resolve_user(db_session, "clerk_no_replace_001", "test_org_123")
 
         # contact_id guard held, so nothing was displaced and nothing invalidated
         assert linked_supplier.contact_id == existing_user.id

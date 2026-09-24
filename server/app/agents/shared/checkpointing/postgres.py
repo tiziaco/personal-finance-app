@@ -1,7 +1,7 @@
 """PostgreSQL checkpointing utilities for LangGraph agents."""
 
 import asyncio
-from typing import Optional
+from typing import Optional, Sequence
 from urllib.parse import quote_plus
 
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
@@ -90,27 +90,43 @@ async def create_postgres_saver() -> AsyncPostgresSaver:
         return _checkpointer
 
 
-async def delete_conversation_checkpoints(conversation_id: str) -> None:
-    """Hard-delete every checkpoint row for one conversation thread.
+async def delete_conversations_checkpoints(conversation_ids: Sequence[str]) -> None:
+    """Hard-delete every checkpoint row for a set of conversation threads.
 
     Checkpoints are keyed by thread_id in a single set of tables shared by
     every agent, so this is a property of the checkpoint store rather than of
-    any agent instance. Callers that hold an agent gain nothing by going
-    through it.
+    any agent instance. One DELETE per table covers the whole set.
+
+    The table name is interpolated because a table cannot be a bind
+    parameter; it comes from settings. The ids are always bound.
 
     Args:
-        conversation_id: The thread_id whose rows are removed.
+        conversation_ids: The thread_ids whose rows are removed. Empty is a
+            no-op and takes no connection.
 
     Raises:
         Exception: If the pool is unavailable or a DELETE fails.
     """
+    ids = list(conversation_ids)
+    if not ids:
+        return
+
     # Singleton - already initialized at startup
     conn_pool = await create_connection_pool()
 
     async with conn_pool.connection() as conn:
         for table in settings.database.CHECKPOINT_TABLES:
-            await conn.execute(f"DELETE FROM {table} WHERE thread_id = %s", (conversation_id,))
-            logger.info("cleared_table_for_conversation", table=table, conversation_id=conversation_id)
+            await conn.execute(f"DELETE FROM {table} WHERE thread_id = ANY(%s)", (ids,))
+            logger.info("cleared_table_for_conversations", table=table, count=len(ids))
+
+
+async def delete_conversation_checkpoints(conversation_id: str) -> None:
+    """Hard-delete every checkpoint row for one conversation thread.
+
+    Raises:
+        Exception: If the pool is unavailable or a DELETE fails.
+    """
+    await delete_conversations_checkpoints([conversation_id])
 
 
 async def close_connection_pool() -> None:

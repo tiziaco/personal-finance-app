@@ -12,7 +12,6 @@ import * as zod from "zod"
  * @summary Create a new chat conversation
  */
 export const createConversationResponseNameDefault = ``
-export const createConversationResponseNameMax = 100
 
 export const CreateConversationResponse = zod
   .object({
@@ -24,7 +23,6 @@ export const CreateConversationResponse = zod
       .describe("When the conversation was created"),
     name: zod
       .string()
-      .max(createConversationResponseNameMax)
       .default(createConversationResponseNameDefault)
       .describe("Name of the conversation"),
   })
@@ -50,12 +48,13 @@ export const RenameConversationParams = zod.object({
   conversation_id: zod.string(),
 })
 
+export const renameConversationBodyNameMax = 100
+
 export const RenameConversationBody = zod.object({
-  name: zod.string(),
+  name: zod.string().max(renameConversationBodyNameMax),
 })
 
 export const renameConversationResponseNameDefault = ``
-export const renameConversationResponseNameMax = 100
 
 export const RenameConversationResponse = zod
   .object({
@@ -67,7 +66,6 @@ export const RenameConversationResponse = zod
       .describe("When the conversation was created"),
     name: zod
       .string()
-      .max(renameConversationResponseNameMax)
       .default(renameConversationResponseNameDefault)
       .describe("Name of the conversation"),
   })
@@ -80,7 +78,6 @@ export const RenameConversationResponse = zod
  * @summary List all user chat conversations
  */
 export const listConversationsResponseNameDefault = ``
-export const listConversationsResponseNameMax = 100
 
 export const ListConversationsResponseItem = zod
   .object({
@@ -92,7 +89,6 @@ export const ListConversationsResponseItem = zod
       .describe("When the conversation was created"),
     name: zod
       .string()
-      .max(listConversationsResponseNameMax)
       .default(listConversationsResponseNameDefault)
       .describe("Name of the conversation"),
   })

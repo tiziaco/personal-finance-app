@@ -19,23 +19,11 @@ class TestGetEnvironment:
             ("stage", Environment.STAGING),
             ("test", Environment.TEST),
             ("development", Environment.DEVELOPMENT),
-            ("dev", Environment.DEVELOPMENT),  # falls to default case
-            ("unknown", Environment.DEVELOPMENT),
+            ("dev", Environment.DEVELOPMENT),
             ("PRODUCTION", Environment.PRODUCTION),  # case insensitive
             ("Test", Environment.TEST),
         ],
-        ids=[
-            "production",
-            "prod",
-            "staging",
-            "stage",
-            "test",
-            "development",
-            "dev-fallback",
-            "unknown-fallback",
-            "uppercase",
-            "mixed-case",
-        ],
+        ids=["production", "prod", "staging", "stage", "test", "development", "dev", "uppercase", "mixed-case"],
     )
     def test_environment_resolution(self, monkeypatch, env_value, expected):
         monkeypatch.setenv("APP_ENV", env_value)
@@ -44,6 +32,13 @@ class TestGetEnvironment:
     def test_default_when_unset(self, monkeypatch):
         monkeypatch.delenv("APP_ENV", raising=False)
         assert get_environment() == Environment.DEVELOPMENT
+
+    @pytest.mark.parametrize("env_value", ["unknown", "production ", "prd", ""])
+    def test_unrecognised_value_raises(self, monkeypatch, env_value):
+        """A typo must not silently resolve to development."""
+        monkeypatch.setenv("APP_ENV", env_value)
+        with pytest.raises(ValueError, match="APP_ENV"):
+            get_environment()
 
 
 class TestAuthSettings:
