@@ -15,6 +15,7 @@
 |---|---|
 | [`RBAC/roles_definition.md`](./RBAC/roles_definition.md) | What the four roles mean and why the slugs are English while the labels are Italian |
 | [`api-client-codegen-setup.md`](./api-client-codegen-setup.md) | Rebuild guide for the OpenAPI → orval → TanStack Query pipeline |
+| [`BUGS.md`](./BUGS.md) | Known defects in merged code — what's broken, how to reproduce it, what fixing it involves |
 
 ## Architecture
 
