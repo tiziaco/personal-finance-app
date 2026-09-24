@@ -34,7 +34,7 @@ tests/
     │   ├── test_conversations.py        # Conversation CRUD endpoints, ownership
     │   └── test_chatbot.py              # Chat, stream, history — mock agent
     ├── dependencies/
-    │   ├── test_database.py             # Error translation, RLS context set/clear
+    │   ├── test_database.py             # Error translation, deferred-event flush
     │   └── test_conversation_access.py  # 403 vs 404 ownership enforcement
     └── exceptions/
         └── test_handlers.py             # Exception → HTTP mapping, no info leakage

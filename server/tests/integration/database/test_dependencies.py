@@ -1,6 +1,6 @@
-"""Integration tests for get_db_session dependency — error translation and RLS context."""
+"""Integration tests for get_db_session dependency — error translation and deferred-event flushing."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from sqlalchemy.exc import DBAPIError, IntegrityError, OperationalError
@@ -18,7 +18,7 @@ from app.modules.account.models import User
 pytestmark = pytest.mark.integration
 
 
-def _make_mock_request(with_user_id: bool = False):
+def _make_mock_request():
     """Create a mock FastAPI request with session_factory on app state."""
     mock_session = AsyncMock()
     mock_session.commit = AsyncMock()
@@ -27,22 +27,13 @@ def _make_mock_request(with_user_id: bool = False):
 
     mock_request = MagicMock()
     mock_request.app.state.session_factory.return_value = mock_session
-
-    if with_user_id:
-        mock_request.state.user_id = "test-user-uuid"
-    else:
-        # Remove user_id attribute so hasattr returns False
-        del mock_request.state.user_id
-
     return mock_request, mock_session
 
 
 class TestErrorTranslation:
     """Tests for SQLAlchemy error → domain exception mapping."""
 
-    @patch("app.database.dependencies.clear_session_context", new_callable=AsyncMock)
-    @patch("app.database.dependencies.set_session_context", new_callable=AsyncMock)
-    async def test_integrity_error_raises_database_conflict(self, mock_set, mock_clear):
+    async def test_integrity_error_raises_database_conflict(self):
         """IntegrityError → DatabaseConflictError (409)."""
         mock_request, mock_session = _make_mock_request()
         orig_exc = Exception("unique constraint violation")
@@ -54,9 +45,7 @@ class TestErrorTranslation:
         with pytest.raises(DatabaseConflictError):
             await gen.athrow(IntegrityError("INSERT ...", {}, orig_exc))
 
-    @patch("app.database.dependencies.clear_session_context", new_callable=AsyncMock)
-    @patch("app.database.dependencies.set_session_context", new_callable=AsyncMock)
-    async def test_operational_error_raises_database_connection_error(self, mock_set, mock_clear):
+    async def test_operational_error_raises_database_connection_error(self):
         """OperationalError → DatabaseConnectionError (503)."""
         mock_request, mock_session = _make_mock_request()
         orig_exc = Exception("connection refused")
@@ -68,9 +57,7 @@ class TestErrorTranslation:
         with pytest.raises(DatabaseConnectionError):
             await gen.athrow(OperationalError("SELECT ...", {}, orig_exc))
 
-    @patch("app.database.dependencies.clear_session_context", new_callable=AsyncMock)
-    @patch("app.database.dependencies.set_session_context", new_callable=AsyncMock)
-    async def test_dbapi_error_raises_database_error(self, mock_set, mock_clear):
+    async def test_dbapi_error_raises_database_error(self):
         """DBAPIError → DatabaseError (500)."""
         mock_request, mock_session = _make_mock_request()
         orig_exc = Exception("dbapi error")
@@ -138,41 +125,6 @@ class TestIntegrityDiagnostics:
         assert _integrity_diagnostics(IntegrityError("INSERT ...", {}, Exception("no fields"))) == (None, None)
 
 
-class TestRLSContext:
-    """Tests for RLS context setup and cleanup."""
-
-    @patch("app.database.dependencies.clear_session_context", new_callable=AsyncMock)
-    @patch("app.database.dependencies.set_session_context", new_callable=AsyncMock)
-    async def test_set_context_called_when_user_id_present(self, mock_set, mock_clear):
-        mock_request, mock_session = _make_mock_request(with_user_id=True)
-
-        gen = get_db_session(mock_request)
-        await gen.__anext__()
-        try:
-            await gen.aclose()
-        except StopAsyncIteration:
-            pass
-
-        mock_set.assert_called_once_with(mock_session, "test-user-uuid")
-
-    @patch("app.database.dependencies.clear_session_context", new_callable=AsyncMock)
-    @patch("app.database.dependencies.set_session_context", new_callable=AsyncMock)
-    async def test_clear_context_always_called(self, mock_set, mock_clear):
-        """clear_session_context must run even when an exception occurs."""
-        mock_request, mock_session = _make_mock_request()
-        orig_exc = Exception("boom")
-        mock_session.commit.side_effect = IntegrityError("...", {}, orig_exc)
-
-        gen = get_db_session(mock_request)
-        await gen.__anext__()
-        try:
-            await gen.athrow(IntegrityError("...", {}, orig_exc))
-        except DatabaseConflictError:
-            pass
-
-        mock_clear.assert_called_once()
-
-
 async def test_deferred_events_are_flushed_after_commit(test_engine):
     """A deferred handler runs once the request's session has committed, with a session of its own."""
     from unittest.mock import AsyncMock
@@ -187,7 +139,6 @@ async def test_deferred_events_are_flushed_after_commit(test_engine):
         factory = sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
         request = MagicMock(spec=Request)
         request.app.state.session_factory = factory
-        request.state = MagicMock(spec=[])  # no user_id → no RLS context
 
         generator = get_db_session(request)
         session = await generator.__anext__()

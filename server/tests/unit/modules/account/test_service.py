@@ -47,7 +47,8 @@ async def test_erase_user_runs_full_cascade(session):
     mem.assert_awaited_once_with("11111111-2222-3333-4444-555555555555")
     publish.assert_awaited_once_with(USER_ERASING, session=session, user_id="11111111-2222-3333-4444-555555555555")
     invalidate.assert_awaited_once_with(clerk_id="user_abc")
-    session.commit.assert_awaited_once()
+    # The request's DbSession commits the cascade; erase_user never does.
+    session.commit.assert_not_awaited()
 
 
 async def test_erase_user_anonymizes_the_row(session):

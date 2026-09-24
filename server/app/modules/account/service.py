@@ -180,17 +180,23 @@ class UserService:
 
         Step order is contractual. Subscribers to USER_ERASING and the memory
         deletion run before `anonymize_user()`, because they are keyed by
-        identifiers it destroys. The org-role cache is invalidated after the
-        commit, using the clerk_id captured before anonymisation rewrote it;
-        the supplier-link cache was already dropped inline, by supplier's own
-        USER_ERASING subscriber, inside this transaction.
+        identifiers it destroys. The org-role cache is invalidated last, under
+        the clerk_id captured before anonymisation rewrote it. Its position
+        against the commit does not matter: it is refilled from Clerk, not
+        from this table, and Clerk has already deleted the user.
+
+        Not committed here: the caller's DbSession commits before the response
+        is sent. delete_user_memory is irreversible, so anything a caller runs
+        after this call that fails before the commit would roll back the
+        anonymisation with the memories already gone. Neither caller runs
+        anything after it today.
 
         Idempotent: on a second run the conversation list is empty, mem0
         deletion is a no-op, and the row is already anonymised.
 
         Args:
             user: The user to erase. Must be attached to `session`.
-            session: Database session. Committed by this method.
+            session: Database session. Committed by the caller's DbSession.
         """
         original_clerk_id = user.clerk_id
 
@@ -208,7 +214,6 @@ class UserService:
 
         user.anonymize_user()
         session.add(user)
-        await session.commit()
 
         await user_cache.invalidate_user(clerk_id=original_clerk_id)
 

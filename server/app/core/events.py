@@ -12,9 +12,11 @@ Two dispatch modes, chosen per subscription:
              and propagates: the publisher is mid-transaction and must not
              commit a half-done cascade. For cascades.
 * deferred — the default. Queued in the request context and run by `flush()`
-             after the publisher's commit, each in a session of its own. A
-             failure is logged and counted, never raised: the response has
-             been decided. For reactions, and the shape a queue will take.
+             after the publisher's commit and before the response is sent,
+             each in a session of its own, so they add to response latency.
+             A failure is logged and counted, never raised: the write is
+             durable and must not be reported as failed. For reactions, and
+             the shape a queue will take.
 
 Registration order is import order, which is an isort artifact — subscribers
 to one event must not depend on running before or after each other.
@@ -142,11 +144,6 @@ class EventDispatcher:
         logged as `event_flush_round_limit_reached` rather than looped on
         forever. Returns the number of handlers attempted, not counting any
         left queued at the bound.
-
-        Each fresh session is built from `session_factory` alone —
-        `set_session_context` is never called here, unlike the request path.
-        No RLS policy reads that context today, but a fork adding one would
-        find its first deferred handler failing with nothing pointing here.
 
         Callers outside a request — a script, a worker — call this themselves.
         """

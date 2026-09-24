@@ -64,7 +64,7 @@ async def delete_me(
        the cached link — both inline, in the same transaction, by supplier's
        own USER_ERASING subscriber
     6. Anonymize the user record in DB
-    7. Invalidate the org-role cache, after the commit — the supplier-link
+    7. Invalidate the org-role cache — the supplier-link
        cache was already dropped in step 5; a stale entry there is harmless
        because the erased user can no longer re-authenticate to reach it
 

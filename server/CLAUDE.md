@@ -137,6 +137,11 @@ module that owns them: `app/modules/account/webhooks.py` for Clerk.
 - Pydantic models over raw dicts (RORO pattern)
 - File names: `lowercase_with_underscores.py`
 - All imports at the top of the file — never inside functions
+- DB writes end in `flush()`, never `commit()`: `DbSession` is `scope="function"`, so
+  `get_db_session` commits after the route returns and before the response is sent
+- A background task or a streaming body never uses the request's session — it is closed
+  by then. Pass plain values; a task that needs the database opens its own from
+  `request.app.state.session_factory`
 
 ---
 
@@ -322,8 +327,10 @@ When a user is deleted (`DELETE /api/v1/auth/me`, or Clerk's `user.deleted`), `a
 1. Clerk deletion, by the route only — on the webhook path Clerk's deletion is the trigger (JWTs immediately invalidated)
 2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes their LangGraph checkpoints, and blanks their names; `supplier` clears `Supplier.contact_id`
 3. mem0 memories deleted (`delete_user_memory`)
-4. User PII anonymised via `AnonymizableMixin.anonymize_user()`, then commit
+4. User PII anonymised via `AnonymizableMixin.anonymize_user()`
 5. The role cache invalidated under the clerk_id captured before step 4
+
+The request's `DbSession` commits the whole cascade before the response is sent; `erase_user` does not commit.
 
 Steps 2 and 3 run before step 4 because they are keyed by identifiers `anonymize_user()` destroys. The `user_erased` log line carries `subscriber_count`; a module that owns user-keyed data subscribes to `USER_ERASING` in its `handlers.py`.
 

@@ -19,10 +19,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.events import events
 from app.core.logging import logger
-from app.database.context import (
-    clear_session_context,
-    set_session_context,
-)
 from app.exceptions.base import (
     DatabaseConflictError,
     DatabaseConnectionError,
@@ -53,7 +49,23 @@ def _integrity_diagnostics(exc: IntegrityError) -> tuple[Optional[str], Optional
 
 
 async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
-    """Core dependency for database sessions."""
+    """One session and one transaction per request, committed before the response is sent.
+
+    `DbSession` binds this with `scope="function"`, and that keyword is the
+    transaction boundary: the post-`yield` block runs after the path
+    operation returns and before the response goes on the wire. With the
+    default `"request"` scope the commit ran after the bytes were sent, so a
+    200 could precede a failed commit. `tests/unit/database/test_dependencies.py`
+    pins the keyword and the order.
+
+    Consequences routes rely on:
+    - A commit-time failure reaches the exception handlers (a unique violation is a 409).
+    - Deferred event handlers run after the commit and before the response, so they add
+      to its latency.
+    - The session is closed by the time a `BackgroundTasks` callable or a `StreamingResponse`
+      body runs. Neither may use it; `expire_on_commit=False` is what lets them read
+      attributes already loaded.
+    """
     if not hasattr(request.app.state, "session_factory"):
         logger.error("session_factory_not_initialized")
         raise RuntimeError("Database session factory not initialized")
@@ -61,10 +73,6 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
     session = request.app.state.session_factory()
     events.begin()
     try:
-        # Set RLS context if user is authenticated
-        if hasattr(request.state, "user_id"):
-            await set_session_context(session, request.state.user_id)
-
         yield session
         await session.commit()
         # Deferred handlers run only once the request's writes are durable; a
@@ -106,9 +114,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
         logger.exception("database_session_error", error=str(e))
         raise
     finally:
-        # Clear RLS context to prevent leaking to pooled connections
-        await clear_session_context(session)
         await session.close()
 
 
-DbSession = Annotated[AsyncSession, Depends(get_db_session)]
+DbSession = Annotated[AsyncSession, Depends(get_db_session, scope="function")]
