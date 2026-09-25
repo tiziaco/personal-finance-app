@@ -3,7 +3,6 @@ import { ThemeProvider } from "@app/ui/theme-provider"
 import { Toaster } from "@app/ui/sonner"
 import { ClerkProvider } from "@clerk/nextjs"
 import { AuthProvider } from "@app/auth"
-import { QueryProvider } from "@app/api-client/query-provider"
 
 import type { Metadata } from "next"
 import "@/styles/globals.css"
@@ -33,18 +32,16 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="en" suppressHydrationWarning className={inter.variable}>
         <body className="antialiased min-h-screen bg-background">
-          <AuthProvider>
-            <QueryProvider>
-              <ThemeProvider
-                attribute="class"
-                defaultTheme="system"
-                enableSystem
-                disableTransitionOnChange
-              >
-                {children}
-                <Toaster position="bottom-right" />
-              </ThemeProvider>
-            </QueryProvider>
+          <AuthProvider signOutUrl="/sign-in">
+            <ThemeProvider
+              attribute="class"
+              defaultTheme="system"
+              enableSystem
+              disableTransitionOnChange
+            >
+              {children}
+              <Toaster position="bottom-right" />
+            </ThemeProvider>
           </AuthProvider>
         </body>
       </html>

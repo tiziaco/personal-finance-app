@@ -9,7 +9,6 @@
   },
   "peerDependencies": {
     "@clerk/nextjs": ">=6.0.0",
-    "@clerk/types": ">=4.0.0",
     "react": "^19.0.0"
   },
   "devDependencies": {

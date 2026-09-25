@@ -200,9 +200,6 @@ importers:
       '@clerk/nextjs':
         specifier: '>=6.0.0'
         version: 6.39.1(next@16.2.3(@babel/core@7.29.0(supports-color@7.2.0))(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
-      '@clerk/types':
-        specifier: '>=4.0.0'
-        version: 4.101.21(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       react:
         specifier: ^19.0.0
         version: 19.2.4

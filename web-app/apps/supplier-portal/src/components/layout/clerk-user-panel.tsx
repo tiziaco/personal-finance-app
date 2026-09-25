@@ -5,25 +5,21 @@ import { useAppAuth, Role } from "@app/auth"
 import { UserDetailsPanel } from "@app/components/layout/user-panel"
 
 export function ClerkUserPanel() {
-  const { isLoaded, user, role } = useAppAuth()
-  const { signOut, openUserProfile, openOrganizationProfile } = useClerk()
+  const { isLoaded, user, role, signOut } = useAppAuth()
+  const { openUserProfile, openOrganizationProfile } = useClerk()
 
   return (
     <UserDetailsPanel
       user={
         isLoaded && user
           ? {
-              name:
-                [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-                "User",
-              email: user.primaryEmailAddress?.emailAddress ?? "No email",
-              imageUrl: user.imageUrl,
+              name: user.name ?? "User",
+              email: user.email ?? "No email",
+              imageUrl: user.imageUrl ?? undefined,
             }
           : null
       }
-      // Sign out straight to /sign-in. The default lands on `/`, which
-      // middleware then bounces twice to reach the same place.
-      onSignOut={() => signOut({ redirectUrl: "/sign-in" })}
+      onSignOut={() => void signOut()}
       onOpenProfile={() => openUserProfile()}
       onOpenOrganizationProfile={
         role === Role.PROJECT_MANAGER

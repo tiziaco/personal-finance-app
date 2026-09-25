@@ -3,18 +3,26 @@
  *
  * Portability seam: AuthProvider wraps Clerk's hooks to derive identity and role.
  * When migrating to WorkOS, only AuthProvider's internals change.
- * All components call useAppAuth() — they never call useAuth() or useUser() directly.
+ * All components call useAppAuth() — they never call useAuth() or useUser()
+ * directly — and the context exposes no vendor type.
  */
 "use client"
 
-import { createContext, useContext } from "react"
+import { createContext, useCallback, useContext, useMemo } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
-import type { UserResource } from "@clerk/types"
 import { getUserRole, Role } from "./permissions"
 
+/** The signed-in user's profile, as the vendor reports it. */
+export interface AppUser {
+  /** Full name, or null when the profile has none. */
+  name: string | null
+  email: string | null
+  imageUrl: string | null
+}
+
 interface AuthContextValue {
-  /** The Clerk user object, or null/undefined while loading. */
-  user: UserResource | null | undefined
+  /** The signed-in user, or null while loading or signed out. */
+  user: AppUser | null
   /** The current user's org role, or null if no active org context. */
   role: Role | null
   /** True once Clerk has finished initialising the session. */
@@ -25,6 +33,12 @@ interface AuthContextValue {
    * it, which is what keeps that package off Clerk and on this seam.
    */
   getToken: () => Promise<string | null>
+  /**
+   * End the session, then load `signOutUrl` as a new document. A router push
+   * would keep the heap — every cache and context the previous user filled —
+   * alive across a trust boundary.
+   */
+  signOut: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -32,16 +46,53 @@ const AuthContext = createContext<AuthContextValue>({
   role: null,
   isLoaded: false,
   getToken: async () => null,
+  signOut: async () => {},
 })
 
-/** Wrap inside ClerkProvider in each app's root layout. */
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { isLoaded, orgRole, getToken } = useAuth()
-  const { user } = useUser()
+/**
+ * Wrap inside ClerkProvider in each app's root layout. `signOutUrl` is the
+ * app's route, hence a prop.
+ */
+export function AuthProvider({
+  children,
+  signOutUrl = "/",
+}: {
+  children: React.ReactNode
+  signOutUrl?: string
+}) {
+  const { isLoaded, orgRole, getToken, signOut: endSession } = useAuth()
+  const { user: clerkUser } = useUser()
   const role = getUserRole(orgRole)
 
+  const user = useMemo<AppUser | null>(
+    () =>
+      clerkUser
+        ? {
+            name:
+              [clerkUser.firstName, clerkUser.lastName]
+                .filter(Boolean)
+                .join(" ") || null,
+            email: clerkUser.primaryEmailAddress?.emailAddress ?? null,
+            imageUrl: clerkUser.imageUrl || null,
+          }
+        : null,
+    [clerkUser],
+  )
+
+  const signOut = useCallback(async () => {
+    // Await: navigating away mid-request could leave the session alive.
+    // redirectUrl because Clerk navigates too, and its default is "/".
+    // finally: if the session is already gone, the destroy rejects, and
+    // stranding the user on a signed-in page is the worse failure.
+    try {
+      await endSession({ redirectUrl: signOutUrl })
+    } finally {
+      window.location.assign(signOutUrl)
+    }
+  }, [endSession, signOutUrl])
+
   return (
-    <AuthContext.Provider value={{ user, role, isLoaded, getToken }}>
+    <AuthContext.Provider value={{ user, role, isLoaded, getToken, signOut }}>
       {children}
     </AuthContext.Provider>
   )

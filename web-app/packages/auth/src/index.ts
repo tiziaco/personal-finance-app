@@ -1,2 +1,2 @@
 export * from "./permissions"
-export { AuthProvider, useAppAuth } from "./provider"
+export { AuthProvider, useAppAuth, type AppUser } from "./provider"

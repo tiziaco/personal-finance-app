@@ -13,6 +13,7 @@ import {
 import { GeneralSettings } from "@/components/settings/general-settings"
 import { ServerHealthIndicator } from "@/components/settings/server-status"
 import { ClerkUserPanel } from "@/components/layout/clerk-user-panel"
+import { QueryProvider } from "@app/api-client/query-provider"
 import { Settings, Cog } from "lucide-react"
 
 const SETTINGS_TABS: SettingsTab[] = [
@@ -26,39 +27,44 @@ const SETTINGS_TABS: SettingsTab[] = [
 
 export default function HubLayout({ children }: { children: React.ReactNode }) {
   return (
-    <SidebarProvider>
-      <AppSidebar
-        items={HUB_NAV}
-        logoSrc="/images/logo-small.png"
-        logoAlt="Template App"
-        variant="floating"
-        settingsSlot={
-          <SettingsDialog
-            tabs={SETTINGS_TABS}
-            trigger={
-              <SidebarMenuButton
-                size="lg"
-                tooltip="Settings"
-                className="cursor-pointer"
-              >
-                <Cog />
-                <span>Settings</span>
-              </SidebarMenuButton>
-            }
-            footerSlot={<ServerHealthIndicator />}
-          />
-        }
-        userSlot={<ClerkUserPanel />}
-      />
-      <SidebarTrigger
-        size="icon"
-        className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer"
-      />
-      <SidebarInset className="flex flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          <div className="px-4 py-4 min-w-0">{children}</div>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    // The cache lives here, not at the root, so its lifetime is the signed-in
+    // shell's: leaving this group unmounts the provider and drops the previous
+    // user's data with it. Nothing outside the group reads the API.
+    <QueryProvider>
+      <SidebarProvider>
+        <AppSidebar
+          items={HUB_NAV}
+          logoSrc="/images/logo-small.png"
+          logoAlt="Template App"
+          variant="floating"
+          settingsSlot={
+            <SettingsDialog
+              tabs={SETTINGS_TABS}
+              trigger={
+                <SidebarMenuButton
+                  size="lg"
+                  tooltip="Settings"
+                  className="cursor-pointer"
+                >
+                  <Cog />
+                  <span>Settings</span>
+                </SidebarMenuButton>
+              }
+              footerSlot={<ServerHealthIndicator />}
+            />
+          }
+          userSlot={<ClerkUserPanel />}
+        />
+        <SidebarTrigger
+          size="icon"
+          className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer"
+        />
+        <SidebarInset className="flex flex-col overflow-hidden">
+          <div className="flex-1 overflow-auto">
+            <div className="px-4 py-4 min-w-0">{children}</div>
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </QueryProvider>
   )
 }

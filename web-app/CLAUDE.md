@@ -216,6 +216,8 @@ shadcn/Base UI primitives.
 
 - **Clerk** handles auth — no login/register endpoints to build
 - Client components: `useAppAuth()` from `@app/auth` — never `useUser()` / `useAuth()` directly. Server components: `currentUser()`
+- `useAppAuth()` exposes `user`, `role`, `isLoaded`, `getToken` and `signOut`, and **no vendor type**: `user` is `@app/auth`'s own `AppUser` (`name`, `email`, `imageUrl`). `useClerk()` is only for Clerk's own UI (`openUserProfile`, `openOrganizationProfile`)
+- **Sign out with `signOut()` from `useAppAuth()`**, never `useClerk().signOut`. It ends the session and then loads `AuthProvider`'s `signOutUrl` as a new document, so nothing the previous user cached survives. For the same reason `QueryProvider` sits in the signed-in route group's layout, not the root
 - Trust middleware: if a protected route renders, the user is authenticated — no manual auth checks needed
 - Use embedded Clerk components (custom routes), not hosted Account Portal
 
@@ -330,6 +332,8 @@ toast.error(String(error.body))
 - Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
 - Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
 - Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@app/auth`
+- Calling `useClerk().signOut` — a client-side route keeps the previous user's caches; use `signOut` from `useAppAuth()`
+- Moving `QueryProvider` back to the root layout — the cache would outlive the session
 - Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
 - Putting auth logic in `packages/ui` — it belongs in `packages/auth`
 - Hand-editing files under `packages/api-client/src/generated/` — the next generation deletes them
