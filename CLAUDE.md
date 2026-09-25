@@ -231,8 +231,9 @@ git config core.hooksPath .githooks
 Two hooks live there. `pre-commit` keeps the API contract in sync (see **API
 Contract** below). `pre-push` runs `make check-server` and `make check-web`
 for whichever side changed since the upstream branch: ruff and Prettier in
-check mode, plus ESLint. There is no CI for these, so the hook is the gate;
-`make check` runs both by hand and `git push --no-verify` skips it once.
+check mode, plus ESLint — and, for `web-app/`, `make test-web` (Vitest).
+There is no CI for these, so the hook is the gate; `make check` runs both
+checks by hand and `git push --no-verify` skips it once.
 `.vscode/settings.json` formats on save with the same tools, so the hook
 rarely has anything to say.
 

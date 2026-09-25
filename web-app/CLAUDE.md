@@ -114,6 +114,8 @@ pnpm dev:supplier          # supplier portal  → http://localhost:3002
 
 pnpm build                 # build all apps
 pnpm type-check            # TypeScript check across workspace
+pnpm test                  # Vitest, once (also `make test-web` from the repo root)
+pnpm test:watch            # Vitest in watch mode
 ```
 
 3000 and 3002 are the main checkout's defaults. From the repo root,
@@ -140,6 +142,32 @@ pnpm format:check    # what the root pre-push hook runs
 Prettier ignores Markdown and the generated client; orval formats the latter
 through the same config, so `make gen-contract` and `pnpm format` agree.
 
+## Testing
+
+Vitest + Testing Library in jsdom. One config, `vitest.config.mts`, with three
+projects: `packages` (every `packages/*/src`), `internal-portal` and
+`supplier-portal` — one per portal because each resolves `@/` to its own `src/`.
+A third app needs a third `portal(...)` line there.
+
+The root `package.json` pins `react` and `react-dom` for the tests. **Keep them
+equal to the portals' exact version**: bump React in `apps/*` alone and the lockfile
+holds two copies, `resolve.dedupe` sends the tests to the root one, and the suite
+runs a React the portals don't ship.
+
+`pnpm test`, or `make test-web` from the repo root. **The pre-push hook runs it**
+after `make check-web` whenever `web-app/` changed; there is no CI.
+
+**Tests are co-located with their subjects** — `user-panel.test.tsx` next to
+`user-panel.tsx` — so a test moves with `git mv` when a component is promoted
+between packages. This diverges from `server/tests/` on purpose.
+
+**`*.test.*` is Vitest. `*.spec.*` is reserved for Playwright** and excluded from
+the run.
+
+Before writing or debugging a test, read the **`/web-app-testing`** skill: the
+sidebar/`matchMedia` trap, type-checked test files, the pinned `NODE_ENV`, the root React pin and
+module-load constants all fail far from their cause.
+
 ## Skills to Use
 
 Invoke these skills before starting the relevant task:
@@ -151,6 +179,7 @@ Invoke these skills before starting the relevant task:
 | Building or refactoring React components | `/react` |
 | Adding auth, handling user input, or touching security-sensitive code | `/security-review` |
 | Performance optimization — bundle size, rendering, caching | `/vercel-react-best-practices` |
+| Writing, running or debugging any test | `/web-app-testing` |
 
 ---
 
@@ -336,6 +365,8 @@ toast.error(String(error.body))
 - Moving `QueryProvider` back to the root layout — the cache would outlive the session
 - Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
 - Putting auth logic in `packages/ui` — it belongs in `packages/auth`
+- Naming a Vitest file `*.spec.ts` — that suffix is reserved for Playwright and excluded from the run
+- Putting `NODE_ENV` in an env file — Next sets it per command; anywhere else it leaks into (the root Makefile exports `internal-portal/.env.local`) it decides how React builds under test
 - Hand-editing files under `packages/api-client/src/generated/` — the next generation deletes them
 - Hand-writing a type for a request or response body — import it from `@app/api-client/types`
 - Changing a server route without running `make gen-contract` in the same commit

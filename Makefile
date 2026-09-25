@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -49,9 +49,10 @@ help:
 	@echo "  make worktree-clean     - In a linked worktree: stop its dev servers, remove its containers, volume, images"
 	@echo ""
 	@echo "Checks:"
-	@echo "  make check              - Lint and format-check both sides (what the pre-push hook runs)"
+	@echo "  make check              - Lint and format-check both sides (pre-push runs these, plus test-web)"
 	@echo "  make check-server       - ruff check + ruff format --check + lint-imports"
 	@echo "  make check-web          - pnpm lint + pnpm format:check"
+	@echo "  make test-web           - Vitest unit and component tests (web-app)"
 	@echo ""
 	@echo "Contract:"
 	@echo "  make gen-contract       - Re-export openapi.json and regenerate the typed API client"
@@ -173,6 +174,11 @@ check-server:
 
 check-web:
 	@cd web-app && pnpm -s lint && pnpm -s format:check
+
+# Tests, not a check: `check` stays read-only lint/format. No NODE_ENV here —
+# vitest.config.mts pins it, whatever the -include'd .env.local exports.
+test-web:
+	@cd web-app && pnpm -s test
 
 # The OpenAPI spec and the generated API client are committed artifacts. This
 # regenerates both and fails if the committed versions are stale.

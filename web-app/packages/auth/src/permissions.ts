@@ -16,22 +16,25 @@ export const Role = {
 
 export type Role = (typeof Role)[keyof typeof Role]
 
+const ORG_PREFIX = "org:"
+
 /**
  * Convert a Clerk orgRole string to a Role value.
  *
- * Strips the 'org:' prefix that Clerk adds to all org role slugs.
- * Returns null if orgRole is absent (user has no active org context).
+ * Clerk prefixes every org role slug with 'org:'. Only a leading prefix is
+ * stripped; a value without one, or naming no known role, is not a role.
+ * Returns null when orgRole is absent (no active org context).
  *
  * @example
  * getUserRole("org:project_manager") // → "project_manager"
+ * getUserRole("project_manager")     // → null
  * getUserRole(null)                  // → null
  */
 export function getUserRole(orgRole: string | null | undefined): Role | null {
-  if (!orgRole) return null
-  const stripped = orgRole.replace("org:", "")
+  if (!orgRole?.startsWith(ORG_PREFIX)) return null
+  const slug = orgRole.slice(ORG_PREFIX.length)
   const values = Object.values(Role) as string[]
-  if (!values.includes(stripped)) return null
-  return stripped as Role
+  return values.includes(slug) ? (slug as Role) : null
 }
 
 /** Returns true for any role that grants access to the internal portal. */
