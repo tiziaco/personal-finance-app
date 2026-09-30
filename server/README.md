@@ -24,20 +24,10 @@ make install
 cp .env.example .env.development
 ```
 
-Key variables in `.env.development`:
-
-```bash
-APP_ENV=development
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5434
-POSTGRES_DB=mydb
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=postgres
-OPENAI_API_KEY=...
-CLERK_SECRET_KEY=...
-LANGFUSE_PUBLIC_KEY=...
-LANGFUSE_SECRET_KEY=...
-```
+`.env.example` lists every variable with a comment. The ones that must be real: the
+Postgres credentials, `CLERK_SECRET_KEY` (and the rest of the Clerk block —
+[`docs/setup/clerk.md`](../docs/setup/clerk.md)) and the Langfuse keys. `OPENAI_API_KEY`
+is optional; only an LLM call needs it.
 
 ## Development Commands
 
@@ -55,14 +45,9 @@ make migrate-create ENV=development MSG="add document table"
 make migrate-downgrade ENV=development
 ```
 
-The `make migrate*` targets above run on the host via `uv`. They are the path
-for **authoring** revisions.
-
-The Docker stack applies migrations itself: a one-shot `migrate` service runs
-`alembic upgrade head` and `server` will not start until it exits 0. Migrations
-no longer run from the app's entrypoint. To apply or inspect them in Docker
-without starting the app, use `make docker-migrate` / `make docker-migrate-status`
-from the repo root.
+The `make migrate*` targets run on the host via `uv` — the path for **authoring**
+revisions. The Docker stack applies them itself, as a release phase; see
+[`CLAUDE.md`](CLAUDE.md) under **Database Migrations**.
 
 ## Testing
 
@@ -94,4 +79,4 @@ without them.
 The schema's title, description and `/api/v1` prefix come from
 `[tool.app.metadata]` in `pyproject.toml`, and its version from `[project]`,
 loaded by `app/core/metadata.py`. They are not environment variables — see
-**Service Identity** in the root `README.md` for why.
+[`docs/setup/making-it-yours.md`](../docs/setup/making-it-yours.md) §1 for why.

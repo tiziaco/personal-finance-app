@@ -11,15 +11,13 @@ root follows the checkout's own port, which differs in a git worktree.
 
 This is a [Next.js 16](https://nextjs.org/) application using the App Router, part of the `web-app` pnpm monorepo.
 
-**Key pages:**
+**Routes:**
 
 | Route | Description |
 |---|---|
-| `/home` | Main dashboard |
-| `/projects` | Project list and management |
-| `/orders` | Purchase order management |
-| `/sign-in` | Clerk-powered sign-in |
-| `/sign-up` | Clerk-powered sign-up |
+| `/home`, `/projects`, `/orders` | Placeholder pages in `src/app/(dashboard)/` — the example domain's screens are not built yet |
+| `/sign-in` | Clerk's sign-in |
+| `/sign-up` | Clerk's sign-up |
 | `/unauthorized` | Shown to a signed-in user without internal-portal access |
 
 ---
@@ -99,20 +97,20 @@ The app will be available at http://localhost:3000.
 ```
 src/
 ├── app/
-│   ├── (app)/         # Authenticated routes (home, projects, orders)
-│   ├── (auth)/        # Auth routes (sign-in, sign-up)
-│   ├── layout.tsx     # Root layout
+│   ├── (dashboard)/   # Signed-in routes, their layout (sidebar, QueryProvider)
+│   ├── (auth)/        # sign-in, sign-up
+│   ├── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
 │   └── unauthorized/  # Wrong-role landing page
 ├── components/
-│   ├── layout/        # Sidebar, header, shell components
-│   ├── settings/      # Settings UI
-│   └── ui/            # Page-level UI components
-├── hooks/             # Custom React hooks
-├── lib/               # Utilities, API helpers, env config
-├── providers/         # React context providers
-├── proxy.ts           # Clerk middleware / RBAC proxy
-└── styles/            # Global CSS
+│   ├── layout/        # This portal's user panel
+│   └── settings/      # This portal's settings tabs and server-status wrapper
+├── lib/               # Navigation items
+├── proxy.ts           # Clerk middleware — the role gate
+└── styles/            # Global CSS, and the @source lines for the shared packages
 ```
+
+Shared UI lives in the workspace packages, not here — see `web-app/CLAUDE.md`'s "Where a
+new component goes".
 
 ### Branding
 

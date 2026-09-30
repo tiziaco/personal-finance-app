@@ -11,8 +11,6 @@ from app.modules.account import get_current_user
 from app.modules.account.models import User
 from app.modules.conversation import get_chatbot_agent
 
-pytestmark = pytest.mark.integration
-
 
 @pytest.fixture(autouse=True)
 def clear_user_cache():

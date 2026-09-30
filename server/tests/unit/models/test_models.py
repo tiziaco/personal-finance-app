@@ -84,7 +84,7 @@ class TestAnonymizableMixin:
 
 
 class TestTenantMixin:
-    """The column every tenant-owned table gets (architecture §6)."""
+    """The column every tenant-owned table gets (architecture §9)."""
 
     def test_org_id_is_indexed_and_not_nullable(self):
         field = TenantMixin.model_fields["org_id"]

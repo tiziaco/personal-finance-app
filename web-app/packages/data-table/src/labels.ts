@@ -1,0 +1,23 @@
+/** Every string this package renders. One place to translate. */
+export const labels = {
+  noResults: "No results.",
+  search: "Search",
+  columns: "Columns",
+  expandRow: "Expand row",
+  collapseRow: "Collapse row",
+  pagination: "Pagination",
+  previousPage: "Previous page",
+  nextPage: "Next page",
+  pagerSummary: (from: number, to: number, total: number) =>
+    `Showing ${from} to ${to} of ${total} entries`,
+  filters: "Filters",
+  activeFilters: "active",
+  clearAll: "Clear all",
+  removeFilter: (label: string) => `Remove ${label}`,
+  anyDate: "Any date",
+  onOrAfter: "On or after",
+  onOrBefore: "On or before",
+  between: "Between",
+  dateFrom: (label: string) => `${label} from`,
+  dateTo: (label: string) => `${label} to`,
+}

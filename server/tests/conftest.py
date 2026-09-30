@@ -1,7 +1,7 @@
 """Shared test fixtures and configuration.
 
 This module provides pytest fixtures for testing the FastAPI application,
-including test database setup, HTTP clients, and authentication helpers.
+including the test database and HTTP clients.
 """
 
 import asyncio
@@ -29,8 +29,8 @@ from app.core.config import settings
 from app.database.dependencies import get_db_session
 from app.main import app
 
-# Event loop is managed by pytest-asyncio via asyncio_default_fixture_loop_scope = session
-# in pytest.ini. No custom event_loop fixture needed.
+# pytest.ini runs every async fixture and test on one session-scoped loop, so the
+# pool of the session-scoped test_engine is usable in every test.
 
 
 # ============================================================================
@@ -192,108 +192,8 @@ async def unauthenticated_client(test_engine) -> AsyncGenerator[AsyncClient, Non
 
 
 # ============================================================================
-# Authentication Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def mock_clerk_user_id() -> str:
-    """Mock Clerk user ID for testing.
-
-    Returns:
-        str: Test user ID
-    """
-    return "user_test_123456789"
-
-
-@pytest.fixture
-def mock_jwt_token(mock_clerk_user_id: str) -> str:
-    """Mock JWT token for authenticated requests.
-
-    In a real implementation, you'd generate a proper JWT here.
-    For now, we'll mock the authentication middleware.
-
-    Args:
-        mock_clerk_user_id: Test user ID
-
-    Returns:
-        str: Mock JWT token
-    """
-    # TODO: Generate actual test JWT if needed
-    return "mock_jwt_token_for_testing"
-
-
-@pytest.fixture
-def auth_headers(mock_jwt_token: str) -> dict:
-    """Create authorization headers for authenticated requests.
-
-    Args:
-        mock_jwt_token: JWT token
-
-    Returns:
-        dict: Headers with Authorization bearer token
-
-    Example:
-        ```python
-        async def test_protected_endpoint(client, auth_headers):
-            response = await client.get("/api/v1/me", headers=auth_headers)
-            assert response.status_code == 200
-        ```
-    """
-    return {"Authorization": f"Bearer {mock_jwt_token}"}
-
-
-# ============================================================================
-# Mock Service Fixtures
-# ============================================================================
-
-
-@pytest.fixture
-def mock_openai_response():
-    """Mock OpenAI API response for LLM testing.
-
-    Returns:
-        dict: Mock completion response
-    """
-    return {
-        "id": "chatcmpl-test123",
-        "object": "chat.completion",
-        "created": 1234567890,
-        "model": "gpt-5-mini",
-        "choices": [
-            {
-                "index": 0,
-                "message": {
-                    "role": "assistant",
-                    "content": "This is a test response from the AI assistant.",
-                },
-                "finish_reason": "stop",
-            }
-        ],
-        "usage": {
-            "prompt_tokens": 10,
-            "completion_tokens": 20,
-            "total_tokens": 30,
-        },
-    }
-
-
-# ============================================================================
 # Utility Fixtures
 # ============================================================================
-
-
-@pytest.fixture
-def sample_chat_message() -> dict:
-    """Sample chat message payload for testing.
-
-    Returns:
-        dict: Chat message request body
-    """
-    return {
-        "content": "Hello, how are you?",
-        "conversation_id": "test_conversation_123",
-    }
 
 
 @pytest.fixture(autouse=True)

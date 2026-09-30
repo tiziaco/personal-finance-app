@@ -8,27 +8,11 @@ Continuation of the root `CLAUDE.md`. Covers `server/` conventions only — no r
 
 All commands below run from `server/`. For the full Docker stack, use root `make` commands (see root `CLAUDE.md`).
 
-```bash
-make install          # pip install uv + uv sync
-make dev              # dev server on :8100 (hot reload, APP_ENV=development)
-make staging          # uvicorn in staging env
-make prod             # uvicorn in production env
-```
-
-Env file is selected by `APP_ENV`. Copy `.env.development.example` → `.env.development` before first run.
+Env file is selected by `APP_ENV`. Copy `.env.example` → `.env.development` before first run.
 
 ### Server-only Docker
 
-```bash
-make docker-run                            # dev stack: server + db (APP_ENV=development)
-make docker-run-db ENV=development         # database only
-make docker-logs ENV=development           # follow server + db logs
-make docker-stop ENV=development           # stop the stack, database included
-make docker-logs-server ENV=development    # follow the server container only
-make docker-stop-server ENV=development    # stop the server, leave the database up
-```
-
-These all drive `../docker-compose.dev.yml`, which bind-mounts `./server/app`
+`make help` lists the `docker-*` targets. They all drive `../docker-compose.dev.yml`, which bind-mounts `./server/app`
 over the image's code. That is why `docker-run` takes no `ENV`: a
 `ENV=production` variant would run production secrets against your working
 tree. Production runs from `docker-compose.prod.yml`, via the root `Makefile`.
@@ -41,16 +25,8 @@ differs.
 
 ### Database Migrations (Alembic)
 
-These run on the **host** via `uv`, against the DB named in `server/.env.<ENV>`.
-Use them to author revisions:
-
-```bash
-make migrate ENV=development                          # apply all pending migrations
-make migrate-create ENV=development MSG='add orders'  # generate new migration
-make migrate-downgrade ENV=development                # rollback one step (REV=-1 default)
-make migrate-history ENV=development                  # show migration history
-make migrate-current ENV=development                  # show current revision
-```
+The `make migrate*` targets (see `make help`) run on the **host** via `uv`, against
+the DB named in `server/.env.<ENV>`. Use them to author revisions.
 
 In Docker, migrations are a **discrete release phase**, not part of app startup.
 A one-shot `migrate` service runs `alembic upgrade head`, and `server` is gated
@@ -76,43 +52,12 @@ Two caveats:
   always executes the working tree. `alembic.ini` is **not** — changes to it
   need `make docker-build-api`.
 
-### Linting
-
-```bash
-make lint     # ruff check
-make format   # ruff format
-```
-
 ---
 
 ## Directory Structure
 
 Module-first. The rules, the slots and the reasoning are in
-[`docs/architecture/server-modules.md`](../docs/architecture/server-modules.md); this is the map.
-
-```
-server/
-├── app/
-│   ├── main.py              # Assembly: middlewares, handlers, routers, and an import of every module
-│   ├── api/
-│   │   ├── v1/api.py        # include_router(<module>.router) — prefixes and tags live in the modules
-│   │   ├── system/          # Health, readiness, root — and their schemas
-│   │   └── middlewares/     # Auth (JWT), access logging, correlation ID, rate limiting, metrics
-│   ├── modules/             # One package per bounded context; import another only from its root
-│   │   ├── account/         # User row, identity/role/org dependencies, Clerk webhooks, erasure
-│   │   ├── conversation/    # Conversations and the chatbot routes; erases on USER_ERASING
-│   │   └── supplier/        # The example domain: the contact link and SupplierID
-│   ├── agents/              # LangGraph agents: base/, chatbot/, shared/, messages.py, graph.py
-│   ├── integrations/        # Third-party adapters: clerk/ (client + webhook verification), llm/
-│   ├── core/                # config, logging, metrics, limiter, events
-│   ├── database/            # engine, session factory, DbSession (app/database/dependencies.py)
-│   ├── exceptions/          # base.py — the exception hierarchy; handlers.py
-│   ├── models/base.py       # BaseModel and the mixins, TenantMixin included
-│   ├── schemas/base.py      # ErrorResponse
-│   └── utils/               # JWT verification, sanitisation, the cache-miss sentinel
-├── alembic/env.py           # Imports every module's models slot — the registry
-└── tests/                   # Mirrors app/: tests/unit/modules/<name>/test_<slot>.py
-```
+[`docs/architecture/server.md`](../docs/architecture/server.md).
 
 A module has a fixed set of slots — `router`, `schemas`, `models`, `service`,
 `repository`, `dependencies`, `exceptions`, optionally `handlers` and `domain` —
@@ -122,6 +67,13 @@ imports from that root and nowhere deeper; `account` cannot import
 they subscribe to. `make check-server` runs `lint-imports` over the contracts
 in `pyproject.toml`, and `tests/unit/test_module_contracts.py` fails the suite
 when a new module lacks its entries.
+
+**Adding a module means adding its import to `app/main.py`**, whether or not
+anything else imports it. A module's event subscribers (`USER_ERASING` and the
+like) register only when the module is imported; a module that owns user-keyed
+data but has no router would otherwise never load, and erasure would skip its
+data with no exception and no failed request.
+`test_main_imports_every_module_explicitly` is what catches it.
 
 `integrations/` holds code that exists only because a third party does — one
 package per provider, carrying the outbound client and the inbound
@@ -142,6 +94,19 @@ module that owns them: `app/modules/account/webhooks.py` for Clerk.
 - A background task or a streaming body never uses the request's session — it is closed
   by then. Pass plain values; a task that needs the database opens its own from
   `request.app.state.session_factory`
+
+---
+
+## Skills to Use
+
+Invoke these before starting the relevant task. The `server-patterns` skill's
+reference files are the long form of the conventions on this page.
+
+| Situation | Skill |
+|-----------|-------|
+| Adding or changing a module, service, repository, route, exception, event subscriber, or a third-party adapter | `/server-patterns` |
+| Calling or inspecting a Clerk backend endpoint by hand | `/clerk-backend-api` |
+| Writing, running or debugging any test | `/server-testing` |
 
 ---
 
@@ -182,17 +147,7 @@ async def get_document(doc_id: str):
     return await document_service.get(doc_id)
 ```
 
-Base exceptions live in `app/exceptions/base.py`:
-
-| Class | HTTP |
-|---|---|
-| `NotFoundError` | 404 |
-| `AuthenticationError` | 401 |
-| `AuthorizationError` | 403 |
-| `ConflictError` | 409 |
-| `ValidationError` | 422 |
-| `DatabaseError` | 500/503 |
-
+Base exceptions, and the HTTP status each maps to, live in `app/exceptions/base.py`.
 Each module defines its own exceptions extending these, in `app/modules/<name>/exceptions.py`; integration exceptions go in `app/integrations/<provider>/exceptions.py`.
 
 ---
@@ -207,7 +162,9 @@ The schema's `info` block and its `/api/v1` prefix come from
 `[tool.app.metadata]` and `[project]` in `pyproject.toml`, loaded by
 `app/core/metadata.py`. Never move them into `Settings`: an env-derived title or
 prefix makes the exported artifact machine-dependent, which
-`tests/unit/scripts/test_export_openapi.py` asserts against.
+`tests/unit/scripts/test_export_openapi.py` asserts against. To rename the service in
+a fork, change them there, run `make gen-contract` and commit the output.
+`.env.example`'s `PROJECT_NAME` is unrelated — it only names Docker images and containers.
 
 Every route must therefore declare:
 
@@ -259,7 +216,7 @@ mechanically. It needs no database.
 
 ## Settings Access
 
-Pydantic nested models in `app/core/config.py`. Domains: `database`, `llm`, `langfuse`, `memory`, `auth`, `logging`, `rate_limits`, `cors`, `evaluation`.
+Pydantic nested models in `app/core/config.py`.
 
 ```python
 # ✅ Correct — unpack SecretStr
@@ -286,37 +243,29 @@ All agents extend `BaseAgent` (`app/agents/base/`) and must implement `create_gr
 
 ## Testing
 
-Tests live in `server/tests/` split into two layers:
+Before writing or debugging a test, read the **`/server-testing`** skill: an unmarked file
+that `make` never runs, the role an authenticated client lacks, and a lifespan that never runs
+all fail far from their cause.
 
-```
-tests/
-├── unit/                  # Pure logic, no external deps — mock everything external
-│   ├── modules/<name>/    # One file per slot file: test_service.py, test_handlers.py, …
-│   ├── agents/  api/  config/  core/  exceptions/  integrations/  middleware/  models/  schemas/  utils/
-│   ├── test_module_contracts.py   # every module has its contracts, its alembic line, its main.py import
-│   └── models/test_tenant_tables.py  # every table carries org_id or is allowlisted with a reason
-└── integration/           # Requires a live DB (testcontainers)
-    ├── modules/<name>/    # routes under router/, then test_service.py, test_repository.py, …
-    ├── api/  database/  exceptions/
-```
-
-Run from `server/`:
+Run from `server/`: `make test*` (see `make help`), or target a file or test name:
 
 ```bash
-make test              # all tests (APP_ENV=test)
-make test-unit         # unit tests only
-make test-integration  # integration tests only
-make test-coverage     # all tests + HTML/XML coverage report
-make test-fast         # all tests, skipping slow ones
-
-# Target a specific file or test name
 APP_ENV=test uv run pytest tests/unit/modules/account/test_cache.py
 APP_ENV=test uv run pytest -k "test_name"
 ```
 
-Coverage is reported automatically (`--cov=app`). HTML report written to `htmlcov/`.
+Coverage runs only under `make test-coverage`; the HTML report goes to `htmlcov/`. The pytest
+config is `pytest.ini` — pytest ignores `[tool.pytest.ini_options]` while that file exists.
 
 New tests mirror the `app/` structure: a test for `app/modules/account/cache.py` goes in `tests/unit/modules/account/test_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
+
+**A whole-object assertion pins a field-to-column mapping only if every field holds a
+distinguishable value.** When a fixture leaves most fields at a shared default (`None`,
+`0`, `False`), two transposed fields still pass `assert result == expected` — the object
+is the right shape. Give each field of a multi-field row its own value first.
+
+**A test that pins known-wrong behaviour names its [`BUGS.md`](../docs/BUGS.md) entry**
+in a comment, so the fix is what changes it — invert it then, don't delete it.
 
 ---
 

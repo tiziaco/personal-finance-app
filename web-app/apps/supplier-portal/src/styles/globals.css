@@ -4,6 +4,7 @@
 
 @source "../../../../packages/ui/src";
 @source "../../../../packages/components/src";
+@source "../../../../packages/data-table/src";
 
 @custom-variant dark (&:is(.dark *));
 

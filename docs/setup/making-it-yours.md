@@ -84,7 +84,7 @@ error toast text is `messages.toasts` in `web-app/packages/core/src/constants/me
 
 Verify with `make deploy-check` (and `make deploy-check DEPLOY_ENV=production`). Note
 what it does *not* prove — the Traefik labels themselves are never exercised; see the
-checklist in `docs/superpowers/specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md`.
+label checklist in [`deploy-dokploy.md`](./deploy-dokploy.md).
 
 ## 4. The example domain
 
@@ -97,7 +97,8 @@ it. Replace it when it doesn't fit:
 | `Supplier` model, repository, link service and `SupplierID` | `server/app/modules/supplier/` — delete the folder, its three lines in `server/pyproject.toml` (`[tool.importlinter]`: the `R1: supplier` contract and the `app.modules.supplier` token in the R6 layers, plus the `account`/`conversation` contracts' `app.modules.supplier.*` entries), its `import` in `server/alembic/env.py`, its line in `server/app/main.py`, its row in `server/tests/unit/models/test_tenant_tables.py`, `server/tests/unit/modules/supplier/`, `server/tests/integration/modules/supplier/`, and the supplier assertions in `server/tests/integration/modules/account/router/test_auth_delete.py`; then `server/alembic/versions/*_add_supplier_table.py` |
 | Role names | `server/app/modules/account/models.py` **and** `web-app/packages/auth/src/permissions.ts` — **and the Clerk dashboard** (see [`clerk.md`](./clerk.md) §2) |
 | The external portal's name | `web-app/apps/supplier-portal/` (directory, `package.json` name, `APP_NAME` in both compose files, `SUPPLIER_PORTAL_DOMAIN`, and its Traefik labels) |
-| Italian UI labels | `ROLE_LABELS` in `packages/auth/src/permissions.ts`; `HUB_NAV` in each portal's `src/lib/hub-nav.ts` |
+| UI labels | `ROLE_LABELS` in `packages/auth/src/permissions.ts`; `HUB_NAV` in each portal's `src/lib/hub-nav.ts` |
+| Product and data-model docs | [`../product/features/suppliers.md`](../product/features/suppliers.md) and [`../data-model/supplier.md`](../data-model/supplier.md) — rewrite for your domain; rename the roles table in [`../product/features/account.md`](../product/features/account.md) with the enum; fill [`../product/prd-mvp.md`](../product/prd-mvp.md) |
 
 Two notes on sequencing:
 
@@ -120,11 +121,8 @@ files yourself — `git grep`, not `grep -r`, so gitignored local state (`server
 `server/logs/`) does not report a failure that no rename can fix:
 
 ```bash
-git grep -Ii your-old-name -- ':(exclude)docs/superpowers'
+git grep -Ii your-old-name
 ```
-
-`docs/superpowers/` is excluded on purpose: those are dated design records, and
-rewriting them to say something they did not say at the time would falsify the history.
 
 ---
 
@@ -134,7 +132,5 @@ rewriting them to say something they did not say at the time would falsify the h
 authentication, not a config error. [`clerk.md`](./clerk.md) §4.
 
 **Both portal images are built with the internal portal's `NEXT_PUBLIC_*` build args.**
-Compose resolves `build.args` from the invoking shell, and the Makefile exports only
-`web-app/apps/internal-portal/.env.local`. Fine while both portals share one Clerk
-instance and one API origin; silent the day they must differ. `deploy-check` asserts each
-image baked its own `APP_NAME`, not which portal's other values it baked.
+Fine while both portals share one Clerk instance and one API origin; silent the day they
+must differ. [`deploy-dokploy.md`](./deploy-dokploy.md).

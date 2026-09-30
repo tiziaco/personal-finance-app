@@ -1,4 +1,4 @@
-"""Every table is tenant-scoped or listed here with a reason (architecture §6).
+"""Every table is tenant-scoped or listed here with a reason (architecture §9).
 
 A new table fails this test until it either carries TenantMixin or gets a row in
 ALLOWLIST. That is the entire mechanism: the decision cannot be skipped, only made.

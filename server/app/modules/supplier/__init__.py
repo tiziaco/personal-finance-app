@@ -1,7 +1,7 @@
 """Supplier — the example domain: an external company and the portal user who manages it.
 
 This is the public surface. Another module imports from here and nowhere
-deeper (docs/architecture/server-modules.md, R1). No router yet: the module
+deeper (docs/architecture/server.md, R1). No router yet: the module
 exists for the contact link and the supplier-scoped identity.
 """
 

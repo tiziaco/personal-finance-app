@@ -5,7 +5,7 @@ anyone, plus the environment variables each step produces.
 
 Do this first. Then [`clerk-webhooks.md`](./clerk-webhooks.md) for event delivery.
 For how the code consumes the token once it arrives, see
-[`../../server/docs/authentication.md`](../../server/docs/authentication.md).
+[`../architecture/authentication.md`](../architecture/authentication.md).
 
 Clerk is the only identity provider wired in, and it supplies **both** authentication
 and multi-tenancy — the tenant is a Clerk Organization. There is no local password
@@ -38,6 +38,9 @@ so tenant-scoped queries return nothing. That looks like an empty database, not 
 problem — see the symptom table at the end.
 
 Each user must therefore be a member of an organization, with one selected as active.
+Neither portal has an organization switcher, so the active one comes from Clerk at
+sign-in: **turn personal accounts off** (Dashboard → Organizations), or a member can sign
+in with none active and has no way to fix it.
 
 ---
 
@@ -51,6 +54,10 @@ Each user must therefore be a member of an organization, with one selected as ac
 | `reviewer` | `org:reviewer` | internal |
 | `approver` | `org:approver` | internal |
 | `supplier` | `org:supplier` | external |
+
+**Clerk's built-in roles are not app roles.** `org:admin` (an organization's creator) and
+`org:member` (Clerk's default for new members) are rejected by both portals and the API:
+assign every member one of the four, and make one of them the default role for new members.
 
 **The `org:` prefix is Clerk's, not yours.** You create `project_manager`; Clerk emits
 `org:project_manager`; `getUserRole()` strips the prefix
@@ -68,8 +75,8 @@ every route — which reads like a real permissions problem, not the slug typo t
 it.
 
 These four are the **example domain's** roles. Renaming them is a code change *and* a
-dashboard change; see [`making-it-yours.md`](./making-it-yours.md). Their meanings are
-in [`../RBAC/roles_definition.md`](../RBAC/roles_definition.md).
+dashboard change; see [`making-it-yours.md`](./making-it-yours.md). What each is for is
+in [`../product/features/account.md`](../product/features/account.md) §3.
 
 ---
 
@@ -111,11 +118,9 @@ The fallback form honours the requested destination and only defaults to `/home`
 when none was asked for.
 
 > **The `NEXT_PUBLIC_*` values are baked in at image build time**, not read at runtime —
-> Next.js inlines them. Changing one means rebuilding. And Compose resolves `build.args`
-> from the invoking shell, which the root Makefile populates from the **internal**
-> portal's `.env.local` only: today both images ship the internal portal's publishable
-> key and API URL. Harmless while both portals share one Clerk instance and one API
-> origin, silent breakage the day they must differ.
+> Next.js inlines them, so changing one means rebuilding. Today both portal images are
+> built with the internal portal's values; why, and when that stops being harmless:
+> [`deploy-dokploy.md`](./deploy-dokploy.md).
 
 ---
 
@@ -179,7 +184,7 @@ webhook. Full procedure, including the ngrok tunnel for local delivery:
 
 | What you see | Likely cause |
 |---|---|
-| Signed in, but every route bounces you back | Role slug mismatch — `getUserRole()` returned `null`. Check §2 spelling. |
+| Signed in, but every route bounces you back | Role slug mismatch — `getUserRole()` returned `null`. Check §2 spelling, and that the member holds one of the four roles, not Clerk's default `org:admin` / `org:member`. |
 | 401 from the API, token looks valid | The portal's origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
 | Server won't start, `SettingsError` on `ALLOWED_ORIGINS` | Not a JSON array (§4). |
 | Signed in, everything empty, no errors | No **active** organization → `org_id = None` (§1). |

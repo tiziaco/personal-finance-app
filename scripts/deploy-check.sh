@@ -12,8 +12,7 @@
 #
 # What this does NOT prove: anything about the Traefik labels. Nothing here
 # routes a request through a proxy — they are reviewed, and first exercised
-# on a real deploy. See docs/superpowers/specs/
-# 2026-09-03-ws2-traefik-dokploy-deploy-design.md, "What this does not prove".
+# on a real deploy. See docs/setup/deploy-dokploy.md.
 #
 # `docker compose` (v2) rather than the Makefile's DOCKER_COMPOSE: this script
 # depends on v2 semantics — `<project>-<service>` default image names, and

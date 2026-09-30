@@ -92,6 +92,24 @@ export {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "./primitives/collapsible"
+export {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "./primitives/popover"
+export {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableFooter,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./primitives/table"
 export { SettingSection } from "./primitives/setting-section"
 export {
   Sidebar,

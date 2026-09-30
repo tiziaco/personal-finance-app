@@ -24,6 +24,8 @@ wheels/
 .coverage
 coverage.xml
 /htmlcov/
+.import_linter_cache/
+.ruff_cache/
 
 # Reports
 evals/reports/

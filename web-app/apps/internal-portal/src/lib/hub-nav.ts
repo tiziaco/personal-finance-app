@@ -8,6 +8,6 @@ import type { NavItem } from "@app/core/types/nav"
  */
 export const HUB_NAV: NavItem[] = [
   { title: "Home", url: "/home", icon: HomeIcon },
-  { title: "Progetti", url: "/projects", icon: Building2 },
-  { title: "Ordini", url: "/orders", icon: NotepadText },
+  { title: "Projects", url: "/projects", icon: Building2 },
+  { title: "Orders", url: "/orders", icon: NotepadText },
 ]

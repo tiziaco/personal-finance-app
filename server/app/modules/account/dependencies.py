@@ -99,7 +99,7 @@ def get_current_org_id(user: CurrentUser) -> str:
 
     The row, not `request.state.org_id`: JIT provisioning fills the org from
     Clerk when the token carries none, so the row is authoritative once
-    `get_current_user` has run (architecture §6).
+    `get_current_user` has run (architecture §9).
 
     Raises:
         AuthorizationError: If the user belongs to no organisation.

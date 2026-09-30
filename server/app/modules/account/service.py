@@ -22,7 +22,7 @@ from app.modules.account.models import User
 from app.modules.account.repository import user_repository
 from app.utils.cache import MISS
 
-# Published for the modules above account (architecture §5). A subscriber
+# Published for the modules above account (architecture §8). A subscriber
 # imports the constant, so a renamed event is an import error, not a silent
 # no-op.
 USER_SYNCED = "account.user_synced"  # session, user_id, metadata — after JIT provisioning or a Clerk create

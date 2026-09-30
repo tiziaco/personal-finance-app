@@ -74,6 +74,7 @@ differ in a git worktree.
 | Runtime dep used by both apps | Each app individually |
 | Needed by a primitive | `packages/ui` |
 | Needed by composed chrome | `packages/components` |
+| Needed by the tables or list state | `packages/data-table` |
 | Pure helper, type or constant — no rendering | `packages/core` |
 | Tooling (eslint, typescript, etc.) | Workspace root (`-w`) |
 
@@ -93,17 +94,16 @@ Even if both apps depend on the same package at the same version, pnpm installs 
 
 ### Adding shadcn components
 
-shadcn components that are shared belong in `packages/ui`. Run from that directory:
-
-```bash
-cd packages/ui && pnpm dlx shadcn@latest add button dialog table
-```
+shadcn components that are shared belong in `packages/ui`. Install each one by hand from
+its page on `ui.shadcn.com/docs/components/base/` (the **Manual** tab, Base UI variant) — the
+`shadcn` CLI cannot resolve the `@app/core/lib/utils` alias this workspace uses.
 
 Components land in `packages/ui/src/primitives/` and are importable as `@app/ui/<name>`
 immediately — the `exports` map is a wildcard. They are **not** in the `@app/ui` barrel
 until you add a line to `packages/ui/src/index.ts` by hand.
 
-If a component is only used in one app, add it directly inside that app instead.
+Every primitive goes there, even one used by a single portal. Composed components have their
+own homes; see `references/components.md` in the `web-app-patterns` skill.
 
 ## Docker Commands
 

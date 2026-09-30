@@ -1,7 +1,7 @@
 """Supplier repository for database operations.
 
 Scoped to contact linking. Supplier lifecycle (create/update/delete) arrives
-with the first write route (architecture §8).
+with the first write route (architecture §9).
 """
 
 from typing import Optional

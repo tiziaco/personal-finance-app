@@ -11,16 +11,15 @@ root follows the checkout's own port, which differs in a git worktree.
 
 This is a [Next.js 16](https://nextjs.org/) application using the App Router, part of the `web-app` pnpm monorepo.
 
-**Key pages:**
+**Routes:**
 
 | Route | Description |
 |---|---|
-| `/home` | Supplier dashboard |
-| `/projects` | Projects the supplier is associated with |
-| `/orders` | Purchase orders requiring documentation |
-| `/sign-in` | Clerk-powered sign-in |
-| `/sign-up` | Clerk-powered sign-up |
+| `/home`, `/projects`, `/orders` | Placeholder pages in `src/app/(portal)/` — the example domain's screens are not built yet |
+| `/sign-in` | Clerk's sign-in |
 | `/unauthorized` | Shown to a signed-in user without supplier-portal access |
+
+No sign-up page: suppliers arrive by invitation.
 
 ---
 
@@ -53,7 +52,7 @@ docs.
 The `NEXT_PUBLIC_*` values are **inlined at image build time**, not read at runtime, so
 changing one means rebuilding the image. Note that today both portal images are built
 with the *internal* portal's build args — see
-[`docs/setup/making-it-yours.md`](../../../docs/setup/making-it-yours.md).
+[`docs/setup/deploy-dokploy.md`](../../../docs/setup/deploy-dokploy.md).
 
 Getting the keys is only half of it — Clerk also needs Organizations enabled, four org
 roles created with exact slugs, and this portal's origin (`http://localhost:3002`) listed
@@ -101,20 +100,20 @@ The app will be available at http://localhost:3002.
 ```
 src/
 ├── app/
-│   ├── (app)/         # Authenticated routes (home, projects, orders)
-│   ├── (auth)/        # Auth routes (sign-in, sign-up)
-│   ├── layout.tsx     # Root layout
+│   ├── (portal)/      # Signed-in routes, their layout (sidebar, QueryProvider)
+│   ├── (auth)/        # sign-in
+│   ├── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
 │   └── unauthorized/  # Wrong-role landing page
 ├── components/
-│   ├── layout/        # Sidebar, header, shell components
-│   ├── settings/      # Settings UI
-│   └── ui/            # Page-level UI components
-├── hooks/             # Custom React hooks
-├── lib/               # Utilities, API helpers, env config
-├── providers/         # React context providers
-├── proxy.ts           # Clerk middleware / RBAC proxy
-└── styles/            # Global CSS
+│   ├── layout/        # This portal's user panel
+│   └── settings/      # This portal's settings tabs and server-status wrapper
+├── lib/               # Navigation items
+├── proxy.ts           # Clerk middleware — the role gate
+└── styles/            # Global CSS, and the @source lines for the shared packages
 ```
+
+Shared UI lives in the workspace packages, not here — see `web-app/CLAUDE.md`'s "Where a
+new component goes".
 
 ### Branding
 

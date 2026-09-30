@@ -2,7 +2,9 @@
 
 ## Overview
 
-Authentication is handled by [Clerk](https://clerk.com). There are no register/login endpoints — users authenticate via Clerk's hosted UI and the backend validates their JWT tokens. Users are automatically provisioned in the database on first access (JIT provisioning).
+The server's side of authentication: verifying the token, provisioning the user, the
+caches. The end-to-end path — portal, Clerk, token, user row — is
+[`docs/architecture/authentication.md`](../../docs/architecture/authentication.md).
 
 ## Architecture
 
@@ -13,7 +15,7 @@ Request
 AuthMiddleware              Extracts JWT, verifies via JWKS (RS256)
   |                         Stores clerk_id in request.state.clerk_id
   v
-get_current_user (DI)       JIT provisioning: cache -> DB -> Clerk API
+get_current_user (DI)       JIT provisioning: DB -> Clerk API
   |                         Stores internal user_id in request.state.user_id
   v
 Route Handler               Receives User object via CurrentUser
@@ -23,7 +25,7 @@ Route Handler               Receives User object via CurrentUser
 
 | ID | Type | Purpose |
 |----|------|---------|
-| `id` | UUID string (PK) | Internal DB relationships, foreign keys, RLS context |
+| `id` | UUID string (PK) | Internal DB relationships, foreign keys |
 | `clerk_id` | Text (unique, indexed) | Auth lookups, Clerk API calls |
 
 All foreign keys (e.g., `conversation.user_id`) reference the internal `id`. The `clerk_id` is only used at the authentication boundary.
@@ -85,7 +87,7 @@ Called via `asyncio.to_thread()` since the SDK is synchronous.
 
 ### 7. Supplier link — `app/modules/supplier/` (`USER_SYNCED` subscriber)
 
-`account` cannot import `supplier` (module DAG, `docs/architecture/server-modules.md`), so linking runs as an event
+`account` cannot import `supplier` (module DAG, `docs/architecture/server.md`), so linking runs as an event
 subscriber instead of a direct call. `supplier`'s `USER_SYNCED` handler (`handlers.py`) calls
 `SupplierService.link_from_metadata()`, which claims the supplier named in the invitation metadata; its
 `USER_ERASING` and `USER_OFFBOARDED` handlers call `SupplierService.unlink_contact()`. Both go through
@@ -114,7 +116,7 @@ Every method is `async` even though the in-memory implementation never awaits �
 
 **Invalidation points:**
 - Supplier re-link (`SupplierService.link_from_metadata`) — clears both the new contact and the displaced previous one
-- GDPR erasure and org offboarding — `account`'s own `USER_ERASING` handling clears the role cache; `supplier`'s `USER_ERASING`/`USER_OFFBOARDED` handlers clear the supplier cache
+- GDPR erasure and org offboarding — `erase_user` clears the role cache as its last step; `supplier`'s `USER_ERASING`/`USER_OFFBOARDED` handlers clear the supplier cache
 - Clerk membership webhooks (`app/modules/account/webhooks.py`) — every `organization_membership.*` event drops the user's cached role
 
 The `org_role` staleness this section used to name as an open gap is closed: a role change or an offboarding in Clerk now invalidates the entry on delivery, so revocation is immediate rather than bounded by the 60s TTL. It degrades to the TTL only if the delivery fails every svix retry.

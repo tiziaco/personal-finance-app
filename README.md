@@ -26,8 +26,7 @@ library, an API contract that cannot silently drift from its client, and a deplo
 The template ships with a worked example rather than empty stubs: **supplier document
 compliance**. Internal staff manage projects, suppliers and orders; suppliers submit
 documents against them. That is why you will find a `Supplier` model, a
-`supplier-portal/` app, roles named `project_manager`/`reviewer`/`approver`/`supplier`,
-and some Italian UI labels.
+`supplier-portal/` app and roles named `project_manager`/`reviewer`/`approver`/`supplier`.
 
 None of it is load-bearing. Rename or replace it to fit your domain — the multi-tenancy,
 auth, contract and deploy machinery underneath do not depend on any of it.
@@ -96,7 +95,7 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 │       ├── core/                  # @app/core — cn(), NavItem, copy — no renderer
 │       ├── ui/                    # @app/ui — shadcn/Base UI primitives, WEB ONLY
 │       └── components/            # @app/components — composed chrome, built on ui
-├── docs/                          # Setup guides, RBAC, architecture, design history
+├── docs/                          # Setup, architecture, guides, roadmap, TODO/BUGS, specs
 ├── infra/                         # Prometheus + Grafana config
 ├── scripts/                       # gen-contract, check-contract, verify-infra, deploy-check
 ├── docker-compose.dev.yml         # Development stack
@@ -130,7 +129,8 @@ cp web-app/apps/internal-portal/.env.example web-app/apps/internal-portal/.env.l
 cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.local
 ```
 
-Required variables include Clerk API keys, database credentials, and OpenAI/Langfuse keys.
+Required variables include Clerk API keys, database credentials and the Langfuse keys. The
+OpenAI key is optional: only an LLM call needs it.
 
 ### Clerk
 
@@ -150,38 +150,11 @@ git config core.hooksPath .githooks
 Without this the pre-commit contract gate does not exist, and a route change committed
 without its regenerated client is caught only by CI.
 
-### Service Identity (renaming a fork)
+### Renaming a fork
 
-The API's title, description and versioned path prefix are **not** environment
-variables. They live in `server/pyproject.toml`, and the version alongside them
-in `[project]`:
-
-```toml
-[project]
-version = "1.0.0"
-
-[tool.app.metadata]
-title = "Template App - Server"
-description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
-api_v1_str = "/api/v1"
-```
-
-Change them there, then regenerate the committed contract and commit the result:
-
-```bash
-make gen-contract
-```
-
-They are kept out of `.env` on purpose. All four land in the committed
-`server/openapi.json` — the first three verbatim in its `info` block,
-`api_v1_str` as the prefix on every versioned path — and orval stamps the title
-into the header of every generated API client file. Read from a gitignored
-`.env.<env>` they would differ per machine, so `make check-contract` would fail
-on CI and on every fresh clone the moment anyone set one.
-
-`PROJECT_NAME` in `server/.env.example` is a different thing despite the name:
-it only tags the Docker image built by `make -C server docker-build`, and has no
-effect on the API's title.
+The API's title, description, version and `/api/v1` prefix live in `server/pyproject.toml`,
+not in `.env` — they land in the committed contract, so changing them is a contract
+change. The procedure and the reason: [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) §1.
 
 ---
 
@@ -202,10 +175,11 @@ make docker-run         # full stack: web-app, server, db, prometheus, grafana, 
 make docker-run-core    # core only: web-app, server, db (no monitoring)
 make docker-run-db      # database only (ENV=development|staging|production)
 
-# Logs
+# Migrations
 make docker-migrate     # apply Alembic migrations (one-shot container)
 make docker-migrate-status  # show the database's current revision
 
+# Logs
 make docker-logs        # follow logs for all services
 make docker-logs-core   # follow logs for core services only
 
@@ -218,28 +192,9 @@ make rebuild            # clean + full stack
 make rebuild-core       # clean + core stack
 ```
 
-### Database migrations
-
-Migrations are a discrete release phase, not part of app startup. A one-shot
-`migrate` service runs `alembic upgrade head` and `server` will not start until
-it exits 0, so a failed migration fails the deploy and leaves the previously
-running container serving the old image. This is expressed in the compose files
-because the deploy target runs only `docker compose up -d --build` and offers no
-release-phase hook.
-
-Two consequences worth knowing:
-
-- `depends_on` applies to `compose up`, not to reboots. After a Docker daemon or
-  host restart, `server` returns under its restart policy without a `migrate` run.
-- Revisions are authored on the host (`cd server && make migrate-create ENV=…`).
-  In dev, `server/alembic/` is bind-mounted so the container sees new revisions
-  immediately; `alembic.ini` is not, so changes to it need `make docker-build-api`.
-
-For production, use the production compose file directly:
-
-```bash
-docker compose -f docker-compose.prod.yml up -d --build
-```
+Migrations run as a release phase: a one-shot `migrate` service applies them before
+`server` starts, and a failed migration fails the `up`. Authoring revisions, and the
+caveats, are in [`server/CLAUDE.md`](server/CLAUDE.md) under **Database Migrations**.
 
 Services will be available at:
 
@@ -273,87 +228,25 @@ cp apps/internal-portal/.env.example apps/internal-portal/.env.local
 cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
 ```
 
-> **The Docker and native paths are mutually exclusive.** They collide on host ports
-> **3000, 3002 and 8100** (the main checkout's defaults), which the Compose services
-> publish, and on the single static `NGROK_DOMAIN`, claimed by both the `ngrok` compose
-> service and `make dev-tunnel`. Stop one before starting the other. `make dev-preflight`
-> checks the ports and fails with a pointer rather than letting the servers die on a
-> bind error.
-
-Running natively also means migrations are **not** applied for you the way the Docker
-`migrate` service does it — run `make migrate ENV=development` from `server/`.
-
-For Clerk webhook work, `make dev-tunnel` exposes the local API at `https://$NGROK_DOMAIN`.
-Run the Make target rather than `ngrok` directly — it passes `--authtoken` explicitly, for
-the reason set out in [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md).
+> **The Docker and native paths are mutually exclusive** — they publish the same host
+> ports and claim the same ngrok domain. Stop one before starting the other;
+> `make dev-preflight` checks. The native path does not apply migrations for you, and
+> Clerk webhooks need `make dev-tunnel`. All three are in [`CLAUDE.md`](CLAUDE.md) under
+> **Running the Stack**.
 
 ### Parallel Work (git worktrees)
 
-Each linked git worktree can run its own stack — database, containers, ports —
-so two branches can be built side by side, each in its own Claude session.
-
-**Start**
+Each linked git worktree can run its own stack — database, containers, ports — so two
+branches can be built side by side, each in its own Claude session.
 
 ```bash
 make worktree-new NAME=feed                   # .claude/worktrees/feed on feat/feed
-make worktree-new NAME=cv-fix BRANCH=fix/cv   # a different branch name
 cd .claude/worktrees/feed && claude
+make worktree-clean                           # inside it, before `git worktree remove`
 ```
 
-An existing local branch is checked out; one that exists only as
-`origin/<branch>` is tracked (how you pick up a PR branch); otherwise the branch
-is created from the current HEAD. `worktree-new` then runs the worktree's own
-`make worktree-init`: it assigns a slot, copies the env files from the main
-checkout with the slot's values written in, and installs dependencies. For a
-worktree created some other way, run `make worktree-init` inside it.
-
-Prefer this to `claude --worktree`, which names the branch `worktree-<name>`,
-bases it on `origin/main` (without your unpushed commits), starts the session
-before init has run, and on a clean exit deletes the folder without
-`worktree-clean`.
-
-**Ports**
-
-| | Internal portal | Supplier portal | API | PostgreSQL |
-|---|---|---|---|---|
-| Main checkout (slot 0) | 3000 | 3002 | 8100 | 5434 |
-| Worktree slot N (1–9) | 3000+10N | 3002+10N | 8100+10N | 5434+10N |
-
-Those are the defaults: the bases are the main checkout's `*_HOST_PORT`s in its
-root `.env`. Running several projects built from this template on one machine?
-Give each its own block of 100 (e.g. 3200 / 3202 / 8300) and set
-`ALLOWED_ORIGINS` and both `NEXT_PUBLIC_API_URL`s to match. Re-running
-`make worktree-init` in an existing worktree moves it with its main checkout.
-
-**Run** — inside the worktree, as in main: `make docker-run-core`; or natively
-`make docker-run-db ENV=development`, `make -C server migrate ENV=development`,
-then `make -C server dev`, `make dev-internal` and `make dev-supplier` (or
-VS Code's `Dev: All` with the worktree open as its own window).
-
-**Monitoring and the tunnel** stay in the main checkout: Prometheus, Grafana and
-cAdvisor publish fixed ports, and ngrok has one static domain. `make docker-run`
-refuses in a worktree; `make dev-tunnel` works from any checkout, one at a time.
-
-**Finish**
-
-```bash
-make worktree-clean                       # inside the worktree
-cd ../../.. && git worktree remove .claude/worktrees/feed
-git branch -d feat/feed                   # once merged
-```
-
-`worktree-clean` stops the worktree's own dev servers (matched by working
-directory, not port alone) and removes its containers, database volume and
-images. It leaves the shared Docker build cache alone.
-
-**Merging parallel branches**
-
-- **Two Alembic heads.** Both branches' migrations descend from the same
-  revision. After the second merge, `cd server && uv run alembic merge heads -m
-  "merge <a> and <b>"` and commit the merge revision.
-- **Contract conflicts.** Never hand-merge `server/openapi.json` or
-  `web-app/packages/api-client/src/generated/`: take either side, run
-  `make gen-contract`, and commit what it produces.
+Ports, what stays in the main checkout, and merging two branches' migrations and
+contracts: [`CLAUDE.md`](CLAUDE.md) under **Parallel worktrees**.
 
 ---
 
@@ -366,13 +259,36 @@ make test-unit         # unit tests only, no database needed
 make test-integration  # requires a live database
 make test-coverage     # HTML + XML coverage report
 
-# Frontend — from web-app/
-pnpm type-check        # tsc --noEmit across the workspace
+# Frontend — from the repo root, or `pnpm test` / `pnpm test:watch` in web-app/
+make test-web          # Vitest: packages and both portals
 
 # Repo-level checks
+make check                       # ruff, import-linter, ESLint, Prettier — read-only
 make check-contract              # committed API artifacts match the routes
 bash scripts/verify-infra.sh     # layout, identifiers, compose validity
 ```
+
+### Quality gates
+
+The git hooks are the main gate. CI re-runs the contract, the server's lint and the
+module boundaries on every pull request; ESLint, Prettier and Vitest run only in the
+hook. Install the hooks once per clone
+with `git config core.hooksPath .githooks`.
+
+| When | What runs | Skipped by |
+|---|---|---|
+| On save (VS Code) | ruff and Prettier format; ruff organizes imports | — |
+| `git commit` touching `server/app/` | `make check-contract` — regenerates the spec and client, blocks on drift | `--no-verify` |
+| `git push` with `server/` changes | `make check-server` — ruff, ruff format, import-linter (module boundaries) | `--no-verify` |
+| `git push` with `web-app/` changes | `make check-web` — ESLint, Prettier; then `make test-web` | `--no-verify` |
+| Pull request, push to `main` | **API Contract** workflow — `check-contract`, the OpenAPI contract tests, `tsc` across the workspace | — |
+| Pull request, push to `main` | **Module Boundaries** workflow — import-linter, ruff, the module-contract, tenant-table and event tests | — |
+| Building an image | `make docker-build` / `docker-build-web` run `check-contract` first | — |
+| By hand only | the server's full pytest suite (`cd server && make test`), `make deploy-check` | — |
+
+A hook whose tool is missing warns and lets the commit or push through rather than
+blocking it. The server suite is the gap: nothing runs it automatically, so run it before
+pushing a server change.
 
 ---
 
@@ -388,15 +304,9 @@ make deploy-check                      # staging (default)
 make deploy-check DEPLOY_ENV=production
 ```
 
-This builds and boots the deploy stack under its own Compose project, so a running dev
-stack is untouched, then tears itself down. It proves the file parses under `APP_ENV`,
-that both portals build as genuinely distinct images, that a failed migration fails the
-stack, and that nothing publishes a host port.
-
-**It does not exercise the Traefik labels** — a wrong container port or a router pointing
-at an undeclared service surfaces on the first real deploy. Reviewing them is the
-substitute; the checklist is in
-`docs/superpowers/specs/2026-09-03-ws2-traefik-dokploy-deploy-design.md`.
+What `deploy-check` proves and what it cannot is in [`CLAUDE.md`](CLAUDE.md) under
+**Deploying**; the Traefik label checklist and a 404 triage are in
+[`docs/setup/deploy-dokploy.md`](docs/setup/deploy-dokploy.md).
 
 ---
 
@@ -405,9 +315,14 @@ substitute; the checklist is in
 | Where | What |
 |---|---|
 | [`docs/`](docs/) | Index of everything below |
+| [`docs/ROADMAP.md`](docs/ROADMAP.md) | Where the work stands — the one file that records progress |
+| [`docs/BUGS.md`](docs/BUGS.md), [`docs/TODO.md`](docs/TODO.md) | What is wrong today, and what is deferred to the change that should make it |
 | [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — Clerk dashboard, roles, `ALLOWED_ORIGINS` |
 | [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md) | Webhook endpoint and the dev tunnel |
 | [`docs/setup/infrastructure.md`](docs/setup/infrastructure.md) | Root `.env`, Prometheus/Grafana/cAdvisor, and what production omits |
 | [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) | Renaming this template for your project |
+| [`docs/setup/deploy-dokploy.md`](docs/setup/deploy-dokploy.md) | Deploying behind Dokploy's Traefik — what `deploy-check` cannot prove |
+| [`docs/architecture/`](docs/architecture/) | How the server, the web app and authorization are built |
+| [`docs/guides/`](docs/guides/) | Patterns portable beyond this repo — the API codegen pipeline |
 | [`CLAUDE.md`](CLAUDE.md), [`server/CLAUDE.md`](server/CLAUDE.md), [`web-app/CLAUDE.md`](web-app/CLAUDE.md) | Working conventions and the most detailed operational notes in the repo |
 

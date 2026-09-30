@@ -47,10 +47,10 @@ export function isSupplierRole(role: Role | null): boolean {
   return role !== null && role === Role.SUPPLIER
 }
 
-/** Italian display labels — mapped in the frontend only. */
+/** Display labels — mapped in the frontend only. */
 export const ROLE_LABELS: Record<Role, string> = {
   [Role.PROJECT_MANAGER]: "Project Manager",
-  [Role.REVIEWER]: "Revisore",
-  [Role.APPROVER]: "Approvatore",
-  [Role.SUPPLIER]: "Fornitore",
+  [Role.REVIEWER]: "Reviewer",
+  [Role.APPROVER]: "Approver",
+  [Role.SUPPLIER]: "Supplier",
 }

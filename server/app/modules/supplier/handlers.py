@@ -1,6 +1,6 @@
 """Subscriptions to account events.
 
-All three are inline (architecture §5): a supplier's first request JIT-provisions
+All three are inline (architecture §8): a supplier's first request JIT-provisions
 the user and resolves SupplierID in one transaction, so the link must exist
 before the publisher commits; and an anonymised user row that still has a
 Supplier.contact_id pointing at it is the association erasure exists to remove.

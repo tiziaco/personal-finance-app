@@ -1,7 +1,7 @@
 """Conversation — a user's chat threads and the chatbot that answers in them.
 
 This is the public surface. Another module imports from here and nowhere
-deeper (docs/architecture/server-modules.md, R1).
+deeper (docs/architecture/server.md, R1).
 """
 
 from app.modules.conversation.dependencies import (  # noqa: I001

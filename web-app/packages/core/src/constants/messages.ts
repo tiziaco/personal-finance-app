@@ -7,11 +7,12 @@
  */
 export const messages = {
   toasts: {
-    sessionExpired: "Sessione scaduta. Effettua di nuovo l'accesso.",
-    forbidden: "Non hai i permessi per questa operazione.",
-    notFound: "Risorsa non trovata.",
-    conflictError: "Operazione in conflitto con lo stato attuale.",
-    validationError: "Dati non validi.",
-    genericError: "Si è verificato un errore. Riprova.",
+    sessionExpired: "Your session has expired. Please sign in again.",
+    forbidden: "You don't have permission to do this.",
+    notFound: "Not found.",
+    conflictError:
+      "This conflicts with the current state. Refresh and try again.",
+    validationError: "Some of the data is invalid.",
+    genericError: "Something went wrong. Please try again.",
   },
 } as const

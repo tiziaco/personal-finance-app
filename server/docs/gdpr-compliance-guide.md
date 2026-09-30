@@ -1,14 +1,20 @@
-# GDPR Compliance Guide for B2C Applications
+# GDPR Compliance Guide
 
 > **Open findings.** A review of the implemented erasure flow found gaps this
 > guide does not cover — most importantly that Langfuse retains message content
 > keyed by the `user.id` that survives erasure. See
-> [`gdpr-erasure-findings.md`](./gdpr-erasure-findings.md). That doc also records
-> that this guide's B2C framing is wrong for the current B2B template.
+> [`gdpr-erasure-findings.md`](./gdpr-erasure-findings.md). The cascade as built is
+> **GDPR — Right to Erasure** in [`server/CLAUDE.md`](../CLAUDE.md); this guide is the
+> general pattern behind it.
 
 ## Overview
 
-For B2C applications serving European users, GDPR (General Data Protection Regulation) compliance is **mandatory**, not optional. This guide explains how to handle user data deletion properly.
+GDPR (General Data Protection Regulation) applies to this platform even though its
+customers are businesses. A named person's work email, their name, and what they typed
+into a conversation are personal data, whether they are an internal project manager or
+a supplier's contact, and Article 17 gives that person the right to erasure. This guide
+explains how to handle user data deletion properly. The `Transaction` and `FraudRecord`
+examples below are illustrative: the template has neither table.
 
 ## Key GDPR Principle: Right to Erasure (Article 17)
 
@@ -208,7 +214,7 @@ class AuditLog(BaseModel, table=True):
 
 ## Compliance Checklist
 
-Before launching your B2C app:
+Before launching a product built on this template:
 
 - [ ] **User Deletion Endpoint** - Users can delete their account
 - [ ] **Hard Delete Messages** - Chat history completely removed
@@ -223,27 +229,16 @@ Before launching your B2C app:
 
 ## Testing Your Implementation
 
-```python
-# tests/test_gdpr_compliance.py
-async def test_user_deletion_removes_all_personal_data(session):
-    """Verify GDPR-compliant deletion removes PII."""
-    # Create user
-    user = User(email="test@example.com", first_name="John")
-    session.add(user)
-    await session.commit()
-    
-    # Delete user
-    await delete_user_gdpr_compliant(user.id, session, checkpointer)
-    
-    # Verify anonymization
-    await session.refresh(user)
-    assert user.is_anonymized
-    assert "deleted_user_" in user.email
-    assert user.first_name is None
-    
-    # Verify no personal data remains
-    # Check messages are gone, etc.
-```
+The cascade is tested at every layer it touches — use these as the model for a new
+module's erasure tests:
+
+| What | Where |
+|---|---|
+| `anonymize_user()` clears every PII field | `tests/unit/modules/account/test_models.py` |
+| `erase_user` runs its steps in order | `tests/unit/modules/account/test_service.py` |
+| Each module's `USER_ERASING` subscriber | `tests/unit/modules/<name>/test_handlers.py` |
+| `DELETE /api/v1/auth/me` end to end, real DB | `tests/integration/modules/account/router/test_auth_delete.py` |
+| The `user.deleted` webhook runs the same cascade | `tests/integration/modules/account/router/test_webhooks.py` |
 
 ## When in Doubt
 
@@ -262,7 +257,8 @@ async def test_user_deletion_removes_all_personal_data(session):
 
 ## Summary
 
-For B2C applications in Europe:
+For any product whose users are people in the EU — employees and business contacts
+included:
 
 ✅ **Use anonymization** for user personal data (not soft delete)  
 ✅ **Hard delete** user-generated content (messages, files)  

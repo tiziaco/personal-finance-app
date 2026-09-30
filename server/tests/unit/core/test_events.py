@@ -1,4 +1,4 @@
-"""Tests for the in-process event dispatcher (architecture §5)."""
+"""Tests for the in-process event dispatcher (architecture §8)."""
 
 from unittest.mock import AsyncMock, patch
 

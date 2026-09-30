@@ -1,7 +1,7 @@
 """Account — the Clerk-backed identity: the user row, the caller's identity, role and organisation, erasure.
 
 This is the public surface. Another module imports from here and nowhere
-deeper (docs/architecture/server-modules.md, R1).
+deeper (docs/architecture/server.md, R1).
 
 The dependency *getters* are exported alongside their Annotated aliases on
 purpose: FastAPI keys dependency_overrides by the exact callable, so

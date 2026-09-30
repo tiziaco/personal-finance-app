@@ -89,6 +89,10 @@ test the prop. Hoist the next such read the same way before reaching for a modul
 - `window.location.assign` is replaced via `Object.defineProperty(window, "location", …)`; restore it
   in `afterEach`.
 - A whole-object `toEqual` only pins a field mapping if every field holds a distinguishable value.
+- **Vitest's JSX transform and Next's SWC transform disagree about whitespace next to `{expr}`.**
+  A string built as JSX text around an expression can render right under test and drop a space in
+  the browser, and `toHaveTextContent` normalises whitespace, so no assertion catches it. Build such
+  a string as a template literal in the component body.
 
 ## Conventions
 
@@ -99,3 +103,6 @@ test the prop. Hoist the next such read the same way before reaching for a modul
 - **Explicit imports**: `globals: false`, so `import { describe, it, expect, vi } from "vitest"`.
 - **A third app** gets `portal("<app>")` in the config's `projects`, a `src/testing.d.ts`, and its
   own copy of any duplicated component's test.
+- **A test that pins known-wrong behaviour names its [`BUGS.md`](../../../docs/BUGS.md) entry** in a
+  comment, so the fix is what changes it — invert it then, don't delete it. Before "fixing" a test
+  that looks wrong, check `BUGS.md` for an entry naming it.

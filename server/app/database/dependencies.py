@@ -77,7 +77,7 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
         await session.commit()
         # Deferred handlers run only once the request's writes are durable; a
         # request that raised above never reaches this line, and its queue is
-        # discarded with the request context (architecture §5).
+        # discarded with the request context (architecture §8).
         await events.flush(request.app.state.session_factory)
     except IntegrityError as e:
         await session.rollback()

@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     "@app/core",
     "@app/ui",
     "@app/components",
+    "@app/data-table",
     "@app/auth",
     "@app/api-client",
   ],

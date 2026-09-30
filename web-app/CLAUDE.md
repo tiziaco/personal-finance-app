@@ -1,23 +1,13 @@
 # Web App — Frontend Guide
 
 pnpm monorepo containing two Next.js 16 applications backed by shared UI packages.
+This file is the working rules; the reasoning — the access gate, the session boundary,
+the path to the API, adding a portal — is in
+[`docs/architecture/web-app.md`](../docs/architecture/web-app.md).
 
 ---
 
 ## Workspace Structure
-
-```
-web-app/
-├── apps/
-│   ├── internal-portal/   # Dashboard for project managers (port 3000)
-│   └── supplier-portal/   # External supplier portal (port 3002)
-└── packages/
-    ├── api-client/        # Generated API client from the OpenAPI spec (packages/api-client)
-    ├── auth/              # Role enum, useAppAuth(), getUserRole() (packages/auth)
-    ├── core/              # cn(), NavItem, copy — no renderer (packages/core)
-    ├── ui/                # shadcn/Base UI primitives, WEB ONLY (packages/ui)
-    └── components/        # Composed chrome, built on ui (packages/components)
-```
 
 ### The three UI packages, and why they are three
 
@@ -52,51 +42,13 @@ import { cn } from "@app/core/lib/utils"                            // no barrel
 import type { NavItem } from "@app/core/types/nav"
 ```
 
-`@app/ui`'s `exports` is wildcard-based, so `shadcn add` needs no `package.json` edit —
-but its barrel (`packages/ui/src/index.ts`) is still hand-maintained, so **a new
-primitive needs a line there** or it is silently missing from `@app/ui`.
-
 ### Where a new component goes
 
-| The component… | Goes in |
-|---|---|
-| has no render dependency at all | `packages/core` |
-| is a shadcn/Base UI primitive | `packages/ui` |
-| composes primitives, no Clerk and no API client | `packages/components` |
-| is shared by both portals and needs the API client | `packages/api-client` |
-| is bound to **one portal's** auth, routes or payloads | that portal's `src/components/` |
-| is a shipped example a fork should **rewrite, not configure** | that portal's `src/components/`, even with no such binding |
-
-The last row is what `general-settings.tsx` is. It imports only `@app/ui`, `next-themes`
-and `lucide-react`, so the rule above says "promote" — and it stays in both portals
-anyway. Its body *is* the customization, `SETTINGS_TABS` is the extension point it hangs
-off, and duplicating it is the demonstration that each portal owns its settings surface.
-The question that decides this row is: **does a fork configure this, or rewrite it?**
-
-The slot pattern (`settingsSlot`, `userSlot`, `footerSlot`) is the promotion mechanism,
-not just a way to avoid importing `@app/auth` into `packages/components`. When one
-impure line is all that holds a component in an app, the line becomes a slot and the
-component moves up.
-
-### Failure modes with no safety net
-
-- A new package without a matching `@source` line in **both** portals' `globals.css`
-  builds clean and renders unstyled. Tailwind scans filesystem paths, not package
-  graphs. Verify against `h-125` and `max-w-2xl!` in the emitted CSS — they exist
-  nowhere else in the repo.
-- A new primitive is importable as `@app/ui/<name>` immediately, because `exports` is a
-  wildcard, but is missing from the barrel until someone edits `src/index.ts` by hand.
-  That has already happened twice — `AvatarBadge` and `SidebarFooterMenu`.
-- `packages/core` compiles without the `dom` lib, so the "no renderer" rule is enforced
-  by `tsc` rather than by review. Worth stating, because the error it produces looks
-  like a misconfiguration if you do not know it is deliberate.
-- A new workspace package needs to be added to `transpilePackages` in **both** portals'
-  `next.config.ts`. The packages ship raw TypeScript, so a package left out doesn't fail
-  at the config — it fails as a parse error somewhere inside the package itself, with
-  nothing connecting it back to `next.config.ts`.
-- A new workspace package needs its `package.json` copied in `web-app/Dockerfile`'s
-  deps stage, or `pnpm install --frozen-lockfile` fails in the container and nowhere
-  else.
+Six homes, decided by what the component imports — and, for a shipped example, by
+whether a fork configures it or rewrites it. The table, the slot pattern that promotes
+a component, adding a primitive (its barrel line is by hand) and the three edits a new
+package needs that fail far from their cause are in the `web-app-patterns` skill,
+`references/components.md`.
 
 Both apps share the same conventions, dependencies, and patterns described in this file.
 
@@ -104,40 +56,14 @@ Both apps share the same conventions, dependencies, and patterns described in th
 
 ## Dev Commands
 
-Run from `web-app/`:
-
-```bash
-pnpm install               # install all workspace dependencies
-
-pnpm dev:internal          # internal-portal → http://localhost:3000
-pnpm dev:supplier          # supplier portal  → http://localhost:3002
-
-pnpm build                 # build all apps
-pnpm type-check            # TypeScript check across workspace
-pnpm test                  # Vitest, once (also `make test-web` from the repo root)
-pnpm test:watch            # Vitest in watch mode
-```
-
-3000 and 3002 are the main checkout's defaults. From the repo root,
+Scripts are in `web-app/package.json`. `pnpm dev:internal` / `pnpm dev:supplier`
+use the main checkout's ports (3000 / 3002); from the repo root,
 `make dev-internal` / `make dev-supplier` follow the checkout's own ports, which
 differ in a git worktree (see *Parallel worktrees* in the root `CLAUDE.md`).
-
-Env files must exist before starting:
-
-```bash
-cp apps/internal-portal/.env.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
-```
 
 ---
 
 ## Lint and Format
-
-```bash
-pnpm lint            # ESLint in both portals and in packages/ui, packages/auth
-pnpm format          # Prettier --write (config: .prettierrc, semicolons off)
-pnpm format:check    # what the root pre-push hook runs
-```
 
 Prettier ignores Markdown and the generated client; orval formats the latter
 through the same config, so `make gen-contract` and `pnpm format` agree.
@@ -170,15 +96,12 @@ module-load constants all fail far from their cause.
 
 ## Skills to Use
 
-Invoke these skills before starting the relevant task:
+Invoke these skills before starting the relevant task. The `web-app-patterns` skill's
+reference files are the long form of the conventions on this page.
 
 | Situation | Skill |
 |-----------|-------|
-| Designing or building any UI — layouts, components, pages, visual hierarchy | `/frontend-design` |
-| Deciding where/how to fetch data from the API | `/nextjs-data-fetching-strategy` |
-| Building or refactoring React components | `/react` |
-| Adding auth, handling user input, or touching security-sensitive code | `/security-review` |
-| Performance optimization — bundle size, rendering, caching | `/vercel-react-best-practices` |
+| Adding a screen, a component or a table, wiring it to the API, gating it by role — any change under `apps/*/src/` or `packages/` | `/web-app-patterns` |
 | Writing, running or debugging any test | `/web-app-testing` |
 
 ---
@@ -193,22 +116,6 @@ node_modules/next/dist/docs/
 ```
 
 Heed deprecation notices. Do not assume patterns from older versions apply.
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Framework | Next.js 16 + React 19, App Router |
-| Language | TypeScript 5 (strict) |
-| Styling | Tailwind CSS v4 |
-| UI Components | shadcn/ui + **Base UI** (`@base-ui/react`) + Lucide React |
-| Auth | Clerk (`@clerk/nextjs`) |
-| Data Fetching | TanStack Query v5 — hooks generated by orval (`@app/api-client`) |
-| Validation | Zod v4 |
-| Notifications | Sonner |
-| Package Manager | pnpm (workspaces) |
 
 ---
 
@@ -231,9 +138,9 @@ This project uses **Base UI** (`@base-ui/react`), not Radix UI. Patterns are dif
 
 ### Shared Components
 
-Before creating a new component, check the placement table in "Where a new component
-goes" above — there are five candidate homes now, and `packages/ui` is only the one for
-shadcn/Base UI primitives.
+Before creating a new component, check the placement table in
+`references/components.md` of the `web-app-patterns` skill — `packages/ui` is only the
+home for shadcn/Base UI primitives.
 
 ### Server vs Client Components
 
@@ -243,51 +150,17 @@ shadcn/Base UI primitives.
 
 ### Authentication
 
-- **Clerk** handles auth — no login/register endpoints to build
-- Client components: `useAppAuth()` from `@app/auth` — never `useUser()` / `useAuth()` directly. Server components: `currentUser()`
-- `useAppAuth()` exposes `user`, `role`, `isLoaded`, `getToken` and `signOut`, and **no vendor type**: `user` is `@app/auth`'s own `AppUser` (`name`, `email`, `imageUrl`). `useClerk()` is only for Clerk's own UI (`openUserProfile`, `openOrganizationProfile`)
-- **Sign out with `signOut()` from `useAppAuth()`**, never `useClerk().signOut`. It ends the session and then loads `AuthProvider`'s `signOutUrl` as a new document, so nothing the previous user cached survives. For the same reason `QueryProvider` sits in the signed-in route group's layout, not the root
-- Trust middleware: if a protected route renders, the user is authenticated — no manual auth checks needed
-- Use embedded Clerk components (custom routes), not hosted Account Portal
+- **Clerk** (`@clerk/nextjs` **v6, Core 2**) handles auth — no login/register endpoints to
+  build. Use embedded Clerk components (custom routes), not the hosted Account Portal
+- Client components: `useAppAuth()` from `@app/auth` — never `useUser()` / `useAuth()`.
+  Check `isLoaded` before role-dependent UI; compare `role === Role.*`
+- Sign out with `signOut()` from `useAppAuth()`, never `useClerk().signOut`
+- Trust the proxy: if a protected route renders, the user is authenticated and holds a
+  role that belongs in this portal — no manual checks
+- Auth logic lives in `packages/auth`, never `packages/ui`
 
-### Clerk RBAC — Auth Package and Role-Gated Rendering
-
-Shared auth logic lives in **`packages/auth`** (`@app/auth`) — not in `packages/ui`. This includes the `Role` enum, `getUserRole()`, `isInternalRole()`, `ROLE_LABELS`, and the `AuthProvider` / `useAppAuth()` hook.
-
-This project is on `@clerk/nextjs` **v6 (Core 2)**. The current SDK (`<Show>`) is not available.
-
-**In client components — always use `useAppAuth()`**, never `useAuth()` or `useUser()` directly:
-
-```typescript
-import { useAppAuth, Role } from '@app/auth'
-
-const { user, role, isLoaded } = useAppAuth()
-if (role === Role.PROJECT_MANAGER) { ... }
-```
-
-**Declarative role gates — use `<Protect>`** from `@clerk/nextjs` (Core 2):
-
-```tsx
-import { Protect } from '@clerk/nextjs'
-
-<Protect role="org:project_manager">
-  <InviteButton />
-</Protect>
-```
-
-**Middleware (`proxy.ts`):** read `orgRole` from `auth()` and pass through `getUserRole()` from `@app/auth`:
-
-```typescript
-import { getUserRole, isInternalRole } from '@app/auth'
-
-// correct
-const { orgRole } = await auth()
-const role = getUserRole(orgRole)
-
-// wrong — reads user metadata, not org role
-const { sessionClaims } = await auth()
-const role = sessionClaims?.metadata?.role
-```
+The long form — the `useAppAuth()` fields, `<Protect>`, `proxy.ts`, signing out, adding a
+role — is `references/auth.md` in the `web-app-patterns` skill.
 
 ### API Client — Generated, Never Hand-Written
 
@@ -301,42 +174,27 @@ import { GetReadinessResponse } from "@app/api-client/zod/system"   // Zod valid
 import { ApiError } from "@app/api-client"                          // the error type
 ```
 
-Rules:
+- **Never hand-edit `packages/api-client/src/generated/`** — orval runs with `clean: true`.
+- **Regenerate in the same commit as the server change**: `make gen-contract` from the
+  repo root (the pre-commit hook, the image build and CI all fail on drift).
+- Import hooks **per tag** (`/endpoints/<tag>`). Streaming routes have no hook — plain `fetch`.
+- Generated hooks are **client-only** (`useApiFetch` is a hook); a Server Component, route
+  handler or script needs a hand-written fetch. No `src/lib/api/` layer.
+- Every hook's `error` is an `ApiError` — `{ status, body, requestId }`. `QueryProvider`
+  toasts copy mapped from the **status**; never render `error.message` or `error.body`.
 
-- **Never hand-edit anything under `packages/api-client/src/generated/`.** orval runs
-  with `clean: true` and deletes that tree on every generation.
-- **Regenerate in the same commit as the server change.** Run `make gen-contract` from
-  the repo root, or the **Contract: Generate** VS Code task. `make check-contract` does
-  the same and then fails on drift — that is what CI and the image build run, and the
-  pre-commit hook blocks a `server/app/` commit that leaves the artifacts behind.
-- Import hooks **per tag** (`/endpoints/<tag>`), not from a barrel. Tags come from the
-  route's FastAPI tag.
-- Streaming routes are deliberately excluded from generation (they carry the `streaming`
-  tag), so they have no hook. Call them with plain `fetch`.
-- Generated hooks route through `useApiFetch`, which is **a hook** — it reads the live
-  Clerk token from `useAppAuth()` on every call. That makes them client-only: a Server
-  Component, route handler or script needs its own hand-written fetch.
-- Do not create an `src/lib/api/` layer. The generated client is that layer.
-
-**Errors.** Every hook's `error` is an `ApiError` — `{ status, body, requestId }` — and
-nothing else. `QueryProvider` (`@app/api-client`) toasts centrally, mapping the
-**status** to curated copy in `@app/core`'s `constants/messages.ts`.
-
-```typescript
-// ✅ Correct — a status maps to copy we wrote
-if (error.status === 404) toast.error(messages.toasts.notFound)
-
-// ❌ Wrong — server-authored text must never reach the UI
-toast.error(error.message)
-toast.error(String(error.body))
-```
+Which path to take, pagination, filters, polling and the server fetch are
+`references/data-access.md` in the `web-app-patterns` skill.
 
 ### Loading States
 
 - Use **component-level skeletons** for auth loading and data fetching
 - Use **`loading.tsx`** for route-level navigation loading
 - Never return `null` from loading states — always return a skeleton
-- Use sidebar-aware skeleton colors: `bg-sidebar-accent`, `bg-muted`, `bg-foreground/10`
+- Skeleton colors: `Skeleton`'s own `bg-muted` in page content, `bg-sidebar-accent` inside the sidebar
+
+Adding a screen — its route group, sidebar entry, loading state and copy — is
+`references/pages.md` in the `web-app-patterns` skill.
 
 ### Error Handling
 
@@ -350,24 +208,12 @@ toast.error(String(error.body))
 
 ## Common Pitfalls
 
-- Using `asChild` (Radix) instead of `render` prop (Base UI)
-- Placing `DropdownMenuLabel` outside `DropdownMenuGroup`
-- Creating new components in `apps/` that belong in one of the shared packages — see
-  "Where a new component goes" above
-- Returning `null` from loading states
-- Using wrong skeleton colors inside sidebars
-- Forgetting `"use client"` on components with hooks or event handlers
+Beyond the rules above:
+
 - Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the portals only need the publishable key and the sign-in/sign-up URLs
 - Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
 - Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
-- Calling `useAuth()` / `useUser()` directly in components — use `useAppAuth()` from `@app/auth`
 - Calling `useClerk().signOut` — a client-side route keeps the previous user's caches; use `signOut` from `useAppAuth()`
 - Moving `QueryProvider` back to the root layout — the cache would outlive the session
 - Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
-- Putting auth logic in `packages/ui` — it belongs in `packages/auth`
-- Naming a Vitest file `*.spec.ts` — that suffix is reserved for Playwright and excluded from the run
 - Putting `NODE_ENV` in an env file — Next sets it per command; anywhere else it leaks into (the root Makefile exports `internal-portal/.env.local`) it decides how React builds under test
-- Hand-editing files under `packages/api-client/src/generated/` — the next generation deletes them
-- Hand-writing a type for a request or response body — import it from `@app/api-client/types`
-- Changing a server route without running `make gen-contract` in the same commit
-- Rendering `error.message` or `error.body` — map `error.status` to copy in `@app/core`'s `constants/messages.ts`

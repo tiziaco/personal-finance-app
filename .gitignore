@@ -7,3 +7,8 @@
 
 # Playwright MCP session artifacts (page snapshots, console logs)
 .playwright-mcp/
+.pytest_cache/
+.ruff_cache/
+.superpowers/*
+!.superpowers/specs/
+!.superpowers/plans/

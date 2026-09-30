@@ -8,12 +8,12 @@ export default function UnauthorizedPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-6 text-center">
-      <h1 className="text-2xl font-semibold">Accesso non consentito</h1>
+      <h1 className="text-2xl font-semibold">Access denied</h1>
       <p className="text-muted-foreground max-w-md">
-        Il tuo account non ha i permessi per accedere al portale fornitori.
-        Contatta un amministratore se ritieni che si tratti di un errore.
+        Your account does not have access to the supplier portal. Contact an
+        administrator if you think this is a mistake.
       </p>
-      <Button onClick={() => void signOut()}>Esci</Button>
+      <Button onClick={() => void signOut()}>Sign out</Button>
     </div>
   )
 }

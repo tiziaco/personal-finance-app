@@ -10,7 +10,7 @@ import "@/styles/globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Template App | Portale fornitore",
+  title: "Template App | Supplier portal",
   description:
     "Template App is a multi-tenant B2B platform template. This is the external portal, where suppliers submit documents and track their orders.",
   icons: {

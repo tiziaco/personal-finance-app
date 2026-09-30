@@ -4,9 +4,8 @@ How to wire a Clerk instance to this app's webhook endpoint. Repeat once per
 Clerk instance (development and production are separate instances with
 separate endpoints and **separate signing secrets**).
 
-Design rationale lives in
-`docs/superpowers/specs/2026-08-26-ws4-clerk-webhooks-design.md`. This file is
-the operational checklist only.
+This file is the operational checklist only. What the events do to the user row is
+[`../architecture/authentication.md`](../architecture/authentication.md) §4.
 
 ---
 

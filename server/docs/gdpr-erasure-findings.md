@@ -1,13 +1,16 @@
 # GDPR Erasure — Findings
 
-**Status:** findings only. No decisions taken, nothing implemented from this doc.
-**Date:** 2026-08-25 · **Re-checked:** 2026-08-27 (after WS4 Clerk webhooks)
+**Status:** findings only. No decisions taken, nothing implemented from this doc. The
+open items are tracked in [`docs/TODO.md`](../../docs/TODO.md).
+**Date:** 2026-08-25 · **Re-checked:** 2026-08-27 (after WS4 Clerk webhooks), 2026-09-25
+(after the module layout and PR #5)
 **Purpose:** input to a future spec + implementation plan. Written during the WS3
 auth-hardening branch, after `DELETE /api/v1/auth/me` was repaired (it had never
 completed successfully — `anonymize_user()` nulled a `NOT NULL` column).
 
-Related: [`gdpr-compliance-guide.md`](./gdpr-compliance-guide.md) (the current,
-partly-misframed guide), [`authentication.md`](./authentication.md).
+Related: [`gdpr-compliance-guide.md`](./gdpr-compliance-guide.md) (the general
+pattern), [`authentication.md`](./authentication.md), and **GDPR — Right to Erasure** in
+[`server/CLAUDE.md`](../CLAUDE.md) (the cascade as built).
 
 ---
 
@@ -21,6 +24,30 @@ Findings are split by **when** they need addressing, not by severity:
 - **Group B — for the B2C fork.** Concerns that only bite, or bite much harder,
   when the data subjects are consumers.
 - **Group C — framing / doc debt.**
+
+### Re-check, 2026-09-25 (after the module layout and PR #5)
+
+Every finding was re-verified against the code. **Nine still stand; C1 is closed.**
+
+| | Verdict |
+|---|---|
+| A1 pseudonymisation | **Unchanged.** `anonymize_user()` keeps `user.id`; `conversation.user_id` still points at it |
+| A2 Langfuse | **Unchanged.** `langfuse_user_id` is still set on every call (`app/agents/shared/observability/langfuse.py:33`); nothing masks or deletes |
+| A3 split state | **Unchanged.** `delete_me` still deletes from Clerk before `erase_user` runs |
+| A4 silent mem0 failure | **Unchanged.** `app/agents/shared/memory/factory.py:104-105` |
+| A5 log retention | **Unchanged.** No retention policy exists |
+| A6 32-bit `anonymous_id` | **Unchanged.** `app/modules/account/models.py:66` |
+| B1–B3 | **Unchanged.** Out of scope for the template |
+| C1 guide framing | **Closed.** The guide is retitled and reframed for B2B contact data |
+| C2 asymmetric user types | **Unchanged.** One flow for both |
+
+What changed underneath: the conversation half of erasure is now `conversation`'s
+`USER_ERASING` subscriber (`app/modules/conversation/handlers.py`), not a step in
+`erase_user`, and PR #5 made it delete checkpoints for **every** conversation the user
+owns, soft-deleted ones included — before, a conversation deleted earlier relied on the
+delete route having cleared its checkpoints. That strengthens the half the findings
+already counted as correct; it closes none of them. The references below are updated to
+match.
 
 ### Re-check, 2026-08-27 (after WS4)
 
@@ -145,7 +172,7 @@ conversations verbatim**. This defeats any anonymisation claim on its own,
 regardless of what the `user` row looks like.
 
 Note the asymmetry: the cascade hard-deletes LangGraph checkpoints
-(`app/modules/account/service.py`) — the correct instinct — while the same
+(`app/modules/conversation/handlers.py`) — the correct instinct — while the same
 message content sits in Langfuse untouched. WS4 widened the reach rather than
 the coverage: `erase_user` now also runs from the `user.deleted` webhook, so a
 dashboard-initiated deletion leaves Langfuse equally untouched.
@@ -156,7 +183,7 @@ Needs: a Langfuse deletion path (API or documented retention), or masking at
 ### A3. Partial-failure ordering leaves accounts in a split state
 
 `app/modules/account/router/auth.py` deletes from Clerk **first**, before any local work.
-`delete_conversation_checkpoints`
+`delete_conversations_checkpoints`
 (`app/agents/shared/checkpointing/postgres.py`) correctly propagates on failure —
 but by then the Clerk account is already gone, the DB transaction rolls back, and
 the caller gets a 500.
@@ -178,7 +205,7 @@ irreversible external calls happen last.
 `app/agents/shared/memory/factory.py:104-105` catches and logs, then returns
 normally. Erasure reports success while the extracted-fact memories remain.
 
-Contrast with `delete_conversation_checkpoints`, which propagates. The two
+Contrast with `delete_conversations_checkpoints`, which propagates. The two
 erasure steps have opposite failure semantics for no stated reason — and on the
 webhook path the difference is now load-bearing: only the propagating step earns
 an svix redelivery.
@@ -267,7 +294,7 @@ disputes.
 
 The blocker for hard delete is **not** `user.id` (a PK, necessarily non-nullable)
 but `conversation.user_id`: NOT NULL, and its FK carries no `ondelete` clause
-(`alembic/versions/20260411_1650_0c7838405158_initial_schema.py:52`). A
+(`alembic/versions/20260411_1650_0c7838405158_initial_schema.py:53`). A
 `DELETE FROM "user"` raises `ForeignKeyViolation` today. `Supplier.contact_id` is
 already nullable and already nulled by the flow — that one is fine.
 
@@ -304,9 +331,9 @@ this ticket wider than it looks.
 
 **Retaining conversation rows buys nothing trainable.** A `Conversation` row is
 `id`, `user_id`, `name`, and timestamps (`app/modules/conversation/models.py:37-39`). The
-messages are in the LangGraph checkpoint tables keyed by `thread_id`, hard-deleted
-in `erase_user` (`app/modules/account/service.py`); `name` is cleared by `conversation`'s `USER_ERASING` handler,
-not by the anonymisation step (A1). A post-erasure row contains no
+messages are in the LangGraph checkpoint tables keyed by `thread_id`, hard-deleted by
+`conversation`'s `USER_ERASING` handler (`app/modules/conversation/handlers.py`), which
+also clears `name` — not the anonymisation step (A1). A post-erasure row contains no
 text. Keeping it buys a row count and costs a retained per-person activity series.
 
 **Training on a departed user's content is the thing Art 17 blocks.** Rules that
@@ -389,7 +416,8 @@ Findings were read from source on 2026-08-25 at commit `6c2532a`
 - `app/modules/account/router/auth.py` — `delete_me` seven-step flow
 - `app/agents/shared/observability/langfuse.py:23-37` — trace metadata
 - `app/agents/shared/memory/factory.py:98-105` — swallowed exception
-- `app/agents/shared/checkpointing/postgres.py:93-113` — checkpoint deletion (propagates)
+- `app/agents/shared/checkpointing/postgres.py:93-120` — checkpoint deletion (propagates)
+- `app/modules/conversation/handlers.py` — the conversation half of the cascade (since the module layout)
 - `app/api/middlewares/logging.py:37-40` — identifier binding
 
 `grep -rn "mask" app/` returns nothing — no Langfuse content masking.

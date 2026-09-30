@@ -1,0 +1,47 @@
+{
+  "name": "@app/data-table",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./package.json": "./package.json",
+    "./client-data-table": "./src/table/client-data-table.tsx",
+    "./server-data-table": "./src/table/server-data-table.tsx",
+    "./table-search-input": "./src/table/table-search-input.tsx",
+    "./table-state": "./src/table/table-state.ts",
+    "./list-query": "./src/table/list-query.ts",
+    "./columns": "./src/table/columns.ts",
+    "./use-local-table-state": "./src/table/use-local-table-state.ts",
+    "./use-stored-column-visibility": "./src/table/use-stored-column-visibility.ts",
+    "./url-state/use-url-table-state": "./src/url-state/use-url-table-state.ts",
+    "./url-state/params": "./src/url-state/params.ts",
+    "./url-state/prefix-keys": "./src/url-state/prefix-keys.ts",
+    "./url-state/date-filter": "./src/url-state/date-filter.ts",
+    "./url-state/url-state-adapter": "./src/url-state/url-state-adapter.ts",
+    "./url-state/testing": "./src/url-state/testing.ts",
+    "./filters/filter-panel": "./src/filters/filter-panel.tsx",
+    "./filters/filter-chip": "./src/filters/filter-chip.tsx",
+    "./filters/date-filter-control": "./src/filters/date-filter-control.tsx"
+  },
+  "dependencies": {
+    "@app/core": "workspace:*",
+    "@app/ui": "workspace:*",
+    "@tanstack/match-sorter-utils": "^8.19.4",
+    "@tanstack/react-table": "^8.21.3",
+    "lucide-react": "^1.8.0",
+    "nuqs": "^2.10.1"
+  },
+  "peerDependencies": {
+    "next": ">=16.0.0",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "eslint": "^9",
+    "eslint-config-next": "16.2.3",
+    "typescript": "^5.9.3"
+  },
+  "scripts": {
+    "lint": "eslint"
+  }
+}

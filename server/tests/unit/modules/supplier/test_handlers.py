@@ -1,4 +1,4 @@
-"""The supplier module's reactions to account events (architecture §5)."""
+"""The supplier module's reactions to account events (architecture §8)."""
 
 from unittest.mock import AsyncMock, MagicMock, patch
 

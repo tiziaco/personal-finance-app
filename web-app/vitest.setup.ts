@@ -27,3 +27,10 @@ Object.defineProperty(window, "matchMedia", {
 // does not. Tests of the unset branch delete it themselves.
 process.env.NEXT_PUBLIC_API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8100"
+
+// jsdom has no ResizeObserver; DataTableCore measures frozen columns with it.
+globalThis.ResizeObserver ??= class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+} as unknown as typeof ResizeObserver
