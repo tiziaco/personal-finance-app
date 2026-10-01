@@ -1,7 +1,7 @@
 """Pins for get_db_session's transaction boundary: commit after the route returns, before the response is sent."""
 
-from typing import Any
-from unittest.mock import MagicMock
+from typing import Any, Optional
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi import FastAPI
@@ -47,7 +47,13 @@ class _StubSession:
         self.events.append("close")
 
 
-async def _post(events: list[str], fail_commit: bool = False, fail_route: bool = False) -> int:
+async def _post(
+    events: list[str],
+    fail_commit: bool = False,
+    fail_route: bool = False,
+    route_error: Optional[Exception] = None,
+    path: str = "/write",
+) -> int:
     """POST to a throwaway app wired like the real one; record the first body frame in `events`."""
     app = FastAPI()
     app.state.session_factory = lambda: _StubSession(events, fail_commit)
@@ -58,6 +64,13 @@ async def _post(events: list[str], fail_commit: bool = False, fail_route: bool =
         events.append("handler")
         if fail_route:
             raise NotFoundError("gone")
+        if route_error is not None:
+            raise route_error
+        return {"ok": True}
+
+    @app.post("/items/{item_id}")
+    async def item(item_id: int, db_session: DbSession) -> dict[str, bool]:
+        events.append("handler")
         return {"ok": True}
 
     async def probed(scope: dict[str, Any], receive: Any, send: Any) -> None:
@@ -70,7 +83,7 @@ async def _post(events: list[str], fail_commit: bool = False, fail_route: bool =
 
     transport = ASGITransport(app=probed, raise_app_exceptions=False)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
-        return (await client.post("/write")).status_code
+        return (await client.post(path)).status_code
 
 
 class TestOrdering:
@@ -93,4 +106,38 @@ class TestOrdering:
         events: list[str] = []
 
         assert await _post(events, fail_route=True) == 404
+        assert events == ["handler", "rollback", "close", "body"]
+
+
+def _session_errors(logger: MagicMock) -> list:
+    return [c for c in logger.exception.call_args_list if c.args and c.args[0] == "database_session_error"]
+
+
+class TestLogging:
+    """database_session_error is for failures nothing else handles; a 4xx is not one."""
+
+    async def test_a_handled_service_error_is_not_logged_as_a_session_error(self):
+        events: list[str] = []
+
+        with patch("app.database.dependencies.logger") as logger:
+            assert await _post(events, fail_route=True) == 404
+
+        assert _session_errors(logger) == []
+        assert "rollback" in events
+
+    async def test_a_validation_error_is_not_logged_as_a_session_error(self):
+        events: list[str] = []
+
+        with patch("app.database.dependencies.logger") as logger:
+            assert await _post(events, path="/items/not-a-number") == 422
+
+        assert _session_errors(logger) == []
+
+    async def test_an_unexpected_exception_is_still_logged_with_its_traceback(self):
+        events: list[str] = []
+
+        with patch("app.database.dependencies.logger") as logger:
+            assert await _post(events, route_error=RuntimeError("boom")) == 500
+
+        assert len(_session_errors(logger)) == 1
         assert events == ["handler", "rollback", "close", "body"]

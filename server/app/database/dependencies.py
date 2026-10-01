@@ -10,6 +10,7 @@ from fastapi import (
     Depends,
     Request,
 )
+from fastapi.exceptions import RequestValidationError
 from sqlalchemy.exc import (
     DBAPIError,
     IntegrityError,
@@ -23,6 +24,7 @@ from app.exceptions.base import (
     DatabaseConflictError,
     DatabaseConnectionError,
     DatabaseError,
+    ServiceError,
 )
 
 
@@ -109,6 +111,10 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
         raise DatabaseError(
             "Database API error",
         ) from e
+    except (ServiceError, RequestValidationError):
+        # Raised by the route or a dependency and answered by its own handler, which logs it.
+        await session.rollback()
+        raise
     except Exception as e:
         await session.rollback()
         logger.exception("database_session_error", error=str(e))
