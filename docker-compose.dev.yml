@@ -14,7 +14,6 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
-        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
     ports:
       - "${INTERNAL_PORTAL_HOST_PORT:-3000}:3000"
@@ -32,7 +31,6 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
-        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
     ports:
       - "${SUPPLIER_PORTAL_HOST_PORT:-3002}:3000"
@@ -129,7 +127,7 @@ services:
   # endpoint URL registered in the Clerk dashboard survives restarts.
   # ngrok's --url flag requires a full URL with scheme; NGROK_DOMAIN is
   # stored as a bare hostname (matches the ngrok dashboard and
-  # docs/setup/clerk-webhooks.md), so the scheme is prepended here.
+  # docs/setup/clerk.md §6), so the scheme is prepended here.
   ngrok:
     image: ngrok/ngrok:latest
     command: http server:8000 --url=https://${NGROK_DOMAIN}

@@ -25,7 +25,7 @@ make dev-preflight      # verify this checkout's API and portal ports are free
 make dev-tunnel         # ngrok: https://$NGROK_DOMAIN -> localhost:$API_HOST_PORT
 ```
 
-`NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the Makefile via `-include`), not from your shell — so run the target rather than `ngrok` directly. It passes `--authtoken` explicitly, for the reason in [`docs/setup/clerk-webhooks.md`](../../../docs/setup/clerk-webhooks.md).
+`NGROK_DOMAIN` and `NGROK_AUTHTOKEN` come from the root `.env` (loaded by the Makefile via `-include`), not from your shell — so run the target rather than `ngrok` directly. It passes `--authtoken` explicitly, for the reason in [`docs/setup/clerk.md`](../../../docs/setup/clerk.md) §6.
 
 In VS Code, `Dev: All` (⇧⌘B) chains preflight → start db → migrate → API server and both portals. `Dev: All + Tunnel` adds the tunnel, for Clerk webhook work. Migrations are **not** applied automatically on this path the way the Docker `migrate` service does it — `Dev: Migrate` runs `make migrate ENV=development` on the host, **from `server/`** (the task sets `cwd`). The root Makefile has no `migrate` target: by hand it is `make -C server migrate ENV=development`, or `make docker-migrate` for the container route.
 

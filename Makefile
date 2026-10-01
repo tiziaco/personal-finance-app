@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core
+.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-apply-roles clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -33,6 +33,11 @@ DEPLOY_ENV ?= staging
 -include web-app/apps/internal-portal/.env.local
 .EXPORT_ALL_VARIABLES:
 
+# Name of the Clerk application clerk-bootstrap-env creates; its id lands in the
+# root .env as CLERK_APP_ID. One per developer:
+#   make clerk-bootstrap-env CLERK_APP_NAME="Template App Dev — <name>"
+CLERK_APP_NAME ?= Template App Dev
+
 # Default target
 help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
@@ -58,6 +63,16 @@ help:
 	@echo "  make gen-contract       - Re-export openapi.json and regenerate the typed API client"
 	@echo "  make check-contract     - Fail if openapi.json or the generated client is stale"
 	@echo "  make deploy-check       - Verify docker-compose.prod.yml builds and runs (DEPLOY_ENV=staging)"
+	@echo ""
+	@echo "Clerk (development instance — docs/setup/clerk.md):"
+	@echo "  make clerk-setup           - The next four, in order; a re-run skips creating the app"
+	@echo "  make clerk-bootstrap-env   - Create the app and write its keys to the env files"
+	@echo "  make clerk-apply-config    - Apply scripts/clerk/config.json to the instance"
+	@echo "  make clerk-apply-roles     - Apply its x_organization_roles: roles, creator and default role"
+	@echo "  make clerk-seed-users      - Create the dev org and users in server/data/clerk-dev-seed.json"
+	@echo "  make clerk-check-config    - Fail if the instance has drifted from config.json"
+	@echo "  make clerk-pull-config     - Refresh config.json from the instance"
+	@echo "  make clerk-bootstrap-oauth - Register Swagger's Authorize button (optional)"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
@@ -133,7 +148,7 @@ dev-kill:
 dev-tunnel:
 	@if [ -z "$(NGROK_DOMAIN)" ]; then \
 		echo "NGROK_DOMAIN is not set. Add it to the root .env."; \
-		echo "See docs/setup/clerk-webhooks.md for how to claim a static domain."; \
+		echo "See docs/setup/clerk.md §6 for how to claim a static domain."; \
 		exit 1; \
 	fi
 	@if [ -z "$(NGROK_AUTHTOKEN)" ]; then \
@@ -208,6 +223,40 @@ deploy-check:
 # the spec imports app.main, so a half-finished refactor would block the stack
 # from starting. Drift is the normal state while a route is being written.
 docker-build docker-build-web: check-contract
+
+# Clerk development instance. CLERK_APP_ID comes from the root .env (-include).
+# clerk-setup runs the scripts, not the targets: under -j prerequisites run in
+# parallel, and seeding needs the roles. Only bootstrap-env refuses a re-run.
+clerk-setup:
+	@if [ -n "$$CLERK_APP_ID" ]; then \
+		echo "==> CLERK_APP_ID is set ($$CLERK_APP_ID); skipping app creation"; \
+	else \
+		CLERK_APP_NAME="$(CLERK_APP_NAME)" ./scripts/clerk/bootstrap-env.sh; \
+	fi
+	@./scripts/clerk/apply-config.sh
+	@./scripts/clerk/apply-roles.sh
+	@./scripts/clerk/seed-users.sh
+
+clerk-bootstrap-env:
+	@CLERK_APP_NAME="$(CLERK_APP_NAME)" ./scripts/clerk/bootstrap-env.sh
+
+clerk-apply-config:
+	@./scripts/clerk/apply-config.sh
+
+clerk-apply-roles:
+	@./scripts/clerk/apply-roles.sh
+
+clerk-pull-config:
+	@./scripts/clerk/pull-config.sh
+
+clerk-check-config:
+	@./scripts/clerk/check-config.sh
+
+clerk-seed-users:
+	@./scripts/clerk/seed-users.sh
+
+clerk-bootstrap-oauth:
+	@./scripts/clerk/bootstrap-oauth.sh
 
 # Build commands
 # `migrate` is intentionally absent from these service lists: it shares

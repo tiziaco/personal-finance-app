@@ -19,7 +19,7 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 | `/sign-in` | Clerk's sign-in |
 | `/unauthorized` | Shown to a signed-in user without supplier-portal access |
 
-No sign-up page: suppliers arrive by invitation.
+No sign-up page: sign-up is invitation-only ([`docs/setup/clerk.md`](../../../docs/setup/clerk.md) §7).
 
 ---
 
@@ -40,9 +40,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/home
-NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home
 ```
 
 The `NEXT_PUBLIC_CLERK_*` values are read by the Clerk SDK straight from the

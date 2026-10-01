@@ -17,8 +17,9 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 |---|---|
 | `/home`, `/projects`, `/orders` | Placeholder pages in `src/app/(dashboard)/` — the example domain's screens are not built yet |
 | `/sign-in` | Clerk's sign-in |
-| `/sign-up` | Clerk's sign-up |
 | `/unauthorized` | Shown to a signed-in user without internal-portal access |
+
+No sign-up page: sign-up is invitation-only ([`docs/setup/clerk.md`](../../../docs/setup/clerk.md) §7).
 
 ---
 
@@ -39,9 +40,7 @@ NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_...
 CLERK_SECRET_KEY=sk_test_...
 
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/home
-NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home
 ```
 
 The `NEXT_PUBLIC_CLERK_*` values are read by the Clerk SDK straight from the
@@ -98,7 +97,7 @@ The app will be available at http://localhost:3000.
 src/
 ├── app/
 │   ├── (dashboard)/   # Signed-in routes, their layout (sidebar, QueryProvider)
-│   ├── (auth)/        # sign-in, sign-up
+│   ├── (auth)/        # sign-in
 │   ├── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
 │   └── unauthorized/  # Wrong-role landing page
 ├── components/

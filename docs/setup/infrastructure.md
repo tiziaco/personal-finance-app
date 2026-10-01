@@ -32,7 +32,7 @@ the root `.env`, not in addition to it.
 | `APP_ENV` | Selects the server env file Compose loads (`./server/.env.${APP_ENV}`). Default `development`. |
 | `GRAFANA_ADMIN_PASSWORD` | Grafana's admin password. Required whenever Grafana starts — see §4. |
 | `NGROK_DOMAIN` | Your reserved ngrok domain, for Clerk webhook delivery |
-| `NGROK_AUTHTOKEN` | ngrok authtoken. See [`clerk-webhooks.md`](./clerk-webhooks.md). |
+| `NGROK_AUTHTOKEN` | ngrok authtoken. See [`clerk.md`](./clerk.md) §6. |
 
 Four more sit **commented out** in `.env.example`, because the defaults are usually
 right. Set them on a machine where the defaults collide — and when several projects

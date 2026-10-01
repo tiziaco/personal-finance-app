@@ -21,16 +21,20 @@ is for, and which portal it lands in, is
 
 The slugs are English because they are identifiers — in Clerk, in `Role` on both sides,
 in every check. The labels exist only in the frontend (`ROLE_LABELS` in
-`@app/auth`). A fork renames both, and the slugs in the Clerk dashboard too
+`@app/auth`). A fork renames both, and the slugs in `scripts/clerk/config.json` too
 ([`setup/making-it-yours.md`](../setup/making-it-yours.md)).
 
 **Every check compares `Role` values, never Clerk's strings.** One function on each side
 turns the token's claim into a `Role` — `get_current_role()` in `account`, `getUserRole()`
 in `@app/auth` — so a change of identity provider rewrites those two and no role check.
 
-**Only the server may change an organization.** Inviting a member, removing one or
-changing a role needs Clerk's secret key, which never reaches a portal. No route does it
-yet; today it is done in Clerk's dashboard.
+**Only a project manager changes an organization's members.** Clerk's system permissions
+on `project_manager` let them invite, remove and re-role members from the organization
+profile the internal portal opens (`openOrganizationProfile()`); no other role holds them,
+and no API route changes membership. The server learns of each change from the membership
+webhooks, or from the token at the member's next request. An invitation sent this way
+carries no `supplier_id`, so an invited supplier gets `SUPPLIER_NOT_LINKED` until a
+`Supplier` row is linked to them.
 
 **A supplier is also a row**, linked to its portal contact — the link and its lifecycle
 are in [`../data-model/supplier.md`](../data-model/supplier.md). `SupplierID` (§2) resolves it.

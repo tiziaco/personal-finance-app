@@ -82,5 +82,5 @@ route-group layout, not the root, for the same reason.
 1. `packages/auth/src/permissions.ts`: the slug in `Role`, its label in `ROLE_LABELS`, and — if no
    predicate fits — a new `is<X>Role`. `permissions.test.ts` is next to it.
 2. The predicate in the `proxy.ts` of each portal that admits it.
-3. The role in the Clerk dashboard — `docs/setup/clerk.md`.
+3. The role in `x_organization_roles` (`scripts/clerk/config.json`), then `make clerk-apply-roles` — `docs/setup/clerk.md` §1.
 4. The server's side of it — `docs/architecture/authorization.md`.

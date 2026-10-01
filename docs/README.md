@@ -11,8 +11,7 @@ a change is made once. File names are kebab-case, except the repo-level trackers
 
 | Doc | What it covers |
 |---|---|
-| [`setup/clerk.md`](./setup/clerk.md) | Clerk dashboard setup — organizations, the four role slugs, keys, `ALLOWED_ORIGINS`. **Do this first; nothing authenticates without it.** |
-| [`setup/clerk-webhooks.md`](./setup/clerk-webhooks.md) | Webhook endpoint, signing secret, and the ngrok tunnel for local delivery |
+| [`setup/clerk.md`](./setup/clerk.md) | Clerk setup — organizations, roles, keys, `ALLOWED_ORIGINS`, webhooks. **Do this first; nothing authenticates without it.** |
 | [`setup/infrastructure.md`](./setup/infrastructure.md) | The root `.env`, and the Prometheus/Grafana/cAdvisor stack — what it covers, and what production does not |
 | [`setup/making-it-yours.md`](./setup/making-it-yours.md) | Renaming the template for your project — service identity, branding, deploy names, and replacing the example domain |
 | [`setup/deploy-dokploy.md`](./setup/deploy-dokploy.md) | Dokploy/Traefik facts for a first deploy — what `make deploy-check` cannot exercise, and what to check when a clean build 404s |

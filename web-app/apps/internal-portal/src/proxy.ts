@@ -2,7 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
 import { getUserRole, isInternalRole } from "@app/auth"
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"])
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)"])
 // Reachable only when signed in, and deliberately NOT in isPublicRoute: this is
 // where the role guard below sends people, so it has to sit outside that guard
 // or it redirects to itself until the browser gives up.
@@ -21,7 +21,7 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/home", req.url))
   }
 
-  // Allow public routes (sign-in, sign-up) without auth
+  // Sign-in is the only public route: sign-up is invitation-only, on Clerk's Account Portal
   if (isPublicRoute(req)) return
 
   // Enforce authentication

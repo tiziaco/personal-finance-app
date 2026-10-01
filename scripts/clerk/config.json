@@ -1,0 +1,84 @@
+{
+  "auth_access_control": {
+    "sign_up_mode": "restricted"
+  },
+  "auth_email": {
+    "required_for_sign_up": true,
+    "sign_in_strategies": [],
+    "used_for_sign_in": true,
+    "used_for_sign_up": true,
+    "verification_strategies": [
+      "email_code"
+    ]
+  },
+  "auth_multi_factor": {
+    "authenticator_app": {
+      "enabled": false
+    },
+    "backup_code": {
+      "enabled": false
+    },
+    "required_for_sign_in": false,
+    "required_for_sign_up": false
+  },
+  "auth_password": {
+    "device_trust": {
+      "enabled": false
+    },
+    "disable_hibp": true,
+    "enabled": true,
+    "enforce_hibp_on_sign_in": false,
+    "min_length": 8
+  },
+  "organization_settings": {
+    "admin_delete_enabled": false,
+    "enabled": true,
+    "force_organization_selection": true,
+    "slug_disabled": true
+  },
+  "user_model": {
+    "first_name": {
+      "enabled": true,
+      "required": true
+    },
+    "last_name": {
+      "enabled": true,
+      "required": true
+    }
+  },
+  "x_organization_roles": {
+    "creator_role": "org:project_manager",
+    "default_role": "org:supplier",
+    "roles": [
+      {
+        "description": "The final check before payment; read-only",
+        "key": "org:approver",
+        "name": "Approver",
+        "permissions": []
+      },
+      {
+        "description": "Manages projects, suppliers, orders, document checklists and the organization's members",
+        "key": "org:project_manager",
+        "name": "Project Manager",
+        "permissions": [
+          "org:sys_memberships:manage",
+          "org:sys_memberships:read",
+          "org:sys_profile:delete",
+          "org:sys_profile:manage"
+        ]
+      },
+      {
+        "description": "Document due diligence beside the project manager; approves or rejects documents",
+        "key": "org:reviewer",
+        "name": "Reviewer",
+        "permissions": []
+      },
+      {
+        "description": "An external company's contact; sees its own orders and uploads its own documents",
+        "key": "org:supplier",
+        "name": "Supplier",
+        "permissions": []
+      }
+    ]
+  }
+}

@@ -62,16 +62,40 @@ the two agree on every real token. **Unblocks:** nothing today; make it strict b
 second identity provider or a hand-minted token (a test fixture, a service account) can
 reach the API. Reasoning: [`architecture/authorization.md`](./architecture/authorization.md) §2.
 
-## Clerk — invitation-only sign-up
+## Clerk — supplier dev seed
 
-The supplier portal has no sign-up page and suppliers are meant to arrive by invitation, but
-[`setup/clerk.md`](./setup/clerk.md) has no step restricting sign-ups, so anyone can
-sign up through the internal portal and land on `/unauthorized` with no organization. The
-supplier portal's `.env.example` also sets `NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up`, a
-page it does not have. Open sign-up also stores the stranger: the `user.created` webhook
-inserts a user row with their email and names, safe only on an invitation-only instance.
-**Unblocks:** a production Clerk instance. Decide whether the internal portal keeps self
-sign-up at all; keeping it means gating `user.created` on membership.
+`make clerk-seed-users` seeds the three internal roles, not a supplier. A `supplier` user
+needs a `Supplier` row whose `contact_id` points at them, or every request is 403
+`SUPPLIER_NOT_LINKED`, and that link is made only from `supplier_id` membership metadata.
+Seeding one needs a server-side dev seed that creates the `Supplier` first (its data beside
+`server/data/clerk-dev-seed.json`), then a membership carrying its id — or a real
+invitation. **Unblocks:** checking the supplier portal with one command. Reasoning:
+[`setup/clerk.md`](./setup/clerk.md) §2.
+
+## Clerk — ticket-aware sign-up pages
+
+Invitations complete on Clerk's hosted Account Portal, so an invitee leaves the portal's
+domain to create their account. Sign-up pages in both portals that accept only an
+invitation ticket (`__clerk_ticket`), with invitations whose `redirect_url` points at
+them, would keep the whole flow on the portal. Point Clerk's `paths.sign_up` at the page
+(scriptable in `config.json`) and restore
+`NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home`, which the page reads; the
+dashboard redirect in §7 then becomes unnecessary. **Unblocks:** a branded invitation
+flow.
+Reasoning: [`setup/clerk.md`](./setup/clerk.md) §7.
+
+## Clerk — offboarding policy
+
+Removing a member deletes the membership, not the Clerk user: `handle_membership_deleted`
+clears `org_id` and the cached role, and the account stays, unable to do anything once
+user-created organizations are off. Deleting it is manual, and runs `erase_user` through
+the `user.deleted` webhook — irreversible, so not something a mistaken "Remove member"
+should trigger. The usual enterprise shape is two steps: ban on the last membership's
+removal (sessions end, sign-in is blocked, the record stays), delete after a retention
+period or on an erasure request. **Unblocks:** offboarding without an operator in Clerk's
+dashboard. **Decide first:** the retention period, and **Erasure — decide the target
+state** above, which is what the deletion runs. Reasoning:
+[`setup/clerk.md`](./setup/clerk.md) §1.
 
 ## Deploy — per-portal build args
 

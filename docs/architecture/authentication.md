@@ -28,9 +28,9 @@ integration, and `get_current_role()` — the one function that turns the token'
 a `Role`, as `getUserRole()` does on the web. A change of provider rewrites those and no
 route.
 
-**Sign-up is open today.** Anyone can sign up on the internal portal and lands on
-`/unauthorized` with no organization; the supplier portal has no sign-up page
-([`../TODO.md`](../TODO.md), **Clerk — invitation-only sign-up**).
+**Sign-up is invitation-only.** Clerk's `restricted` mode refuses anyone without an
+invitation; invitations complete on Clerk's Account Portal, and neither portal has a
+sign-up page ([`../setup/clerk.md`](../setup/clerk.md) §7).
 
 ## 2. The token
 
@@ -96,7 +96,7 @@ person with no organization membership at all gets a `403`.
 
 **It is kept current by webhooks, not by signing in** — `user.created`, `user.updated`,
 `user.deleted`, and `organizationMembership.created`, `.updated` and `.deleted`
-([`setup/clerk-webhooks.md`](../setup/clerk-webhooks.md)).
+([`setup/clerk.md`](../setup/clerk.md) §6).
 
 | Field | Written by |
 |---|---|

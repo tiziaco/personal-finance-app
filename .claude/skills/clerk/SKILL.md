@@ -1,11 +1,13 @@
 ---
 name: clerk
-description: Clerk authentication router. Use when user asks about adding authentication,
-  setting up Clerk, custom sign-in flows, Swift or native iOS auth, native Android
-  auth, Next.js patterns, React patterns, Vue patterns, Nuxt patterns, Astro patterns,
-  TanStack Start patterns, Expo patterns, React Router patterns, Chrome Extension patterns,
-  organizations, syncing users, or testing. Automatically routes to the specific skill
-  based on their task.
+description: Clerk authentication router. Use when user asks about Clerk CLI operations,
+  adding authentication, setting up Clerk, custom sign-in flows, Swift or native iOS
+  auth, native Android auth, Next.js patterns, React patterns, Vue patterns, Nuxt
+  patterns, Astro patterns, TanStack Start patterns, Expo patterns, React Router
+  patterns, Chrome Extension patterns, organizations, billing, subscriptions, payments,
+  pricing, plans, seat-based pricing, feature entitlements, syncing users, testing,
+  impersonating a user, or testing webhooks locally.
+  Automatically routes to the specific skill based on their task.
 license: MIT
 metadata:
   version: 2.0.0
@@ -35,8 +37,16 @@ All skills are written for the current SDK. When something differs in Core 2, it
 
 **Adding Clerk to your project** → Use `clerk-setup`
 - Framework detection and quickstart
-- Environment setup, API keys, Keyless flow
+- Environment setup, API keys, temporary dev keys via `clerk init`
 - Migration from other auth providers
+
+**Operating Clerk from the CLI** → Use `clerk-cli`
+- Auth, linking, `doctor`, and environment pulls
+- User, org, session, app, and instance management
+- Impersonating a user (`clerk impersonate`) and local webhook testing (`clerk webhooks listen`)
+- Feature toggles (`clerk enable orgs`, `clerk enable billing`)
+- Backend, Platform, and Frontend API calls through `clerk api`
+- Deploy handoff and deploy status verification
 
 **Custom sign-in/sign-up UI** → Use `clerk-custom-ui`
 - Custom authentication flows with `useSignIn` / `useSignUp` hooks
@@ -79,10 +89,11 @@ All skills are written for the current SDK. When something differs in Core 2, it
 - Route protection via loaders
 - Vinxi server integration
 
-**Expo patterns** → Use `clerk-expo-patterns`
-- Secure token storage
-- OAuth deep linking
-- Push notifications with auth
+**Expo / React Native auth** → Use `clerk-expo`
+- Prebuilt native components (AuthView, UserButton)
+- Custom flows: email, password, SMS/phone OTP, MFA
+- OAuth/SSO and native Google/Apple sign-in
+- Expo Router protected routes, token storage, push notifications
 
 **Chrome Extension patterns** → Use `clerk-chrome-extension-patterns`
 - Background scripts auth
@@ -94,6 +105,13 @@ All skills are written for the current SDK. When something differs in Core 2, it
 - Organization slugs in URLs
 - Roles, permissions, RBAC
 - Member management
+
+**Billing & Subscriptions** → Use `clerk-billing`
+- `<PricingTable />` component
+- Plan and feature gating with `has()`
+- Seat-based B2B billing with organizations
+- Subscription lifecycle webhooks
+- Free trials, invoicing
 
 **Webhooks** → Use `clerk-webhooks`
 - Real-time events
@@ -125,6 +143,7 @@ All skills are written for the current SDK. When something differs in Core 2, it
 
 If you know your task, you can directly access:
 - `/clerk-setup` - Framework setup
+- `/clerk-cli` - CLI operations and Clerk resource management
 - `/clerk-custom-ui` - Custom flows & appearance
 - `/clerk-nextjs-patterns` - Next.js patterns
 - `/clerk-react-patterns` - React patterns
@@ -133,9 +152,10 @@ If you know your task, you can directly access:
 - `/clerk-nuxt-patterns` - Nuxt patterns
 - `/clerk-astro-patterns` - Astro patterns
 - `/clerk-tanstack-patterns` - TanStack Start patterns
-- `/clerk-expo-patterns` - Expo patterns
+- `/clerk-expo` - Expo / React Native
 - `/clerk-chrome-extension-patterns` - Chrome Extension patterns
 - `/clerk-orgs` - Organizations
+- `/clerk-billing` - Billing & subscriptions
 - `/clerk-webhooks` - Webhooks
 - `/clerk-testing` - Testing
 - `/clerk-swift` - Swift/native iOS

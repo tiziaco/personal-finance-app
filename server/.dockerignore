@@ -57,6 +57,9 @@ AGENTS.md
 # Database and config files
 schema.sql
 
+# Seed data — committed dev passwords, never in an image.
+data/
+
 # Scripts not needed in container.
 # The Dockerfile copies scripts/ wholesale, so this denylist is what keeps
 # host-only scripts out of the image — add new ones here.

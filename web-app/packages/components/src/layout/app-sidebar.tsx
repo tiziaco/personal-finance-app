@@ -1,5 +1,6 @@
 "use client"
 
+import { Fragment } from "react"
 import {
   Sidebar,
   SidebarContent,
@@ -41,7 +42,9 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarFooterMenu>
             {settingsSlot && <SidebarMenuItem>{settingsSlot}</SidebarMenuItem>}
-            {userSlot}
+            {/* Built in a Server Component, the slot reaches React as an
+                unkeyed list child and draws a key warning; the Fragment keys it. */}
+            <Fragment key="user">{userSlot}</Fragment>
           </SidebarFooterMenu>
         </SidebarGroup>
       </SidebarFooter>

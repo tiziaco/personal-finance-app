@@ -63,7 +63,7 @@ apps/<portal>/src/
 ├── proxy.ts                         # the access gate (§3)
 ├── app/
 │   ├── layout.tsx                   # ClerkProvider › AuthProvider › ThemeProvider, Toaster
-│   ├── (auth)/sign-in/…             # public; the internal portal also has sign-up
+│   ├── (auth)/sign-in/…             # public; no portal has sign-up (invitation-only)
 │   ├── (dashboard)/ or (portal)/    # the signed-in shell
 │   │   ├── layout.tsx               # QueryProvider › UrlStateAdapter › SidebarProvider › AppSidebar
 │   │   └── home/, projects/, orders/
@@ -81,16 +81,13 @@ Each is either bound to that portal's auth (`ClerkUserPanel`) or an example a fo
 rewrites rather than configures (`GeneralSettings`); the `web-app-patterns` skill's
 `references/components.md` has the rule.
 
-The supplier portal has no sign-up page: suppliers are meant to enter by invitation. Nothing
-enforces that yet — see [`../TODO.md`](../TODO.md).
-
 ## 3. Who gets in
 
 `src/proxy.ts` — Next 16's name for middleware — runs before every non-static request:
 
 1. `/` redirects to `/home` here, not in a page: a page-level `redirect()` deadlocks the
    App Router during the navigation that follows Clerk's `setActive()`.
-2. Sign-in and sign-up pass.
+2. Sign-in passes.
 3. `auth.protect()` sends anyone without a session to sign-in.
 4. The role comes from `auth().orgRole` through `getUserRole()`. The internal portal
    admits `isInternalRole`, the supplier portal `isSupplierRole`; anyone else — a null
@@ -210,4 +207,4 @@ somewhere other than where they are missing:
 | `scripts/deploy-check.sh` | the domain default and the image assertion |
 | `.vscode/tasks.json`, `.vscode/settings.json` | a `Dev:` task; the app in ESLint's working directories |
 | `server/.env.<env>` | the origin in `ALLOWED_ORIGINS` |
-| Clerk dashboard | the origin, and any new role (`docs/setup/clerk.md`) |
+| Clerk instance | any new role (`x_organization_roles`, then `make clerk-apply-roles`); the origin in `ALLOWED_ORIGINS` (`docs/setup/clerk.md`) |

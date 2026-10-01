@@ -11,7 +11,7 @@ starts, not examples of finished screens.
 
 Inside the signed-in route group — `app/(dashboard)/` in the internal portal, `app/(portal)/` in the
 supplier portal. Outside it there is no sidebar and no `QueryProvider`, so a generated hook has no
-client. Only sign-in, sign-up and `unauthorized/` live outside.
+client. Only sign-in and `unauthorized/` live outside.
 
 The portals share no routes. A screen both audiences need is two `page.tsx` files, one per portal, over
 components shared through a package (`components.md`); whether it belongs in one portal or both is a

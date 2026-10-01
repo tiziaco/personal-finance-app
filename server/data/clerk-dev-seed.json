@@ -1,0 +1,28 @@
+{
+  "organization": {
+    "name": "Template Dev Org"
+  },
+  "users": [
+    {
+      "email": "dev-pm@example.com",
+      "password": "template-dev-pm-3f9a",
+      "first_name": "Dev",
+      "last_name": "PM",
+      "role": "org:project_manager"
+    },
+    {
+      "email": "dev-reviewer@example.com",
+      "password": "template-dev-reviewer-7c21",
+      "first_name": "Dev",
+      "last_name": "Reviewer",
+      "role": "org:reviewer"
+    },
+    {
+      "email": "dev-approver@example.com",
+      "password": "template-dev-approver-b84e",
+      "first_name": "Dev",
+      "last_name": "Approver",
+      "role": "org:approver"
+    }
+  ]
+}

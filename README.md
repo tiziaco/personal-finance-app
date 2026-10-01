@@ -111,7 +111,11 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 - [Docker](https://www.docker.com/) and Docker Compose
 - [Node.js](https://nodejs.org/) 20+ and [pnpm](https://pnpm.io/) (for local frontend dev) — this is a pnpm workspace; npm and yarn will not resolve the `@app/*` packages
 - [uv](https://docs.astral.sh/uv/) (for local backend dev)
-- A [Clerk](https://clerk.com/) application — see [`docs/setup/clerk.md`](docs/setup/clerk.md)
+- The [Clerk CLI](https://clerk.com/docs/cli) and [jq](https://jqlang.org/), which the Clerk
+  setup scripts use: `brew install clerk/stable/clerk jq` (or `npm install -g clerk`)
+- An [ngrok](https://ngrok.com/) account with its free static domain, for Clerk webhooks
+  only. The Docker path runs ngrok in a container; the native path needs it on the host:
+  `brew install ngrok`
 
 ### Environment Files
 
@@ -134,10 +138,21 @@ OpenAI key is optional: only an LLM call needs it.
 
 ### Clerk
 
-Nothing authenticates until the Clerk dashboard is configured: Organizations enabled,
-four org roles created with exact slugs, and every portal origin listed in
-`ALLOWED_ORIGINS`. Miss the last one and valid tokens are rejected — it looks like broken
-auth, not a config error.
+Nothing authenticates until a Clerk instance is configured:
+
+```bash
+clerk auth login
+make clerk-setup CLERK_APP_NAME="Template App Dev — <name>"
+```
+
+This creates a development app, writes its keys to the env files, applies the settings and
+roles, and seeds three dev users. Re-running it is safe. Then:
+
+- **`ALLOWED_ORIGINS`** must list every portal origin, or valid tokens are rejected — it
+  looks like broken auth, not a config error.
+- **Webhooks** have no script: add the endpoint in the Clerk dashboard and copy its secret
+  into `server/.env.development`. Sign-in works without them; profile edits, offboarding
+  and role changes need them. See [`clerk.md` §6](docs/setup/clerk.md#6-webhooks).
 
 Full procedure: [`docs/setup/clerk.md`](docs/setup/clerk.md).
 
@@ -209,30 +224,33 @@ Services will be available at:
 | cAdvisor | http://localhost:8080 |
 | PostgreSQL | localhost:5434 |
 
-### Frontend Development (local)
+### Native Development (local)
 
-From `web-app/`:
+The API and both portals run on the host with hot reload; only Postgres runs in Docker.
+Install dependencies once: `uv sync` in `server/`, `pnpm install` in `web-app/`.
+
+**In VS Code**, press ⇧⌘B (Ctrl+Shift+B), the default build task: **Dev: All** checks the
+ports, starts Postgres, applies migrations, then runs the API and both portals in their own
+terminals. Two more tasks are under **Terminal → Run Task**:
+
+- **Dev: All + Tunnel** adds the ngrok tunnel, for Clerk webhooks.
+- **Dev: Kill All** frees the ports.
+
+**From a terminal**, the same steps, each server in its own terminal:
 
 ```bash
-# Install all workspace dependencies
-pnpm install
-
-# Run the internal dashboard
-pnpm dev:internal    # http://localhost:3000
-
-# Run the supplier portal (3002 unless PORT is set)
-pnpm dev:supplier    # http://localhost:3002
-
-# Copy and fill env files before starting
-cp apps/internal-portal/.env.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
+make dev-preflight                      # fail early if a port is taken
+make docker-run-db ENV=development      # Postgres
+make -C server migrate ENV=development  # not applied for you on this path
+make -C server dev                      # API, http://localhost:8100
+make dev-internal                       # internal portal, http://localhost:3000
+make dev-supplier                       # supplier portal, http://localhost:3002
+make dev-tunnel                         # optional — ngrok, for Clerk webhooks
 ```
 
 > **The Docker and native paths are mutually exclusive** — they publish the same host
 > ports and claim the same ngrok domain. Stop one before starting the other;
-> `make dev-preflight` checks. The native path does not apply migrations for you, and
-> Clerk webhooks need `make dev-tunnel`. All three are in [`CLAUDE.md`](CLAUDE.md) under
-> **Running the Stack**.
+> `make dev-preflight` checks.
 
 ### Parallel Work (git worktrees)
 
@@ -317,8 +335,7 @@ What `deploy-check` proves and what it cannot is in [`CLAUDE.md`](CLAUDE.md) und
 | [`docs/`](docs/) | Index of everything below |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Where the work stands — the one file that records progress |
 | [`docs/BUGS.md`](docs/BUGS.md), [`docs/TODO.md`](docs/TODO.md) | What is wrong today, and what is deferred to the change that should make it |
-| [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — Clerk dashboard, roles, `ALLOWED_ORIGINS` |
-| [`docs/setup/clerk-webhooks.md`](docs/setup/clerk-webhooks.md) | Webhook endpoint and the dev tunnel |
+| [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — the Clerk setup scripts, roles, `ALLOWED_ORIGINS`, webhooks |
 | [`docs/setup/infrastructure.md`](docs/setup/infrastructure.md) | Root `.env`, Prometheus/Grafana/cAdvisor, and what production omits |
 | [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) | Renaming this template for your project |
 | [`docs/setup/deploy-dokploy.md`](docs/setup/deploy-dokploy.md) | Deploying behind Dokploy's Traefik — what `deploy-check` cannot prove |

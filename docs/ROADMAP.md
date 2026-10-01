@@ -39,6 +39,5 @@ The dependencies already recorded in those two files, gathered in one place:
   example domain's real screens — projects, orders, documents.
 - **`supplier` adopts `TenantMixin` with its first write route**, never before — the
   backfill needs rows to exist.
-- **Before the first production Clerk instance:** decide invitation-only sign-up.
 - **Before the first deploy behind Traefik:** `--forwarded-allow-ips`, or every caller
   shares one rate-limit bucket.

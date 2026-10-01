@@ -95,15 +95,18 @@ it. Replace it when it doesn't fit:
 | Concept | Where it lives |
 |---|---|
 | `Supplier` model, repository, link service and `SupplierID` | `server/app/modules/supplier/` — delete the folder, its three lines in `server/pyproject.toml` (`[tool.importlinter]`: the `R1: supplier` contract and the `app.modules.supplier` token in the R6 layers, plus the `account`/`conversation` contracts' `app.modules.supplier.*` entries), its `import` in `server/alembic/env.py`, its line in `server/app/main.py`, its row in `server/tests/unit/models/test_tenant_tables.py`, `server/tests/unit/modules/supplier/`, `server/tests/integration/modules/supplier/`, and the supplier assertions in `server/tests/integration/modules/account/router/test_auth_delete.py`; then `server/alembic/versions/*_add_supplier_table.py` |
-| Role names | `server/app/modules/account/models.py` **and** `web-app/packages/auth/src/permissions.ts` — **and the Clerk dashboard** (see [`clerk.md`](./clerk.md) §2) |
+| Role names | `server/app/modules/account/models.py` **and** `web-app/packages/auth/src/permissions.ts` — **and the Clerk instance**: `x_organization_roles` in `scripts/clerk/config.json`, `server/data/clerk-dev-seed.json`, then `make clerk-apply-roles clerk-seed-users` ([`clerk.md`](./clerk.md) §1) |
 | The external portal's name | `web-app/apps/supplier-portal/` (directory, `package.json` name, `APP_NAME` in both compose files, `SUPPLIER_PORTAL_DOMAIN`, and its Traefik labels) |
 | UI labels | `ROLE_LABELS` in `packages/auth/src/permissions.ts`; `HUB_NAV` in each portal's `src/lib/hub-nav.ts` |
 | Product and data-model docs | [`../product/features/suppliers.md`](../product/features/suppliers.md) and [`../data-model/supplier.md`](../data-model/supplier.md) — rewrite for your domain; rename the roles table in [`../product/features/account.md`](../product/features/account.md) with the enum; fill [`../product/prd-mvp.md`](../product/prd-mvp.md) |
 
 Two notes on sequencing:
 
-- **Renaming a role is a dashboard change too.** Change the enum without changing the
-  Clerk slug and every user silently loses access — `getUserRole()` returns `null`.
+- **Renaming a role is an instance change too.** A new key is a new role: every member
+  still holding the old key lands on `/unauthorized` — `getUserRole()` returns `null` —
+  until they are moved. `make clerk-seed-users` moves the seeded users; move everyone else
+  from the organization profile, then re-run `make clerk-apply-roles` to delete the old
+  role.
 - **Renaming the `supplier` table** needs a new Alembic revision. On a template with no
   production data, rewriting the initial migration is cleaner; on a deployed fork it is not.
 

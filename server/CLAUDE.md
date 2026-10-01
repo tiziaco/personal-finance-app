@@ -80,6 +80,10 @@ package per provider, carrying the outbound client and the inbound
 verification. What a provider's event *means* for our rows is decided in the
 module that owns them: `app/modules/account/webhooks.py` for Clerk.
 
+`data/` holds seed data — today `clerk-dev-seed.json`, which `make clerk-seed-users`
+reads. It carries committed dev passwords, so `.dockerignore` keeps it out of the image;
+new seed data goes there too.
+
 ---
 
 ## Code Conventions

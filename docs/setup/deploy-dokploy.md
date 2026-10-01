@@ -133,7 +133,7 @@ the request never reached the application.
   unexercised by anything in this repo.
 - **No Clerk production instance.** Production keys, the production origins registered in
   Clerk, and the webhook endpoint pointing at `API_DOMAIN`
-  ([`clerk-webhooks.md`](./clerk-webhooks.md)) are set by hand per environment.
+  ([`clerk.md`](./clerk.md) §6) are set by hand per environment.
 
 ---
 

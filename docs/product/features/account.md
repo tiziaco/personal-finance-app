@@ -17,9 +17,7 @@ A person joins by **invitation to an organization**, then signs in on the portal
 role — the internal portal or the supplier portal. There is no separate account to create
 on the platform: accepting the invitation is enough.
 
-Sign-up is not yet invitation-only: anyone can sign up on the internal portal, and lands on
-`/unauthorized` with no organization
-([`../../TODO.md`](../../TODO.md), **Clerk — invitation-only sign-up**).
+Sign-up is invitation-only: there is no way in without an invitation.
 
 ## 2. Organizations
 
@@ -66,5 +64,4 @@ rather than anonymous, and the tracing service still holds conversations
 
 ## 6. Open questions
 
-None beyond the two `TODO.md` items above — invitation-only sign-up, and erasure's target
-state.
+None beyond erasure's target state, above.

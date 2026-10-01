@@ -210,7 +210,7 @@ Adding a screen — its route group, sidebar entry, loading state and copy — i
 
 Beyond the rules above:
 
-- Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the portals only need the publishable key and the sign-in/sign-up URLs
+- Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the portals only need the publishable key and the sign-in URL
 - Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
 - Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
 - Calling `useClerk().signOut` — a client-side route keeps the previous user's caches; use `signOut` from `useAppAuth()`
