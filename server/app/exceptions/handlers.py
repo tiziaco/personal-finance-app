@@ -75,7 +75,7 @@ async def service_exception_handler(request: Request, exc: ServiceError) -> JSON
 
     return JSONResponse(
         status_code=exc.status_code,
-        content=error_response.model_dump(exclude_none=True),
+        content=error_response.model_dump(mode="json", exclude_none=True),
     )
 
 

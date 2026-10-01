@@ -12,7 +12,7 @@ import * as zod from "zod"
  * @summary Send a message and get a response
  */
 export const SendChatMessageParams = zod.object({
-  conversation_id: zod.string(),
+  conversation_id: zod.uuid(),
 })
 
 export const sendChatMessageBodyMessageMax = 3000
@@ -55,7 +55,7 @@ export const SendChatMessageResponse = zod
  * @summary Clear chat history
  */
 export const ClearChatHistoryParams = zod.object({
-  conversation_id: zod.string(),
+  conversation_id: zod.uuid(),
 })
 
 export const ClearChatHistoryResponse = zod.void()
@@ -65,7 +65,7 @@ export const ClearChatHistoryResponse = zod.void()
  * @summary Get conversation chat history
  */
 export const ListChatMessagesParams = zod.object({
-  conversation_id: zod.string(),
+  conversation_id: zod.uuid(),
 })
 
 export const listChatMessagesResponseMessagesItemContentMax = 3000

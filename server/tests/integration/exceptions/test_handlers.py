@@ -40,7 +40,6 @@ class TestServiceErrorHandler:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Not Mine",
         )
@@ -65,7 +64,6 @@ class TestValidationErrorHandler:
     async def test_invalid_payload_returns_422(self, authenticated_client_with_agent, db_session, test_user):
         """Sending a message that violates schema constraints → 422."""
         conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=test_user.id,
             name="Test",
         )
@@ -80,7 +78,6 @@ class TestValidationErrorHandler:
 
     async def test_422_response_has_field_errors(self, authenticated_client_with_agent, db_session, test_user):
         conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=test_user.id,
             name="Test",
         )

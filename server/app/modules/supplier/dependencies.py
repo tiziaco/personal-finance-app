@@ -1,5 +1,6 @@
 """Supplier-scoped identity — resolves the caller's supplier_id."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import Depends
@@ -10,7 +11,7 @@ from app.modules.supplier.exceptions import SupplierNotLinkedError
 from app.modules.supplier.service import supplier_service
 
 
-async def get_supplier_id(current_user: CurrentUser, session: DbSession) -> str:
+async def get_supplier_id(current_user: CurrentUser, session: DbSession) -> uuid.UUID:
     """Resolve the supplier_id linked to the current user.
 
     Raises 403 SUPPLIER_NOT_LINKED if no Supplier.contact_id points at this user.
@@ -27,4 +28,4 @@ async def get_supplier_id(current_user: CurrentUser, session: DbSession) -> str:
     return supplier_id
 
 
-SupplierID = Annotated[str, Depends(get_supplier_id)]
+SupplierID = Annotated[uuid.UUID, Depends(get_supplier_id)]

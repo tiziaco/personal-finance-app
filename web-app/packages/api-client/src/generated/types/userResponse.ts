@@ -10,7 +10,7 @@
  * Response model for user profile.
  *
  * Attributes:
- *     id: Internal user ID (UUID string)
+ *     id: Internal user ID (UUID v7)
  *     clerk_id: External Clerk user ID
  *     email: User's email address
  *     first_name: User's first name
@@ -29,7 +29,7 @@ export interface UserResponse {
   email: string
   /** User's first name */
   first_name?: string | null
-  /** Internal user ID (UUID) */
+  /** Internal user ID (UUID v7) */
   id: string
   /** User's last name */
   last_name?: string | null

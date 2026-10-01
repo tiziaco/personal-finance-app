@@ -1,5 +1,7 @@
 """Subscriptions to account events."""
 
+import uuid
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.shared.checkpointing import delete_conversations_checkpoints
@@ -9,7 +11,7 @@ from app.modules.conversation.service import conversation_service
 
 
 @events.on(USER_ERASING, inline=True)
-async def erase_on_user_erasing(session: AsyncSession, user_id: str) -> None:
+async def erase_on_user_erasing(session: AsyncSession, user_id: uuid.UUID) -> None:
     """Erase what a user's conversations hold: the rows are soft-deleted, the messages gone, the names blank.
 
     Inline, in the publishing transaction and before the user row is

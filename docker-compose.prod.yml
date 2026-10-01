@@ -167,12 +167,13 @@ services:
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-server-secure.service=${COMPOSE_PROJECT_NAME}-server
 
   db:
-    image: pgvector/pgvector:pg16
+    image: pgvector/pgvector:pg18
     env_file:
       - ./server/.env.${APP_ENV:-production}
     # No host port binding — DB is only accessible within the Docker network
     volumes:
-      - postgres-data:/var/lib/postgresql/data
+      # PG18 keeps data in a major-version subdirectory and will not start with a mount at .../data.
+      - postgres-data:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 10s

@@ -2,6 +2,7 @@
 
 import pytest
 from sqlalchemy.exc import IntegrityError
+from uuid_utils.compat import uuid7
 
 from app.modules.account.exceptions import UserAlreadyExistsError
 from app.modules.account.models import User
@@ -125,7 +126,7 @@ class TestGetUser:
         assert found.id == saved_user.id
 
     async def test_get_by_id_not_found(self, db_session):
-        found = await UserRepository.get_by_id(db_session, "nonexistent-uuid-000")
+        found = await UserRepository.get_by_id(db_session, uuid7())
         assert found is None
 
     async def test_get_by_clerk_id_found(self, db_session, saved_user):

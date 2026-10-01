@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.account.schemas import UserResponse
 
@@ -14,7 +15,7 @@ class TestUserResponse:
 
     def test_valid_user_response(self):
         resp = UserResponse(
-            id="uuid-123",
+            id=uuid7(),
             clerk_id="user_abc",
             email="test@example.com",
             first_name="Alice",
@@ -26,7 +27,7 @@ class TestUserResponse:
 
     def test_optional_fields_default_to_none(self):
         resp = UserResponse(
-            id="uuid-123",
+            id=uuid7(),
             clerk_id="user_abc",
             email="test@example.com",
             created_at=datetime.now(UTC),

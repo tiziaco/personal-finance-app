@@ -7,7 +7,7 @@ the frontend client is generated from.
 ## Tech Stack
 
 - **FastAPI** + uvicorn + uvloop
-- **PostgreSQL 16** with pgvector (via SQLModel + Alembic)
+- **PostgreSQL 18** with pgvector (via SQLModel + Alembic)
 - **LangGraph** + LangChain + OpenAI for AI agent workflows
 - **Clerk** for JWT authentication and user provisioning
 - **Langfuse** for LLM observability

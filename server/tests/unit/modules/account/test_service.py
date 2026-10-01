@@ -6,6 +6,7 @@ cleared before the row is anonymised, because anonymisation destroys the
 identifiers those systems are keyed by.
 """
 
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -16,10 +17,12 @@ from app.modules.account.service import UserService, merge_clerk_metadata
 
 pytestmark = pytest.mark.unit
 
+USER_ID = uuid.UUID("0199a8b0-0000-7000-8000-000000000001")
+
 
 def make_user() -> User:
     user = User(
-        id="11111111-2222-3333-4444-555555555555",
+        id=USER_ID,
         clerk_id="user_abc",
         email="person@example.com",
         org_id="org_1",
@@ -44,8 +47,8 @@ async def test_erase_user_runs_full_cascade(session):
     ):
         await UserService.erase_user(session, user)
 
-    mem.assert_awaited_once_with("11111111-2222-3333-4444-555555555555")
-    publish.assert_awaited_once_with(USER_ERASING, session=session, user_id="11111111-2222-3333-4444-555555555555")
+    mem.assert_awaited_once_with(USER_ID)
+    publish.assert_awaited_once_with(USER_ERASING, session=session, user_id=USER_ID)
     invalidate.assert_awaited_once_with(clerk_id="user_abc")
     # The request's DbSession commits the cascade; erase_user never does.
     session.commit.assert_not_awaited()

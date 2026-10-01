@@ -1,5 +1,6 @@
 """Conversation management service."""
 
+import uuid
 from typing import (
     List,
     Optional,
@@ -16,24 +17,22 @@ class ConversationService:
     """Service for chat conversation management operations."""
 
     @staticmethod
-    async def create_conversation(
-        session: AsyncSession, conversation_id: str, user_id: str, name: str = ""
-    ) -> Conversation:
+    async def create_conversation(session: AsyncSession, user_id: uuid.UUID, name: str = "") -> Conversation:
         """Create a new chat conversation."""
-        return await conversation_repository.create(session, conversation_id, user_id, name)
+        return await conversation_repository.create(session, user_id, name)
 
     @staticmethod
-    async def get_conversation(session: AsyncSession, conversation_id: str) -> Optional[Conversation]:
+    async def get_conversation(session: AsyncSession, conversation_id: uuid.UUID) -> Optional[Conversation]:
         """Get a conversation by ID, soft-deleted included."""
         return await conversation_repository.get_by_id(session, conversation_id)
 
     @staticmethod
-    async def get_user_conversations(session: AsyncSession, user_id: str) -> List[Conversation]:
+    async def get_user_conversations(session: AsyncSession, user_id: uuid.UUID) -> List[Conversation]:
         """Get a user's active conversations, oldest first."""
         return await conversation_repository.list_active_for_user(session, user_id)
 
     @staticmethod
-    async def update_conversation_name(session: AsyncSession, conversation_id: str, name: str) -> Conversation:
+    async def update_conversation_name(session: AsyncSession, conversation_id: uuid.UUID, name: str) -> Conversation:
         """Update a conversation's name.
 
         Raises ConversationNotFoundError if there is no such conversation.
@@ -47,22 +46,22 @@ class ConversationService:
         return await conversation_repository.update_name(session, conversation, name)
 
     @staticmethod
-    async def soft_delete_conversation(session: AsyncSession, conversation_id: str) -> bool:
+    async def soft_delete_conversation(session: AsyncSession, conversation_id: uuid.UUID) -> bool:
         """Soft-delete a conversation. False if there is no such conversation."""
         return await conversation_repository.soft_delete(session, conversation_id)
 
     @staticmethod
-    async def soft_delete_all_user_conversations(session: AsyncSession, user_id: str) -> list[str]:
+    async def soft_delete_all_user_conversations(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
         """Soft-delete every active conversation for a user and return their IDs."""
         return await conversation_repository.soft_delete_active_for_user(session, user_id)
 
     @staticmethod
-    async def list_user_conversation_ids(session: AsyncSession, user_id: str) -> list[str]:
+    async def list_user_conversation_ids(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
         """Every conversation id a user owns, deleted or not."""
         return await conversation_repository.list_ids_for_user(session, user_id)
 
     @staticmethod
-    async def blank_all_user_conversation_names(session: AsyncSession, user_id: str) -> int:
+    async def blank_all_user_conversation_names(session: AsyncSession, user_id: uuid.UUID) -> int:
         """Clear the name of every conversation a user owns, deleted or not.
 
         Part of erasure: a name is free text and may hold PII. Returns the

@@ -56,7 +56,7 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 | Language | Python 3.13+ |
 | Runtime | Uvicorn + uvloop |
 | ORM / Models | SQLModel + Pydantic v2 |
-| Database | PostgreSQL 16 with pgvector |
+| Database | PostgreSQL 18 with pgvector |
 | Migrations | Alembic |
 | Auth | Clerk (JWT via PyJWT + clerk-backend-api) |
 | AI / Agents | LangGraph + LangChain + LangChain-OpenAI |
@@ -69,7 +69,7 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 
 | Component | Technology |
 |---|---|
-| Database | pgvector/pgvector:pg16 |
+| Database | pgvector/pgvector:pg18 |
 | Monitoring | Prometheus + Grafana + cAdvisor |
 | Containerization | Docker + Docker Compose |
 

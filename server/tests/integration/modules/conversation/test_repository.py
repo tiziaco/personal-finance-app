@@ -1,9 +1,9 @@
 """Integration tests for ConversationRepository — queries against the real test database."""
 
-import uuid
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.account.models import User
 from app.modules.conversation.models import Conversation
@@ -33,18 +33,18 @@ async def other_user(db_session):
 
 
 async def _create(db_session, user_id, name=""):
-    return await ConversationRepository.create(db_session, str(uuid.uuid4()), user_id, name=name)
+    return await ConversationRepository.create(db_session, user_id, name=name)
 
 
 class TestCreate:
     async def test_persists_the_row(self, db_session, owner):
-        conv_id = str(uuid.uuid4())
-        conv = await ConversationRepository.create(db_session, conv_id, owner.id, name="My Chat")
-        assert (conv.id, conv.user_id, conv.name) == (conv_id, owner.id, "My Chat")
+        conv = await ConversationRepository.create(db_session, owner.id, name="My Chat")
+        assert (conv.user_id, conv.name) == (owner.id, "My Chat")
+        assert conv.id.version == 7
         assert conv.created_at is not None
 
     async def test_name_defaults_to_empty(self, db_session, owner):
-        conv = await ConversationRepository.create(db_session, str(uuid.uuid4()), owner.id)
+        conv = await ConversationRepository.create(db_session, owner.id)
         assert conv.name == ""
 
 
@@ -54,7 +54,7 @@ class TestGetById:
         assert (await ConversationRepository.get_by_id(db_session, conv.id)).id == conv.id
 
     async def test_missing_returns_none(self, db_session):
-        assert await ConversationRepository.get_by_id(db_session, "nonexistent-conv-id") is None
+        assert await ConversationRepository.get_by_id(db_session, uuid7()) is None
 
     async def test_returns_soft_deleted_rows(self, db_session, owner):
         # get_user_conversation (dependencies.py) does its own deleted_at check.
@@ -68,10 +68,7 @@ class TestListActiveForUser:
     async def test_oldest_first(self, db_session, owner):
         # Inserted out of created_at order, so heap order cannot pass for the ORDER BY.
         base = datetime(2026, 1, 1, tzinfo=UTC)
-        rows = {
-            k: Conversation(id=str(uuid.uuid4()), user_id=owner.id, created_at=base + timedelta(minutes=k))
-            for k in (2, 0, 1)
-        }
+        rows = {k: Conversation(user_id=owner.id, created_at=base + timedelta(minutes=k)) for k in (2, 0, 1)}
         db_session.add_all(rows.values())
         await db_session.flush()
 
@@ -107,7 +104,7 @@ class TestSoftDelete:
         assert (await ConversationRepository.get_by_id(db_session, conv.id)).is_deleted is True
 
     async def test_missing_returns_false(self, db_session):
-        assert await ConversationRepository.soft_delete(db_session, "nonexistent-conv-id") is False
+        assert await ConversationRepository.soft_delete(db_session, uuid7()) is False
 
 
 class TestSoftDeleteActiveForUser:

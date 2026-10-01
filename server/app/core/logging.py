@@ -8,6 +8,7 @@ console-friendly development logging and JSON-formatted production logging.
 import json
 import logging
 import sys
+import uuid
 from contextvars import ContextVar
 from datetime import datetime
 from pathlib import Path
@@ -86,6 +87,23 @@ def add_context_to_event_dict(logger: Any, method_name: str, event_dict: Dict[st
     if context:
         event_dict.update(context)
     return event_dict
+
+
+def _stringify_uuid(value: Any) -> Any:
+    if isinstance(value, uuid.UUID):
+        return str(value)
+    if isinstance(value, dict):
+        return {key: _stringify_uuid(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_stringify_uuid(item) for item in value]
+    if isinstance(value, tuple):
+        return tuple(_stringify_uuid(item) for item in value)
+    return value
+
+
+def stringify_uuids(logger: Any, method_name: str, event_dict: EventDict) -> EventDict:
+    """Render uuid.UUID values as plain strings, nested ones too; both renderers would print UUID('…')."""
+    return {key: _stringify_uuid(value) for key, value in event_dict.items()}
 
 
 class CustomConsoleRenderer(structlog.dev.ConsoleRenderer):
@@ -261,6 +279,7 @@ def get_structlog_processors(include_file_info: bool = True) -> List[Any]:
         structlog.processors.UnicodeDecoder(),
         # Add context variables (user_id, conversation_id, etc.) to all log events
         add_context_to_event_dict,
+        stringify_uuids,
     ]
 
     if include_file_info:

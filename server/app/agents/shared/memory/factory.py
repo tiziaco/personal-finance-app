@@ -1,5 +1,6 @@
 """Memory factory and utilities for agent long-term memory management."""
 
+import uuid
 from typing import Any, Dict, Optional
 
 from mem0 import AsyncMemory
@@ -71,7 +72,7 @@ async def create_memory() -> AsyncMemory:
     return _memory_instance
 
 
-async def get_relevant_memory(user_id: str, query: str) -> str:
+async def get_relevant_memory(user_id: uuid.UUID, query: str) -> str:
     """Relevant memories for a user, formatted; "" if none or on any error."""
     try:
         memory = await create_memory()
@@ -95,7 +96,7 @@ async def get_relevant_memory(user_id: str, query: str) -> str:
         return ""
 
 
-async def delete_user_memory(user_id: str) -> None:
+async def delete_user_memory(user_id: uuid.UUID) -> None:
     """Delete all long-term memory entries for a user (GDPR erasure)."""
     try:
         memory = await create_memory()
@@ -106,7 +107,7 @@ async def delete_user_memory(user_id: str) -> None:
 
 
 async def update_memory(
-    user_id: str,
+    user_id: uuid.UUID,
     messages: list[dict],
     metadata: dict = None,
 ) -> None:

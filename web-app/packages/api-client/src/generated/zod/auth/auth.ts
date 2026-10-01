@@ -32,12 +32,12 @@ export const GetMeResponse = zod
       .union([zod.string(), zod.null()])
       .optional()
       .describe("User's first name"),
-    id: zod.string().describe("Internal user ID (UUID)"),
+    id: zod.uuid().describe("Internal user ID (UUID v7)"),
     last_name: zod
       .union([zod.string(), zod.null()])
       .optional()
       .describe("User's last name"),
   })
   .describe(
-    "Response model for user profile.\n\nAttributes:\n    id: Internal user ID (UUID string)\n    clerk_id: External Clerk user ID\n    email: User's email address\n    first_name: User's first name\n    last_name: User's last name\n    avatar_url: User's avatar URL\n    created_at: When the user was created",
+    "Response model for user profile.\n\nAttributes:\n    id: Internal user ID (UUID v7)\n    clerk_id: External Clerk user ID\n    email: User's email address\n    first_name: User's first name\n    last_name: User's last name\n    avatar_url: User's avatar URL\n    created_at: When the user was created",
   )

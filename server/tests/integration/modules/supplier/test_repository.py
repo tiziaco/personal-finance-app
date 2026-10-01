@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.account.models import User
 from app.modules.supplier.models import Supplier
@@ -48,7 +49,7 @@ class TestGetById:
         assert found.id == saved_supplier.id
 
     async def test_get_by_id_not_found(self, db_session):
-        found = await SupplierRepository.get_by_id(db_session, "nonexistent-uuid-000")
+        found = await SupplierRepository.get_by_id(db_session, uuid7())
         assert found is None
 
 

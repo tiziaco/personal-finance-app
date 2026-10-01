@@ -102,7 +102,7 @@ class TestSupplierRelinkInvalidation:
         clerk_user.last_name = "Contact"
         clerk_user.image_url = None
         clerk_user.primary_email_address_id = "email_abc"
-        clerk_user.public_metadata = {"supplier_id": supplier_id}
+        clerk_user.public_metadata = {"supplier_id": str(supplier_id)}  # Clerk metadata is JSON: text
         if replace:
             clerk_user.public_metadata["replace"] = True
         return clerk_user

@@ -1,5 +1,6 @@
 """The conversation module's reaction to USER_ERASING."""
 
+import uuid
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -9,6 +10,10 @@ from app.modules.account import USER_ERASING
 from app.modules.conversation import handlers
 
 pytestmark = pytest.mark.unit
+
+USER_ID = uuid.UUID("0199a8b0-0000-7000-8000-000000000001")
+CONV_0 = uuid.UUID("0199a8b0-0000-7000-8000-0000000000c0")
+CONV_1 = uuid.UUID("0199a8b0-0000-7000-8000-0000000000c1")
 
 
 def test_subscribes_inline_to_user_erasing():
@@ -21,8 +26,8 @@ async def test_soft_deletes_clears_checkpoints_then_blanks_names_in_that_order()
     session = AsyncMock()
     session.add = MagicMock()
     parent = MagicMock()
-    soft_delete = AsyncMock(return_value=["conv_1"])
-    list_ids = AsyncMock(return_value=["conv_1", "conv_0"])
+    soft_delete = AsyncMock(return_value=[CONV_1])
+    list_ids = AsyncMock(return_value=[CONV_1, CONV_0])
     checkpoints = AsyncMock()
     blank = AsyncMock(return_value=2)
     parent.attach_mock(soft_delete, "soft_delete")
@@ -39,9 +44,9 @@ async def test_soft_deletes_clears_checkpoints_then_blanks_names_in_that_order()
         patch("app.modules.conversation.handlers.delete_conversations_checkpoints", new=checkpoints),
         patch("app.modules.conversation.handlers.conversation_service.blank_all_user_conversation_names", new=blank),
     ):
-        await handlers.erase_on_user_erasing(session=session, user_id="u1")
+        await handlers.erase_on_user_erasing(session=session, user_id=USER_ID)
 
     assert [c[0] for c in parent.mock_calls] == ["soft_delete", "list_ids", "checkpoints", "blank"]
     # Every id the user owns, soft-deleted ones included — not only those just soft-deleted.
-    checkpoints.assert_awaited_once_with(["conv_1", "conv_0"])
-    blank.assert_awaited_once_with(session, "u1")
+    checkpoints.assert_awaited_once_with([CONV_1, CONV_0])
+    blank.assert_awaited_once_with(session, USER_ID)

@@ -1,14 +1,17 @@
 """This file contains the conversation model for the application."""
 
+import uuid
+
 from sqlmodel import Field
 
 from app.models.base import (
     BaseModel,
     SoftDeleteMixin,
+    UUIDPrimaryKeyMixin,
 )
 
 
-class Conversation(BaseModel, SoftDeleteMixin, table=True):
+class Conversation(BaseModel, UUIDPrimaryKeyMixin, SoftDeleteMixin, table=True):
     """Conversation model for storing chat conversations.
 
     GDPR Note:
@@ -26,7 +29,7 @@ class Conversation(BaseModel, SoftDeleteMixin, table=True):
       (FK points to anonymized User record)
 
     Attributes:
-        id: The primary key (conversation ID used in LangGraph)
+        id: UUID v7 primary key; also the LangGraph thread id, as text
         user_id: Foreign key to the user (remains valid after anonymization)
         name: Name of the conversation — cleared on user deletion (may contain PII)
         created_at: When the conversation was created (from BaseModel)
@@ -34,6 +37,5 @@ class Conversation(BaseModel, SoftDeleteMixin, table=True):
         deleted_at: When the conversation was soft deleted (from SoftDeleteMixin)
     """
 
-    id: str = Field(primary_key=True)
-    user_id: str = Field(foreign_key="user.id", index=True)  # Index for JOIN queries
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)  # Index for JOIN queries
     name: str = Field(default="")

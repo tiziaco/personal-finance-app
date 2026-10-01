@@ -1,6 +1,7 @@
 """PostgreSQL checkpointing utilities for LangGraph agents."""
 
 import asyncio
+import uuid
 from typing import Optional, Sequence
 from urllib.parse import quote_plus
 
@@ -90,7 +91,7 @@ async def create_postgres_saver() -> AsyncPostgresSaver:
         return _checkpointer
 
 
-async def delete_conversations_checkpoints(conversation_ids: Sequence[str]) -> None:
+async def delete_conversations_checkpoints(conversation_ids: Sequence[uuid.UUID]) -> None:
     """Hard-delete every checkpoint row for a set of conversation threads.
 
     Checkpoints are keyed by thread_id in a single set of tables shared by
@@ -107,7 +108,7 @@ async def delete_conversations_checkpoints(conversation_ids: Sequence[str]) -> N
     Raises:
         Exception: If the pool is unavailable or a DELETE fails.
     """
-    ids = list(conversation_ids)
+    ids = [str(conversation_id) for conversation_id in conversation_ids]
     if not ids:
         return
 
@@ -120,7 +121,7 @@ async def delete_conversations_checkpoints(conversation_ids: Sequence[str]) -> N
             logger.info("cleared_table_for_conversations", table=table, count=len(ids))
 
 
-async def delete_conversation_checkpoints(conversation_id: str) -> None:
+async def delete_conversation_checkpoints(conversation_id: uuid.UUID) -> None:
     """Hard-delete every checkpoint row for one conversation thread.
 
     Raises:

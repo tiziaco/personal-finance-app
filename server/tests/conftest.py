@@ -53,7 +53,7 @@ def postgres_container():
     Requires a running Docker daemon. The container gets an ephemeral host
     port, so it can never collide with the dev database.
     """
-    with PostgresContainer("pgvector/pgvector:pg16", driver="asyncpg") as postgres:
+    with PostgresContainer("pgvector/pgvector:pg18", driver="asyncpg") as postgres:
         yield postgres
 
 

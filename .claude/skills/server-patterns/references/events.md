@@ -40,7 +40,7 @@ logger.info("user_erased", user_id=user.id, subscriber_count=subscriber_count)
 ```python
 # app/modules/conversation/handlers.py
 @events.on(USER_ERASING, inline=True)
-async def erase_on_user_erasing(session: AsyncSession, user_id: str) -> None:
+async def erase_on_user_erasing(session: AsyncSession, user_id: uuid.UUID) -> None:
     await conversation_service.soft_delete_all_user_conversations(session, user_id)
     ...
 

@@ -11,6 +11,7 @@ These tests pin the sync/async shape of the two halves of that boundary.
 """
 
 import inspect
+import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -21,6 +22,8 @@ import app.agents.shared.memory.factory as factory
 from app.core.config import settings
 
 pytestmark = pytest.mark.unit
+
+USER_ID = uuid.UUID("0199a8b0-0000-7000-8000-000000000001")
 
 
 @pytest.fixture(autouse=True)
@@ -81,7 +84,7 @@ async def test_get_relevant_memory_formats_search_results():
     fake_cls.from_config = MagicMock(return_value=instance)
 
     with patch.object(factory, "AsyncMemory", fake_cls):
-        result = await factory.get_relevant_memory("user-1", "who am I?")
+        result = await factory.get_relevant_memory(USER_ID, "who am I?")
 
     assert result == "* likes tea\n* lives in Rome"
 
@@ -99,10 +102,10 @@ async def test_search_passes_the_user_id_in_filters_not_as_a_kwarg():
     fake_cls.from_config = MagicMock(return_value=instance)
 
     with patch.object(factory, "AsyncMemory", fake_cls):
-        await factory.get_relevant_memory("user-1", "who am I?")
+        await factory.get_relevant_memory(USER_ID, "who am I?")
 
     kwargs = instance.search.await_args.kwargs
-    assert kwargs["filters"] == {"user_id": "user-1"}
+    assert kwargs["filters"] == {"user_id": str(USER_ID)}
     assert "user_id" not in kwargs
 
 
@@ -118,7 +121,7 @@ async def test_search_pins_top_k_and_threshold_explicitly():
     fake_cls.from_config = MagicMock(return_value=instance)
 
     with patch.object(factory, "AsyncMemory", fake_cls):
-        await factory.get_relevant_memory("user-1", "who am I?")
+        await factory.get_relevant_memory(USER_ID, "who am I?")
 
     kwargs = instance.search.await_args.kwargs
     assert kwargs["top_k"] == settings.memory.SEARCH_TOP_K
@@ -188,11 +191,11 @@ async def test_update_memory_strips_identity_keys_from_metadata():
     fake_cls = MagicMock()
     fake_cls.from_config = MagicMock(return_value=instance)
 
-    metadata = {"user_id": "user-1", "conversation_id": "c-1", "environment": "test"}
+    metadata = {"user_id": str(USER_ID), "conversation_id": "c-1", "environment": "test"}
 
     with patch.object(factory, "AsyncMemory", fake_cls):
-        await factory.update_memory("user-1", [{"role": "user", "content": "hi"}], metadata)
+        await factory.update_memory(USER_ID, [{"role": "user", "content": "hi"}], metadata)
 
     kwargs = instance.add.await_args.kwargs
-    assert kwargs["user_id"] == "user-1"
+    assert kwargs["user_id"] == str(USER_ID)
     assert kwargs["metadata"] == {"conversation_id": "c-1", "environment": "test"}

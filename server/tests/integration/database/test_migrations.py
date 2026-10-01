@@ -75,7 +75,9 @@ def test_migrations_produce_the_models_schema(test_database_url, monkeypatch):
         engine = create_engine(base_url.set(drivername="postgresql+psycopg", database=SCRATCH_DB))
         try:
             with engine.connect() as connection:
-                context = MigrationContext.configure(connection, opts={"include_name": _include_name})
+                context = MigrationContext.configure(
+                    connection, opts={"include_name": _include_name, "compare_server_default": True}
+                )
                 diff = compare_metadata(context, SQLModel.metadata)
         finally:
             engine.dispose()

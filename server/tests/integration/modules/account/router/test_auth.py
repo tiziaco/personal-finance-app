@@ -21,7 +21,7 @@ class TestGetMe:
         response = await authenticated_client.get("/api/v1/auth/me")
         data = response.json()
 
-        assert data["id"] == test_user.id
+        assert data["id"] == str(test_user.id)
         assert data["clerk_id"] == test_user.clerk_id
         assert data["email"] == test_user.email
 

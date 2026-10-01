@@ -3,6 +3,7 @@
 import uuid
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.account.models import User
 from app.modules.conversation.models import Conversation
@@ -15,7 +16,7 @@ class TestConversationAccessDependency:
 
     async def test_nonexistent_conversation_returns_404(self, authenticated_client):
         """Conversation not in DB → 404 from ConversationNotFoundError."""
-        fake_id = str(uuid.uuid4())
+        fake_id = uuid7()
         response = await authenticated_client.patch(
             f"/api/v1/conversation/conversation/{fake_id}/name",
             data={"name": "New Name"},
@@ -24,7 +25,7 @@ class TestConversationAccessDependency:
 
     async def test_error_response_has_error_code(self, authenticated_client):
         """404 response body contains error code for client identification."""
-        fake_id = str(uuid.uuid4())
+        fake_id = uuid7()
         response = await authenticated_client.patch(
             f"/api/v1/conversation/conversation/{fake_id}/name",
             data={"name": "New Name"},
@@ -45,7 +46,6 @@ class TestConversationAccessDependency:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Not Mine",
         )
@@ -70,7 +70,6 @@ class TestConversationAccessDependency:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Not Mine",
         )
@@ -87,7 +86,6 @@ class TestConversationAccessDependency:
     async def test_own_conversation_succeeds(self, authenticated_client, db_session, test_user):
         """Accessing own conversation → 200, no error."""
         conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=test_user.id,
             name="Mine",
         )

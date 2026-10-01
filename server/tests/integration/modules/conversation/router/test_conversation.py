@@ -3,6 +3,7 @@
 import uuid
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.conversation.models import Conversation
 
@@ -13,7 +14,6 @@ pytestmark = pytest.mark.integration
 async def user_conversation(db_session, test_user):
     """An existing conversation owned by test_user."""
     conv = Conversation(
-        id=str(uuid.uuid4()),
         user_id=test_user.id,
         name="Existing Chat",
     )
@@ -38,8 +38,7 @@ class TestCreateConversation:
         response = await authenticated_client.post("/api/v1/conversation/conversation")
         data = response.json()
         assert "conversation_id" in data
-        # Should be a valid UUID
-        uuid.UUID(data["conversation_id"])  # raises ValueError if invalid
+        assert uuid.UUID(data["conversation_id"]).version == 7
 
     async def test_response_schema(self, authenticated_client):
         response = await authenticated_client.post("/api/v1/conversation/conversation")
@@ -66,7 +65,7 @@ class TestListConversations:
         assert response.status_code == 200
         data = response.json()
         assert len(data) == 1
-        assert data[0]["conversation_id"] == user_conversation.id
+        assert data[0]["conversation_id"] == str(user_conversation.id)
 
 
 class TestRenameConversation:
@@ -87,7 +86,7 @@ class TestRenameConversation:
         assert response.status_code == 200
         data = response.json()
         assert data["name"] == "Renamed Chat"
-        assert data["conversation_id"] == user_conversation.id
+        assert data["conversation_id"] == str(user_conversation.id)
 
     @pytest.mark.parametrize("name", ["O'Brien's trip", "Anne & <Marie>"])
     async def test_rename_stores_the_name_verbatim(self, authenticated_client, user_conversation, db_session, name):
@@ -134,7 +133,7 @@ class TestRenameConversation:
 
     async def test_rename_nonexistent_returns_404(self, authenticated_client):
         response = await authenticated_client.patch(
-            "/api/v1/conversation/conversation/nonexistent-id/name",
+            f"/api/v1/conversation/conversation/{uuid7()}/name",
             data={"name": "New Name"},
         )
         assert response.status_code == 404
@@ -148,7 +147,6 @@ class TestRenameConversation:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Other's Chat",
         )
@@ -176,10 +174,21 @@ class TestDeleteConversation:
         assert response.status_code == 204
 
     async def test_delete_nonexistent_returns_404(self, authenticated_client_with_agent):
-        response = await authenticated_client_with_agent.delete(
-            "/api/v1/conversation/conversation/nonexistent-conv-id"
-        )
+        response = await authenticated_client_with_agent.delete(f"/api/v1/conversation/conversation/{uuid7()}")
         assert response.status_code == 404
+
+    @pytest.mark.parametrize(
+        ("method", "path"),
+        [
+            ("patch", "/api/v1/conversation/conversation/not-a-uuid/name"),
+            ("delete", "/api/v1/conversation/conversation/not-a-uuid"),
+            ("post", "/api/v1/chatbot/chat/not-a-uuid"),
+        ],
+    )
+    async def test_a_malformed_id_is_422_not_a_database_error(self, authenticated_client_with_agent, method, path):
+        response = await authenticated_client_with_agent.request(method, path, data={"name": "x"})
+
+        assert response.status_code == 422
 
     async def test_delete_other_users_conversation_returns_403(self, db_session, authenticated_client_with_agent):
         from app.modules.account.models import User
@@ -190,7 +199,6 @@ class TestDeleteConversation:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Other's Chat",
         )

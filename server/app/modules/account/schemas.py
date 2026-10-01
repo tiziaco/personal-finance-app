@@ -1,5 +1,6 @@
 """Authentication and user schemas for the API."""
 
+import uuid
 from datetime import datetime
 from typing import Optional
 
@@ -14,7 +15,7 @@ class UserResponse(BaseModel):
     """Response model for user profile.
 
     Attributes:
-        id: Internal user ID (UUID string)
+        id: Internal user ID (UUID v7)
         clerk_id: External Clerk user ID
         email: User's email address
         first_name: User's first name
@@ -23,7 +24,7 @@ class UserResponse(BaseModel):
         created_at: When the user was created
     """
 
-    id: str = Field(..., description="Internal user ID (UUID)")
+    id: uuid.UUID = Field(..., description="Internal user ID (UUID v7)")
     clerk_id: str = Field(..., description="Clerk user ID")
     email: EmailStr = Field(..., description="User's email address")
     first_name: Optional[str] = Field(None, description="User's first name")

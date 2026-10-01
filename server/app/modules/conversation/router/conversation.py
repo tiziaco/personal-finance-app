@@ -1,6 +1,5 @@
 """Conversation CRUD endpoints for the authenticated user."""
 
-import uuid
 from typing import List
 
 from fastapi import (
@@ -32,11 +31,10 @@ router = APIRouter(prefix="/conversation", tags=["conversation"])
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def create_conversation(request: Request, db_session: DbSession, user: CurrentUser):
     """Create a new chat conversation for the authenticated user."""
-    conversation_id = str(uuid.uuid4())
-    conversation = await conversation_service.create_conversation(db_session, conversation_id, user.id)
+    conversation = await conversation_service.create_conversation(db_session, user.id)
 
     return ConversationResponse(
-        conversation_id=conversation_id,
+        conversation_id=conversation.id,
         name=conversation.name,
         created_at=conversation.created_at,
     )

@@ -46,11 +46,11 @@ Every table follows these. A doc lists only its own table's exceptions.
 - **Singular table names**, SQLModel's default — no model sets `__tablename__`. `user` is
   a reserved word in PostgreSQL: unquoted, `FROM user` returns the `current_user`
   function's row instead of erroring. Hand-written SQL writes `"user"`.
-- **Text UUID v4 primary keys**, generated app-side —
-  `Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)` — stored as
-  `VARCHAR`, with no server default. The move to a native `uuid` column is deferred
-  ([`../TODO.md`](../TODO.md)). The exception is `conversation.id`, which the caller
-  supplies: it is the LangGraph thread id.
+- **UUID v7 primary keys** in a native `uuid` column, from `UUIDPrimaryKeyMixin`
+  (`server/app/models/base.py`): generated app-side with `uuid_utils.compat.uuid7()`, with
+  `DEFAULT uuidv7()` as the backstop for raw SQL. `uuidv7()` needs **PostgreSQL 18**. Ids
+  are `uuid.UUID` inside the server and text only where they leave it — `conversation.id`
+  is also the LangGraph thread id, stored there as text.
 - **Every table extends `BaseModel`** (`server/app/models/base.py`): `created_at` and
   `updated_at`, `TIMESTAMPTZ`, set app-side; `created_at` is indexed, `updated_at`
   refreshed on every write.

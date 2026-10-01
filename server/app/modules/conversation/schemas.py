@@ -1,5 +1,6 @@
 """Conversation and chat request/response schemas."""
 
+import uuid
 from datetime import datetime
 from typing import List
 
@@ -20,7 +21,7 @@ class ConversationResponse(BaseModel):
         created_at: When the conversation was created
     """
 
-    conversation_id: str = Field(..., description="The unique identifier for the chat conversation")
+    conversation_id: uuid.UUID = Field(..., description="The unique identifier for the chat conversation")
     name: str = Field(default="", description="Name of the conversation")
     created_at: datetime = Field(..., description="When the conversation was created")
 

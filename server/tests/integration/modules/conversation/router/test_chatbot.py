@@ -4,6 +4,7 @@ import json
 import uuid
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.modules.conversation.models import Conversation
 
@@ -14,7 +15,6 @@ pytestmark = pytest.mark.integration
 async def test_conversation(db_session, test_user):
     """A conversation owned by test_user for chatbot testing."""
     conv = Conversation(
-        id=str(uuid.uuid4()),
         user_id=test_user.id,
         name="Chat Test",
     )
@@ -47,7 +47,7 @@ class TestChatEndpoint:
 
     async def test_chat_nonexistent_conversation_returns_404(self, authenticated_client_with_agent):
         response = await authenticated_client_with_agent.post(
-            "/api/v1/chatbot/chat/nonexistent-conv-id",
+            f"/api/v1/chatbot/chat/{uuid7()}",
             json={"message": "Hello"},
         )
         assert response.status_code == 404
@@ -68,7 +68,6 @@ class TestChatEndpoint:
         await db_session.refresh(other_user)
 
         other_conv = Conversation(
-            id=str(uuid.uuid4()),
             user_id=other_user.id,
             name="Other's Chat",
         )

@@ -3,6 +3,8 @@
 These tests exercise pure in-memory behaviour — no database required.
 """
 
+import uuid
+
 import pytest
 
 from app.models.base import TenantMixin
@@ -10,6 +12,8 @@ from app.modules.account.models import User
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.unit
+
+USER_ID = uuid.UUID("0199a8b0-0000-7000-8000-000000000001")
 
 
 # ============================================================================
@@ -21,31 +25,31 @@ class TestSoftDeleteMixin:
     """Tests for SoftDeleteMixin properties and methods."""
 
     def test_is_deleted_false_by_default(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         assert conv.is_deleted is False
 
     def test_deleted_at_none_by_default(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         assert conv.deleted_at is None
 
     def test_soft_delete_sets_deleted_at(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         conv.soft_delete()
         assert conv.deleted_at is not None
 
     def test_is_deleted_true_after_soft_delete(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         conv.soft_delete()
         assert conv.is_deleted is True
 
     def test_restore_clears_deleted_at(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         conv.soft_delete()
         conv.restore()
         assert conv.deleted_at is None
 
     def test_is_deleted_false_after_restore(self):
-        conv = Conversation(id="conv-1", user_id="user-1")
+        conv = Conversation(user_id=USER_ID)
         conv.soft_delete()
         conv.restore()
         assert conv.is_deleted is False

@@ -1,5 +1,6 @@
 """Supplier service — the contact link between a supplier and a portal user."""
 
+import uuid
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,7 +15,7 @@ class SupplierService:
     """Links, unlinks and resolves the supplier a user manages."""
 
     @staticmethod
-    async def link_from_metadata(session: AsyncSession, user_id: str, metadata: dict) -> Optional[str]:
+    async def link_from_metadata(session: AsyncSession, user_id: uuid.UUID, metadata: dict) -> Optional[uuid.UUID]:
         """Link a supplier to this user based on invitation metadata.
 
         Runs on every account sync (JIT provisioning and two webhooks), so it
@@ -30,8 +31,13 @@ class SupplierService:
         Returns:
             The linked Supplier.id, or None if nothing was linked.
         """
-        supplier_id = metadata.get("supplier_id")
-        if not supplier_id:
+        raw_supplier_id = metadata.get("supplier_id")
+        if not raw_supplier_id:
+            return None
+        try:
+            supplier_id = uuid.UUID(str(raw_supplier_id))
+        except ValueError:
+            logger.warning("supplier_link_target_missing", supplier_id=raw_supplier_id, user_id=user_id)
             return None
 
         replace_flag = bool(metadata.get("replace"))
@@ -63,7 +69,7 @@ class SupplierService:
         return supplier.id
 
     @staticmethod
-    async def unlink_contact(session: AsyncSession, user_id: str) -> Optional[str]:
+    async def unlink_contact(session: AsyncSession, user_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Clear Supplier.contact_id for any supplier this user manages.
 
         Anonymising the user row leaves Supplier.contact_id pointing at it,
@@ -88,7 +94,7 @@ class SupplierService:
         return supplier.id
 
     @staticmethod
-    async def get_id_for_user(session: AsyncSession, user_id: str) -> Optional[str]:
+    async def get_id_for_user(session: AsyncSession, user_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Resolve the Supplier.id linked to this user, cache-first.
 
         A cached None is honoured as "known not linked" rather than treated as

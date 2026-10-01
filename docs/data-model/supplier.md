@@ -26,8 +26,8 @@ on every supplier request, and refuses a user with no link (`SUPPLIER_NOT_LINKED
 
 ```sql
 CREATE TABLE supplier (
-    id          VARCHAR     PRIMARY KEY,                    -- str(uuid.uuid4()), app-side
-    contact_id  VARCHAR     REFERENCES "user" (id),         -- the portal contact; NULL until one exists
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),
+    contact_id  UUID        REFERENCES "user" (id),         -- the portal contact; NULL until one exists
     name        VARCHAR     NOT NULL,
     code        VARCHAR     NOT NULL,                       -- unique
     vat_number  VARCHAR     NOT NULL,                       -- unique

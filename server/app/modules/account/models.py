@@ -1,6 +1,5 @@
 """The user row and the organisation roles."""
 
-import uuid
 from datetime import UTC, datetime
 from enum import StrEnum
 from typing import Optional
@@ -8,10 +7,10 @@ from typing import Optional
 from sqlalchemy import DateTime
 from sqlmodel import Field
 
-from app.models.base import AnonymizableMixin, BaseModel
+from app.models.base import AnonymizableMixin, BaseModel, UUIDPrimaryKeyMixin
 
 
-class User(BaseModel, AnonymizableMixin, table=True):
+class User(BaseModel, UUIDPrimaryKeyMixin, AnonymizableMixin, table=True):
     """User model for storing user accounts.
 
     GDPR Compliance:
@@ -23,7 +22,7 @@ class User(BaseModel, AnonymizableMixin, table=True):
     - Mark with anonymized_at timestamp
 
     Attributes:
-        id: Internal UUID primary key for DB relationships
+        id: UUID v7 primary key (UUIDPrimaryKeyMixin)
         clerk_id: External Clerk user ID for auth lookups (anonymized on deletion)
         org_id: Clerk organisation ID. Set from JWT on every login; used for
             tenant-scoped DB queries. Intentionally not the role (see design spec).
@@ -41,7 +40,6 @@ class User(BaseModel, AnonymizableMixin, table=True):
         anonymized_at: When personal data was anonymized (GDPR deletion)
     """
 
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()), primary_key=True)
     clerk_id: str = Field(unique=True, index=True)
     org_id: Optional[str] = Field(default=None, index=True)
     email: str = Field(unique=True, index=True)
@@ -63,7 +61,7 @@ class User(BaseModel, AnonymizableMixin, table=True):
         UserService.erase_user (which publishes USER_ERASING), not directly:
         alone, this leaves conversation names unerased.
         """
-        anonymous_id = f"deleted_user_{self.id[:8]}"
+        anonymous_id = f"deleted_user_{self.id}"
         self.clerk_id = anonymous_id
         self.email = f"{anonymous_id}@anonymized.local"
         self.email_verified = False

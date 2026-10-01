@@ -16,7 +16,7 @@ export const createConversationResponseNameDefault = ``
 export const CreateConversationResponse = zod
   .object({
     conversation_id: zod
-      .string()
+      .uuid()
       .describe("The unique identifier for the chat conversation"),
     created_at: zod.iso
       .datetime({ offset: true })
@@ -35,7 +35,7 @@ export const CreateConversationResponse = zod
  * @summary Delete a chat conversation
  */
 export const DeleteConversationParams = zod.object({
-  conversation_id: zod.string(),
+  conversation_id: zod.uuid(),
 })
 
 export const DeleteConversationResponse = zod.void()
@@ -45,7 +45,7 @@ export const DeleteConversationResponse = zod.void()
  * @summary Rename a chat conversation
  */
 export const RenameConversationParams = zod.object({
-  conversation_id: zod.string(),
+  conversation_id: zod.uuid(),
 })
 
 export const renameConversationBodyNameMax = 100
@@ -59,7 +59,7 @@ export const renameConversationResponseNameDefault = ``
 export const RenameConversationResponse = zod
   .object({
     conversation_id: zod
-      .string()
+      .uuid()
       .describe("The unique identifier for the chat conversation"),
     created_at: zod.iso
       .datetime({ offset: true })
@@ -82,7 +82,7 @@ export const listConversationsResponseNameDefault = ``
 export const ListConversationsResponseItem = zod
   .object({
     conversation_id: zod
-      .string()
+      .uuid()
       .describe("The unique identifier for the chat conversation"),
     created_at: zod.iso
       .datetime({ offset: true })

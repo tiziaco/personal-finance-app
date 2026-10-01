@@ -1,5 +1,6 @@
 """User repository for database operations."""
 
+import uuid
 from datetime import (
     UTC,
     datetime,
@@ -19,7 +20,7 @@ class UserRepository:
     """Repository for user database operations."""
 
     @staticmethod
-    async def get_by_id(session: AsyncSession, user_id: str) -> Optional[User]:
+    async def get_by_id(session: AsyncSession, user_id: uuid.UUID) -> Optional[User]:
         """Get a user by internal ID."""
         return await session.get(User, user_id)
 

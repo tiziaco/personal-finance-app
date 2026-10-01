@@ -30,8 +30,8 @@ at a valid one.
 
 ```sql
 CREATE TABLE "user" (
-    id              VARCHAR     PRIMARY KEY,   -- str(uuid.uuid4()), app-side
-    clerk_id        VARCHAR     NOT NULL,      -- unique; 'deleted_user_<first 8 chars of id>' after erasure
+    id              UUID        PRIMARY KEY DEFAULT uuidv7(),
+    clerk_id        VARCHAR     NOT NULL,      -- unique; 'deleted_user_<id>' after erasure
     org_id          VARCHAR,                   -- the active Clerk organization; NULL after erasure
     email           VARCHAR     NOT NULL,      -- unique; '<anonymous id>@anonymized.local' after erasure
     email_verified  BOOLEAN     NOT NULL,
@@ -69,9 +69,3 @@ CREATE TABLE "user" (
   no guaranteed order, and an event older than the row is skipped; a host-clock value
   would make every later event look stale ([`../architecture/authentication.md`](../architecture/authentication.md)
   §4).
-
-## 5. Deferred
-
-- **A native `uuid` primary key** — [`../TODO.md`](../TODO.md), **Data model**.
-- **A full-length `anonymous_id`** — today it uses 8 characters of the id;
-  [`../TODO.md`](../TODO.md), **Erasure** (A6).

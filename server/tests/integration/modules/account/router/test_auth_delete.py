@@ -119,7 +119,7 @@ class TestDeleteMeCheckpointCleanup:
         self, authenticated_client_with_agent, test_user, db_session, mocked_externals
     ):
         """One call carrying every conversation the user owned — none may be skipped."""
-        conversations = [Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name=f"Chat {i}") for i in range(2)]
+        conversations = [Conversation(user_id=test_user.id, name=f"Chat {i}") for i in range(2)]
         db_session.add_all(conversations)
         await db_session.flush()
 
@@ -138,8 +138,8 @@ class TestDeleteMeCheckpointCleanup:
         DELETE /conversation/{id} clears checkpoints before soft-deleting, so in
         practice these are already gone. Erasure must not depend on it.
         """
-        active = Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name="Active")
-        earlier = Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name="Deleted earlier")
+        active = Conversation(user_id=test_user.id, name="Active")
+        earlier = Conversation(user_id=test_user.id, name="Deleted earlier")
         db_session.add_all([active, earlier])
         await db_session.flush()
         earlier.soft_delete()
@@ -161,7 +161,7 @@ class TestDeleteMeCheckpointCleanup:
         identifiers, so a cascade that anonymised first would be deleting
         checkpoints keyed by values it had already destroyed.
         """
-        conv = Conversation(id=str(uuid.uuid4()), user_id=test_user.id, name="Before")
+        conv = Conversation(user_id=test_user.id, name="Before")
         db_session.add(conv)
         await db_session.flush()
 

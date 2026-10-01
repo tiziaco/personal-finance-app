@@ -4,6 +4,7 @@ Scoped to contact linking. Supplier lifecycle (create/update/delete) arrives
 with the first write route (architecture §9).
 """
 
+import uuid
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,7 +17,7 @@ class SupplierRepository:
     """Repository for supplier database operations relevant to user/contact linking."""
 
     @staticmethod
-    async def get_by_id(session: AsyncSession, supplier_id: str) -> Optional[Supplier]:
+    async def get_by_id(session: AsyncSession, supplier_id: uuid.UUID) -> Optional[Supplier]:
         """Get a supplier by internal ID.
 
         Args:
@@ -31,7 +32,7 @@ class SupplierRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_id_by_contact_id(session: AsyncSession, user_id: str) -> Optional[str]:
+    async def get_id_by_contact_id(session: AsyncSession, user_id: uuid.UUID) -> Optional[uuid.UUID]:
         """Get the id of the non-soft-deleted supplier linked to this user, if any.
 
         Args:
@@ -48,7 +49,7 @@ class SupplierRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_by_contact_id(session: AsyncSession, user_id: str) -> Optional[Supplier]:
+    async def get_by_contact_id(session: AsyncSession, user_id: uuid.UUID) -> Optional[Supplier]:
         """Get the supplier (any deletion state) linked to this user's contact_id.
 
         Unlike get_id_by_contact_id, this is not scoped to non-deleted suppliers:
@@ -69,7 +70,7 @@ class SupplierRepository:
     async def set_contact_id(
         session: AsyncSession,
         supplier: Supplier,
-        contact_id: Optional[str],
+        contact_id: Optional[uuid.UUID],
     ) -> Supplier:
         """Set Supplier.contact_id and flush.
 

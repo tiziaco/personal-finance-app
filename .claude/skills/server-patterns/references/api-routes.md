@@ -47,10 +47,9 @@ router = APIRouter(prefix="/conversation", tags=["conversation"])
 )
 @limiter.limit(settings.rate_limits.endpoints.CHAT[0])
 async def create_conversation(request: Request, db_session: DbSession, user: CurrentUser):
-    conversation_id = str(uuid.uuid4())
-    conversation = await conversation_service.create_conversation(db_session, conversation_id, user.id)
+    conversation = await conversation_service.create_conversation(db_session, user.id)
     return ConversationResponse(
-        conversation_id=conversation_id, name=conversation.name, created_at=conversation.created_at
+        conversation_id=conversation.id, name=conversation.name, created_at=conversation.created_at
     )
 
 
@@ -98,15 +97,14 @@ A path resource is resolved and authorised by the module's dependency, and the r
 async def get_user_conversation(
     user: CurrentUser,
     db_session: DbSession,
-    conversation_id: str = Path(...),
+    conversation_id: uuid.UUID = Path(...),  # a malformed id is a 422 before any query
 ) -> Conversation:
-    sanitized_id = sanitize_string(conversation_id)
-    conversation = await conversation_service.get_conversation(db_session, sanitized_id)
+    conversation = await conversation_service.get_conversation(db_session, conversation_id)
 
     if not conversation or conversation.deleted_at is not None:
-        raise ConversationNotFoundError(f"Conversation {sanitized_id} not found", conversation_id=sanitized_id)
+        raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
     if conversation.user_id != user.id:
-        raise ConversationAccessDeniedError(..., conversation_id=sanitized_id, user_id=user.id)
+        raise ConversationAccessDeniedError(..., conversation_id=conversation_id, user_id=user.id)
 
     return conversation
 
@@ -143,7 +141,7 @@ instead turns a stored value into a 500 on every later read.
 Store text as the member typed it. Escaping belongs to the renderer — JSON and React both escape on output — and at
 the write layer it compounds on every edit. The one input-side change is dropping null bytes, which Postgres text
 columns reject (`name.replace("\0", "")`). `sanitize_string` (`app/utils/sanitization.py`) is for identifiers, not
-content: the ownership dependency runs it on `conversation_id`.
+content; a `uuid.UUID` path parameter needs neither — FastAPI rejects a malformed id with a 422.
 
 A validation failure raises a domain exception from the module's `exceptions.py` (the categories are in
 `references/exceptions.md`) or is left to Pydantic. There is no `HTTPException` in a module.

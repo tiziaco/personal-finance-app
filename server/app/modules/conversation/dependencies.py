@@ -1,5 +1,6 @@
 """Conversation verification dependencies for FastAPI endpoints."""
 
+import uuid
 from typing import Annotated
 
 from fastapi import (
@@ -14,13 +15,12 @@ from app.modules.account import CurrentUser
 from app.modules.conversation.exceptions import ConversationAccessDeniedError, ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.service import conversation_service
-from app.utils.sanitization import sanitize_string
 
 
 async def get_user_conversation(
     user: CurrentUser,
     db_session: DbSession,
-    conversation_id: str = Path(...),
+    conversation_id: uuid.UUID = Path(...),
 ) -> Conversation:
     """Verify conversation exists and belongs to authenticated user.
 
@@ -36,16 +36,15 @@ async def get_user_conversation(
         ConversationNotFoundError: If conversation not found
         ConversationAccessDeniedError: If access denied
     """
-    sanitized_id = sanitize_string(conversation_id)
-    conversation = await conversation_service.get_conversation(db_session, sanitized_id)
+    conversation = await conversation_service.get_conversation(db_session, conversation_id)
 
     if not conversation or conversation.deleted_at is not None:
-        raise ConversationNotFoundError(f"Conversation {sanitized_id} not found", conversation_id=sanitized_id)
+        raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
 
     if conversation.user_id != user.id:
         raise ConversationAccessDeniedError(
-            f"User {user.id} does not have access to conversation {sanitized_id}",
-            conversation_id=sanitized_id,
+            f"User {user.id} does not have access to conversation {conversation_id}",
+            conversation_id=conversation_id,
             user_id=user.id,
         )
 

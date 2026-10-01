@@ -16,19 +16,18 @@ The erasure cascade runs and is tested, but what it leaves behind is pseudonymis
 anonymised: `user.id` survives, `conversation.user_id` still points at it, and Langfuse
 still holds the conversations keyed by that id.
 [`server/docs/gdpr-erasure-findings.md`](../server/docs/gdpr-erasure-findings.md) has
-nine open findings (A1–A6, B1–B3, C2), four design options and seven open questions.
+eight open findings (A1–A5, B1–B3, C2), four design options and seven open questions.
 
 **Unblocks:** a truthful privacy policy, and any fork that goes to production with real
 supplier contacts. **Decide first:** C2 — one erasure flow for both user types, or two.
 It determines whether the rest is one path or two.
 
-Three findings do not wait on that decision and are small on their own:
+Two findings do not wait on that decision and are small on their own:
 
 - **A2 — Langfuse.** Stop sending `langfuse_user_id`, mask content at source, or add a
   deletion call to the cascade. The highest-impact finding.
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
-- **A6 — 32-bit `anonymous_id`.** Use the full UUID in `anonymize_user()`.
 
 ## Tenancy — `supplier` adopts `TenantMixin`
 
@@ -36,15 +35,6 @@ Three findings do not wait on that decision and are small on their own:
 the mixin needs a backfill of `org_id` on existing rows. **Unblocks:** the first supplier
 write route, which must ship with the mixin, the backfill migration, and `org_id` on
 every `supplier` repository method. Reasoning: `docs/architecture/server.md` §9.
-
-## Data model — native `uuid` primary keys
-
-Every primary key is a `VARCHAR` holding `str(uuid.uuid4())`, generated app-side, with no
-server default. A native `uuid` column halves the key and its indexes and rejects
-malformed ids; UUID v7 would also make them time-ordered. **Unblocks:** nothing today;
-decide before a fork's tables grow large, because the change is a migration of every key
-and every foreign key. A `uuidv7()` server default needs **PostgreSQL 18**; the stack runs
-16. Conventions: [`data-model/README.md`](./data-model/README.md) §3.
 
 ## Authorization — the first organization-scoped route
 

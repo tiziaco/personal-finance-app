@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.agents.shared.checkpointing.postgres import (
     delete_conversation_checkpoints,
@@ -64,6 +65,17 @@ class TestDeleteConversationsCheckpoints:
 
         create_pool.assert_not_awaited()
         conn.execute.assert_not_awaited()
+
+    async def test_uuid_ids_are_bound_as_text(self, pool_with_connection):
+        """thread_id is a text column; a uuid[] parameter would not compare to it."""
+        _, conn = pool_with_connection
+        ids = [uuid7(), uuid7()]
+
+        await delete_conversations_checkpoints(ids)
+
+        for call in conn.execute.await_args_list:
+            _, params = call.args
+            assert params == ([str(i) for i in ids],)
 
 
 class TestDeleteConversationCheckpoints:

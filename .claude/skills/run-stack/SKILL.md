@@ -34,3 +34,17 @@ In VS Code, `Dev: All` (⇧⌘B) chains preflight → start db → migrate → A
 The root `Makefile` manages the full Compose stack: `make docker-run` (full, with monitoring and ngrok) or `make docker-run-core` (portals, server, db). Migrations apply automatically on `docker-run*`; `make docker-migrate` is for on-demand use.
 
 `ngrok` (dev only) tunnels `server:8000` for Clerk webhook delivery. Compose publishes no host port for it, so its inspection dashboard has no fixed URL.
+
+### After a PostgreSQL major-version bump
+
+A data directory from an older major version will not start. Drop the volume and re-apply
+migrations — dev users come back through JIT provisioning on the next sign-in:
+
+```bash
+make docker-stop
+docker volume ls | grep postgres-data      # <project>_postgres-data
+docker volume rm <project>_postgres-data
+make docker-run-db ENV=development && make -C server migrate ENV=development
+```
+
+A linked worktree's volume goes with `make worktree-clean`.

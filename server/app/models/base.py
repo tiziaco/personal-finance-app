@@ -1,5 +1,6 @@
 """Base models and mixins for all models."""
 
+import uuid
 from datetime import (
     UTC,
     datetime,
@@ -8,11 +9,13 @@ from typing import Optional
 
 from sqlalchemy import (
     DateTime,
+    text,
 )
 from sqlmodel import (
     Field,
     SQLModel,
 )
+from uuid_utils.compat import uuid7
 
 
 class TimestampMixin(SQLModel):
@@ -102,10 +105,24 @@ class TenantMixin(SQLModel):
     org_id: str = Field(index=True, nullable=False)
 
 
+class UUIDPrimaryKeyMixin(SQLModel):
+    """The primary key: a UUID v7 in a native uuid column.
+
+    Generated app-side, so the id exists before flush; `uuidv7()` (PostgreSQL 18+)
+    covers rows inserted by raw SQL.
+    """
+
+    id: uuid.UUID = Field(
+        default_factory=uuid7,
+        primary_key=True,
+        sa_column_kwargs={"server_default": text("uuidv7()")},
+    )
+
+
 class BaseModel(TimestampMixin, SQLModel):
     """Base for all models: created_at / updated_at tracking.
 
-    Compose with SoftDeleteMixin or AnonymizableMixin as needed.
+    Compose with UUIDPrimaryKeyMixin, and SoftDeleteMixin or AnonymizableMixin as needed.
     """
 
     pass

@@ -22,8 +22,8 @@ checkpoint tables, keyed by the thread id, which is this row's `id`.
 
 ```sql
 CREATE TABLE conversation (
-    id          VARCHAR     PRIMARY KEY,                    -- the LangGraph thread id; caller-supplied
-    user_id     VARCHAR     NOT NULL REFERENCES "user" (id),
+    id          UUID        PRIMARY KEY DEFAULT uuidv7(),   -- also the LangGraph thread id, as text
+    user_id     UUID        NOT NULL REFERENCES "user" (id),
     name        VARCHAR     NOT NULL,                       -- '' by default; blanked on erasure
     deleted_at  TIMESTAMPTZ,
     created_at  TIMESTAMPTZ NOT NULL,

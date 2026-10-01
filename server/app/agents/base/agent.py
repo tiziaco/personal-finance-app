@@ -1,6 +1,7 @@
 """Base agent class for all LangGraph agents."""
 
 import asyncio
+import uuid
 from abc import (
     ABC,
     abstractmethod,
@@ -53,8 +54,8 @@ class BaseAgent(ABC):
     async def get_response(
         self,
         messages: list[Message],
-        conversation_id: str,
-        user_id: Optional[str] = None,
+        conversation_id: uuid.UUID,
+        user_id: Optional[uuid.UUID] = None,
     ) -> list[dict]:
         """Get a response from the agent."""
         if not self.is_ready():
@@ -83,8 +84,8 @@ class BaseAgent(ABC):
     async def get_stream_response(
         self,
         messages: list[Message],
-        conversation_id: str,
-        user_id: Optional[str] = None,
+        conversation_id: uuid.UUID,
+        user_id: Optional[uuid.UUID] = None,
     ) -> AsyncGenerator[str, None]:
         """Stream the agent's response, token by token."""
         if not self.is_ready():
@@ -117,14 +118,16 @@ class BaseAgent(ABC):
             logger.exception("error_in_stream_processing", error=str(stream_error), conversation_id=conversation_id)
             raise stream_error
 
-    async def get_chat_history(self, conversation_id: str) -> list[Message]:
+    async def get_chat_history(self, conversation_id: uuid.UUID) -> list[Message]:
         """Get the chat history for a given conversation."""
         if not self.is_ready():
             raise RuntimeError(
                 "Agent graph not initialized. This should not happen if startup completed successfully."
             )
 
-        state: StateSnapshot = await self._graph.aget_state(config={"configurable": {"thread_id": conversation_id}})
+        state: StateSnapshot = await self._graph.aget_state(
+            config={"configurable": {"thread_id": str(conversation_id)}}
+        )
         return self._process_messages(state.values["messages"]) if state.values else []
 
     def _process_messages(self, messages: list[BaseMessage]) -> list[Message]:

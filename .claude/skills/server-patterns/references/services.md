@@ -15,7 +15,7 @@ whole — together they are under 200 lines. What follows is why each line is wh
 
 class ConversationRepository:
     @staticmethod
-    async def get_by_id(session: AsyncSession, conversation_id: str) -> Optional[Conversation]:
+    async def get_by_id(session: AsyncSession, conversation_id: uuid.UUID) -> Optional[Conversation]:
         """Returns soft-deleted rows too — the ownership dependency does its own check."""
         return await session.get(Conversation, conversation_id)
 
@@ -29,7 +29,7 @@ class ConversationRepository:
         return conversation
 
     @staticmethod
-    async def soft_delete_active_for_user(session: AsyncSession, user_id: str) -> list[str]:
+    async def soft_delete_active_for_user(session: AsyncSession, user_id: uuid.UUID) -> list[uuid.UUID]:
         statement = select(Conversation).where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
         conversations = (await session.execute(statement)).scalars().all()
         for conv in conversations:
@@ -63,14 +63,14 @@ not the service, because whoever calls it must then `add` and `flush` — and th
 
 class ConversationService:
     @staticmethod
-    async def update_conversation_name(session: AsyncSession, conversation_id: str, name: str) -> Conversation:
+    async def update_conversation_name(session: AsyncSession, conversation_id: uuid.UUID, name: str) -> Conversation:
         conversation = await conversation_repository.get_by_id(session, conversation_id)
         if not conversation:
             raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
         return await conversation_repository.update_name(session, conversation, name)
 
     @staticmethod
-    async def blank_all_user_conversation_names(session: AsyncSession, user_id: str) -> int:
+    async def blank_all_user_conversation_names(session: AsyncSession, user_id: uuid.UUID) -> int:
         """Clear the name of every conversation a user owns, deleted or not.
 
         Part of erasure: a name is free text and may hold PII. Returns the

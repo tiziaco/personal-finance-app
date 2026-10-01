@@ -176,6 +176,7 @@
         "properties": {
           "conversation_id": {
             "description": "The unique identifier for the chat conversation",
+            "format": "uuid",
             "title": "Conversation Id",
             "type": "string"
           },
@@ -389,7 +390,7 @@
         "type": "object"
       },
       "UserResponse": {
-        "description": "Response model for user profile.\n\nAttributes:\n    id: Internal user ID (UUID string)\n    clerk_id: External Clerk user ID\n    email: User's email address\n    first_name: User's first name\n    last_name: User's last name\n    avatar_url: User's avatar URL\n    created_at: When the user was created",
+        "description": "Response model for user profile.\n\nAttributes:\n    id: Internal user ID (UUID v7)\n    clerk_id: External Clerk user ID\n    email: User's email address\n    first_name: User's first name\n    last_name: User's last name\n    avatar_url: User's avatar URL\n    created_at: When the user was created",
         "properties": {
           "avatar_url": {
             "anyOf": [
@@ -433,7 +434,8 @@
             "title": "First Name"
           },
           "id": {
-            "description": "Internal user ID (UUID)",
+            "description": "Internal user ID (UUID v7)",
+            "format": "uuid",
             "title": "Id",
             "type": "string"
           },
@@ -602,6 +604,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }
@@ -660,6 +663,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }
@@ -699,6 +703,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }
@@ -747,6 +752,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }
@@ -831,6 +837,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }
@@ -872,6 +879,7 @@
             "name": "conversation_id",
             "required": true,
             "schema": {
+              "format": "uuid",
               "title": "Conversation Id",
               "type": "string"
             }

@@ -232,6 +232,10 @@ which point a second erasure raises `IntegrityError`.
 Negligible at this product's scale, and not a compliance issue — but using the
 full UUID costs nothing.
 
+**Closed 2026-10-01** (`feat/pg18-uuid-v7`): `anonymize_user()` uses the full id. With
+UUID v7 keys the 8-character prefix is the timestamp, so two users created in the same
+minute would have collided.
+
 ---
 
 ## Group B — for the B2C fork

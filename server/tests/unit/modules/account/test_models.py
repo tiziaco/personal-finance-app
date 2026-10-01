@@ -1,5 +1,7 @@
 """Tests for app.modules.account.models."""
 
+import uuid
+
 import pytest
 
 from app.modules.account.models import Role, User
@@ -67,3 +69,14 @@ class TestUserAnonymizeUser:
     def test_is_anonymized_true_after_call(self, full_user):
         full_user.anonymize_user()
         assert full_user.is_anonymized is True
+
+    def test_two_users_created_in_the_same_minute_do_not_collide(self):
+        """A v7 id's first 8 hex digits are its timestamp: constant for ~65 s, so a prefix is not unique."""
+        a = User(id=uuid.UUID("0199a8b0-1111-7000-8000-000000000001"), clerk_id="clerk_a", email="a@example.com")
+        b = User(id=uuid.UUID("0199a8b0-2222-7000-8000-000000000002"), clerk_id="clerk_b", email="b@example.com")
+
+        a.anonymize_user()
+        b.anonymize_user()
+
+        assert a.clerk_id != b.clerk_id
+        assert a.email != b.email

@@ -20,6 +20,7 @@ from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from uuid_utils.compat import uuid7
 
 from app.integrations.clerk import ClerkRateLimitError
 from app.integrations.clerk.timestamps import UNSYNCED_EPOCH
@@ -119,13 +120,13 @@ def clerk_has_the_user() -> AsyncMock:
 
 
 def existing_user(last_synced_at: datetime = NOW_DT) -> User:
-    user = User(id="uuid-1", clerk_id="user_abc", email="ada@example.com", org_id="org_1")
+    user = User(id=uuid7(), clerk_id="user_abc", email="ada@example.com", org_id="org_1")
     user.last_synced_at = last_synced_at
     return user
 
 
 def make_user(org_id=None) -> User:
-    return User(id="uuid-1", clerk_id="user_abc", email="ada@example.com", org_id=org_id)
+    return User(id=uuid7(), clerk_id="user_abc", email="ada@example.com", org_id=org_id)
 
 
 def test_primary_email_picks_the_primary_address():
@@ -569,7 +570,7 @@ async def test_created_from_membership_does_not_suppress_the_user_created_that_f
 
     async def fake_create_or_get(**kwargs):
         row["user"] = User(
-            id="uuid-1",
+            id=uuid7(),
             clerk_id=kwargs["clerk_id"],
             email=kwargs["email"],
             org_id=kwargs["org_id"],

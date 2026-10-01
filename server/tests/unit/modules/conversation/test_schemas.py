@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
+from uuid_utils.compat import uuid7
 
 from app.agents.messages import Message
 from app.modules.conversation.schemas import (
@@ -73,7 +74,7 @@ class TestConversationResponse:
 
     def test_valid_response(self):
         resp = ConversationResponse(
-            conversation_id="abc-123",
+            conversation_id=uuid7(),
             name="My Chat",
             created_at=datetime.now(UTC),
         )
@@ -83,7 +84,7 @@ class TestConversationResponse:
     def test_name_is_returned_verbatim(self, name):
         """Escaping is the renderer's job — the response carries the stored name unchanged."""
         resp = ConversationResponse(
-            conversation_id="abc-123",
+            conversation_id=uuid7(),
             name=name,
             created_at=datetime.now(UTC),
         )
@@ -91,7 +92,7 @@ class TestConversationResponse:
 
     def test_empty_name_allowed(self):
         resp = ConversationResponse(
-            conversation_id="abc-123",
+            conversation_id=uuid7(),
             name="",
             created_at=datetime.now(UTC),
         )
