@@ -2,11 +2,8 @@
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
-# Host port for postgres. 5432 collides with other projects on the same
-# machine, so it is overridable: set POSTGRES_HOST_PORT in the root .env.
-POSTGRES_HOST_PORT ?= 5434
-# Host port for the API server, for the same reason: 8000 is what every other
-# FastAPI/Django project on the machine also reaches for. Inside Docker the
+# Host port for the API server: 8000 is what every other FastAPI/Django
+# project on the machine also reaches for. Inside Docker the
 # server still listens on 8000 — this is only the host-side binding, so the
 # compose healthcheck, the prometheus target and `server:8000` are unaffected.
 # Overridable: set API_HOST_PORT in the root .env.
@@ -32,6 +29,10 @@ DEPLOY_ENV ?= staging
 -include .env
 -include web-app/apps/internal-portal/.env.local
 .EXPORT_ALL_VARIABLES:
+
+# Host port for postgres: the server's POSTGRES_PORT, read here because Compose
+# publishes db on it and only sees what this Makefile exports.
+POSTGRES_PORT := $(or $(shell sed -nE 's/^[[:space:]]*(export[[:space:]]+)?POSTGRES_PORT=[^0-9]*([0-9]+).*/\2/p' server/.env.$(or $(APP_ENV),development) 2>/dev/null | tail -n 1),5434)
 
 # Name of the Clerk application clerk-bootstrap-env creates; its id lands in the
 # root .env as CLERK_APP_ID. One per developer:
@@ -146,12 +147,12 @@ dev-kill:
 # --authtoken is load-bearing: ~/Library/Application Support/ngrok/ngrok.yml
 # beats $NGROK_AUTHTOKEN, so a stale token there fails with ERR_NGROK_320.
 dev-tunnel:
-	@if [ -z "$(NGROK_DOMAIN)" ]; then \
+	@if [ -z "$(NGROK_DOMAIN)" ] || [ "$(NGROK_DOMAIN)" = change-me ]; then \
 		echo "NGROK_DOMAIN is not set. Add it to the root .env."; \
 		echo "See docs/setup/clerk.md §6 for how to claim a static domain."; \
 		exit 1; \
 	fi
-	@if [ -z "$(NGROK_AUTHTOKEN)" ]; then \
+	@if [ -z "$(NGROK_AUTHTOKEN)" ] || [ "$(NGROK_AUTHTOKEN)" = change-me ]; then \
 		echo "NGROK_AUTHTOKEN is not set. Add it to the root .env."; \
 		echo "Copy it from the ngrok dashboard's 'Your Authtoken' page."; \
 		exit 1; \
@@ -299,7 +300,7 @@ docker-run: guard-main
 	@echo "   Prometheus:          http://localhost:9090"
 	@echo "   Grafana:             http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)"
 	@echo "   cAdvisor:            http://localhost:8080"
-	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
+	@echo "   Database:            localhost:$(POSTGRES_PORT)"
 
 # Core stack - essential services only (no monitoring)
 # `migrate` is not in the service list because compose starts the full
@@ -314,7 +315,7 @@ docker-run-core:
 	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
 	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
-	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
+	@echo "   Database:            localhost:$(POSTGRES_PORT)"
 
 # Database only - for local development
 # `--wait` blocks on the pg_isready healthcheck so callers that connect
@@ -336,7 +337,7 @@ docker-run-db:
 	APP_ENV=$(ENV) $(DOCKER_COMPOSE) -f $(COMPOSE_FILE) --env-file $$ENV_FILE up -d --wait db
 	@echo ""
 	@echo "✅ Database is running!"
-	@echo "   Database:            localhost:$(POSTGRES_HOST_PORT)"
+	@echo "   Database:            localhost:$(POSTGRES_PORT)"
 
 # Migrations
 # The `docker-run*` targets already apply migrations via the `migrate` service,

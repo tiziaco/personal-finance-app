@@ -306,7 +306,7 @@ def setup_logging() -> None:
     In development: pretty console output
     In staging/production: structured JSON logs
     """
-    log_level = logging.DEBUG if settings.DEBUG else logging.INFO
+    log_level = logging.getLevelName(settings.logging.LEVEL)
 
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(log_level)
@@ -408,11 +408,9 @@ def setup_logging() -> None:
 setup_logging()
 
 logger = structlog.get_logger()
-log_level_name = "DEBUG" if settings.DEBUG else "INFO"
 logger.info(
     "logging_initialized",
     environment=settings.ENVIRONMENT.value,
-    log_level=log_level_name,
+    log_level=settings.logging.LEVEL,
     log_format=settings.logging.FORMAT,
-    debug=settings.DEBUG,
 )

@@ -36,7 +36,7 @@ check "app-network declared in prod compose" grep -q "app-network:" docker-compo
 # binding must stay configurable, and the server must keep reaching db on the
 # CONTAINER port 5432 regardless of what the host binding is set to.
 check "db host port is configurable, not hardcoded 5432" \
-  bash -c 'grep -q "POSTGRES_HOST_PORT" docker-compose.dev.yml && ! grep -qE "^\s+- \"?5432:5432" docker-compose.dev.yml'
+  bash -c 'grep -q "\${POSTGRES_PORT:-" docker-compose.dev.yml && ! grep -qE "^\s+- \"?5432:5432" docker-compose.dev.yml'
 check "server pins container-side POSTGRES_PORT" \
   grep -q "POSTGRES_PORT=5432" docker-compose.dev.yml
 check "web-app package name is web-app"      grep -q '"name": "web-app"' web-app/package.json

@@ -33,7 +33,6 @@ def create_graph_config(
             "user_id": user,
             "conversation_id": thread_id,
             "environment": settings.ENVIRONMENT.value,
-            "debug": settings.DEBUG,
             # Langfuse-specific metadata keys (v3 approach)
             "langfuse_user_id": user,
             "langfuse_session_id": thread_id,

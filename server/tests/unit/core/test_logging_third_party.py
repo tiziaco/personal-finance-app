@@ -50,8 +50,7 @@ def test_primp_is_silenced_at_info_not_only_debug() -> None:
 def test_silencing_is_scoped_rather_than_a_global_floor() -> None:
     """Non-vacuity: the app's own records must still get through.
 
-    Holds whether or not `settings.DEBUG` is set, since `setup_logging` picks
-    DEBUG or INFO and both are below WARNING.
+    Assumes `.env.test` sets LOG_LEVEL below WARNING, as it ships with DEBUG.
     """
     assert logging.getLogger().getEffectiveLevel() < logging.WARNING
 

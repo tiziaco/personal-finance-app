@@ -88,7 +88,7 @@ echo "Database Name: $( [[ -n ${POSTGRES_DB:-${DB_NAME:-}} ]] && echo 'set' || e
 echo "Database User: $( [[ -n ${POSTGRES_USER:-${DB_USER:-}} ]] && echo 'set' || echo 'Not set' )"
 
 echo "LLM Model: ${DEFAULT_LLM_MODEL:-Not set}"
-echo "Debug Mode: ${DEBUG:-false}"
+echo "Log Level: ${LOG_LEVEL:-INFO}"
 
 # NOTE: migrations deliberately do NOT run here. They are a discrete release
 # phase — the `migrate` service in docker-compose.*.yml — which `server` is

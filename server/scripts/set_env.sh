@@ -83,7 +83,6 @@ echo -e "${GREEN}Database user:   ${YELLOW}${POSTGRES_USER:-${DB_USER:-Not set}}
 
 echo -e "${GREEN}LLM model:       ${YELLOW}${DEFAULT_LLM_MODEL:-Not set}${NC}"
 echo -e "${GREEN}Log level:       ${YELLOW}${LOG_LEVEL:-Not set}${NC}"
-echo -e "${GREEN}Debug mode:      ${YELLOW}${DEBUG:-Not set}${NC}"
 
 # Create helper functions
 start_app() {

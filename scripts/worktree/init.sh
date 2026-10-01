@@ -3,7 +3,7 @@
 # port set, the env files, and installed dependencies.
 #
 # Slot N owns base + 10N for each host port. Bases are the main checkout's (its
-# root .env, else 3000/3002/8100/5434), so a re-run after main moves to another
+# root .env and, for Postgres, server/.env.development; else 3000/3002/8100/5434), so a re-run after main moves to another
 # block of 100 moves this worktree too. Main is slot 0 and never runs this.
 #
 # The slot is allocated once and saved as WORKTREE_SLOT: recomputing it per run
@@ -54,12 +54,12 @@ for f in $REQUIRED_ENV_FILES; do
 done
 
 # ── Bases ────────────────────────────────────────────────────────────────────
-base_port() { # base_port <key> <default>
-  local v
-  v="$(read_key "$MAIN/.env" "$1")"
+base_port() { # base_port <key> <default> [file, default .env]
+  local v file=${3:-.env}
+  v="$(read_key "$MAIN/$file" "$1")"
   v="${v:-$2}"
   if ! [[ "$v" =~ ^[0-9]+$ ]]; then
-    echo "FAIL: $1=$v in $MAIN/.env is not a port number." >&2
+    echo "FAIL: $1=$v in $MAIN/$file is not a port number." >&2
     exit 1
   fi
   echo "$v"
@@ -67,7 +67,7 @@ base_port() { # base_port <key> <default>
 BASE_INTERNAL="$(base_port INTERNAL_PORTAL_HOST_PORT 3000)"
 BASE_SUPPLIER="$(base_port SUPPLIER_PORTAL_HOST_PORT 3002)"
 BASE_API="$(base_port API_HOST_PORT 8100)"
-BASE_DB="$(base_port POSTGRES_HOST_PORT 5434)"
+BASE_DB="$(base_port POSTGRES_PORT 5434 server/.env.development)"
 
 slot_ports() { # slot_ports <n> -> "internal supplier api db"
   echo $((BASE_INTERNAL + STEP * $1)) $((BASE_SUPPLIER + STEP * $1)) \
@@ -168,7 +168,6 @@ upsert .env COMPOSE_PROJECT_NAME "$PROJECT"
 upsert .env INTERNAL_PORTAL_HOST_PORT "$INTERNAL_PORT"
 upsert .env SUPPLIER_PORTAL_HOST_PORT "$SUPPLIER_PORT"
 upsert .env API_HOST_PORT "$API_PORT"
-upsert .env POSTGRES_HOST_PORT "$DB_PORT"
 upsert server/.env.development POSTGRES_PORT "$DB_PORT"
 upsert server/.env.development ALLOWED_ORIGINS \
   "'[\"http://localhost:$INTERNAL_PORT\", \"http://localhost:$SUPPLIER_PORT\", \"http://localhost:$API_PORT\"]'"

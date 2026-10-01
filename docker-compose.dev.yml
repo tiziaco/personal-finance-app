@@ -143,7 +143,9 @@ services:
     env_file:
       - ./server/.env.${APP_ENV:-development}
     ports:
-      - "${POSTGRES_HOST_PORT:-5434}:5432"
+      # Published on the server's own POSTGRES_PORT, so the native server and
+      # this binding share one value. The root Makefile hands it to Compose.
+      - "${POSTGRES_PORT:-5434}:5432"
     volumes:
       # PG18 keeps data in a major-version subdirectory and will not start with a mount at .../data.
       - postgres-data:/var/lib/postgresql

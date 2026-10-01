@@ -173,6 +173,15 @@ class LoggingSettings(BaseSettings):
             v.mkdir(parents=True, exist_ok=True)
         return v
 
+    @field_validator("LEVEL", mode="before")
+    @classmethod
+    def known_level(cls, v):
+        """Normalise to upper case; an unknown level fails at startup."""
+        level = str(v).strip().upper()
+        if level not in ("CRITICAL", "ERROR", "WARNING", "INFO", "DEBUG"):
+            raise ValueError(f"Unrecognised LOG_LEVEL {v!r}; expected DEBUG, INFO, WARNING, ERROR or CRITICAL")
+        return level
+
 
 # Rate Limit Endpoint Settings
 class RateLimitEndpointSettings(BaseSettings):
@@ -248,13 +257,11 @@ class Settings(BaseSettings):
     # Environment
     ENVIRONMENT: Environment = Field(default_factory=get_environment)
 
-    # Application Settings.
     # The service's name, version, description and versioned path prefix are NOT
-    # here: they are product identity and published interface rather than
+    # settings: they are product identity and published interface rather than
     # deployment configuration, and an env-overridable title or route prefix
     # would make the exported OpenAPI artifact differ per machine. See
     # app/core/metadata.py.
-    DEBUG: bool = False
 
     # Nested Settings
     database: DatabaseSettings = Field(default_factory=DatabaseSettings)

@@ -30,8 +30,8 @@ containers, database volume and images.
 | 0 (main checkout) | base | base | base | base | `COMPOSE_PROJECT_NAME`, else the directory name |
 | N (1–9) | base + 10N | base + 10N | base + 10N | base + 10N | `<main's project>-<worktree dir>` |
 
-Bases are the main checkout's `*_HOST_PORT`s in its root `.env`, defaulting to
-3000 / 3002 / 8100 / 5434. `make worktree-init` (which `worktree-new` runs)
+Bases are the main checkout's `*_HOST_PORT`s in its root `.env` and its
+`POSTGRES_PORT` in `server/.env.development`, defaulting to 3000 / 3002 / 8100 / 5434. `make worktree-init` (which `worktree-new` runs)
 assigns the slot once, saves it as `WORKTREE_SLOT`, and writes the slot's ports,
 `ALLOWED_ORIGINS` and `NEXT_PUBLIC_API_URL` into the worktree's env files. Every
 make target and `Dev:` task then follows them.

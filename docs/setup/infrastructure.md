@@ -34,23 +34,29 @@ the root `.env`, not in addition to it.
 | `NGROK_DOMAIN` | Your reserved ngrok domain, for Clerk webhook delivery |
 | `NGROK_AUTHTOKEN` | ngrok authtoken. See [`clerk.md`](./clerk.md) §6. |
 
-Four more sit **commented out** in `.env.example`, because the defaults are usually
-right. Set them on a machine where the defaults collide — and when several projects
-built from this template share a machine, give each its own block of 100 (see
-*Parallel worktrees* in `CLAUDE.md`). A git worktree gets its own values from
-`make worktree-init`.
+Three more are the host ports, set to their defaults in `.env.example`. Change them on a
+machine where the defaults collide; when several projects built from this template
+share a machine, give each its own block of 100 (see *Parallel worktrees* in
+`CLAUDE.md`). A git worktree gets its own values from `make worktree-init`. Never blank
+one: the Makefile loads the root `.env` after its own defaults, so an empty value
+replaces the default with nothing.
+
+Postgres' host port is not here: it is `POSTGRES_PORT` in `server/.env.development`
+(default `5434`, since 5432 collides with a local Postgres). The native server connects
+on it and the Makefile hands it to Compose, which publishes `db` on it — one value, so
+the two cannot drift. On the compose network `db` is always 5432.
 
 | Variable | Default | Why you would set it |
 |---|---|---|
 | `INTERNAL_PORTAL_HOST_PORT` | `3000` | Host port for the internal portal, on both paths: Compose publishes it and `make dev-internal` runs `next dev` on it. |
 | `SUPPLIER_PORTAL_HOST_PORT` | `3002` | The same for the supplier portal (`make dev-supplier`). |
 | `API_HOST_PORT` | `8100` | 8000 is what every other FastAPI project on the machine also wants. Host-side only — the container still listens on 8000, so the healthcheck, the Prometheus target and `server:8000` are unaffected. |
-| `POSTGRES_HOST_PORT` | `5434` | 5432 collides with a local Postgres. Host-side only; on the compose network `db` is always 5432. |
 
-Two more are commented out too. `COMPOSE_PROJECT_NAME` is optional: unset, Compose
-uses the directory name, and setting it on an existing checkout points Compose at a
-new, empty database volume. `WORKTREE_SLOT` is written by `make worktree-init`; leave
-it unset in the main checkout.
+Three more ship empty. `CLERK_APP_ID` is written by `make clerk-bootstrap-env`
+([`clerk.md`](./clerk.md)). `COMPOSE_PROJECT_NAME` is optional: empty, Compose uses the
+directory name, and setting it on an existing checkout points Compose at a new, empty
+database volume. `WORKTREE_SLOT` is written by `make worktree-init`; leave it empty in
+the main checkout — `0` is not a valid value there.
 
 ---
 
@@ -168,6 +174,6 @@ where to widen it.
 | Grafana loads, every panel empty | Prometheus cannot reach `server:8000`. Check the server container is up and on `app-network`. |
 | Some panels populated, others empty | Label contract broken — instrumentation options changed (§2). |
 | Grafana rejects `admin`/`admin` | The username is `admin`; the password is whatever `GRAFANA_ADMIN_PASSWORD` is set to in the root `.env`. |
-| Port 5432 or 8000 already allocated | Set `POSTGRES_HOST_PORT` / `API_HOST_PORT` in the root `.env` (§1). |
+| Port 5432 or 8000 already allocated | Set `POSTGRES_PORT` in `server/.env.development`, or `API_HOST_PORT` in the root `.env` (§1). |
 | Dashboards vanished after `make clean` | `clean` removes volumes, including `grafana-storage`. Commit dashboards to `infra/grafana/dashboards/json/`. |
 | Metrics work locally, absent in prod | Expected — the prod compose file ships no monitoring stack (§3). |
