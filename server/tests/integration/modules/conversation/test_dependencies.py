@@ -83,3 +83,18 @@ class TestConversationAccessDependency:
         assert response.status_code == 404
         assert data["error"] == "CONVERSATION_NOT_FOUND"
         assert str(other_user.id) not in response.text
+
+    async def test_own_conversation_succeeds(self, authenticated_client, db_session, test_user):
+        """Accessing own conversation → 200, no error."""
+        conv = Conversation(
+            user_id=test_user.id,
+            name="Mine",
+        )
+        db_session.add(conv)
+        await db_session.flush()
+
+        response = await authenticated_client.patch(
+            f"/api/v1/conversation/conversation/{conv.id}/name",
+            data={"name": "Still Mine"},
+        )
+        assert response.status_code == 200

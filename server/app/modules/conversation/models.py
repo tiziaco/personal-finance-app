@@ -1,7 +1,5 @@
 """This file contains the conversation model for the application."""
 
-import uuid
-
 from sqlmodel import Field
 
 from app.models.base import (
