@@ -35,7 +35,7 @@ Media & Electronics · Savings & Investments · Travel & Holidays · Miscellaneo
 ## 4. Rules and edge cases
 
 - **How it works, in product terms.** The labeller recognises well-known merchants, asks an
-  LLM to categorise the rest in batches, and checks the answers against the list. An
+  LLM to categorise the rest in batches, and checks the answers against the list. A
   merchant the LLM does not answer for is filed under Miscellaneous with a confidence of
   0.3.
 - **Every transaction carries a confidence**, 0 to 1. Anything the user entered or edited

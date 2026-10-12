@@ -31,8 +31,14 @@ change up on its own.
 
 ## 3. Deleting an account
 
-A user can delete their own account, or an operator can delete them from the identity
-provider's dashboard. Both run the same erasure.
+There is **no delete-account screen** yet. Today an account is deleted in one of two ways,
+and both run the same erasure:
+
+- **Through the API:** `DELETE /api/v1/auth/me`. No screen in the app calls it. It deletes
+  the user from Clerk first, so their token cannot re-create the account, then runs the
+  erasure.
+- **From Clerk's dashboard:** an operator deletes the user there, and Clerk's
+  `user.deleted` webhook tells the app, which runs the erasure.
 
 **What is erased:** the sign-in account and every session; the user's name, email and
 avatar; their conversations with the assistant and the chat history in them; the
@@ -50,5 +56,7 @@ rather than anonymous, and the tracing service still holds conversations
 ## 4. Open questions
 
 - **Erasure's target state**, above.
+- **A delete-account screen.** The profile window has no way to delete the account, and
+  nothing in the app calls the API. Should it?
 - **Leaving without deleting.** Should a user be able to export their transactions before
   deleting? The legacy app had no export, and none is planned.
