@@ -27,7 +27,6 @@ What the product does, for the people deciding scope. Conventions are in
 |---|---|
 | [`product/prd-mvp.md`](./product/prd-mvp.md) | The first release's scope — a skeleton for a fork to fill |
 | [`product/features/account.md`](./product/features/account.md) | Getting in, organizations, the roles, the profile, deleting an account |
-| [`product/features/suppliers.md`](./product/features/suppliers.md) | The example domain — supplier companies, their contact, their documents |
 
 ## Data model
 
@@ -39,7 +38,6 @@ decisions that record why its schema looks the way it does. Conventions are in
 |---|---|
 | [`data-model/account.md`](./data-model/account.md) | The `"user"` table — the platform's record of a person Clerk has told it about |
 | [`data-model/conversation.md`](./data-model/conversation.md) | The `conversation` table — one row per chat thread with the assistant |
-| [`data-model/supplier.md`](./data-model/supplier.md) | The `supplier` table — an external company, and the user who acts for it |
 
 ## Architecture
 

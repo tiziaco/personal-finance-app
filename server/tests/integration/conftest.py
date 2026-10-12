@@ -20,13 +20,10 @@ def clear_user_cache():
     here without awaiting would create a coroutine and clear nothing.
     """
     from app.modules.account.cache import user_cache
-    from app.modules.supplier.cache import supplier_cache
 
     user_cache.reset()
-    supplier_cache.reset()
     yield
     user_cache.reset()
-    supplier_cache.reset()
 
 
 @pytest_asyncio.fixture

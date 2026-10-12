@@ -12,7 +12,6 @@ from svix.webhooks import Webhook
 from app.modules.account.models import User
 from app.modules.account.repository import UserRepository
 from app.modules.account.webhooks import clerk_dispatcher
-from app.modules.supplier.models import Supplier
 
 pytestmark = pytest.mark.integration
 
@@ -279,46 +278,14 @@ async def test_membership_deleted_clears_org(client, db_session):
     assert user.org_id is None
 
 
-async def test_membership_deleted_for_matching_org_unlinks_supplier(client, db_session):
-    """The positive mirror of the org-mismatch test below: a deletion whose
-    org matches the user's current org_id is a genuine offboarding and must
-    clear Supplier.contact_id against the real database, not just a mock."""
-    await post(client, "organization_membership.created", MEMBERSHIP_DATA)  # org_e2e
-    user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
-    assert user is not None
-
-    supplier = Supplier(contact_id=user.id, name="Acme Forgings", code="ACME-MATCH", vat_number="IT12345678902")
-    db_session.add(supplier)
-    await db_session.flush()
-
-    assert (
-        await post(
-            client,
-            "organization_membership.deleted",
-            MEMBERSHIP_DATA,
-            msg_id="msg_matching_org",
-        )
-    ).status_code == 204
-
-    await db_session.refresh(user)
-    assert user.org_id is None
-    await db_session.refresh(supplier)
-    assert supplier.contact_id is None
-
-
 async def test_membership_deleted_for_different_org_leaves_state_intact(client, db_session):
     """Ruling 3's second invariant. An admin reassigning a user between orgs
     emits organizationMembership.created(B) and .deleted(A) with no ordering
     guarantee. A deleted(A) landing after created(B) must be a no-op: org_id
-    would self-heal via JIT, but JIT never restores Supplier.contact_id, so a
-    spurious unlink here is permanent."""
+    would self-heal via JIT, so a spurious clear here is avoidable churn."""
     await post(client, "organization_membership.created", MEMBERSHIP_DATA)  # org_e2e
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     assert user is not None
-
-    supplier = Supplier(contact_id=user.id, name="Acme Forgings", code="ACME-E2E", vat_number="IT12345678901")
-    db_session.add(supplier)
-    await db_session.flush()
 
     deleted_wrong_org = {**MEMBERSHIP_DATA, "organization": {"id": "org_other"}}
     assert (
@@ -332,8 +299,6 @@ async def test_membership_deleted_for_different_org_leaves_state_intact(client, 
 
     await db_session.refresh(user)
     assert user.org_id == "org_e2e"
-    await db_session.refresh(supplier)
-    assert supplier.contact_id == user.id
 
 
 async def test_user_deleted_anonymises_and_replay_is_a_noop(client, db_session, mocked_memory):

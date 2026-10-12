@@ -1,6 +1,6 @@
 """Account dependencies — who is calling, with what role, in which organisation.
 
-Resource-ownership checks ("does this supplier own this order?") live in the
+Resource-ownership checks ("does this user own this conversation?") live in the
 owning module's service; nothing here touches a table but the user row.
 """
 

@@ -195,8 +195,8 @@ class UserService:
         original_clerk_id = user.clerk_id
 
         # Inline subscribers run here, in this transaction, before the row is
-        # anonymised — conversation soft-delete, checkpoints, names, and the
-        # supplier link. Their identifiers are what anonymize_user() destroys.
+        # anonymised — conversation soft-delete, checkpoints, and names. Their
+        # identifiers are what anonymize_user() destroys.
         subscriber_count = await events.publish(USER_ERASING, session=session, user_id=user.id)
         if subscriber_count == 0:
             # Never raise here — erasure must proceed either way — but a

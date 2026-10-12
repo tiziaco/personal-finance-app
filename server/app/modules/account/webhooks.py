@@ -418,20 +418,18 @@ async def handle_membership_updated(ctx: WebhookContext) -> None:
 async def handle_membership_deleted(ctx: WebhookContext) -> None:
     """Revoke access when a user is removed from, or leaves, an organisation.
 
-    Clears org_id, unlinks any supplier this user was the contact for, and
-    drops the cached role so revocation is immediate rather than bounded by
+    Clears org_id and drops the cached role so revocation is immediate rather than bounded by
     the cache TTL.
 
     Guarded against a reversed created/deleted pair: moving a user from org A to
     org B emits created(B) and deleted(A) with no ordering guarantee, and acting
-    on a late deleted(A) would clear org B and unlink the supplier. The org loss
-    would self-heal via JIT, but JIT does not restore Supplier.contact_id, so a
-    wrong unlink is permanent. Comparing the event's org against the user's
+    on a late deleted(A) would clear org B. The org loss would self-heal via
+    JIT, but comparing the event's org against the user's
     *current* org_id catches it — but only when both are present. A NULL
     user.org_id means created(B) never landed, so there is no "B" to have been
     reversed against and the event is a genuine offboarding.
 
-    Publishes USER_OFFBOARDED; the supplier module unlinks the contact.
+    Publishes USER_OFFBOARDED.
     """
     data = ctx.data
     session = ctx.session

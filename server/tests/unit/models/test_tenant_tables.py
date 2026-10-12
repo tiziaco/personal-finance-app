@@ -19,7 +19,6 @@ pytestmark = pytest.mark.unit
 ALLOWLIST: dict[str, str] = {
     "user": "org_id is nullable — erasure clears it so an anonymised row cannot single out a one-contact supplier org",
     "conversation": "owned through its user; the user's org is the tenant",
-    "supplier": "no write route yet; adopts the mixin with the first one, and the backfill has no source until then",
 }
 
 

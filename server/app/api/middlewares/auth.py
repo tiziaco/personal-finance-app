@@ -31,12 +31,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         request.state.org_id = None
         request.state.org_role = None
 
-        # PUBLIC ROUTES (Phase 7, D-04): skip Clerk parsing entirely.
-        # No identity is needed for /public/* endpoints — link_token is the credential.
-        # Mirrors the /health, /metrics log-silence carve-out below but is a *literal skip*.
-        if request.url.path.startswith("/public/"):
-            return await call_next(request)
-
         auth_header = request.headers.get("authorization")
         if auth_header and auth_header.startswith("Bearer "):
             try:

@@ -60,13 +60,8 @@ async def delete_me(
     2. Soft-delete all conversation records + collect their IDs
     3. Clear LangGraph checkpoint data for each conversation (message PII)
     4. Delete mem0 long-term memory (extracted fact PII)
-    5. Unlink any supplier this user managed (Supplier.contact_id) and drop
-       the cached link — both inline, in the same transaction, by supplier's
-       own USER_ERASING subscriber
-    6. Anonymize the user record in DB
-    7. Invalidate the org-role cache — the supplier-link
-       cache was already dropped in step 5; a stale entry there is harmless
-       because the erased user can no longer re-authenticate to reach it
+    5. Anonymize the user record in DB
+    6. Invalidate the org-role cache
 
     Args:
         request: The FastAPI request object for rate limiting.

@@ -172,8 +172,7 @@ layers = [
 name = "R6: modules form a DAG — a module imports only those listed below it"
 type = "layers"
 layers = [
-    # '|' forbids these siblings from importing each other; ':' would permit it.
-    "app.modules.conversation | app.modules.supplier",
+    "app.modules.conversation",
     "app.modules.account",
 ]
 
@@ -190,19 +189,12 @@ layers = [
 name = "R1: account reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.account"]
-forbidden_modules = ["app.modules.conversation.*", "app.modules.supplier.*"]
+forbidden_modules = ["app.modules.conversation.*"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: conversation reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.conversation"]
-forbidden_modules = ["app.modules.account.*", "app.modules.supplier.*"]
-allow_indirect_imports = true
-
-[[tool.importlinter.contracts]]
-name = "R1: supplier reaches other modules only through their package roots"
-type = "forbidden"
-source_modules = ["app.modules.supplier"]
-forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*"]
+forbidden_modules = ["app.modules.account.*"]
 allow_indirect_imports = true

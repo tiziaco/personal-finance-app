@@ -10,7 +10,7 @@ carrying its org_id would still single that person out (Art 29 WP Opinion
 05/2014 / EDPB Guidelines 04/2025 singling-out test).
 
 Revision ID: b3f1c27a4e18
-Revises: 9bcca25cfef3
+Revises: 0c7838405158
 Create Date: 2026-08-25 09:00:00.000000
 
 """
@@ -24,7 +24,7 @@ from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "b3f1c27a4e18"
-down_revision: Union[str, Sequence[str], None] = "9bcca25cfef3"
+down_revision: Union[str, Sequence[str], None] = "0c7838405158"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
