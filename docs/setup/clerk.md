@@ -41,7 +41,8 @@ permission in the team's Clerk workspace.
 
 Local webhooks are needed only for work on the handlers. Without the tunnel, sign-in still
 works — JIT provisioning creates the user on first request — and what is lost is profile
-edits made in Clerk and account deletion made there. Staging and production are each one
+edits made in Clerk and account deletion made there (from Clerk's profile window or the
+dashboard). Staging and production are each one
 shared instance with one endpoint at the real API URL.
 
 ## Reusing an existing instance

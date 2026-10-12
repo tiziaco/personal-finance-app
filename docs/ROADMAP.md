@@ -23,7 +23,7 @@ Links are relative to `docs/`.
 
 | Change | State | Branch | Where it is specified |
 |---|---|---|---|
-| **Foundation** — single-tenant B2C base | in progress | `port/template` | `.superpowers/specs/2026-10-12-foundation-design.md` |
+| **Foundation** — single-tenant B2C base | done (2026-10-12) | `port/template` | [`architecture/`](./architecture/), [`setup/clerk.md`](./setup/clerk.md) |
 | **Backend modules** — transactions, CSV import, analytics, insights, finance agents | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
 | **Frontend** — finance pages on the generated client | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
 | **Cutover** — merge into `main`, retire legacy | not started | — | — |

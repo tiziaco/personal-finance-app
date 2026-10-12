@@ -17,6 +17,9 @@ hand-written files).
 
 **Scope placeholder:** the examples use `@acme` as the npm scope; this repo's is `@app`.
 
+**Example domain:** the `suppliers` / `Supplier*` names in the examples come from the template this
+repo was ported from. This app has no such module; read them as any resource.
+
 ### Where this repo differs from the guide
 
 | The guide shows | This repo has | Why |

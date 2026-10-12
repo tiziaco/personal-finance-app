@@ -339,3 +339,11 @@ What `deploy-check` proves and what it cannot is in [`CLAUDE.md`](CLAUDE.md) und
 | [`docs/guides/`](docs/guides/) | Patterns portable beyond this repo — the API codegen pipeline |
 | [`CLAUDE.md`](CLAUDE.md), [`server/CLAUDE.md`](server/CLAUDE.md), [`web-app/CLAUDE.md`](web-app/CLAUDE.md) | Working conventions and the most detailed operational notes in the repo |
 
+
+---
+
+## History
+
+The previous version of this app lives at the git tag `legacy-v0`. The `template` git
+remote points at the multi-tenant template this base was ported from, for merging template
+updates.
