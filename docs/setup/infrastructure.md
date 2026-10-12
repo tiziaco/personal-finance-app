@@ -51,8 +51,8 @@ the two cannot drift. On the compose network `db` is always 5432.
 | `WEB_HOST_PORT` | `3000` | Host port for the web app, on both paths: Compose publishes it and `make dev-web` runs `next dev` on it. |
 | `API_HOST_PORT` | `8100` | 8000 is what every other FastAPI project on the machine also wants. Host-side only — the container still listens on 8000, so the healthcheck, the Prometheus target and `server:8000` are unaffected. |
 
-Three more ship empty. `CLERK_APP_ID` is written by `make clerk-bootstrap-env`
-([`clerk.md`](./clerk.md)). `COMPOSE_PROJECT_NAME` is optional: empty, Compose uses the
+Two more ship empty. `CLERK_APP_ID` is written by `make clerk-bootstrap-env`
+([`clerk.md`](./clerk.md)). `COMPOSE_PROJECT_NAME` ships as `personal-finance`; if empty, Compose uses the
 directory name, and setting it on an existing checkout points Compose at a new, empty
 database volume. `WORKTREE_SLOT` is written by `make worktree-init`; leave it empty in
 the main checkout — `0` is not a valid value there.

@@ -23,7 +23,7 @@ session-scoped event loop for every fixture and test. A throwaway Postgres is st
 ```bash
 make test-unit            # from server/; -m unit, starts no container
 make test-integration     # -m integration; needs a running Docker daemon
-uv run pytest tests/unit/modules/account/test_cache.py   # one file; conftest sets APP_ENV=test
+uv run pytest tests/unit/modules/account/test_service.py   # one file; conftest sets APP_ENV=test
 ```
 
 A `DockerException` at fixture setup means the daemon is down. Only integration tests reach the
@@ -75,7 +75,7 @@ The clients call the app through `ASGITransport`. `client` sets `app.state.engin
 nothing sets the rest:
 
 - **Rate limits:** a tripped limit answers 500, and counts leak between tests. See the
-  [`BUGS.md`](../../../docs/BUGS.md) entry, which gives the fixture that fixes it.
+  [`BUGS.md`](../../../docs/BUGS.md) entry, which describes the fix (an autouse fixture).
 - **Agent:** use `authenticated_client_with_agent`.
 - **Checkpoints:** a route that clears a conversation blocks until `PoolTimeout` without
   `stub_checkpoint_deletion`.

@@ -79,7 +79,7 @@ trap teardown EXIT
 echo "==> 1/5 Parsing $COMPOSE_FILE (APP_ENV=$DEPLOY_ENV)"
 "${COMPOSE[@]}" config -q
 
-echo "==> 2/5 Building both portals and the server"
+echo "==> 2/5 Building the web app and the server"
 "${COMPOSE[@]}" build web server
 
 echo "==> 3/5 Checking the web image baked its APP_NAME"

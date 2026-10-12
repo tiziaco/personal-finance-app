@@ -47,3 +47,10 @@ make docker-run-db ENV=development && make -C server migrate ENV=development
 ```
 
 A linked worktree's volume goes with `make worktree-clean`.
+
+### `alembic upgrade` says "Can't locate revision"
+
+A dev database (a native-path DB or a Compose volume) that the old multi-tenant template
+migrated to revision `b3f1c27a4e18` has a revision this branch's history no longer
+contains. Drop the volume and re-migrate, exactly as in the section above. Dev users come
+back through JIT provisioning.

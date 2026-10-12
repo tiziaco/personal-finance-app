@@ -52,8 +52,9 @@ meets exactly the server column.
 ## 4. Ownership is a test
 
 **Ownership is a test, not a convention.** A table whose rows belong to one user carries
-`UserOwnedMixin` (`app.models.base`: an indexed, non-null `user_id`), and every repository
-method on it takes and filters by the user id.
+`UserOwnedMixin` (`app.models.base`: an indexed, non-null `user_id`), and every list or bulk
+query on it filters by `user_id`. A single-row lookup goes through the owning module's
+ownership dependency (e.g. `UserConversation`), which checks `user_id` right after the fetch.
 `tests/unit/models/test_owned_tables.py` fails on any table that neither carries the mixin
 nor sits in its `ALLOWLIST` with a reason; the only entry is `user`, the owner itself. CI
 runs it in `.github/workflows/module-boundaries.yml` ([`server.md`](./server.md) R7 and

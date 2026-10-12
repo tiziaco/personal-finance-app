@@ -27,6 +27,36 @@ def mocked_externals(stub_checkpoint_deletion):
         yield {"clerk": clerk, "memory": memory, "checkpoints": stub_checkpoint_deletion}
 
 
+class TestDeleteMeOverHttp:
+    """The route end to end: Clerk first, then the cascade, then a 204."""
+
+    async def test_delete_me_deletes_in_clerk_anonymises_user_and_soft_deletes_conversations(
+        self, authenticated_client_with_agent, test_user, db_session, mocked_externals
+    ):
+        original_clerk_id = test_user.clerk_id
+        conv = Conversation(user_id=test_user.id, name="Private chat")
+        db_session.add(conv)
+        await db_session.flush()
+
+        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
+
+        assert response.status_code == 204
+        mocked_externals["clerk"].assert_awaited_once_with(original_clerk_id)
+
+        await db_session.flush()  # the route does not flush; refresh would discard pending changes
+        await db_session.refresh(test_user)
+        assert test_user.anonymized_at is not None
+        assert test_user.clerk_id == f"deleted_user_{test_user.id}"
+        assert test_user.email == f"deleted_user_{test_user.id}@anonymized.local"
+        assert test_user.first_name is None
+        assert test_user.last_name is None
+        assert test_user.avatar_url is None
+
+        await db_session.refresh(conv)
+        assert conv.deleted_at is not None
+        assert conv.name == ""
+
+
 class TestDeleteMeCheckpointCleanup:
     """The erasure cascade must clear the checkpoints of every conversation.
 

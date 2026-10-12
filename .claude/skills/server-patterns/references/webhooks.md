@@ -115,8 +115,8 @@ async def dispatch(self, ctx: WebhookContext) -> None:
 disable endpoints that keep failing — so raising on an event you don't care about eventually costs you the events
 you do.
 
-**Register every spelling the provider might send.** Clerk's dashboard catalog names membership events in camelCase
-while its log docs use snake_case; the wrong key fails *silently* — the handler never runs, no error, no 4xx. When
+**Register every spelling the provider might send.** A provider's dashboard catalog and its log docs can spell the same
+event differently (camelCase against snake_case); the wrong key fails *silently* — the handler never runs, no error, no 4xx. When
 the provider's own docs disagree, register both.
 
 ## Handlers
@@ -150,8 +150,7 @@ idempotent and a same-millisecond distinct event is the worse thing to lose.
 
 **Never resurrect deleted rows.** An `*.updated` handler must not create. If erasure anonymises by rewriting the
 provider's id, a deleted user is indistinguishable from one who never existed — so creating on an unknown id
-resurrects people who exercised their right to erasure. Log and decline. A create handler (`user.created`, a
-membership) inserts only after asking the provider whether the user still exists — a redelivered pre-erasure
+resurrects people who exercised their right to erasure. Log and decline. A create handler (`user.created`) inserts only after asking the provider whether the user still exists — a redelivered pre-erasure
 snapshot would otherwise re-insert the erased PII (`user_service.exists_in_clerk`: a 404 declines, any other error
 propagates).
 

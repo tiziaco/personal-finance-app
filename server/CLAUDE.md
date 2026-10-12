@@ -254,14 +254,14 @@ both fail far from their cause.
 Run from `server/`: `make test*` (see `make help`), or target a file or test name:
 
 ```bash
-APP_ENV=test uv run pytest tests/unit/modules/account/test_cache.py
+APP_ENV=test uv run pytest tests/unit/modules/account/test_service.py
 APP_ENV=test uv run pytest -k "test_name"
 ```
 
 Coverage runs only under `make test-coverage`; the HTML report goes to `htmlcov/`. The pytest
 config is `pytest.ini` — pytest ignores `[tool.pytest.ini_options]` while that file exists.
 
-New tests mirror the `app/` structure: a test for `app/modules/account/cache.py` goes in `tests/unit/modules/account/test_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
+New tests mirror the `app/` structure: a test for `app/modules/account/service.py` goes in `tests/unit/modules/account/test_service.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
 
 **A whole-object assertion pins a field-to-column mapping only if every field holds a
 distinguishable value.** When a fixture leaves most fields at a shared default (`None`,

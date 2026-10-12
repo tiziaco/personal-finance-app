@@ -177,8 +177,11 @@ access tokens carry no `azp` and are authorised by `client_id` instead — which
 ## 6. Webhooks
 
 User events — creation, profile edits, deletion — reach the server at
-`POST /api/v1/webhooks/clerk`. Sign-in does not depend on them: JIT provisioning
-creates the user on first request. **This is the one step with no script** — no
+`POST /api/v1/webhooks/clerk`. Sign-in does not need them to *start*: JIT provisioning
+creates the user on first request. But the webhook is what keeps the app's rows in step with
+Clerk. Without it, a deleted or re-registered email can lock a user out with a 401, because
+the stale row still holds the email ([`BUGS.md`](../BUGS.md), **A re-registered or changed
+email locks the new account out**). **This is the one step with no script** — no
 Clerk API creates an endpoint or returns its signing secret.
 
 ### ngrok (development, once per developer)

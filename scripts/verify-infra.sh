@@ -100,10 +100,8 @@ else
   skip "docker CLI not found — dev compose parse check skipped"
 fi
 
-# Prod compose cannot be validated with `docker compose config`: it points env_file at
-# ./web-app/.env.local, which does not exist (prod compose is stale — it still models a
-# single web-app service from before the web app moved to apps/web). Reshaping it is WS2's scope.
-# Structural validation instead: every service network reference must resolve.
+# Prod compose is not validated with `docker compose config`; check structurally instead:
+# every service network reference must resolve.
 if python3 -c "import yaml" >/dev/null 2>&1; then
   check "prod compose network refs all resolve" python3 -c "
 import sys, yaml

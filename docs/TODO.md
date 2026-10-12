@@ -31,6 +31,20 @@ Two findings do not wait on that decision and are small on their own:
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
 
+## Server — email uniqueness, before the first finance table
+
+`user.email` is unique, so a stale row holding an email locks out whoever signs up with it
+next ([`BUGS.md`](./BUGS.md), **A re-registered or changed email locks the new account
+out**). **Decide before** the first finance table references `user` (sub-project 2, backend
+modules), because the choice changes the migration. Either:
+
+- drop `unique=True` on `User.email`: Clerk owns email uniqueness and `clerk_id` is the
+  identity; or
+- keep it, and on an email collision in JIT reclaim the stale row when
+  `exists_in_clerk(holder.clerk_id)` is false.
+
+**Unblocks:** closing that bug.
+
 ## Server — the R9 import-linter contract
 
 The rule that a `domain` slot imports no ORM and no framework has no contract yet,
@@ -105,3 +119,12 @@ when it rebuilds each module (sub-project 2). One line each, pointing at the leg
 - **Direct `ChatOpenAI` use** — the CSV column-mapping proposal builds its own client,
   bypassing the LLM service's retries, model fallback and error translation. Go through
   the LLM service. `server/app/api/v1/transactions.py` (`_propose_column_mapping`).
+
+## Cutover (sub-project 4)
+
+Facts that exist only because the app was ported from a legacy codebase:
+
+- The legacy app runs from the `../pf-legacy` worktree at tag `legacy-v0`.
+- Never run it while this stack is up: both publish port 3000.
+- Keep the legacy OAuth redirect URI on the shared Clerk OAuth client until cutover, then
+  remove it.

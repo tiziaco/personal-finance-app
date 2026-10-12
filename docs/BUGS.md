@@ -18,6 +18,40 @@ shows it.
 
 ## Server
 
+### A re-registered or changed email locks the new account out with a 401
+
+`user.email` is unique. JIT provisioning inserts a row for a `clerk_id` it has not seen;
+when that email is already held by a row with a *different* `clerk_id`, the insert
+collides, `create_or_get` (`server/app/modules/account/repository.py`) finds no row for the
+new `clerk_id` and raises `UserAlreadyExistsError`, and `get_current_user`
+(`server/app/modules/account/dependencies.py`) turns it into a 401 "Failed to provision
+user". The user sees "session expired" on every request, for as long as the stale row exists.
+
+**Two triggers:**
+
+1. A user deletes their account in Clerk's profile window while no webhook endpoint is
+   configured (or before its retries land), so `user.deleted` never anonymises the row,
+   then signs up again with the same email.
+2. A user changes their email in Clerk, the `user.updated` webhook is missed, and a
+   different person later signs up with the old address.
+
+**Reproduce:** insert a `user` row with email `a@example.com` and `clerk_id` `user_old`,
+then call any authenticated route with a token for a new `clerk_id` whose Clerk profile has
+email `a@example.com`. Expect 401 `Failed to provision user`.
+
+**Why it has gone unnoticed:** the webhook normally keeps rows in step with Clerk, and
+no test provisions a second `clerk_id` onto an existing email.
+
+**Workaround:** delete or anonymise the stale `user` row, the one whose `clerk_id` Clerk
+no longer has (anonymise through `User.anonymize_user`, or delete it if nothing references
+it). The next request provisions the new account.
+
+**Fixing it** is planned for the backend modules (sub-project 2), before the first finance
+table references `user`: see [`TODO.md`](./TODO.md), **Server: email uniqueness**.
+Either drop `unique=True` on `User.email` (Clerk owns email uniqueness; `clerk_id` is the
+identity), or reclaim the stale row on collision when `exists_in_clerk(holder.clerk_id)` is
+false. A test that provisions a second `clerk_id` onto a held email fails first.
+
 ### The app connects to Postgres as a superuser that owns every table
 
 The `db` service in both compose files reads `server/.env.<env>`, so the pgvector image's

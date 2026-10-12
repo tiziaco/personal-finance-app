@@ -63,3 +63,5 @@ rather than anonymous, and the tracing service still holds conversations
 - **A delete-account screen of the app's own.** Clerk's profile window is the user-facing
   path today, and it depends on the webhook. Should the app offer a screen that calls
   `DELETE /api/v1/auth/me`, which does not?
+- **Leaving without deleting.** Should a user be able to export their transactions before
+  deleting? The legacy app had no export, and none is planned.

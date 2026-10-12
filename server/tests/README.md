@@ -7,7 +7,7 @@ The server's test suite, split into unit and integration tests. The layout rule,
 ## Layout
 
 `tests/` mirrors `app/`: a test for `app/modules/account/cache.py` is
-`tests/unit/modules/account/test_cache.py`, or under `tests/integration/modules/account/`
+`tests/unit/modules/account/test_service.py`, or under `tests/integration/modules/account/`
 if it needs the database. Route tests sit under `tests/integration/modules/<name>/router/`.
 Files are not listed here — the tree is the list, and a copy of it goes stale on the next
 commit.
@@ -32,7 +32,7 @@ so `make test-unit` starts no container.
 `conftest.py` sets `APP_ENV=test` itself; the `make` targets set it too. From `server/`:
 
 ```bash
-uv run pytest tests/unit/modules/account/test_cache.py -v   # one file
+uv run pytest tests/unit/modules/account/test_service.py -v   # one file
 uv run pytest -k "test_name"                                # by name
 uv run pytest -m unit                                       # by marker
 uv run pytest -x --lf                                       # stop on first failure, re-run last failures
