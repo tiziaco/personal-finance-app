@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Verify docker-compose.prod.yml could deploy, without a deployment target.
 #
-# The deploy file drifted past the two-portal split and carried defects that
+# The deploy file drifted from the services it deploys and carried defects that
 # no review caught: a service that no longer exists, an env_file path that
 # never did, no APP_NAME build arg, application ports published straight to
 # the host. Every one of them fails here, in seconds, instead of on a deploy.
 #
-# What this proves: the file parses under APP_ENV, both portals build as
-# genuinely distinct images, migrations gate the server, the server reaches
+# What this proves: the file parses under APP_ENV, the web app and the server
+# build, migrations gate the server, the server reaches
 # healthy through its own healthcheck, and nothing publishes to the host.
 #
 # What this does NOT prove: anything about the Traefik labels. Nothing here
@@ -44,7 +44,7 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-for app in internal-portal supplier-portal; do
+for app in internal-portal; do
   if [ ! -f "web-app/apps/$app/.env.local" ]; then
     echo "FAIL: web-app/apps/$app/.env.local not found."
     echo "Copy it from the matching .env.example — see the root CLAUDE.md."
@@ -67,7 +67,6 @@ fi
 # exist so the labels render.
 export APP_ENV="$DEPLOY_ENV"
 export INTERNAL_PORTAL_DOMAIN="${INTERNAL_PORTAL_DOMAIN:-internal.localhost}"
-export SUPPLIER_PORTAL_DOMAIN="${SUPPLIER_PORTAL_DOMAIN:-supplier.localhost}"
 export API_DOMAIN="${API_DOMAIN:-api.localhost}"
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://$API_DOMAIN}"
 
@@ -81,14 +80,13 @@ echo "==> 1/5 Parsing $COMPOSE_FILE (APP_ENV=$DEPLOY_ENV)"
 "${COMPOSE[@]}" config -q
 
 echo "==> 2/5 Building both portals and the server"
-"${COMPOSE[@]}" build internal-portal supplier-portal server
+"${COMPOSE[@]}" build internal-portal server
 
-echo "==> 3/5 Checking each portal image baked its own APP_NAME"
+echo "==> 3/5 Checking the web image baked its APP_NAME"
 # web-app/Dockerfile:65-66 re-declares ARG APP_NAME in the runner stage and
 # promotes it to ENV, so the build arg is readable off the finished image.
-# Without it `pnpm --filter $APP_NAME build` has an empty filter and the two
-# portals are not distinct applications at all.
-for app in internal-portal supplier-portal; do
+# Without it `pnpm --filter $APP_NAME build` has an empty filter.
+for app in internal-portal; do
   baked=$(docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' \
     "$PROJECT-$app" | sed -n 's/^APP_NAME=//p' | head -1)
   if [ "$baked" != "$app" ]; then
@@ -180,7 +178,7 @@ if [ -n "$published" ]; then
 fi
 
 echo
-echo "PASS: $COMPOSE_FILE parses, builds two distinct portal images, gates the"
+echo "PASS: $COMPOSE_FILE parses, builds the web and server images, gates the"
 echo "      server on migrations, and runs with nothing published to the host."
 echo "NOTE: the Traefik labels are NOT exercised here. Nothing routes a request"
 echo "      through a proxy. They are first proven on a real deploy."

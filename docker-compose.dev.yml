@@ -20,23 +20,6 @@ services:
     networks:
       - app-network
 
-  supplier-portal:
-    env_file:
-      - ./web-app/apps/supplier-portal/.env.local
-    build:
-      context: ./web-app
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: supplier-portal
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
-        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
-    restart: always
-    ports:
-      - "${SUPPLIER_PORTAL_HOST_PORT:-3002}:3000"
-    networks:
-      - app-network
-  
   # One-shot release phase: applies Alembic migrations, then exits.
   # `server` is gated on this exiting 0, so a failed migration fails the whole
   # `up` instead of starting an app against a stale schema.

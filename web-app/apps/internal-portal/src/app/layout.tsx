@@ -12,7 +12,7 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 export const metadata: Metadata = {
   title: "Template App",
   description:
-    "Template App is a multi-tenant B2B platform template. This is the internal portal, where staff manage projects, suppliers and orders.",
+    "Personal Finance — track your spending, understand where it goes, and save more.",
   icons: {
     icon: [
       { url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" },

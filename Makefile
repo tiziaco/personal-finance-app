@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-apply-roles clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
+.PHONY: help dev-preflight dev-internal dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-apply-roles clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -8,10 +8,9 @@ COMPOSE_FILE ?= docker-compose.dev.yml
 # compose healthcheck, the prometheus target and `server:8000` are unaffected.
 # Overridable: set API_HOST_PORT in the root .env.
 API_HOST_PORT ?= 8100
-# Host ports for the two portals, on both paths: compose publishes them, and
-# dev-internal / dev-supplier hand them to `next dev` as PORT.
+# Host port for the web app, on both paths: compose publishes it, and
+# dev-internal hands it to `next dev` as PORT.
 INTERNAL_PORTAL_HOST_PORT ?= 3000
-SUPPLIER_PORTAL_HOST_PORT ?= 3002
 # The ports above are slot 0's — the main checkout's. A linked worktree gets
 # slot N from `make worktree-init`, which writes base + 10·N for each (and
 # WORKTREE_SLOT) into that worktree's root .env. Absent means 0.
@@ -42,10 +41,9 @@ CLERK_APP_NAME ?= Template App Dev
 # Default target
 help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
-	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/$(INTERNAL_PORTAL_HOST_PORT)/$(SUPPLIER_PORTAL_HOST_PORT) are free"
+	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/$(INTERNAL_PORTAL_HOST_PORT) are free"
 	@echo "  make dev-internal       - Internal portal (next dev) on port $(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "  make dev-supplier       - Supplier portal (next dev) on port $(SUPPLIER_PORTAL_HOST_PORT)"
-	@echo "  make dev-kill           - Kill whatever listens on $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and 4040"
+	@echo "  make dev-kill           - Kill whatever listens on $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT) and 4040"
 	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
 	@echo ""
 	@echo "Parallel worktrees (one dev stack per git worktree):"
@@ -77,7 +75,7 @@ help:
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
-	@echo "  make docker-build-web   - Build internal-portal and supplier-portal only"
+	@echo "  make docker-build-web   - Build the web app only"
 	@echo "  make docker-build-api   - Build server service only"
 	@echo ""
 	@echo "Up/Down Commands:"
@@ -106,32 +104,25 @@ help:
 # -sTCP:LISTEN matters: a bare `lsof -ti :PORT` also matches outbound
 # connections and dead CLOSED sockets, neither of which blocks a bind.
 dev-preflight:
-	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT); do \
+	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT); do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "❌ Port $$port is already in use (PIDs: $$pids)."; \
-			echo "   The Docker stack publishes $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and $(API_HOST_PORT) — run 'make docker-stop',"; \
+			echo "   The Docker stack publishes $(INTERNAL_PORTAL_HOST_PORT) and $(API_HOST_PORT) — run 'make docker-stop',"; \
 			echo "   or 'make dev-kill' if a previous native run is still alive."; \
 			exit 1; \
 		fi; \
 	done
-	@echo "✅ Ports $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) are free"
+	@echo "✅ Ports $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT) are free"
 
 # Through make rather than `pnpm dev:*` directly: only the Makefile has read
 # the root .env that says which ports this checkout owns.
 dev-internal:
 	@cd web-app && PORT=$(INTERNAL_PORTAL_HOST_PORT) pnpm dev:internal
 
-# The internal portal's .env.local is included and exported above, and an
-# exported variable beats the supplier's own .env.local in Next.js: unset its keys.
-INTERNAL_PORTAL_ENV_KEYS := $(shell sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' web-app/apps/internal-portal/.env.local 2>/dev/null)
-
-dev-supplier:
-	@cd web-app && env $(addprefix -u ,$(INTERNAL_PORTAL_ENV_KEYS)) PORT=$(SUPPLIER_PORTAL_HOST_PORT) pnpm dev:supplier
-
 # 4040 is dev-tunnel's ngrok inspector.
 dev-kill:
-	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT) 4040; do \
+	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) 4040; do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "Killing port $$port (PIDs: $$pids)"; \
@@ -265,12 +256,12 @@ clerk-bootstrap-oauth:
 # refreshes both and they can never run different code.
 docker-build:
 	@echo "🔨 Building all services..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal supplier-portal server
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal server
 	@echo "✅ All services built"
 
 docker-build-web:
 	@echo "🔨 Building web-app service..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal supplier-portal
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal
 	@echo "✅ web-app built"
 
 docker-build-api:
@@ -290,12 +281,11 @@ guard-main:
 
 docker-run: guard-main
 	@echo "🚀 Starting full stack (development mode)"
-	@echo "Services: internal-portal, supplier-portal, server, db, prometheus, grafana, cadvisor, ngrok"
+	@echo "Services: internal-portal, server, db, prometheus, grafana, cadvisor, ngrok"
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
 	@echo ""
 	@echo "✅ Full stack is running!"
 	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Prometheus:          http://localhost:9090"
 	@echo "   Grafana:             http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)"
@@ -308,12 +298,11 @@ docker-run: guard-main
 # before `server` starts.
 docker-run-core:
 	@echo "🚀 Starting core stack (essential services only)"
-	@echo "Services: internal-portal, supplier-portal, server, db"
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d internal-portal supplier-portal server db
+	@echo "Services: internal-portal, server, db"
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d internal-portal server db
 	@echo ""
 	@echo "✅ Core stack is running!"
 	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Database:            localhost:$(POSTGRES_PORT)"
 
@@ -364,7 +353,7 @@ docker-logs:
 
 docker-logs-core:
 	@echo "📋 Following logs for core stack..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f internal-portal supplier-portal server migrate db
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f internal-portal server migrate db
 
 # Clean up everything
 clean:

@@ -4,7 +4,6 @@
   "packageManager": "pnpm@11.21.0",
   "scripts": {
     "dev:internal": "pnpm --filter internal-portal dev",
-    "dev:supplier": "pnpm --filter supplier-portal dev",
     "build": "pnpm --filter \"./apps/*\" build",
     "type-check": "pnpm -r exec tsc --noEmit",
     "test": "vitest run",

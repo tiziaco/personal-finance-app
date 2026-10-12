@@ -18,7 +18,7 @@ cd "$SCRIPT_DIR/../.."
 source "$SCRIPT_DIR/lib.sh"
 
 APP_NAME="${CLERK_APP_NAME:-Template App Dev}"
-PORTALS="web-app/apps/internal-portal web-app/apps/supplier-portal"
+PORTALS="web-app/apps/internal-portal"
 
 if ! command -v jq > /dev/null 2>&1; then
   echo "FAIL: jq is not installed."
@@ -97,7 +97,7 @@ done
 echo "==> 4/4 Done"
 echo
 echo "PASS: \"$APP_NAME\" created; its keys are in .env, server/.env.development"
-echo "      and both portals' .env.local."
+echo "      and the web app's .env.local."
 echo
 echo "Next:"
 echo "  make clerk-apply-config    instance and organization settings"

@@ -20,7 +20,6 @@ COPY packages/ui/package.json ./packages/ui/
 
 # Copy app manifests
 COPY apps/internal-portal/package.json ./apps/internal-portal/
-COPY apps/supplier-portal/package.json ./apps/supplier-portal/
 
 RUN pnpm install --frozen-lockfile
 
@@ -37,12 +36,11 @@ RUN corepack enable pnpm
 COPY --from=deps /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=deps /app/apps/internal-portal/node_modules ./apps/internal-portal/node_modules
-COPY --from=deps /app/apps/supplier-portal/node_modules ./apps/supplier-portal/node_modules
 
 # Copy shared packages source
 COPY packages ./packages
 
-# Copy all apps (both needed so pnpm workspace filter resolves correctly)
+# Copy the apps (the pnpm workspace filter resolves against them)
 COPY apps ./apps
 
 # Environment variables must be present at build time

@@ -52,37 +52,6 @@ services:
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.tls.certresolver=letsencrypt
       - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.service=${COMPOSE_PROJECT_NAME}-internal-portal
 
-  supplier-portal:
-    env_file:
-      - ./web-app/apps/supplier-portal/.env.local
-    build:
-      context: ./web-app
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: supplier-portal
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required at build time - Next.js inlines it. Set it to the API's public origin, e.g. https://api.example.com}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
-        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
-    restart: unless-stopped
-    # 3000, not 3002: that is the container port (web-app/Dockerfile:80-81).
-    # 3002 is a host mapping that exists only in the dev file.
-    expose:
-      - "3000"
-    networks:
-      - app-network
-      - dokploy-network
-    labels:
-      - traefik.enable=true
-      - traefik.docker.network=dokploy-network
-      - traefik.http.services.${COMPOSE_PROJECT_NAME}-supplier-portal.loadbalancer.server.port=3000
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.rule=Host(`${SUPPLIER_PORTAL_DOMAIN:?set to the supplier portal hostname, e.g. suppliers.example.com}`)
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.entrypoints=web
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-web.service=${COMPOSE_PROJECT_NAME}-supplier-portal
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.rule=Host(`${SUPPLIER_PORTAL_DOMAIN}`)
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.entrypoints=websecure
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.tls.certresolver=letsencrypt
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-supplier-portal-secure.service=${COMPOSE_PROJECT_NAME}-supplier-portal
-
   # One-shot release phase: applies Alembic migrations, then exits.
   # Dokploy deploys with `docker compose up -d --build` and offers no
   # release-phase hook, so the ordering has to live here. `server` is gated on

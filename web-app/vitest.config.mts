@@ -34,7 +34,7 @@ export default defineConfig({
     // Explicit imports from "vitest": globals would need a `types` entry in
     // every standalone tsconfig.
     globals: false,
-    // Two portals each own `@/`, so one alias cannot serve both.
+    // Each app owns `@/`, so the alias is per project.
     // `.test.` only: `.spec.` is reserved for Playwright.
     projects: [
       {
@@ -42,7 +42,6 @@ export default defineConfig({
         test: { name: "packages", include: [`packages/*/${TEST_FILES}`] },
       },
       portal("internal-portal"),
-      portal("supplier-portal"),
     ],
   },
 })

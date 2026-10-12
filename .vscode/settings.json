@@ -13,7 +13,6 @@
   "prettier.ignorePath": "web-app/.prettierignore",
   "eslint.workingDirectories": [
     "web-app/apps/internal-portal",
-    "web-app/apps/supplier-portal",
     "web-app/packages/ui",
     "web-app/packages/auth"
   ]
