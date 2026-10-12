@@ -3,7 +3,7 @@
 What the root `.env` is for, what `infra/` contains, and what the monitoring stack does
 and does not cover.
 
-Nothing here is needed to run the app. `make docker-run-core` starts the portals, the
+Nothing here is needed to run the app. `make docker-run-core` starts the web app, the
 server and the database without any of it. Read this when you want dashboards, or when
 `make docker-run` fails on a variable you have never heard of.
 
@@ -17,7 +17,7 @@ Distinct from the service env files, and easy to miss:
 |---|---|
 | **`.env`** (repo root) | Docker Compose orchestration — this file |
 | `server/.env.<environment>` | FastAPI: database, Clerk, LLM, rate limits |
-| `web-app/apps/<portal>/.env.local` | Next.js: `NEXT_PUBLIC_*` build args, Clerk keys |
+| `web-app/apps/web/.env.local` | Next.js: `NEXT_PUBLIC_*` build args, Clerk keys |
 
 ```bash
 cp .env.example .env
@@ -48,12 +48,11 @@ the two cannot drift. On the compose network `db` is always 5432.
 
 | Variable | Default | Why you would set it |
 |---|---|---|
-| `INTERNAL_PORTAL_HOST_PORT` | `3000` | Host port for the internal portal, on both paths: Compose publishes it and `make dev-internal` runs `next dev` on it. |
-| `SUPPLIER_PORTAL_HOST_PORT` | `3002` | The same for the supplier portal (`make dev-supplier`). |
+| `WEB_HOST_PORT` | `3000` | Host port for the web app, on both paths: Compose publishes it and `make dev-web` runs `next dev` on it. |
 | `API_HOST_PORT` | `8100` | 8000 is what every other FastAPI project on the machine also wants. Host-side only — the container still listens on 8000, so the healthcheck, the Prometheus target and `server:8000` are unaffected. |
 
-Three more ship empty. `CLERK_APP_ID` is written by `make clerk-bootstrap-env`
-([`clerk.md`](./clerk.md)). `COMPOSE_PROJECT_NAME` is optional: empty, Compose uses the
+Two more ship empty. `CLERK_APP_ID` is written by `make clerk-bootstrap-env`
+([`clerk.md`](./clerk.md)). `COMPOSE_PROJECT_NAME` ships as `personal-finance`; if empty, Compose uses the
 directory name, and setting it on an existing checkout points Compose at a new, empty
 database volume. `WORKTREE_SLOT` is written by `make worktree-init`; leave it empty in
 the main checkout — `0` is not a valid value there.
@@ -112,7 +111,7 @@ Business metrics (`llm_*`) live in `app/core/metrics.py`. The HTTP families
 
 ## 3. Production has no monitoring
 
-`docker-compose.prod.yml` ships five services — both portals, `migrate`, `server`, `db`.
+`docker-compose.prod.yml` ships four services — `web`, `migrate`, `server`, `db`.
 No Prometheus, no Grafana, no cAdvisor. The stack is instrumented (the server still serves
 `/metrics`) but nothing scrapes it.
 
@@ -161,7 +160,7 @@ it is not — it does not exercise Traefik labels at all.
 **Related, and deliberately unchanged:** `server/app/main.py` disables `/docs`, `/redoc`
 and `/openapi.json` when `ENVIRONMENT == PRODUCTION`. `docker-compose.prod.yml` serves
 staging *and* production, so on **staging those three are served and publicly routed**.
-For an internal B2B tool that is often intended. If it is not, the gate in `main.py` is
+Whether that is intended is a deployment choice; if it is not, the gate in `main.py` is
 where to widen it.
 
 ---

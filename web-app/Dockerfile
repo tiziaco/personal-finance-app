@@ -19,8 +19,7 @@ COPY packages/data-table/package.json ./packages/data-table/
 COPY packages/ui/package.json ./packages/ui/
 
 # Copy app manifests
-COPY apps/internal-portal/package.json ./apps/internal-portal/
-COPY apps/supplier-portal/package.json ./apps/supplier-portal/
+COPY apps/web/package.json ./apps/web/
 
 RUN pnpm install --frozen-lockfile
 
@@ -36,13 +35,12 @@ RUN corepack enable pnpm
 
 COPY --from=deps /app/package.json /app/pnpm-workspace.yaml /app/pnpm-lock.yaml ./
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/internal-portal/node_modules ./apps/internal-portal/node_modules
-COPY --from=deps /app/apps/supplier-portal/node_modules ./apps/supplier-portal/node_modules
+COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
 
 # Copy shared packages source
 COPY packages ./packages
 
-# Copy all apps (both needed so pnpm workspace filter resolves correctly)
+# Copy the apps (the pnpm workspace filter resolves against them)
 COPY apps ./apps
 
 # Environment variables must be present at build time
@@ -54,6 +52,8 @@ ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
 
 ARG NEXT_PUBLIC_CLERK_SIGN_IN_URL
 ENV NEXT_PUBLIC_CLERK_SIGN_IN_URL=$NEXT_PUBLIC_CLERK_SIGN_IN_URL
+ARG NEXT_PUBLIC_CLERK_SIGN_UP_URL
+ENV NEXT_PUBLIC_CLERK_SIGN_UP_URL=$NEXT_PUBLIC_CLERK_SIGN_UP_URL
 
 ENV NEXT_TELEMETRY_DISABLED=1
 

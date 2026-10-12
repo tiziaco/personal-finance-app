@@ -44,4 +44,4 @@ jobs:
 
       - name: Module completeness and tenancy hold
         working-directory: server
-        run: APP_ENV=test uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_tenant_tables.py tests/unit/core/test_events.py -v
+        run: APP_ENV=test uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_owned_tables.py tests/unit/core/test_events.py -v

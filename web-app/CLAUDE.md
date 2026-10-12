@@ -1,8 +1,8 @@
 # Web App — Frontend Guide
 
-pnpm monorepo containing two Next.js 16 applications backed by shared UI packages.
-This file is the working rules; the reasoning — the access gate, the session boundary,
-the path to the API, adding a portal — is in
+pnpm monorepo containing one Next.js 16 application (`apps/web`) backed by shared
+packages. This file is the working rules; the reasoning — the access gate, the session
+boundary, the path to the API — is in
 [`docs/architecture/web-app.md`](../docs/architecture/web-app.md).
 
 ---
@@ -12,8 +12,7 @@ the path to the API, adding a portal — is in
 ### The three UI packages, and why they are three
 
 They stack: `@app/core` ← `@app/ui` ← `@app/components` ← `apps/*`. The split is by
-what survives a React Native port, not by taste — and by what two portals can share
-without pretending they are one app.
+what survives a React Native port, not by taste.
 
 - **`@app/core`** holds everything with no render dependency. It builds with
   `lib: ["esnext"]` and no `"dom"`, so `window` in its own source is a **type error** —
@@ -30,7 +29,7 @@ without pretending they are one app.
 else, ever.** Its `package.json` is the boundary; a docs paragraph is not. Shared code
 that needs Clerk or the API client does not go there. It goes into the package it is
 already coupled to (`@app/api-client` holds `useServerStatus` and `QueryProvider`), or
-it stays in each portal.
+it stays in the app.
 
 Import shapes differ on purpose — the subpath should carry information:
 
@@ -44,22 +43,20 @@ import type { NavItem } from "@app/core/types/nav"
 
 ### Where a new component goes
 
-Six homes, decided by what the component imports — and, for a shipped example, by
-whether a fork configures it or rewrites it. The table, the slot pattern that promotes
+Six homes, decided by what the component imports. The table, the slot pattern that promotes
 a component, adding a primitive (its barrel line is by hand) and the three edits a new
 package needs that fail far from their cause are in the `web-app-patterns` skill,
 `references/components.md`.
 
-Both apps share the same conventions, dependencies, and patterns described in this file.
+The app follows the conventions, dependencies, and patterns described in this file.
 
 ---
 
 ## Dev Commands
 
-Scripts are in `web-app/package.json`. `pnpm dev:internal` / `pnpm dev:supplier`
-use the main checkout's ports (3000 / 3002); from the repo root,
-`make dev-internal` / `make dev-supplier` follow the checkout's own ports, which
-differ in a git worktree (see *Parallel worktrees* in the root `CLAUDE.md`).
+Scripts are in `web-app/package.json`. `pnpm dev` uses the main checkout's port (3000);
+from the repo root, `make dev-web` follows the checkout's own port, which differs in a git
+worktree (see *Parallel worktrees* in the root `CLAUDE.md`).
 
 ---
 
@@ -70,15 +67,14 @@ through the same config, so `make gen-contract` and `pnpm format` agree.
 
 ## Testing
 
-Vitest + Testing Library in jsdom. One config, `vitest.config.mts`, with three
-projects: `packages` (every `packages/*/src`), `internal-portal` and
-`supplier-portal` — one per portal because each resolves `@/` to its own `src/`.
-A third app needs a third `portal(...)` line there.
+Vitest + Testing Library in jsdom. One config, `vitest.config.mts`, with two
+projects: `packages` (every `packages/*/src`) and `web`, which resolves `@/` to
+`apps/web/src/`. A second app would need its own `portal(...)` line there.
 
 The root `package.json` pins `react` and `react-dom` for the tests. **Keep them
-equal to the portals' exact version**: bump React in `apps/*` alone and the lockfile
+equal to the app's exact version**: bump React in `apps/web` alone and the lockfile
 holds two copies, `resolve.dedupe` sends the tests to the root one, and the suite
-runs a React the portals don't ship.
+runs a React the app doesn't ship.
 
 `pnpm test`, or `make test-web` from the repo root. **The pre-push hook runs it**
 after `make check-web` whenever `web-app/` changed; there is no CI.
@@ -101,7 +97,7 @@ reference files are the long form of the conventions on this page.
 
 | Situation | Skill |
 |-----------|-------|
-| Adding a screen, a component or a table, wiring it to the API, gating it by role — any change under `apps/*/src/` or `packages/` | `/web-app-patterns` |
+| Adding a screen, a component or a table, wiring it to the API, any change under `apps/web/src/` or `packages/` | `/web-app-patterns` |
 | Writing, running or debugging any test | `/web-app-testing` |
 
 ---
@@ -153,14 +149,13 @@ home for shadcn/Base UI primitives.
 - **Clerk** (`@clerk/nextjs` **v6, Core 2**) handles auth — no login/register endpoints to
   build. Use embedded Clerk components (custom routes), not the hosted Account Portal
 - Client components: `useAppAuth()` from `@app/auth` — never `useUser()` / `useAuth()`.
-  Check `isLoaded` before role-dependent UI; compare `role === Role.*`
+  Check `isLoaded` before rendering the user
 - Sign out with `signOut()` from `useAppAuth()`, never `useClerk().signOut`
-- Trust the proxy: if a protected route renders, the user is authenticated and holds a
-  role that belongs in this portal — no manual checks
+- Trust the proxy: if a protected route renders, the user is authenticated — no manual
+  checks. There are no roles and no organisations
 - Auth logic lives in `packages/auth`, never `packages/ui`
 
-The long form — the `useAppAuth()` fields, `<Protect>`, `proxy.ts`, signing out, adding a
-role — is `references/auth.md` in the `web-app-patterns` skill.
+The long form — the `useAppAuth()` fields, `proxy.ts`, signing out — is `references/auth.md` in the `web-app-patterns` skill.
 
 ### API Client — Generated, Never Hand-Written
 
@@ -210,10 +205,7 @@ Adding a screen — its route group, sidebar entry, loading state and copy — i
 
 Beyond the rules above:
 
-- Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the portals only need the publishable key and the sign-in URL
-- Using `<Show when={{ role }}>` (current SDK) instead of `<Protect role="org:...">` (Core 2 / v6)
-- Reading `sessionClaims.metadata.role` for role checks — use `auth().orgRole` instead
+- Setting `CLERK_JWT_ISSUER_DOMAIN` and expecting it to do something — nothing reads it. The issuer that anchors token validation is the **server's** `CLERK_ISSUER` (`server/app/core/config.py`, `AuthSettings`); the app only needs the publishable key and the sign-in URL
 - Calling `useClerk().signOut` — a client-side route keeps the previous user's caches; use `signOut` from `useAppAuth()`
 - Moving `QueryProvider` back to the root layout — the cache would outlive the session
-- Calling `has({ role: "org:..." })` directly in components — use `role === Role.*` from `useAppAuth()`
-- Putting `NODE_ENV` in an env file — Next sets it per command; anywhere else it leaks into (the root Makefile exports `internal-portal/.env.local`) it decides how React builds under test
+- Putting `NODE_ENV` in an env file — Next sets it per command; anywhere else it leaks into (the root Makefile exports `apps/web/.env.local`) it decides how React builds under test

@@ -1,27 +1,29 @@
 # Clerk — Setup
 
-Clerk supplies both authentication and multi-tenancy: the tenant is a Clerk Organization,
-and the member's role in it arrives on the token. How the code consumes the token:
+Clerk supplies authentication; the user is the tenant, so there are no organisations and no
+roles to configure. How the code consumes the token:
 [`../architecture/authentication.md`](../architecture/authentication.md).
 
 Most of the setup is scripted, against a **development** instance. With the
 [Clerk CLI](https://clerk.com/docs/cli) and `jq` installed (`brew install clerk/stable/clerk
-jq`), and `clerk auth login` done once, `make clerk-setup` runs the first four of these in
-order. Re-running it is safe: it skips the first, which refuses once `CLERK_APP_ID` is set.
+jq`), and `clerk auth login` done once, `make clerk-setup` runs the first three of these in
+order. Re-running it is safe: it skips creating the app once `CLERK_APP_ID` is set.
 
 ```bash
 make clerk-bootstrap-env    # create the app; its keys into the env files (§3)
-make clerk-apply-config     # instance and organization settings (§1)
-make clerk-apply-roles      # the four roles, creator and default role (§1)
-make clerk-seed-users       # a dev org and three internal users (§2)
+make clerk-apply-config     # scripts/clerk/config.json → the instance (§1)
+make clerk-seed-users       # the two dev users (§2)
+make clerk-check-config     # fail if the instance has drifted from config.json
+make clerk-pull-config      # refresh config.json from the instance
 make clerk-bootstrap-oauth  # optional — Swagger's Authorize button (§5)
 ```
 
+`clerk-setup` is `clerk-bootstrap-env` (skipped when `CLERK_APP_ID` is set), then
+`clerk-apply-config`, then `clerk-seed-users`.
+
 What they do not do: `ALLOWED_ORIGINS` (§4), a decision about your own deployment; the
-webhook endpoint (§6), which no Clerk API creates; and two dashboard toggles no
-configuration key holds — user-created organizations off (§1) and the Account Portal
-redirects (§7). Every script refuses anything but a development instance; production is by
-hand (§8).
+webhook endpoint (§6), which no Clerk API creates; and the Account Portal sign-up toggle
+(§7). Every script refuses anything but a development instance; production is by hand (§8).
 
 ## Team setup
 
@@ -29,7 +31,7 @@ Each developer runs the sequence against **their own** Clerk application, with t
 ngrok domain and webhook endpoint:
 
 ```bash
-make clerk-setup CLERK_APP_NAME="Template App Dev — <name>"
+make clerk-setup CLERK_APP_NAME="Personal Finance Dev — <name>"
 ```
 
 `CLERK_APP_ID` lives in the gitignored root `.env`, so nothing is shared. Not one shared
@@ -38,74 +40,47 @@ would receive everyone else's users and deletions. Creating an application needs
 permission in the team's Clerk workspace.
 
 Local webhooks are needed only for work on the handlers. Without the tunnel, sign-in still
-works — JIT provisioning creates the user and org on first request — and what is lost is
-profile edits made in Clerk, offboarding, and instant role-change invalidation (the 60 s
-cache still expires). Staging and production are each one shared instance with one
-endpoint at the real API URL.
+works — JIT provisioning creates the user on first request — and what is lost is profile
+edits made in Clerk and account deletion made there (from Clerk's profile window or the
+dashboard). Staging and production are each one
+shared instance with one endpoint at the real API URL.
+
+## Reusing an existing instance
+
+To point this repo at a Clerk application that already exists, skip `clerk-bootstrap-env`:
+
+1. Set `CLERK_APP_ID` in the root `.env`, and put the instance's keys in the env files (§3).
+2. `make clerk-pull-config`, then review `git diff scripts/clerk/config.json`. Applying
+   writes the file's values to the instance, so a difference is a setting the apply will
+   change.
+3. Keep every setting the app depends on in `config.json`; settings that live only in the
+   dashboard are what `make clerk-check-config` cannot see. Then `make clerk-setup`, which
+   skips creating the app and applies the config and the dev users.
 
 ---
 
-## 1. Instance, organizations and roles
+## 1. Instance settings
 
 ```bash
 make clerk-apply-config   # scripts/clerk/config.json → the instance
-make clerk-apply-roles    # its x_organization_roles → roles, role set, creator and default role
 make clerk-check-config   # fail if the instance has drifted from the file
+make clerk-pull-config    # the other direction: instance → the file
 ```
 
 [`scripts/clerk/config.json`](../../scripts/clerk/config.json) is the committed copy of every
 instance setting the app depends on:
 
-- **Organizations on, personal accounts off** (`force_organization_selection`). Neither
-  portal has an organization switcher, so the active org has to come from Clerk at sign-in.
-- **Sign-up restricted** to invitations (§7).
+- **Organizations off** (`organization_settings.enabled: false`). The user is the tenant;
+  a token carries no `o` claim, and one that does is ignored.
+- **Sign-up public** (`sign_up_mode: public`) (§7).
+- **Email and password**, with the email-code verification and sign-in strategy; first and
+  last name enabled and optional.
 - **Password sign-in without the device-trust challenge, and Have I Been Pwned off at
-  sign-in** — what lets a seeded user with a throwaway password sign in at all.
-- **Organization deletion off in Clerk's UI** (`admin_delete_enabled: false`). No webhook
-  handles `organization.deleted`, so a deletion from the UI would orphan the org's data.
-  Deleting an org is an operator action.
-- **Users cannot create organizations.** Tenants are created by `make clerk-seed-users` or
-  in the dashboard. Otherwise a user left with no membership — removed, or a PM who left —
-  is offered "Setup your organization" at sign-in and becomes the PM of a tenant of their
-  own. Clerk's config has no key for it, so once per app, in the dashboard:
-  **Organizations → Settings → Allow user-created organizations** off. That is the
-  default for new users; the seeded users carry `create_organization_enabled: false`
-  themselves (§2). Neither blocks the Backend API.
-- **The roles**, under `x_organization_roles` — a key Clerk never uses, which
-  `apply-config` strips and `apply-roles` applies.
+  sign-in** (`enforce_hibp_on_sign_in: false`) — what lets a seeded user with a throwaway
+  password sign in at all. The breach check stays on at sign-up.
 
-| Slug | On the token as | Portal | System permissions |
-|---|---|---|---|
-| `project_manager` | `org:project_manager` | internal | read and manage members; manage and delete the org profile |
-| `reviewer` | `org:reviewer` | internal | — |
-| `approver` | `org:approver` | internal | — |
-| `supplier` | `org:supplier` | supplier | — |
-
-- **Creator role `project_manager`.** Whoever is set as an org's creator becomes its PM.
-  Clerk accepts a creator role only if it can manage and read members and delete the
-  organization — hence the delete permission, which the setting above keeps out of reach.
-- **Default role `supplier`** — the role an invitation form starts on. An internal
-  colleague invited with it by mistake lands on `/unauthorized`, not on internal data.
-- **`org:admin` and `org:member` are deleted.** Both portals and the API reject them.
-
-Two failures that do not look like configuration:
-
-- **A slug typo sends everyone to `/unauthorized`.** Clerk emits `org:project_manager`;
-  `getUserRole()` (`web-app/packages/auth/src/permissions.ts`) strips the prefix and returns
-  `null` for anything it does not recognise. `<Protect role="org:project_manager">` is
-  Clerk's gate and takes the prefix; `role === Role.PROJECT_MANAGER` is ours and does not.
-- **No active organization reads as an empty database.** The token then has no `o` claim,
-  `org_id` is `None` (`server/app/api/middlewares/auth.py`), and every tenant-scoped query
-  returns nothing.
-
-`make clerk-check-config` re-pulls the instance, roles included, and diffs it against the
-committed file; its failure message says how to keep either side. Renaming a role: change
-its key in `x_organization_roles` and in
-[`server/data/clerk-dev-seed.json`](../../server/data/clerk-dev-seed.json), run
-`make clerk-apply-roles` and `make clerk-seed-users`, then the code
-([`making-it-yours.md`](./making-it-yours.md) §4). A new key is a new role: members holding
-the old one land on `/unauthorized` until moved, and it is deleted only once no member or
-invitation holds it — then re-run `make clerk-apply-roles` to delete it.
+`make clerk-check-config` re-pulls the instance and diffs it against the committed file;
+its failure message says how to keep either side.
 
 ---
 
@@ -115,22 +90,21 @@ invitation holds it — then re-run `make clerk-apply-roles` to delete it.
 make clerk-seed-users
 ```
 
-Creates the organization and users in
+Creates the users in
 [`server/data/clerk-dev-seed.json`](../../server/data/clerk-dev-seed.json) — committed on
 purpose: fake emails, throwaway passwords, and a script that refuses anything but a
 development instance.
 
-| User | Role |
+| User | Purpose |
 |---|---|
-| `dev-pm@example.com` | `project_manager` — the org's creator |
-| `dev-reviewer@example.com` | `reviewer` |
-| `dev-approver@example.com` | `approver` |
+| `dev-alice@example.com` | the first user |
+| `dev-bob@example.com` | the second, to check isolation |
 
-Sign in on the internal portal (`:3000`); the passwords are in the file. With a single
-membership Clerk activates the org at sign-in and lands on `/home`. None of them may create an
-organization (§1). Re-running is a no-op; a role changed in the file is applied to the
-membership. There is no seeded supplier
-([`../TODO.md`](../TODO.md), **Clerk — supplier dev seed**).
+Sign in on the app (`:3000`); the passwords are in the file. Re-running is a no-op.
+
+**The isolation check.** Sign in as Alice, create a conversation and note its id; sign in as
+Bob and request that id. The answer is a 404 `CONVERSATION_NOT_FOUND`, the same as for an
+id that does not exist, and Bob's conversation list does not include it.
 
 ---
 
@@ -142,7 +116,7 @@ membership. There is no seeded supplier
 |---|---|
 | root `.env` | `CLERK_APP_ID` — read by every other `clerk-*` target |
 | `server/.env.development` | `CLERK_SECRET_KEY`, `CLERK_ISSUER` |
-| `web-app/apps/<portal>/.env.local`, both portals | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` |
+| `web-app/apps/web/.env.local` | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` |
 
 It refuses to run while `CLERK_APP_ID` is set: it creates a new application. Restart the dev
 servers afterwards — none re-reads its env file. `CLERK_ISSUER` is the trust anchor: the
@@ -150,8 +124,7 @@ JWKS URL that verifies every token is derived from it (`AuthSettings.jwks_url`).
 all three values are on **Dashboard → API keys**; the issuer is the Frontend API URL.
 
 > **`NEXT_PUBLIC_*` values are baked in at image build time.** Changing one means
-> rebuilding. Both portal images are built with the internal portal's values today — why,
-> and when that stops being harmless: [`deploy-dokploy.md`](./deploy-dokploy.md).
+> rebuilding the image ([`deploy-dokploy.md`](./deploy-dokploy.md)).
 
 ---
 
@@ -167,11 +140,11 @@ so confusing:
    rejected as `token_party_not_allowed` — **a valid, unexpired, correctly-signed token
    is refused.**
 
-So every portal origin must be listed, per environment:
+So the web origin must be listed, per environment:
 
 ```bash
 # JSON array — see the warning below
-ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:3002"]
+ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:8100"]
 ```
 
 > **It must be a JSON array.** `ALLOWED_ORIGINS` is a `List[str]`, and pydantic-settings
@@ -179,8 +152,8 @@ ALLOWED_ORIGINS=["http://localhost:3000","http://localhost:3002"]
 > refuses to start with
 > `SettingsError: error parsing value for field "ALLOWED_ORIGINS"`.
 
-In staging and production list the real portal hostnames. Miss one and that portal's
-users get 401s from an API that is working perfectly.
+In staging and production list the real web hostname. Miss it and the app's users get 401s
+from an API that is working perfectly.
 
 ---
 
@@ -190,10 +163,11 @@ users get 401s from an API that is working perfectly.
 make clerk-bootstrap-oauth
 ```
 
-Registers a public PKCE OAuth application and writes `CLERK_OAUTH_CLIENT_ID`,
-`CLERK_AUTHORIZE_URL` and `CLERK_TOKEN_URL` to `server/.env.development`; restart the API.
-Its scopes and redirect URI match `server/app/main.py`; the URI is
-`http://localhost:$API_HOST_PORT/oauth2-redirect` (override: `CLERK_OAUTH_REDIRECT_URI`), and
+Registers a public PKCE OAuth application, or reuses the one already registered, and
+writes `CLERK_OAUTH_CLIENT_ID`, `CLERK_AUTHORIZE_URL` and `CLERK_TOKEN_URL` to
+`server/.env.development`; restart the API. Its scopes and redirect URI match
+`server/app/main.py`; the URI is `http://localhost:$API_HOST_PORT/oauth2-redirect` —
+`http://localhost:8100/oauth2-redirect` by default (override: `CLERK_OAUTH_REDIRECT_URI`), and
 a re-run from a checkout on another port adds that port's URI to the same client. OAuth
 access tokens carry no `azp` and are authorised by `client_id` instead — which is why
 `/docs` needs no entry in `ALLOWED_ORIGINS`.
@@ -202,9 +176,12 @@ access tokens carry no `azp` and are authorised by `client_id` instead — which
 
 ## 6. Webhooks
 
-User and membership events — profile edits, offboarding, role changes — reach the server
-at `POST /api/v1/webhooks/clerk`. Sign-in does not depend on them: JIT provisioning
-creates the user and org on first request. **This is the one step with no script** — no
+User events — creation, profile edits, deletion — reach the server at
+`POST /api/v1/webhooks/clerk`. Sign-in does not need them to *start*: JIT provisioning
+creates the user on first request. But the webhook is what keeps the app's rows in step with
+Clerk. Without it, a deleted or re-registered email can lock a user out with a 401, because
+the stale row still holds the email ([`BUGS.md`](../BUGS.md), **A re-registered or changed
+email locks the new account out**). **This is the one step with no script** — no
 Clerk API creates an endpoint or returns its signing secret.
 
 ### ngrok (development, once per developer)
@@ -237,9 +214,8 @@ instance means no event ever arrives. Then **Webhooks → Add Endpoint**:
 | Development | `https://<NGROK_DOMAIN>/api/v1/webhooks/clerk` |
 | Production | `https://<your-api-domain>/api/v1/webhooks/clerk` |
 
-Subscribe to exactly six events, picked from the catalog: `user.created`, `user.updated`,
-`user.deleted`, `organizationMembership.created`, `organizationMembership.updated`,
-`organizationMembership.deleted`. Anything else is logged and discarded.
+Subscribe to exactly three events, picked from the catalog: `user.created`, `user.updated`
+and `user.deleted`. Anything else is logged and discarded.
 
 ### The signing secret
 
@@ -261,22 +237,16 @@ grace period — update the environment and restart in the same window.
 
 ---
 
-## 7. Sign-up is invitation-only
+## 7. Public sign-up
 
-`sign_up_mode` is `restricted`: nobody signs up without an invitation. A project manager
-invites from the organization profile in the internal portal, choosing a role; the
-invitation email links to Clerk's hosted Account Portal, where the invitee creates their
-account, then signs in on their role's portal. Neither portal has a sign-up page. Keeping
-invitees on the portal's own domain: [`../TODO.md`](../TODO.md), **Clerk — ticket-aware
-sign-up pages**.
+`sign_up_mode` is `public`: anyone can create an account. The app serves the pages itself, at
+`/sign-in` and `/sign-up` (Clerk's components, in the `(auth)` route group), and a new user's
+first authenticated request provisions their row — no invitation, organisation or role is
+involved.
 
-The invitation link never passes through a portal, so the Account Portal gets no
-`redirect_url`, and a portal's `NEXT_PUBLIC_CLERK_SIGN_UP_*_REDIRECT_URL` is never read.
-Where the invitee lands after setting a password is the Account Portal's own fallback,
-which `clerk config` cannot set. Once per app, in the dashboard: **Account Portal →
-Redirects** → after sign-up and after sign-in fallbacks to
-`http://localhost:$INTERNAL_PORTAL_HOST_PORT/home`. Unset, the invitee stays on Clerk's
-page and has to sign in on the portal themselves.
+The Account Portal is Clerk's hosted fallback and has its own sign-up toggle that
+`config.json` does not hold. Once per app, in the dashboard, check **Account Portal →
+Sign-up** is enabled, so a link to Clerk's hosted pages does not dead-end.
 
 ---
 
@@ -287,13 +257,9 @@ hand, from the same file:
 
 1. **Settings** — everything in `scripts/clerk/config.json` except what exists only for
    seeded users: keep Have I Been Pwned on (`disable_hibp`, `enforce_hibp_on_sign_in`).
-2. **Roles & Permissions** — the four roles and permissions in `x_organization_roles`;
-   `project_manager` as creator role, `supplier` as default; delete `org:admin` and
-   `org:member`.
-3. **Keys** (§3) into the platform's environment, `ALLOWED_ORIGINS` with the real portal
-   hostnames (§4), and the webhook endpoint with its secret (§6).
-4. **Organizations → Settings → Allow user-created organizations** off (§1).
-5. **Account Portal → Redirects** to the internal portal's `/home` (§7).
+2. **Keys** (§3) into the platform's environment, `ALLOWED_ORIGINS` with the real web
+   hostname (§4), and the webhook endpoint with its secret (§6).
+3. **Account Portal → Sign-up** enabled (§7).
 
 ---
 
@@ -301,16 +267,11 @@ hand, from the same file:
 
 | What you see | Likely cause |
 |---|---|
-| Signed in, but every route bounces you back | Role slug mismatch — `getUserRole()` returned `null`. Check the slug spelling, and that the member holds one of the four roles (§1). |
-| 401 from the API, token looks valid | The portal's origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
+| 401 from the API, token looks valid | The web origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
 | Server won't start, `SettingsError` on `ALLOWED_ORIGINS` | Not a JSON array (§4). |
-| "Must belong to an organization" at sign-in | Expected: the user was removed from their org and may not create one (§1). Re-invite them, or delete the user. |
-| "Setup your organization" at sign-in | The user has no membership and may create organizations — the dashboard toggle is on (§1). |
-| Signed in, everything empty, no errors | No **active** organization → `org_id = None` (§1). |
-| 403 `SUPPLIER_NOT_LINKED` | A `supplier`-role user with no `Supplier.contact_id` pointing at them. Expected until the invitation carrying `supplier_id` metadata is accepted. |
 | Browser CORS error on every request | Same as the 401 row — one setting, two symptoms (§4). |
-| Roles work locally, not in staging/production | `ALLOWED_ORIGINS` is per-environment; each `server/.env.<env>` needs its own origins. |
-| Role change in Clerk not taking effect | Cached 60s, invalidated by membership webhooks. If webhooks aren't delivering, it degrades to the TTL (§6). |
+| Works locally, not in staging/production | `ALLOWED_ORIGINS` is per-environment; each `server/.env.<env>` needs its own origins. |
+| A new user signs up and the first call answers 401 "Failed to provision user" | Clerk's API was unreachable or the user has no primary email — see the `user_provisioning_failed` log line. |
 | Every webhook delivery 401s | Wrong `whsec_` for this instance, or the variable never reached the process — check the running process's environment, not the file (§6). |
 | No webhook deliveries at all | Endpoint on the wrong instance, or the tunnel is down (§6). |
 | ngrok `ERR_NGROK_320` | The authtoken belongs to a different account than the domain — check the host `ngrok.yml`, which beats the env var (§6). |
@@ -318,8 +279,5 @@ hand, from the same file:
 | Webhook deliveries 404 | The path is `/api/v1/webhooks/clerk` (§6). |
 | Container exits at startup naming `CLERK_WEBHOOK_SIGNING_SECRET` | `REQUIRED_ENV_VARS` in `server/scripts/docker-entrypoint.sh` — set the secret. |
 | Deliveries succeed, database unchanged | Not setup — look for `webhook_event_stale` or a missing-row warning in the handler logs. |
-| `make clerk-seed-users` fails naming a role | The instance does not have it yet — `make clerk-apply-roles` first. |
-| `make clerk-apply-roles` fails: Organizations not enabled | `make clerk-apply-config` first. |
-| `apply-roles` reports a role it kept | A member or an invitation still holds it; move them to a listed role and re-run. |
 | `make clerk-check-config` fails | The instance was changed in the dashboard; the message says how to keep either side. |
 | Sign-in fails for a seeded user with the right password | `make clerk-apply-config` was not run — password sign-in or the HIBP relaxation is missing (§1). |

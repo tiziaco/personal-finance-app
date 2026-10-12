@@ -11,10 +11,10 @@ half that is enforced.
 
 ## Decide two things before writing a file
 
-**Is the table tenant-owned?** A table whose rows belong to one organisation carries `TenantMixin`, and every
-repository method on it takes and filters by `org_id` (R7). Retrofitting this means a backfill, so decide now.
-A table that is genuinely not tenant-owned goes in `ALLOWLIST` in `tests/unit/models/test_tenant_tables.py` with
-the reason — the test fails until one of the two happens, which is the point.
+**Is the table user-owned?** A table whose rows belong to one user carries `UserOwnedMixin` (`user_id`, FK
+`user.id`), and every repository method on it filters by `user_id` (R7). Retrofitting this means a backfill, so
+decide now. A table that is genuinely not user-owned goes in `ALLOWLIST` in `tests/unit/models/test_owned_tables.py`
+with the reason — the test fails until one of the two happens, which is the point.
 
 **Does it hold data keyed to a user?** If so it subscribes to `account.USER_ERASING` in its `handlers` slot and
 cleans up there, inline. `app/modules/conversation/handlers.py` is the model; the GDPR section of
@@ -27,7 +27,7 @@ Create only the slots the module has — empty files are not created for symmetr
 ```
 app/modules/payment/
   __init__.py      # the public surface
-  router.py        # omit if the module has no routes (supplier has none)
+  router.py        # omit if the module has no routes
   schemas.py
   models.py        # omit if it owns no tables
   service.py       # PaymentService + payment_service singleton
@@ -118,7 +118,7 @@ file (R5).
 ## Verify
 
 ```bash
-cd server && uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_tenant_tables.py \
+cd server && uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_owned_tables.py \
                           tests/unit/api/test_openapi_contract.py
 make check-server        # ruff, format, lint-imports — the R1/R2/R6/R9 contracts
 ```

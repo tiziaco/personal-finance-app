@@ -2,8 +2,7 @@
 # Apply scripts/clerk/config.json to the development instance.
 #
 # A PATCH: it asserts only the keys in the file and leaves every other setting
-# alone. x_organization_roles is ours, not Clerk's — stripped here, applied by
-# apply-roles.sh. --destructive is deliberately not passed: it lets a patch
+# alone. --destructive is deliberately not passed: it lets a patch
 # delete resources rather than reset them. Extra arguments go to
 # `clerk config patch` (e.g. --dry-run). Safe to re-run.
 set -euo pipefail
@@ -29,15 +28,11 @@ fi
 echo "==> Verifying the target is a development instance"
 require_dev_instance "$CLERK_APP_ID"
 
-PATCH="$(mktemp)"
-trap 'rm -f "$PATCH"' EXIT
-jq 'del(.x_organization_roles)' "$BASELINE" > "$PATCH"
-
-echo "==> Applying $BASELINE (minus x_organization_roles)"
-clerk config patch --app "$CLERK_APP_ID" --instance dev --file "$PATCH" --yes "$@"
+echo "==> Applying $BASELINE"
+clerk config patch --app "$CLERK_APP_ID" --instance dev --file "$BASELINE" --yes "$@"
 
 case " $* " in *" --dry-run "*) exit 0 ;; esac
 
 echo "PASS: instance settings match the committed baseline."
 echo
-echo "Next: 'make clerk-apply-roles'."
+echo "Next: 'make clerk-seed-users'."

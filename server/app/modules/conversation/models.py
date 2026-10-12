@@ -1,17 +1,16 @@
 """This file contains the conversation model for the application."""
 
-import uuid
-
 from sqlmodel import Field
 
 from app.models.base import (
     BaseModel,
     SoftDeleteMixin,
+    UserOwnedMixin,
     UUIDPrimaryKeyMixin,
 )
 
 
-class Conversation(BaseModel, UUIDPrimaryKeyMixin, SoftDeleteMixin, table=True):
+class Conversation(BaseModel, UUIDPrimaryKeyMixin, UserOwnedMixin, SoftDeleteMixin, table=True):
     """Conversation model for storing chat conversations.
 
     GDPR Note:
@@ -37,5 +36,4 @@ class Conversation(BaseModel, UUIDPrimaryKeyMixin, SoftDeleteMixin, table=True):
         deleted_at: When the conversation was soft deleted (from SoftDeleteMixin)
     """
 
-    user_id: uuid.UUID = Field(foreign_key="user.id", index=True)  # Index for JOIN queries
     name: str = Field(default="")

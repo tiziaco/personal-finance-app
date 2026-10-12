@@ -1,8 +1,8 @@
-# Template App — API Server
+# Personal Finance — API Server
 
-FastAPI backend serving both portals. Handles authentication and tenant scoping via
-Clerk, user provisioning and GDPR erasure, the LangGraph agent, and the OpenAPI contract
-the frontend client is generated from.
+FastAPI backend serving the web app. Handles authentication via Clerk; every row is scoped
+to its user. Also user provisioning and GDPR erasure, the LangGraph agent, and the OpenAPI
+contract the frontend client is generated from.
 
 ## Tech Stack
 
@@ -39,7 +39,7 @@ make dev
 make migrate ENV=development
 
 # Create a new migration
-make migrate-create ENV=development MSG="add document table"
+make migrate-create ENV=development MSG="add transaction table"
 
 # Rollback last migration
 make migrate-downgrade ENV=development
@@ -78,5 +78,5 @@ without them.
 
 The schema's title, description and `/api/v1` prefix come from
 `[tool.app.metadata]` in `pyproject.toml`, and its version from `[project]`,
-loaded by `app/core/metadata.py`. They are not environment variables — see
-[`docs/setup/making-it-yours.md`](../docs/setup/making-it-yours.md) §1 for why.
+loaded by `app/core/metadata.py`. They are not environment variables, and changing one is
+a contract change — see **Identity** in the root [`README.md`](../README.md).

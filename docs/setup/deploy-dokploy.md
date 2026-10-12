@@ -5,9 +5,8 @@ instance. Companion to the **Deploying** section of the root [`CLAUDE.md`](../..
 that section covers `make deploy-check` and what it proves; this doc covers what it
 cannot exercise — the Traefik side, the origins, and the build args.
 
-The file deploys four long-running services and a one-shot: `internal-portal`,
-`supplier-portal` and `server` are routable, `db` is not, and `migrate` runs to
-completion before `server` starts.
+The file deploys three long-running services and a one-shot: `web` and `server` are
+routable, `db` is not, and `migrate` runs to completion before `server` starts.
 
 ---
 
@@ -58,13 +57,12 @@ Sources: [Domains — Docker Compose](https://docs.dokploy.com/docs/core/docker-
 It feeds CORS **and** the Clerk `azp` token-party check — the mechanism, and the JSON
 array it must be, are in [`clerk.md`](./clerk.md) §4. What it means for a deploy:
 
-**Both portal origins** — the real `https://` hostnames behind `INTERNAL_PORTAL_DOMAIN`
-and `SUPPLIER_PORTAL_DOMAIN` — must be listed for the matching environment
+**The web origin** — the real `https://` hostname behind `WEB_DOMAIN` — must be listed
+for the matching environment
 (`server/.env.staging` / `server/.env.production`), or a structurally valid,
 correctly-signed Clerk token is rejected on arrival. **A missing entry does not look like
 a config error; it looks like broken auth** — `401` with a `token_party_not_allowed` log
-line, not a startup failure. Missing only one of the two breaks only that portal, which
-makes it look like a portal bug.
+line, not a startup failure.
 
 It matters more than it looks because the browser calls the API **directly,
 cross-origin**: there is no server-side proxy hop hiding the origin. This is unexercised
@@ -73,28 +71,23 @@ by anything short of a real deploy — no browser, no Clerk, no CORS preflight r
 
 ---
 
-## Both portal images get the internal portal's build args
+## The web image's build args
 
 `NEXT_PUBLIC_*` values are inlined into the bundle at build time, so they are build
 args, not runtime env. Compose resolves `build.args` from the invoking shell's
 environment, never from a service's own `env_file:`, and the root Makefile's `-include`
-exports only `web-app/apps/internal-portal/.env.local`. So both images are built with
-the internal portal's `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `NEXT_PUBLIC_API_URL`.
-
-Harmless while both portals share one Clerk instance and one API origin. The day they
-must differ, both images ship the internal portal's values with nothing warning —
-`deploy-check` asserts only that each image baked its own `APP_NAME`. The limit is in
-the compose file, not the Makefile: both services read the same variable names
-(`${NEXT_PUBLIC_API_URL}`, `${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}`), so on Dokploy too
-they get one value each. Tracked in [`../TODO.md`](../TODO.md).
+exports `web-app/apps/web/.env.local`. So the image is built with that file's
+`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `NEXT_PUBLIC_API_URL`; on Dokploy, set both in the
+build environment, since no `.env.local` exists there. `deploy-check` asserts only that
+the image baked its `APP_NAME`, not that these values are right.
 
 ---
 
 ## What `make deploy-check` does not prove
 
-`make deploy-check` (`scripts/deploy-check.sh`) parses the compose file, builds both
-portal images and the server image, brings the stack up under `APP_ENV=staging` (or
-`production`), and asserts that each portal image baked its own `APP_NAME`, that
+`make deploy-check` (`scripts/deploy-check.sh`) parses the compose file, builds the
+web image and the server image, brings the stack up under `APP_ENV=staging` (or
+`production`), and asserts that the web image baked its `APP_NAME`, that
 `migrate` exits 0, that `server` reaches `healthy` through its own healthcheck, and that
 nothing is published to the host. **It does not route a single request through Traefik.**
 
@@ -102,17 +95,16 @@ Nobody has exercised the current label set against a real Traefik instance. Befo
 first real deploy, review each of the following by hand against the Dokploy facts above —
 a `docker compose -f docker-compose.prod.yml config` render is enough, no server needed:
 
-- `traefik.enable=true` is present on `internal-portal`, `supplier-portal` and `server`,
+- `traefik.enable=true` is present on `web` and `server`,
   and not on `db` or `migrate`, which are not routable.
-- `traefik.docker.network=dokploy-network` is present on all three routable services.
+- `traefik.docker.network=dokploy-network` is present on both routable services.
 - Each declares **two** routers — `-web` (entrypoint `web`, no TLS) and `-secure`
   (entrypoint `websecure`, `tls.certresolver=letsencrypt`) — both pointing at the same
   `traefik.http.services.<name>.loadbalancer.server.port`.
-- That port matches what the container listens on: `3000` for **both** portals (3002 is
-  a dev host mapping only) and `8000` for `server`.
+- That port matches what the container listens on: `3000` for `web` and `8000` for `server`.
 - The `server` routers exclude `/metrics`: `Host(...) && !PathPrefix(`/metrics`)`. That
   endpoint carries no auth, and a bare `Host()` rule would route it publicly.
-- `INTERNAL_PORTAL_DOMAIN`, `SUPPLIER_PORTAL_DOMAIN` and `API_DOMAIN` are set to real
+- `WEB_DOMAIN` and `API_DOMAIN` are set to real
   hostnames in the Dokploy environment — nothing resolves them locally, so a typo renders
   a label that matches no traffic instead of erroring.
 
@@ -128,7 +120,7 @@ the request never reached the application.
 - **No TLS.** The `letsencrypt` cert resolver's HTTP challenge is first exercised on a
   real deploy — there is nothing to issue a certificate for locally.
 - **No HTTP→HTTPS redirect.** The `-web` routers carry no redirect middleware, so the
-  portals and the API also answer on plain HTTP until one is added.
+  web app and the API also answer on plain HTTP until one is added.
 - **No Dokploy.** Its label injection, build pipeline, and `dokploy-network` creation are
   unexercised by anything in this repo.
 - **No Clerk production instance.** Production keys, the production origins registered in
@@ -146,7 +138,7 @@ In order of likelihood, given the facts above:
    Dokploy-managed equivalent — has actually run on the host).
 2. A domain was also added in the Dokploy Domains tab for a service this file already
    labels, producing two ambiguous routers for the same `Host()`.
-3. `INTERNAL_PORTAL_DOMAIN` / `SUPPLIER_PORTAL_DOMAIN` / `API_DOMAIN` in the Dokploy
+3. `WEB_DOMAIN` / `API_DOMAIN` in the Dokploy
    environment does not match the hostname actually being requested.
 
 If it serves pages but every API call fails with `401`, it is not routing:

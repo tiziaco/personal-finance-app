@@ -1,12 +1,8 @@
-# Template App — Monorepo Guide
+# Personal Finance — Monorepo Guide
 
-Template for a multi-tenant B2B platform with two portals — one internal, one for
-external partners — backed by a single FastAPI server. Multi-tenancy is Clerk
-Organizations; the org id arrives on the JWT and scopes queries.
-
-The shipped example domain is **supplier document compliance**. It is illustrative, not
-load-bearing: the `Supplier` model, the `supplier-portal/` app, the role names and their
-UI labels are all meant to be renamed or replaced for your domain.
+Personal Finance is a B2C app for tracking and understanding one person's money: a Next.js
+app (`web-app/apps/web`) backed by a FastAPI server. The user is the tenant — data is keyed
+by `user_id`; there are no organisations and no roles.
 
 What the product does is in [`docs/product/`](docs/product/), what it stores in
 [`docs/data-model/`](docs/data-model/). **Before brainstorming a
@@ -36,7 +32,7 @@ There are two ways to run this app, and **they are mutually exclusive**:
 - **Native path** — app processes on the host, Postgres still in Docker
   (VS Code's `Dev: *` tasks). Needs its own host-side tunnel.
 
-They collide on two resources: host ports **3000, 3002 and 8100** (the main checkout's defaults), which the
+They collide on two resources: host ports **3000 and 8100** (the main checkout's defaults), which the
 compose services publish; and the single static **`NGROK_DOMAIN`**, claimed by
 both the `ngrok` compose service and `make dev-tunnel`. Stop one path before
 starting the other — `make dev-preflight` checks the ports and fails with a
@@ -90,7 +86,7 @@ Contract** below). `pre-push` runs `make check-server` and `make check-web`
 for whichever side changed since the upstream branch: ruff and Prettier in
 check mode, plus ESLint — and, for `web-app/`, `make test-web` (Vitest).
 CI repeats the server half (`.github/workflows/module-boundaries.yml`: import
-contracts, ruff, the module and tenancy tests); nothing in CI runs the web checks,
+contracts, ruff, the module and ownership tests); nothing in CI runs the web checks,
 so for `web-app/` the hook is the only gate. `make check` runs both by hand and
 `git push --no-verify` skips the hook once.
 `.vscode/settings.json` formats on save with the same tools, so the hook
@@ -102,7 +98,7 @@ rarely has anything to say.
 
 `server/openapi.json` and `web-app/packages/api-client/src/generated/` are
 generated from `server/app/` and **committed**. They are a published interface,
-not a build artifact: the generated tree is what both portals compile against.
+not a build artifact: the generated tree is what the app compiles against.
 
 ```bash
 make gen-contract     # re-export the spec and regenerate the client

@@ -11,12 +11,10 @@ module's ownership dependency:
 
 ```python
 # app/modules/conversation/dependencies.py
-conversation = await conversation_service.get_conversation(db_session, sanitized_id)  # session.get underneath
+conversation = await conversation_service.get_conversation(db_session, conversation_id)  # session.get underneath
 
-if not conversation or conversation.deleted_at is not None:
-    raise ConversationNotFoundError(f"Conversation {sanitized_id} not found", conversation_id=sanitized_id)
-if conversation.user_id != user.id:
-    raise ConversationAccessDeniedError(...)
+if not conversation or conversation.deleted_at is not None or conversation.user_id != user.id:
+    raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
 ```
 
 A "helpful" `deleted_at` filter inside `get_by_id` would turn the dependency's check into dead code and change
@@ -41,12 +39,13 @@ exception otherwise.
 
 ---
 
-## Tenant-owned tables
+## User-owned tables
 
-A table whose rows belong to one organisation carries `TenantMixin` (`app/models/base.py`), and every repository
-method on it takes `org_id` and filters by it — including the by-id lookup, so `session.get()` is not enough there.
-The route gets the org from `CurrentOrgId`, exported by `account`. No table carries the mixin yet;
-`tests/unit/models/test_tenant_tables.py` fails on a new table that neither carries it nor is allowlisted with a
+A table whose rows belong to one user carries `UserOwnedMixin` (`app/models/base.py`: `user_id`, FK `user.id`), and
+every query on it filters `user_id` — a list, a count, a bulk update. The by-id lookup is the exception only when the
+module's ownership dependency checks `user_id` right after it (above); anywhere else `session.get()` is not enough.
+The route gets the user from `CurrentUser`, exported by `account`. `conversation` carries the mixin;
+`tests/unit/models/test_owned_tables.py` fails on a new table that neither carries it nor is allowlisted with a
 reason (`docs/architecture/server.md`, R7 and §9).
 
 ---
@@ -86,6 +85,18 @@ for payment in payments:
 await session.flush()
 ```
 
+For a large batch, one statement scoped by owner beats loading every row — after the same found-check, or when
+partial success is acceptable:
+
+```python
+await session.execute(
+    update(Payment)
+    .where(Payment.id.in_(ids), Payment.user_id == user_id, Payment.deleted_at.is_(None))
+    .values(deleted_at=datetime.now(timezone.utc))
+    .execution_options(synchronize_session="fetch")  # keep instances already in the session in step
+)
+```
+
 ---
 
 ## Relationship loading (avoid MissingGreenlet)
@@ -96,8 +107,8 @@ load relationships explicitly, in the same query.
 **A relationship never crosses a module** (`docs/architecture/server.md`, R3). `User` has no
 `.conversations`: the foreign key is declared by table name, and the other side is asked of the other module's
 service. Relationships exist only between tables one module owns, and no module has two yet. The examples below are
-the `orders` module that `docs/architecture/server.md` §2 sketches — an order and its lines, both
-tenant-owned, so every query also filters `org_id`.
+the `transactions` module that `docs/architecture/server.md` §2 sketches — a transaction and its splits, both
+user-owned, so every query also filters `user_id`.
 
 **`selectinload`** — one-to-many / many-to-many. Issues a second `SELECT ... WHERE id IN (...)`.
 
@@ -105,13 +116,13 @@ tenant-owned, so every query also filters `org_id`.
 from sqlalchemy.orm import selectinload
 
 stmt = (
-    select(Order)
-    .where(Order.id == order_id, Order.org_id == org_id)
-    .options(selectinload(Order.lines))
+    select(Transaction)
+    .where(Transaction.id == transaction_id, Transaction.user_id == user_id)
+    .options(selectinload(Transaction.splits))
 )
 result = await session.execute(stmt)
-order = result.scalar_one_or_none()
-# order.lines is now safe to access
+transaction = result.scalar_one_or_none()
+# transaction.splits is now safe to access
 ```
 
 **`joinedload`** — many-to-one / one-to-one. A single `JOIN`. Avoid for collections — it duplicates rows.
@@ -120,9 +131,9 @@ order = result.scalar_one_or_none()
 from sqlalchemy.orm import joinedload
 
 stmt = (
-    select(OrderLine)
-    .where(OrderLine.id == line_id, OrderLine.org_id == org_id)
-    .options(joinedload(OrderLine.order))
+    select(TransactionSplit)
+    .where(TransactionSplit.id == split_id, TransactionSplit.user_id == user_id)
+    .options(joinedload(TransactionSplit.transaction))
 )
 ```
 

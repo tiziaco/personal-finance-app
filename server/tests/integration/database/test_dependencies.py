@@ -91,7 +91,6 @@ class TestIntegrityDiagnostics:
         """
         duplicate = User(
             clerk_id="user_duplicate_email",
-            org_id=test_user.org_id,
             email=test_user.email,
         )
         db_session.add(duplicate)

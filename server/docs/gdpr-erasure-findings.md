@@ -1,5 +1,7 @@
 # GDPR Erasure — Findings
 
+> Findings predate the removal of the supplier module and organisations (2026-10-12); supplier and org_id items are moot.
+
 **Status:** findings only. No decisions taken, nothing implemented from this doc. The
 open items are tracked in [`docs/TODO.md`](../../docs/TODO.md).
 **Date:** 2026-08-25 · **Re-checked:** 2026-08-27 (after WS4 Clerk webhooks), 2026-09-25

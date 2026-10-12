@@ -1,109 +1,61 @@
-# Authorization — tenants, roles, and where each check runs
+# Authorization — the user is the tenant, and where each check runs
 
-Who may see and change what: the tenant boundary, the four roles, and the layer that
-enforces each rule on the server and in the portals. How a token is verified and a user
-provisioned is authentication, and is in [`authentication.md`](./authentication.md).
-Setting up the roles in Clerk is [`setup/clerk.md`](../setup/clerk.md). This describes the
-system as it stands and is kept current.
+Who may see and change what: the ownership boundary and the layer that enforces each rule
+on the server and in the app. How a token is verified and a user provisioned is
+authentication, and is in [`authentication.md`](./authentication.md). Setting up the Clerk
+instance is [`setup/clerk.md`](../setup/clerk.md). This describes the system as it stands
+and is kept current.
 
 ---
 
 ## 1. The model
 
-**A tenant is a Clerk Organization.** Every user who can do anything belongs to one, with
-one selected as active; the session token carries its id and the user's role in it. There
-is no tenant table and no tenant id of our own.
-
-**A role is a Clerk organization role**, one per membership, and arrives on the token —
-not user metadata, and not a column of ours. The four are the example domain's; what each
-is for, and which portal it lands in, is
-[`features/account.md`](../product/features/account.md) §3.
-
-The slugs are English because they are identifiers — in Clerk, in `Role` on both sides,
-in every check. The labels exist only in the frontend (`ROLE_LABELS` in
-`@app/auth`). A fork renames both, and the slugs in `scripts/clerk/config.json` too
-([`setup/making-it-yours.md`](../setup/making-it-yours.md)).
-
-**Every check compares `Role` values, never Clerk's strings.** One function on each side
-turns the token's claim into a `Role` — `get_current_role()` in `account`, `getUserRole()`
-in `@app/auth` — so a change of identity provider rewrites those two and no role check.
-
-**Only a project manager changes an organization's members.** Clerk's system permissions
-on `project_manager` let them invite, remove and re-role members from the organization
-profile the internal portal opens (`openOrganizationProfile()`); no other role holds them,
-and no API route changes membership. The server learns of each change from the membership
-webhooks, or from the token at the member's next request. An invitation sent this way
-carries no `supplier_id`, so an invited supplier gets `SUPPLIER_NOT_LINKED` until a
-`Supplier` row is linked to them.
-
-**A supplier is also a row**, linked to its portal contact — the link and its lifecycle
-are in [`../data-model/supplier.md`](../data-model/supplier.md). `SupplierID` (§2) resolves it.
+**The user is the tenant.** Data is keyed by `user_id`, a foreign key to the `user` row.
+There are no organisations, no roles and no admin flag: every signed-in user is equal and
+sees exactly the rows they own. There is no tenant table and no tenant id of our own.
 
 ## 2. From token to decision
 
 ```
 Clerk session token
-  o.id   → request.state.org_id      AuthMiddleware: verifies, never blocks
-  o.rol  → request.state.org_role    ("org:" stripped)
-  sub    → request.state.clerk_id
-     │
+  sub    → request.state.clerk_id     AuthMiddleware: verifies, never blocks
+     │                                (any other claim, including a stale `o`, is ignored)
      ├─ CurrentUser     the user row, provisioned on first sight         401 if no valid token
-     ├─ CurrentOrgId    user.org_id — the row, not the token            403 if none
-     ├─ CurrentRole     org_role, or Clerk's membership API when absent  403 if none or unknown
-     │    └─ require_role(...)  InternalUserRole, PMOnly, ReviewerRole, SupplierRole
-     ├─ SupplierID      the supplier whose contact_id is this user      403 SUPPLIER_NOT_LINKED
-     └─ ownership       e.g. UserConversation: the row exists and is the caller's   404 / 403
+     └─ ownership       e.g. UserConversation: the row exists, is not     404 with the module's
+                        soft-deleted and is the caller's                  not-found code
 ```
 
 `AuthMiddleware` only reads the token. Every decision is a FastAPI dependency, so a route
-states its own requirements in its signature and nothing is implied by where it is
-mounted. All of them live in the module whose business they are and are exported from its
-root: identity and role in `account`, `SupplierID` in `supplier`, ownership in the module
-that owns the row.
+states its requirements in its signature and nothing is implied by where it is mounted.
+Identity lives in `account` (`CurrentUser`); ownership of a row is the dependency of the
+module that owns the row. `get_current_user` also sets `request.state.user_id`.
+
+**A missing row, a soft-deleted row and another user's row answer the same 404** with the
+same error code (`CONVERSATION_NOT_FOUND` for conversations) and a message that names no
+user, so an id cannot be probed for existence.
 
 **The claims are Clerk's session token's** — what it is, how it travels and what else it
-carries are in [`authentication.md`](./authentication.md) §2. `AuthMiddleware` strips the
-`org:` prefix with `removeprefix`, so an unprefixed role would still parse, where
-`getUserRole()` on the web rejects one. Clerk always sends the prefix, so the two agree on
-every real token ([`../TODO.md`](../TODO.md), **Authorization — strict role prefix on the
-server**).
-
-**The org comes from the user row**, not the token. JIT provisioning fills `org_id` from
-Clerk's membership API when the token carries none, so once `CurrentUser` has resolved,
-the row is the authoritative value.
-
-**The role falls back to Clerk** when the token has no org context — an OAuth token from
-Swagger's Authorize flow, for instance. The answer is cached per process for 60 seconds,
-and the membership webhooks invalidate the entry on a role change or removal, so
-revocation is immediate unless every delivery fails
-([`server/docs/authentication.md`](../../server/docs/authentication.md), **In-Memory Caches**).
+carries are in [`authentication.md`](./authentication.md) §2.
 
 ## 3. Where each rule is enforced
 
-| Rule | Server | Portals |
+| Rule | Server | App |
 |---|---|---|
-| Signed in | `CurrentUser` on the route | `auth.protect()` in `proxy.ts` |
-| Right portal for the role | — | `proxy.ts`: `isInternalRole` / `isSupplierRole`, else `/unauthorized` |
-| Role may perform this action | `require_role(...)` on the route | `role === Role.*` from `useAppAuth()`, or `<Protect role="org:…">`, to hide what would be refused |
-| Row belongs to the caller's tenant | `CurrentOrgId` passed to a repository that filters by it; the table carries `TenantMixin` | — |
-| Row belongs to the caller | the module's ownership dependency (`UserConversation`) | — |
-| Caller acts for this supplier | `SupplierID` | — |
+| Signed in | `CurrentUser` on every non-public route | `auth.protect()` in `proxy.ts`; `/sign-in` and `/sign-up` are public |
+| Row belongs to the caller (list) | the repository query filters by `user_id` | — |
+| Row belongs to the caller (single row) | the module's ownership dependency (`UserConversation`) | — |
 
-**The server is the only enforcement.** Everything in the portals column decides what
-renders. A request made outside the portal — `curl` with a valid token — meets exactly the
-server column. So a portal check never replaces a server check; it saves a user from
-clicking something the server would refuse.
+**The server is the only enforcement.** `proxy.ts` only requires a session; it decides
+what renders, nothing more. A request made outside the app — `curl` with a valid token —
+meets exactly the server column.
 
-**No route calls `require_role` yet.** The four guards exist and are exported, but every
-current route is owner-scoped (conversations) or about the caller themselves (`/auth/me`):
-a supplier token may call any of them and sees only its own data. The first route whose
-data belongs to an organization needs both a guard and `CurrentOrgId`
-([`../TODO.md`](../TODO.md), **Authorization — the first organization-scoped route**).
+## 4. Ownership is a test
 
-**Tenant scoping is a test, not a convention.** A table whose rows belong to one
-organization carries `TenantMixin` (an indexed, non-null `org_id`), and every repository
-method on it takes and filters by the org id. `tests/unit/models/test_tenant_tables.py`
-fails on any table that neither carries the mixin nor sits in its allowlist with a reason
-([`server.md`](./server.md) R7 and §9). No table carries the mixin yet:
-`supplier` is allowlisted until its first write route
-([`../data-model/supplier.md`](../data-model/supplier.md)).
+**Ownership is a test, not a convention.** A table whose rows belong to one user carries
+`UserOwnedMixin` (`app.models.base`: an indexed, non-null `user_id`), and every list or bulk
+query on it filters by `user_id`. A single-row lookup goes through the owning module's
+ownership dependency (e.g. `UserConversation`), which checks `user_id` right after the fetch.
+`tests/unit/models/test_owned_tables.py` fails on any table that neither carries the mixin
+nor sits in its `ALLOWLIST` with a reason; the only entry is `user`, the owner itself. CI
+runs it in `.github/workflows/module-boundaries.yml` ([`server.md`](./server.md) R7 and
+§9).

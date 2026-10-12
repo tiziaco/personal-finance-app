@@ -15,7 +15,7 @@ pytestmark = pytest.mark.integration
 @pytest.fixture
 async def owner(db_session):
     """A user to own test conversations."""
-    user = User(clerk_id="clerk_conv_repo_owner", org_id="test_org_123", email="conv_repo_owner@example.com")
+    user = User(clerk_id="clerk_conv_repo_owner", email="conv_repo_owner@example.com")
     db_session.add(user)
     await db_session.flush()
     await db_session.refresh(user)
@@ -25,7 +25,7 @@ async def owner(db_session):
 @pytest.fixture
 async def other_user(db_session):
     """A second user, to prove per-user queries are scoped."""
-    user = User(clerk_id="clerk_conv_repo_other", org_id="test_org_123", email="conv_repo_other@example.com")
+    user = User(clerk_id="clerk_conv_repo_other", email="conv_repo_other@example.com")
     db_session.add(user)
     await db_session.flush()
     await db_session.refresh(user)

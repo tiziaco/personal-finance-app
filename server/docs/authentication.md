@@ -2,8 +2,7 @@
 
 ## Overview
 
-The server's side of authentication: verifying the token, provisioning the user, the
-caches. The end-to-end path — portal, Clerk, token, user row — is
+The server's side of authentication: verifying the token and provisioning the user. The end-to-end path — app, Clerk, token, user row — is
 [`docs/architecture/authentication.md`](../../docs/architecture/authentication.md).
 
 ## Architecture
@@ -59,10 +58,10 @@ The type alias `CurrentUser = Annotated[User, Depends(get_current_user)]` is use
 
 ### 4. JIT User Provisioning — `app/modules/account/service.py`
 
-`UserService.resolve_user(session, clerk_id, org_id)` follows this flow:
+`UserService.resolve_user(session, clerk_id)` follows this flow:
 
 1. **DB lookup** — query by `clerk_id` (unique + indexed, so a single index scan)
-2. **Clerk API** — fetch user from Clerk, create in DB
+2. **Clerk API** — fetch user from Clerk, create in DB, then publish `USER_SYNCED` (no subscribers yet)
 
 Race condition handling: if two concurrent requests try to create the same user, the `IntegrityError` on the unique `clerk_id` constraint is caught, and the existing user is fetched instead.
 
@@ -80,46 +79,14 @@ Called via `asyncio.to_thread()` since the SDK is synchronous.
 
 `UserRepository` handles all user DB operations via SQLModel/SQLAlchemy:
 - `get_by_id()`, `get_by_clerk_id()`, `get_by_email()`
-- `create()` — creates a user from Clerk data
+- `create()` and `create_or_get()` — create a user from Clerk data
 - `update_from_clerk()` — syncs profile changes
-- `update_org_id()` — syncs org_id when the JWT's org context changes
 - `delete()`
 
-### 7. Supplier link — `app/modules/supplier/` (`USER_SYNCED` subscriber)
+### 7. Caching
 
-`account` cannot import `supplier` (module DAG, `docs/architecture/server.md`), so linking runs as an event
-subscriber instead of a direct call. `supplier`'s `USER_SYNCED` handler (`handlers.py`) calls
-`SupplierService.link_from_metadata()`, which claims the supplier named in the invitation metadata; its
-`USER_ERASING` and `USER_OFFBOARDED` handlers call `SupplierService.unlink_contact()`. Both go through
-`SupplierRepository` for the `Supplier.contact_id` DB operations:
-- `get_by_id()`, `get_by_contact_id()` (any deletion state), `get_id_by_contact_id()` (non-deleted only)
-- `set_contact_id()` — links or unlinks a supplier's contact
-
-## In-Memory Caches — `app/modules/account/cache.py` (org role) and `app/modules/supplier/cache.py` (supplier link)
-
-Two independent caches, one per module, both backed by `cachetools.TTLCache`:
-
-| Cache | Module | Key → Value | TTL | Why that TTL |
-|-------|--------|-------------|-----|--------------|
-| `org_role` | `account` (`UserCache`) | `clerk_id -> role` | 60s | Feeds `get_current_role()` → `require_role()`, so a stale entry keeps a revoked permission alive |
-| `supplier_id` | `supplier` (`SupplierCache`) | `user_id -> supplier_id \| None` | 300s | Saves an indexed query; not authorization-critical |
-
-| Property | Value |
-|----------|-------|
-| Bounds | `maxsize=10_000` per cache, LRU eviction |
-| Scope | Single process — under N workers a TTL is a per-worker staleness bound, not a global one |
-| Invalidation | `user_cache.invalidate_user(clerk_id=...)`; `supplier_cache.invalidate_user(user_id=...)` |
-
-A cached `None` supplier id means "known not linked" and short-circuits the DB, so reads return a `MISS` sentinel for absence rather than `None`.
-
-Every method is `async` even though the in-memory implementation never awaits — that is the seam for a future Redis backend, so swapping it requires no call-site changes.
-
-**Invalidation points:**
-- Supplier re-link (`SupplierService.link_from_metadata`) — clears both the new contact and the displaced previous one
-- GDPR erasure and org offboarding — `erase_user` clears the role cache as its last step; `supplier`'s `USER_ERASING`/`USER_OFFBOARDED` handlers clear the supplier cache
-- Clerk membership webhooks (`app/modules/account/webhooks.py`) — every `organization_membership.*` event drops the user's cached role
-
-The `org_role` staleness this section used to name as an open gap is closed: a role change or an offboarding in Clerk now invalidates the entry on delivery, so revocation is immediate rather than bounded by the 60s TTL. It degrades to the TTL only if the delivery fails every svix retry.
+There is no in-memory cache in the auth path: the user lookup is one indexed query, and
+there are no roles to cache.
 
 ## Swagger UI OAuth2
 

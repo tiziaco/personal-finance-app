@@ -25,13 +25,13 @@ created some other way, run that yourself. `worktree-clean` stops the worktree's
 dev servers (matched by working directory, not port alone) and removes its
 containers, database volume and images.
 
-| Slot | Internal | Supplier | API | Postgres | Compose project |
-|---|---|---|---|---|---|
-| 0 (main checkout) | base | base | base | base | `COMPOSE_PROJECT_NAME`, else the directory name |
-| N (1–9) | base + 10N | base + 10N | base + 10N | base + 10N | `<main's project>-<worktree dir>` |
+| Slot | Web | API | DB | Compose project |
+|---|---|---|---|---|
+| 0 (main checkout) | base | base | base | `COMPOSE_PROJECT_NAME`, else the directory name |
+| N (1–9) | base + 10N | base + 10N | base + 10N | `<main's project>-<worktree dir>` |
 
 Bases are the main checkout's `*_HOST_PORT`s in its root `.env` and its
-`POSTGRES_PORT` in `server/.env.development`, defaulting to 3000 / 3002 / 8100 / 5434. `make worktree-init` (which `worktree-new` runs)
+`POSTGRES_PORT` in `server/.env.development`, defaulting to 3000 / 8100 / 5434. `make worktree-init` (which `worktree-new` runs)
 assigns the slot once, saves it as `WORKTREE_SLOT`, and writes the slot's ports,
 `ALLOWED_ORIGINS` and `NEXT_PUBLIC_API_URL` into the worktree's env files. Every
 make target and `Dev:` task then follows them.
@@ -45,8 +45,8 @@ make target and `Dev:` task then follows them.
   one at a time.
 - **Tear a worktree down with `make worktree-clean`**, not `make clean` or
   `rebuild`: those prune the build cache every checkout shares.
-- **`ALLOWED_ORIGINS` is rewritten** by `worktree-init` to the slot's three
-  origins; extra origins main lists are not carried over.
+- **`ALLOWED_ORIGINS` is rewritten** by `worktree-init` to the slot's two
+  origins (web and API); extra origins main lists are not carried over.
 - **A fresh worktree database fills itself.** Users are provisioned on their
   first authenticated request, so no webhook needs to reach it. Tests never
   touch it — they run against a testcontainer.
@@ -57,5 +57,5 @@ make target and `Dev:` task then follows them.
   side, run `make gen-contract`, and commit what it produces.
 - **Several projects from this template on one machine?** Give each its own
   block of 100: set the `*_HOST_PORT`s in its root `.env`, and `ALLOWED_ORIGINS`
-  and both `NEXT_PUBLIC_API_URL`s to match. Re-run `make worktree-init` in
+  and the web app's `NEXT_PUBLIC_API_URL` to match. Re-run `make worktree-init` in
   existing worktrees to move them along.

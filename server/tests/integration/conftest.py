@@ -12,29 +12,11 @@ from app.modules.account.models import User
 from app.modules.conversation import get_chatbot_agent
 
 
-@pytest.fixture(autouse=True)
-def clear_user_cache():
-    """Reset every user cache before and after each test.
-
-    Sync on purpose: reset() is the non-async form. Calling the async clear()
-    here without awaiting would create a coroutine and clear nothing.
-    """
-    from app.modules.account.cache import user_cache
-    from app.modules.supplier.cache import supplier_cache
-
-    user_cache.reset()
-    supplier_cache.reset()
-    yield
-    user_cache.reset()
-    supplier_cache.reset()
-
-
 @pytest_asyncio.fixture
 async def test_user(db_session):
     """Create a test user in the database, rolled back after each test."""
     user = User(
         clerk_id="user_test_integration_abc123",
-        org_id="test_org_123",
         email="integration@example.com",
         first_name="Test",
         last_name="User",

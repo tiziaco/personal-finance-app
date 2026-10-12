@@ -63,7 +63,7 @@ A module has a fixed set of slots — `router`, `schemas`, `models`, `service`,
 `repository`, `dependencies`, `exceptions`, optionally `handlers` and `domain` —
 and a root `__init__.py` that is its whole public surface. Another module
 imports from that root and nowhere deeper; `account` cannot import
-`conversation` or `supplier`, so it publishes events (`app/core/events.py`) that
+`conversation`, so it publishes events (`app/core/events.py`) that
 they subscribe to. `make check-server` runs `lint-imports` over the contracts
 in `pyproject.toml`, and `tests/unit/test_module_contracts.py` fails the suite
 when a new module lacks its entries.
@@ -118,8 +118,8 @@ reference files are the long form of the conventions on this page.
 
 ```python
 # ✅ Correct
-logger.info("document_uploaded", supplier_id=supplier_id, doc_type=doc_type)
-logger.exception("db_query_failed", table="documents")
+logger.info("transactions_imported", count=count, source=source)
+logger.exception("db_query_failed", table="transactions")
 
 # ❌ Wrong
 logger.info(f"Document {doc_id} uploaded")  # no f-strings in events
@@ -209,12 +209,12 @@ mechanically. It needs no database.
 ## Authentication
 
 - Clerk JWTs verified by `AuthMiddleware` (RS256); `clerk_id` set on `request.state`
-- Use `CurrentUser` from `app.modules.account` for protected endpoints; `CurrentRole`, `CurrentOrgId` and the `require_role(...)` guards come from the same root:
+- Use `CurrentUser` from `app.modules.account` for protected endpoints. It is the only identity dependency: there are no organisations and no roles. Ownership of a row is the owning module's dependency, and a miss — including another user's row — is a 404:
   ```python
-  from app.modules.account import CurrentUser, PMOnly
+  from app.modules.account import CurrentUser
   ```
 - Users are JIT-provisioned in the local DB on first request via `UserService`
-- Conversation ownership enforced by the `UserConversation` dependency
+- Conversation ownership enforced by the `UserConversation` dependency (404 `CONVERSATION_NOT_FOUND` for a missing or another user's conversation)
 
 ---
 
@@ -248,20 +248,20 @@ All agents extend `BaseAgent` (`app/agents/base/`) and must implement `create_gr
 ## Testing
 
 Before writing or debugging a test, read the **`/server-testing`** skill: an unmarked file
-that `make` never runs, the role an authenticated client lacks, and a lifespan that never runs
-all fail far from their cause.
+that `make` never runs and a lifespan that never runs
+both fail far from their cause.
 
 Run from `server/`: `make test*` (see `make help`), or target a file or test name:
 
 ```bash
-APP_ENV=test uv run pytest tests/unit/modules/account/test_cache.py
+APP_ENV=test uv run pytest tests/unit/modules/account/test_service.py
 APP_ENV=test uv run pytest -k "test_name"
 ```
 
 Coverage runs only under `make test-coverage`; the HTML report goes to `htmlcov/`. The pytest
 config is `pytest.ini` — pytest ignores `[tool.pytest.ini_options]` while that file exists.
 
-New tests mirror the `app/` structure: a test for `app/modules/account/cache.py` goes in `tests/unit/modules/account/test_cache.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
+New tests mirror the `app/` structure: a test for `app/modules/account/service.py` goes in `tests/unit/modules/account/test_service.py`. Unit tests mock external deps (DB, Clerk, LLM); integration tests use a real DB.
 
 **A whole-object assertion pins a field-to-column mapping only if every field holds a
 distinguishable value.** When a fixture leaves most fields at a shared default (`None`,
@@ -278,10 +278,9 @@ in a comment, so the fix is what changes it — invert it then, don't delete it.
 When a user is deleted (`DELETE /api/v1/auth/me`, or Clerk's `user.deleted`), `account`'s `erase_user` runs, in order:
 
 1. Clerk deletion, by the route only — on the webhook path Clerk's deletion is the trigger (JWTs immediately invalidated)
-2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes the LangGraph checkpoints of every conversation they own (soft-deleted ones included), and blanks their names; `supplier` clears `Supplier.contact_id`
+2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes the LangGraph checkpoints of every conversation they own (soft-deleted ones included), and blanks their names
 3. mem0 memories deleted (`delete_user_memory`)
 4. User PII anonymised via `AnonymizableMixin.anonymize_user()`
-5. The role cache invalidated under the clerk_id captured before step 4
 
 The request's `DbSession` commits the whole cascade before the response is sent; `erase_user` does not commit.
 

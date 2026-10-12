@@ -7,13 +7,14 @@ identifiers those systems are keyed by.
 """
 
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from app.modules.account import USER_ERASING
 from app.modules.account.models import User
-from app.modules.account.service import UserService, merge_clerk_metadata
+from app.modules.account.service import UserService, clerk_public_metadata
 
 pytestmark = pytest.mark.unit
 
@@ -25,7 +26,6 @@ def make_user() -> User:
         id=USER_ID,
         clerk_id="user_abc",
         email="person@example.com",
-        org_id="org_1",
     )
     return user
 
@@ -43,13 +43,11 @@ async def test_erase_user_runs_full_cascade(session):
     with (
         patch("app.modules.account.service.delete_user_memory", new=AsyncMock()) as mem,
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)) as publish,
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()) as invalidate,
     ):
         await UserService.erase_user(session, user)
 
     mem.assert_awaited_once_with(USER_ID)
     publish.assert_awaited_once_with(USER_ERASING, session=session, user_id=USER_ID)
-    invalidate.assert_awaited_once_with(clerk_id="user_abc")
     # The request's DbSession commits the cascade; erase_user never does.
     session.commit.assert_not_awaited()
 
@@ -60,28 +58,12 @@ async def test_erase_user_anonymizes_the_row(session):
     with (
         patch("app.modules.account.service.delete_user_memory", new=AsyncMock()),
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)),
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
     ):
         await UserService.erase_user(session, user)
 
     assert user.clerk_id != "user_abc"
     assert user.email.endswith("@anonymized.local")
-    assert user.org_id is None
     assert user.anonymized_at is not None
-
-
-async def test_erase_user_invalidates_with_pre_anonymisation_clerk_id(session):
-    """The cache is keyed by the original clerk_id, which anonymize_user destroys."""
-    user = make_user()
-
-    with (
-        patch("app.modules.account.service.delete_user_memory", new=AsyncMock()),
-        patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)),
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()) as invalidate,
-    ):
-        await UserService.erase_user(session, user)
-
-    assert invalidate.await_args.kwargs["clerk_id"] == "user_abc"
 
 
 async def test_erase_user_clears_checkpoints_and_memory_before_anonymising(session):
@@ -111,7 +93,6 @@ async def test_erase_user_clears_checkpoints_and_memory_before_anonymising(sessi
     with (
         patch("app.modules.account.service.delete_user_memory", new=delete_memory_mock),
         patch("app.modules.account.service.events.publish", new=publish_mock),
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch.object(User, "anonymize_user", new=anonymize_mock),
     ):
         await UserService.erase_user(session, user)
@@ -126,7 +107,6 @@ async def test_erase_user_logs_the_subscriber_count(session):
     with (
         patch("app.modules.account.service.delete_user_memory", new=AsyncMock()),
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=2)),
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch("app.modules.account.service.logger") as logger,
     ):
         await UserService.erase_user(session, user)
@@ -138,38 +118,17 @@ async def test_erase_user_logs_an_error_when_no_module_handled_the_erasure(sessi
     with (
         patch("app.modules.account.service.delete_user_memory", new=AsyncMock()),
         patch("app.modules.account.service.events.publish", new=AsyncMock(return_value=0)),
-        patch("app.modules.account.service.user_cache.invalidate_user", new=AsyncMock()),
         patch("app.modules.account.service.logger") as logger,
     ):
         await UserService.erase_user(session, user)
     logger.error.assert_called_once_with("user_erasing_had_no_subscribers", user_id=user.id)
 
 
-class FakeMembership:
-    def __init__(self, metadata):
-        self.public_metadata = metadata
+def test_public_metadata_is_returned_as_a_dict():
+    assert clerk_public_metadata(SimpleNamespace(public_metadata={"plan": "free"})) == {"plan": "free"}
 
 
-class FakeClerkUser:
-    def __init__(self, top, memberships):
-        self.public_metadata = top
-        self.organization_memberships = memberships
-
-
-def test_merge_prefers_top_level_over_membership_metadata():
-    clerk_user = FakeClerkUser({"supplier_id": "top"}, [FakeMembership({"supplier_id": "membership"})])
-    assert merge_clerk_metadata(clerk_user)["supplier_id"] == "top"
-
-
-def test_merge_falls_back_to_membership_metadata():
-    clerk_user = FakeClerkUser({}, [FakeMembership({"supplier_id": "membership", "replace": True})])
-    merged = merge_clerk_metadata(clerk_user)
-    assert merged["supplier_id"] == "membership"
-    assert merged["replace"] is True
-
-
-def test_merge_tolerates_missing_attributes():
-    class Bare:
-        pass
-
-    assert merge_clerk_metadata(Bare()) == {}
+def test_public_metadata_tolerates_missing_and_malformed_values():
+    assert clerk_public_metadata(SimpleNamespace()) == {}
+    assert clerk_public_metadata(SimpleNamespace(public_metadata=None)) == {}
+    assert clerk_public_metadata(SimpleNamespace(public_metadata="not-a-dict")) == {}

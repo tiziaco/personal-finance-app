@@ -17,8 +17,8 @@ cd "$SCRIPT_DIR/../.."
 # shellcheck source=lib.sh
 source "$SCRIPT_DIR/lib.sh"
 
-APP_NAME="${CLERK_APP_NAME:-Template App Dev}"
-PORTALS="web-app/apps/internal-portal web-app/apps/supplier-portal"
+APP_NAME="${CLERK_APP_NAME:-Personal Finance Dev}"
+PORTALS="web-app/apps/web"
 
 if ! command -v jq > /dev/null 2>&1; then
   echo "FAIL: jq is not installed."
@@ -30,7 +30,7 @@ fi
 if [ -n "${CLERK_APP_ID:-}" ]; then
   echo "FAIL: CLERK_APP_ID is already set to $CLERK_APP_ID."
   echo "This target creates a NEW application. To reconfigure the existing one,"
-  echo "run 'make clerk-apply-config', 'make clerk-apply-roles', 'make clerk-seed-users'."
+  echo "run 'make clerk-apply-config', 'make clerk-seed-users'."
   echo "To start over, remove CLERK_APP_ID from the root .env first."
   exit 1
 fi
@@ -97,15 +97,14 @@ done
 echo "==> 4/4 Done"
 echo
 echo "PASS: \"$APP_NAME\" created; its keys are in .env, server/.env.development"
-echo "      and both portals' .env.local."
+echo "      and the web app's .env.local."
 echo
 echo "Next:"
-echo "  make clerk-apply-config    instance and organization settings"
-echo "  make clerk-apply-roles     the four roles, creator and default role"
-echo "  make clerk-seed-users      the dev org and its three users"
+echo "  make clerk-apply-config    instance settings"
+echo "  make clerk-seed-users      two dev users"
 echo "  make clerk-bootstrap-oauth optional — Swagger's Authorize button"
 echo
-echo "Your own app, in a team: make clerk-bootstrap-env CLERK_APP_NAME=\"Template App Dev — <name>\""
+echo "Your own app, in a team: make clerk-bootstrap-env CLERK_APP_NAME=\"Personal Finance Dev — <name>\""
 echo
 echo "NOTE: not set by this script — ALLOWED_ORIGINS in server/.env.development"
 echo "      (docs/setup/clerk.md §4) and CLERK_WEBHOOK_SIGNING_SECRET (§6). Restart"

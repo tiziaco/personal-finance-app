@@ -9,8 +9,8 @@ rather than delete it, so the fix is what makes it pass.
 
 **This file is not [`TODO.md`](./TODO.md).** The test is whether anything is wrong right
 now. A bug is a defect in merged code; a TODO is a decision deferred to the change that
-should make it, in code that is correct as it stands. "`supplier` has no `org_id`" is a
-TODO — nothing writes the table, so nothing leaks until the first write route. "The
+should make it, in code that is correct as it stands. "There is no row-level
+security" is a TODO — the query layer already scopes every read, so nothing leaks. "The
 settings dialog has no side gutter on a phone" is a bug — it is in `main` and any phone
 shows it.
 
@@ -18,20 +18,54 @@ shows it.
 
 ## Server
 
+### A re-registered or changed email locks the new account out with a 401
+
+`user.email` is unique. JIT provisioning inserts a row for a `clerk_id` it has not seen;
+when that email is already held by a row with a *different* `clerk_id`, the insert
+collides, `create_or_get` (`server/app/modules/account/repository.py`) finds no row for the
+new `clerk_id` and raises `UserAlreadyExistsError`, and `get_current_user`
+(`server/app/modules/account/dependencies.py`) turns it into a 401 "Failed to provision
+user". The user sees "session expired" on every request, for as long as the stale row exists.
+
+**Two triggers:**
+
+1. A user deletes their account in Clerk's profile window while no webhook endpoint is
+   configured (or before its retries land), so `user.deleted` never anonymises the row,
+   then signs up again with the same email.
+2. A user changes their email in Clerk, the `user.updated` webhook is missed, and a
+   different person later signs up with the old address.
+
+**Reproduce:** insert a `user` row with email `a@example.com` and `clerk_id` `user_old`,
+then call any authenticated route with a token for a new `clerk_id` whose Clerk profile has
+email `a@example.com`. Expect 401 `Failed to provision user`.
+
+**Why it has gone unnoticed:** the webhook normally keeps rows in step with Clerk, and
+no test provisions a second `clerk_id` onto an existing email.
+
+**Workaround:** delete or anonymise the stale `user` row, the one whose `clerk_id` Clerk
+no longer has (anonymise through `User.anonymize_user`, or delete it if nothing references
+it). The next request provisions the new account.
+
+**Fixing it** is planned for the backend modules (sub-project 2), before the first finance
+table references `user`: see [`TODO.md`](./TODO.md), **Server: email uniqueness**.
+Either drop `unique=True` on `User.email` (Clerk owns email uniqueness; `clerk_id` is the
+identity), or reclaim the stale row on collision when `exists_in_clerk(holder.clerk_id)` is
+false. A test that provisions a second `clerk_id` onto a held email fails first.
+
 ### The app connects to Postgres as a superuser that owns every table
 
 The `db` service in both compose files reads `server/.env.<env>`, so the pgvector image's
 init creates `POSTGRES_USER` as the cluster's **superuser**. The server and the one-shot
 `migrate` service then connect with those same credentials. The role the app runs as is
 therefore `rolsuper = t`, `rolbypassrls = t`, and owns every table. Nothing limits what a
-bug in a route, or an injection through one, can do to the schema or to other tenants'
+bug in a route, or an injection through one, can do to the schema or to other users'
 rows.
 
 **Reproduce:** against any environment's database, as the server's connection:
 `SELECT rolname, rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user;`
 
 **Why it has gone unnoticed:** nothing needs less. Tenancy is enforced in the query
-layer (the org id from the JWT), there is no row-level security for the role to bypass,
+layer (the user id from the JWT), there is no row-level security for the role to bypass,
 and one role is the simplest thing that works for a dev stack.
 
 **Fixing it** is role separation: an owner role for Alembic, and a restricted app role
@@ -110,10 +144,10 @@ Below 42rem the dialog is `w-full` with nothing narrowing it, so it runs edge to
 `h-125` is a fixed 500px, so on a screen shorter than that the dialog is clipped top and
 bottom — it is centred with a translate, not scrolled.
 
-**Reproduce:** open either portal at 375px wide, open Settings from the sidebar. Then
+**Reproduce:** open the app at 375px wide, open Settings from the sidebar. Then
 rotate to landscape.
 
-**Why it has gone unnoticed:** both portals are desktop dashboards, and the sidebar that
+**Why it has gone unnoticed:** the app is a desktop dashboard, and the sidebar that
 holds the Settings trigger is itself a sheet on a phone, so reaching the dialog there is
 already a detour.
 
@@ -121,7 +155,7 @@ already a detour.
 `sm:max-w-md`, and the gutter survives); `h-[min(31.25rem,calc(100dvh-2rem))]`; below `sm`,
 stack the rail above the content as a row of tabs (`flex-col sm:flex-row` on the wrapper,
 `flex-row sm:flex-col` on `SidebarMenu`, the footer slot hidden). Keep the sidebar
-primitives — both portals render the dialog inside a `SidebarProvider`. A layout test that
+primitives — the app renders the dialog inside a `SidebarProvider`. A layout test that
 asserts the class contract (jsdom has no layout) fails first.
 
 ### The server-status dot pings "healthy" while it shows an error
@@ -133,7 +167,7 @@ is not a degraded 503 (a 500, an expired token, the server gone), `useServerStat
 the error and TanStack Query keeps the last healthy `data`, so the dot is red **and**
 pulsing, in red: a live-looking signal on a dead server.
 
-**Reproduce:** with a portal open and the settings dialog showing the indicator, stop the
+**Reproduce:** with the app open and the settings dialog showing the indicator, stop the
 API server and wait for the next 30-second refetch.
 
 **Why it has gone unnoticed:** it needs the API to die after a healthy load, and the
@@ -142,20 +176,3 @@ not stale healthy data with an error.
 
 **Fixing it** is gating the ring on the same condition as green — no `error` and a
 healthy status — with a test for the combination that fails first.
-
-### Three of the portals' four declared favicons do not exist
-
-Both portals' `src/app/layout.tsx` declare `/icons/favicon-16x16.ico`,
-`/icons/favicon-32x32.ico` and `/icons/favicon-ios-57x57.ico` in `metadata.icons`, but
-each `public/icons/` holds only `favicon.ico`. Every page load that picks one of the
-three gets a 404.
-
-**Reproduce:** load either portal with the network panel open and filter on `icons`.
-
-**Why it has gone unnoticed:** the browser falls back to `favicon.ico`, which exists, so
-the tab still shows an icon; the 404s are in the network panel only.
-
-**Fixing it** is either adding the three files to both portals' `public/icons/`, or
-deleting the three entries so `metadata.icons` declares only what ships.
-[`docs/setup/making-it-yours.md`](./setup/making-it-yours.md)'s branding table then needs
-to match.

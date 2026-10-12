@@ -23,16 +23,16 @@ too.
 ## The base URL trap
 
 `NEXT_PUBLIC_API_URL` is the **browser's** view of the API. In dev it is `http://localhost:8100` in
-the main checkout (`apps/*/.env.example`, and `docker-compose.dev.yml`'s build args) — the port
+the main checkout (`apps/web/.env.example`, and `docker-compose.dev.yml`'s build args) — the port
 Compose publishes to the host. A git worktree shifts it by its slot.
 
-Server-side code running **inside a portal container** resolves `localhost:8100` to that container
+Server-side code running **inside the web container** resolves `localhost:8100` to that container
 itself, not to the API. The request fails with a connection error that looks nothing like a config
 problem.
 
 Container-internal traffic must address the service by its Compose name (`http://server:8000`). If a
 server-side call needs to work under `make docker-run`, it needs its own variable — an unprefixed
-`API_INTERNAL_URL`, not the `NEXT_PUBLIC_` one — and a matching entry for **each** portal service in
+`API_INTERNAL_URL`, not the `NEXT_PUBLIC_` one — and a matching entry for the `web` service in
 `docker-compose.dev.yml` and `docker-compose.prod.yml`.
 
 This does not bite on the native path (`Dev: All`), where the API really is on `localhost`. That
@@ -40,13 +40,12 @@ asymmetry is what makes it easy to ship broken.
 
 ## Shape
 
-Put the helper next to the route that uses it — `apps/<portal>/src/app/(dashboard)/<route>/data.ts`
-(the supplier portal's group is `(portal)`). Do **not** start `src/lib/api/`; `web-app/CLAUDE.md`
+Put the helper next to the route that uses it — `apps/web/src/app/(dashboard)/<route>/data.ts`. Do **not** start `src/lib/api/`; `web-app/CLAUDE.md`
 forbids that directory, because it becomes a second, hand-maintained API layer competing with the
 generated one.
 
 ```ts
-// apps/internal-portal/src/app/(dashboard)/<route>/data.ts
+// apps/web/src/app/(dashboard)/<route>/data.ts
 import "server-only"
 
 import { auth } from "@clerk/nextjs/server"
@@ -103,7 +102,7 @@ If you add an `error.tsx` for this, keep its mapping consistent with `toastForEr
 
 ## Caching
 
-The portals run Next 16's earlier caching model — neither `next.config.ts` sets `cacheComponents` —
+The app runs Next 16's earlier caching model — `next.config.ts` does not set `cacheComponents` —
 so a `fetch` is not cached unless it asks to be.
 
 Caching is the one real advantage of the server path: `next: { revalidate, tags }` puts the response

@@ -30,7 +30,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("id", sa.Uuid(), server_default=sa.text("uuidv7()"), nullable=False),
         sa.Column("clerk_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-        sa.Column("org_id", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("email", sqlmodel.sql.sqltypes.AutoString(), nullable=False),
         sa.Column("email_verified", sa.Boolean(), nullable=False),
         sa.Column("first_name", sqlmodel.sql.sqltypes.AutoString(), nullable=True),
@@ -43,7 +42,6 @@ def upgrade() -> None:
     op.create_index(op.f("ix_user_clerk_id"), "user", ["clerk_id"], unique=True)
     op.create_index(op.f("ix_user_created_at"), "user", ["created_at"], unique=False)
     op.create_index(op.f("ix_user_email"), "user", ["email"], unique=True)
-    op.create_index(op.f("ix_user_org_id"), "user", ["org_id"], unique=False)
     op.create_table(
         "conversation",
         sa.Column("deleted_at", sa.DateTime(timezone=True), nullable=True),
@@ -71,7 +69,6 @@ def downgrade() -> None:
     op.drop_index(op.f("ix_conversation_deleted_at"), table_name="conversation")
     op.drop_index(op.f("ix_conversation_created_at"), table_name="conversation")
     op.drop_table("conversation")
-    op.drop_index(op.f("ix_user_org_id"), table_name="user")
     op.drop_index(op.f("ix_user_email"), table_name="user")
     op.drop_index(op.f("ix_user_created_at"), table_name="user")
     op.drop_index(op.f("ix_user_clerk_id"), table_name="user")

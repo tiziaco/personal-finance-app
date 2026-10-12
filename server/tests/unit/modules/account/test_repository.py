@@ -31,7 +31,6 @@ async def test_create_uses_supplied_clerk_timestamp(session):
         session=session,
         clerk_id="user_abc",
         email="a@b.com",
-        org_id="org_1",
         last_synced_at=CLERK_TS,
     )
     assert user.last_synced_at == CLERK_TS
@@ -39,18 +38,12 @@ async def test_create_uses_supplied_clerk_timestamp(session):
 
 async def test_create_falls_back_to_now_when_absent(session):
     before = datetime.now(UTC)
-    user = await UserRepository.create(session=session, clerk_id="user_abc", email="a@b.com", org_id="org_1")
+    user = await UserRepository.create(session=session, clerk_id="user_abc", email="a@b.com")
     assert user.last_synced_at >= before
 
 
-async def test_create_accepts_a_null_org_id(session):
-    """user.created carries no organisation — Clerk models membership separately."""
-    user = await UserRepository.create(session=session, clerk_id="user_abc", email="a@b.com", org_id=None)
-    assert user.org_id is None
-
-
 async def test_update_from_clerk_uses_supplied_timestamp(session):
-    user = User(clerk_id="user_abc", email="a@b.com", org_id="org_1")
+    user = User(clerk_id="user_abc", email="a@b.com")
     user.last_synced_at = CLERK_TS - timedelta(days=1)
 
     await UserRepository.update_from_clerk(session=session, user=user, first_name="New", last_synced_at=CLERK_TS)
@@ -58,7 +51,7 @@ async def test_update_from_clerk_uses_supplied_timestamp(session):
 
 
 async def test_update_from_clerk_falls_back_to_now(session):
-    user = User(clerk_id="user_abc", email="a@b.com", org_id="org_1")
+    user = User(clerk_id="user_abc", email="a@b.com")
     before = datetime.now(UTC)
 
     await UserRepository.update_from_clerk(session=session, user=user, first_name="New")

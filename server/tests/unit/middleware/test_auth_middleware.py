@@ -22,8 +22,7 @@ def _make_app():
             {
                 "clerk_id": getattr(request.state, "clerk_id", None),
                 "user_id": getattr(request.state, "user_id", None),
-                "org_id": getattr(request.state, "org_id", None),
-                "org_role": getattr(request.state, "org_role", None),
+                "state_keys": sorted(request.state._state),
             }
         )
 
@@ -92,47 +91,18 @@ class TestAuthMiddleware:
 
         assert response.json()["user_id"] is None
 
-    # --- NEW: org claims ---
-
     @pytest.mark.asyncio
     @patch("app.api.middlewares.auth.clerk_jwt_verifier")
-    async def test_org_claims_extracted_from_token(self, mock_verifier, app):
-        # Clerk JWT v2 (SDK >= v5) nests org claims under "o"
+    async def test_org_claims_are_ignored(self, mock_verifier, app):
+        """A stale org claim sets nothing: the user is the tenant."""
         mock_verifier.verify_token.return_value = {
             "sub": "user_abc123",
-            "o": {"id": "org_xyz", "rol": "org:project_manager"},
+            "o": {"id": "org_xyz", "rol": "org:admin"},
         }
 
         async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
             response = await client.get("/test", headers={"Authorization": "Bearer valid.token"})
 
         data = response.json()
-        assert data["org_id"] == "org_xyz"
-        assert data["org_role"] == "project_manager"  # prefix stripped
-
-    @pytest.mark.asyncio
-    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
-    async def test_org_prefix_stripped(self, mock_verifier, app):
-        """'org:supplier' should be stored as 'supplier'."""
-        mock_verifier.verify_token.return_value = {
-            "sub": "user_s1",
-            "o": {"id": "org_abc", "rol": "org:supplier"},
-        }
-
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.get("/test", headers={"Authorization": "Bearer token"})
-
-        assert response.json()["org_role"] == "supplier"
-
-    @pytest.mark.asyncio
-    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
-    async def test_missing_org_claims_are_none(self, mock_verifier, app):
-        """Token with no org context (personal account or not-yet-selected org)."""
-        mock_verifier.verify_token.return_value = {"sub": "user_abc123"}
-
-        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
-            response = await client.get("/test", headers={"Authorization": "Bearer valid.token"})
-
-        data = response.json()
-        assert data["org_id"] is None
-        assert data["org_role"] is None
+        assert data["clerk_id"] == "user_abc123"
+        assert data["state_keys"] == ["clerk_id", "user_id"]

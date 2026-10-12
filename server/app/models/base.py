@@ -92,17 +92,16 @@ class AnonymizableMixin(SQLModel):
         self.anonymized_at = datetime.now(UTC)
 
 
-class TenantMixin(SQLModel):
-    """The tenant column for a table owned by one Clerk organisation.
+class UserOwnedMixin(SQLModel):
+    """The owner column for a table whose rows belong to one user.
 
-    `org_id` is the organisation id that arrives on the JWT and is stored on
-    the user row. A table that carries it is scoped by it in every query; a
-    table that does not must be listed, with a reason, in
-    tests/unit/models/test_tenant_tables.py. Adding the mixin to an existing
-    table is a migration with a backfill (architecture §9).
+    The user is the tenant. A table that carries `user_id` is scoped by it in
+    every query, and a lookup that finds another user's row answers 404, as for
+    a row that does not exist. A table that does not carry it must be listed,
+    with a reason, in tests/unit/models/test_owned_tables.py (architecture §9).
     """
 
-    org_id: str = Field(index=True, nullable=False)
+    user_id: uuid.UUID = Field(foreign_key="user.id", index=True, nullable=False)
 
 
 class UUIDPrimaryKeyMixin(SQLModel):

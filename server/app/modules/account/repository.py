@@ -43,7 +43,6 @@ class UserRepository:
         session: AsyncSession,
         clerk_id: str,
         email: str,
-        org_id: Optional[str],
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
@@ -52,15 +51,12 @@ class UserRepository:
     ) -> User:
         """Create a new user from Clerk data.
 
-        `org_id` is None on the user.created path: Clerk's payload carries no
-        organisation, because membership is a separate resource with its own
-        events. `last_synced_at` is Clerk's own clock, read by the webhook
-        ordering guard; the JIT path has no Clerk event to draw one from.
+        `last_synced_at` is Clerk's own clock, read by the webhook ordering
+        guard; the JIT path has no Clerk event to draw one from.
         """
         user = User(
             clerk_id=clerk_id,
             email=email,
-            org_id=org_id,
             first_name=first_name,
             last_name=last_name,
             avatar_url=avatar_url,
@@ -73,7 +69,7 @@ class UserRepository:
         await session.flush()
         await session.refresh(user)
 
-        logger.info("user_created", user_id=user.id, clerk_id=clerk_id, org_id=org_id)
+        logger.info("user_created", user_id=user.id, clerk_id=clerk_id)
         return user
 
     @staticmethod
@@ -81,7 +77,6 @@ class UserRepository:
         session: AsyncSession,
         clerk_id: str,
         email: str,
-        org_id: Optional[str],
         first_name: Optional[str] = None,
         last_name: Optional[str] = None,
         avatar_url: Optional[str] = None,
@@ -103,7 +98,6 @@ class UserRepository:
                 session=session,
                 clerk_id=clerk_id,
                 email=email,
-                org_id=org_id,
                 first_name=first_name,
                 last_name=last_name,
                 avatar_url=avatar_url,
@@ -149,18 +143,6 @@ class UserRepository:
         await session.refresh(user)
 
         logger.info("user_updated", user_id=user.id, clerk_id=user.clerk_id)
-        return user
-
-    @staticmethod
-    async def update_org_id(session: AsyncSession, user: User, org_id: str) -> User:
-        """Sync a user's org_id from the JWT's org context.
-
-        Called on every resolve_user() DB hit, so the row stays aligned when an
-        admin re-assigns the user to a different Clerk organisation.
-        """
-        user.org_id = org_id
-        session.add(user)
-        await session.flush()
         return user
 
 

@@ -1,22 +1,21 @@
-# Template App — Web App
+# Personal Finance — Web App
 
-pnpm monorepo containing the template's two Next.js frontend apps: an internal portal
-and an external partner portal, sharing one component library and one generated API
-client.
+pnpm monorepo containing the Next.js app (`apps/web`) and the packages it is built from,
+including one generated API client.
 
 ## Structure
 
 ```
 web-app/
 ├── apps/
-│   ├── internal-portal/   # Dashboard for project managers (port 3000)
-│   └── supplier-portal/   # Supplier-facing portal (port 3002)
+│   └── web/               # The app (port 3000)
 └── packages/
     ├── api-client/        # @app/api-client — generated API client from the OpenAPI spec
-    ├── auth/              # @app/auth — Role enum, useAppAuth(), getUserRole()
+    ├── auth/              # @app/auth — AuthProvider, useAppAuth(), AppUser
     ├── core/              # @app/core — cn(), NavItem, copy — no renderer
     ├── ui/                # @app/ui — shadcn/Base UI primitives, WEB ONLY
-    └── components/        # @app/components — composed chrome, built on ui
+    ├── components/        # @app/components — composed chrome, built on ui
+    └── data-table/        # @app/data-table — tables, filters, URL list state
 ```
 
 ## Tech Stack
@@ -35,17 +34,17 @@ web-app/
 # From web-app/
 pnpm install
 
-# Copy and fill in environment variables for each app
-cp apps/internal-portal/.env.example apps/internal-portal/.env.local
-cp apps/supplier-portal/.env.example apps/supplier-portal/.env.local
+# Copy and fill in environment variables
+cp apps/web/.env.example apps/web/.env.local
 ```
 
-Key variables in each `.env.local`:
+Key variables in `.env.local`:
 
 ```bash
 NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=...
 CLERK_SECRET_KEY=...
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
 NEXT_PUBLIC_API_URL=http://localhost:8100
 ```
 
@@ -53,15 +52,13 @@ NEXT_PUBLIC_API_URL=http://localhost:8100
 
 ```bash
 # From web-app/
-pnpm dev:internal    # internal dashboard at http://localhost:3000
-pnpm dev:supplier    # supplier portal at http://localhost:3002
-pnpm build           # production build for all apps
+pnpm dev             # the app at http://localhost:3000
+pnpm build           # production build
 pnpm type-check      # TypeScript check across all packages
 ```
 
-3000 and 3002 are the main checkout's defaults. From the repo root,
-`make dev-internal` / `make dev-supplier` follow the checkout's own ports, which
-differ in a git worktree.
+3000 is the main checkout's default. From the repo root, `make dev-web` follows the
+checkout's own port, which differs in a git worktree.
 
 ## Managing Packages
 
@@ -69,8 +66,7 @@ differ in a git worktree.
 
 | Dependency type | Where to add |
 |-----------------|--------------|
-| Runtime dep used by one app | That app only |
-| Runtime dep used by both apps | Each app individually |
+| Runtime dep used by the app | `apps/web` |
 | Needed by a primitive | `packages/ui` |
 | Needed by composed chrome | `packages/components` |
 | Needed by the tables or list state | `packages/data-table` |
@@ -78,9 +74,8 @@ differ in a git worktree.
 | Tooling (eslint, typescript, etc.) | Workspace root (`-w`) |
 
 ```bash
-# Add to a specific app
-pnpm --filter internal-portal add <package>
-pnpm --filter supplier-portal add <package>
+# Add to the app
+pnpm --filter web add <package>
 
 # Add to the shared UI package
 pnpm --filter @app/ui add <package>
@@ -88,8 +83,6 @@ pnpm --filter @app/ui add <package>
 # Add to the workspace root (tooling only)
 pnpm add -w <package>
 ```
-
-Even if both apps depend on the same package at the same version, pnpm installs it once — declaring it in two `package.json` files doesn't mean duplicating it on disk.
 
 ### Adding shadcn components
 
@@ -101,7 +94,7 @@ Components land in `packages/ui/src/primitives/` and are importable as `@app/ui/
 immediately — the `exports` map is a wildcard. They are **not** in the `@app/ui` barrel
 until you add a line to `packages/ui/src/index.ts` by hand.
 
-Every primitive goes there, even one used by a single portal. Composed components have their
+Every primitive goes there, even one used by a single page. Composed components have their
 own homes; see `references/components.md` in the `web-app-patterns` skill.
 
 ## Docker Commands

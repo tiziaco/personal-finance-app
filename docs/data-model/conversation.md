@@ -1,8 +1,7 @@
 # Conversation — Data Model
 
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 29 Sep 2026
-**Describes:** no feature doc yet — the assistant is a pending section of
-[`../product/prd-mvp.md`](../product/prd-mvp.md).
+**Describes:** [`../product/features/chat.md`](../product/features/chat.md).
 **Scope:** the `conversation` table — one row per chat thread with the assistant.
 **Source of truth:** the code — `server/app/modules/conversation/models.py` and the Alembic
 revision `0c7838405158`. The sketch below was last brought in line with them on
@@ -45,8 +44,7 @@ CREATE TABLE conversation (
   which erasure blanks. The personal content is the messages, and erasure hard-deletes the
   checkpoints of every conversation the user owns, soft-deleted ones included
   ([`server/CLAUDE.md`](../../server/CLAUDE.md), **GDPR — Right to Erasure**).
-- **D2 — no `org_id`.** Its entry in the tenancy allowlist (`test_tenant_tables.py`):
-  owned through its user; the user's organization is the tenant.
+- **D2 — `conversation` carries `UserOwnedMixin`; its `user_id` is the owner.**
 
 ## 5. Deferred
 

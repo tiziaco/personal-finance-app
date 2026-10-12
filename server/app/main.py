@@ -38,12 +38,11 @@ from app.exceptions import (
 from app.exceptions.base import ServiceError
 
 # Every module by name, whether or not it has a router. A module that only
-# subscribes to events (supplier) would otherwise never be imported, and
+# subscribes to events would otherwise never be imported, and
 # events.publish() would run zero handlers with no error.
 # tests/unit/test_module_contracts.py checks this list against app/modules/.
 from app.modules import account as _account
 from app.modules import conversation as _conversation
-from app.modules import supplier as _supplier
 
 # Load environment variables
 load_dotenv()

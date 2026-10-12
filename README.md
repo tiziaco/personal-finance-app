@@ -1,19 +1,17 @@
-# Template App
+# Personal Finance
 
-A production-ready template for **multi-tenant B2B platforms with two portals** — one
-for internal staff, one for external partners — backed by a single FastAPI server.
+A B2C app for tracking and understanding one person's money: a Next.js app
+(`web-app/apps/web`) backed by a FastAPI server. The user is the tenant — data is keyed by
+`user_id`; there are no organisations and no roles.
 
 ## Overview
 
-The starting point this gives you is the part that is tedious to build and easy to get
-wrong: tenant isolation, two separately-deployed frontends sharing one component
-library, an API contract that cannot silently drift from its client, and a deploy story.
-
-- **Multi-tenancy via Clerk Organizations** — the org id arrives on the JWT and scopes
-  every query; role-gated routing keeps internal and external users in their own portal
-- **Two Next.js 16 portals** sharing `packages/core`, `packages/ui`,
-  `packages/components`, `packages/auth` and a generated API client, built as genuinely
-  distinct images
+- **One user, one set of data** — every owned row carries `user_id`, repositories filter by
+  it, and another user's row answers 404 exactly like a missing one
+- **Public sign-up** — Clerk handles authentication; the first authenticated request
+  provisions the user's row, so a new user signs up and uses the app at once
+- **A Next.js 16 app** built on `packages/core`, `packages/ui`, `packages/components`,
+  `packages/data-table`, `packages/auth` and a generated API client
 - **A generated, committed API contract** — `server/openapi.json` and the TanStack Query
   hooks derived from it, with four gates that fail if they drift from the routes
 - **GDPR erasure** wired end to end, including LangGraph checkpoints and mem0 memories
@@ -21,15 +19,8 @@ library, an API contract that cannot silently drift from its client, and a deplo
 - **Observability and deploy** — Prometheus, Grafana, cAdvisor, and a Traefik/Dokploy
   compose file that serves both staging and production
 
-### The example domain
-
-The template ships with a worked example rather than empty stubs: **supplier document
-compliance**. Internal staff manage projects, suppliers and orders; suppliers submit
-documents against them. That is why you will find a `Supplier` model, a
-`supplier-portal/` app and roles named `project_manager`/`reviewer`/`approver`/`supplier`.
-
-None of it is load-bearing. Rename or replace it to fit your domain — the multi-tenancy,
-auth, contract and deploy machinery underneath do not depend on any of it.
+What the product does is in [`docs/product/`](docs/product/), what it stores in
+[`docs/data-model/`](docs/data-model/).
 
 ---
 
@@ -87,14 +78,14 @@ auth, contract and deploy machinery underneath do not depend on any of it.
 │   └── pyproject.toml             # Deps AND the service's public identity
 ├── web-app/                       # Next.js monorepo (pnpm workspaces)
 │   ├── apps/
-│   │   ├── internal-portal/       # Staff dashboard (port 3000)
-│   │   └── supplier-portal/       # External partner portal (port 3002)
+│   │   └── web/                   # The app (port 3000)
 │   └── packages/
 │       ├── api-client/            # @app/api-client — generated from openapi.json
-│       ├── auth/                  # @app/auth — Role, useAppAuth(), getUserRole()
+│       ├── auth/                  # @app/auth — AuthProvider, useAppAuth(), AppUser
 │       ├── core/                  # @app/core — cn(), NavItem, copy — no renderer
 │       ├── ui/                    # @app/ui — shadcn/Base UI primitives, WEB ONLY
-│       └── components/            # @app/components — composed chrome, built on ui
+│       ├── components/            # @app/components — composed chrome, built on ui
+│       └── data-table/            # @app/data-table — tables and list state
 ├── docs/                          # Setup, architecture, guides, roadmap, TODO/BUGS, specs
 ├── infra/                         # Prometheus + Grafana config
 ├── scripts/                       # gen-contract, check-contract, verify-infra, deploy-check
@@ -129,8 +120,7 @@ cp .env.example .env
 cp server/.env.example server/.env.development
 
 # Frontend
-cp web-app/apps/internal-portal/.env.example web-app/apps/internal-portal/.env.local
-cp web-app/apps/supplier-portal/.env.example web-app/apps/supplier-portal/.env.local
+cp web-app/apps/web/.env.example web-app/apps/web/.env.local
 ```
 
 Required variables include Clerk API keys, database credentials and the Langfuse keys. The
@@ -142,17 +132,21 @@ Nothing authenticates until a Clerk instance is configured:
 
 ```bash
 clerk auth login
-make clerk-setup CLERK_APP_NAME="Template App Dev — <name>"
+make clerk-setup CLERK_APP_NAME="Personal Finance Dev — <name>"
 ```
 
-This creates a development app, writes its keys to the env files, applies the settings and
-roles, and seeds three dev users. Re-running it is safe. Then:
+This creates a development app, writes its keys to the env files, applies
+`scripts/clerk/config.json` (public sign-up, no organisations) and seeds two dev users.
+Re-running it is safe. To use an existing instance instead, set `CLERK_APP_ID` in the root
+`.env` and run `make clerk-setup`: it skips creating the app, then applies the config.
+Run `make clerk-pull-config` first and review the diff, since applying overwrites the
+instance's settings. Then:
 
-- **`ALLOWED_ORIGINS`** must list every portal origin, or valid tokens are rejected — it
+- **`ALLOWED_ORIGINS`** must list the web origin, or valid tokens are rejected — it
   looks like broken auth, not a config error.
 - **Webhooks** have no script: add the endpoint in the Clerk dashboard and copy its secret
-  into `server/.env.development`. Sign-in works without them; profile edits, offboarding
-  and role changes need them. See [`clerk.md` §6](docs/setup/clerk.md#6-webhooks).
+  into `server/.env.development`. Sign-in works without them; profile edits and account
+  deletion need them. See [`clerk.md` §6](docs/setup/clerk.md#6-webhooks).
 
 Full procedure: [`docs/setup/clerk.md`](docs/setup/clerk.md).
 
@@ -165,11 +159,16 @@ git config core.hooksPath .githooks
 Without this the pre-commit contract gate does not exist, and a route change committed
 without its regenerated client is caught only by CI.
 
-### Renaming a fork
+### Identity
 
-The API's title, description, version and `/api/v1` prefix live in `server/pyproject.toml`,
-not in `.env` — they land in the committed contract, so changing them is a contract
-change. The procedure and the reason: [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) §1.
+- **The API's title, description, version and `/api/v1` prefix** live in
+  `server/pyproject.toml` under `[tool.app.metadata]`, not in `.env`. They land in the
+  committed contract, so changing them is a contract change: run `make gen-contract` and
+  commit the result in the same commit. The pre-commit hook regenerates only when a commit
+  touches `server/app/`, so a `pyproject.toml`-only change is caught by CI, not at commit.
+- **`COMPOSE_PROJECT_NAME`** (root `.env`) names the compose project, the image tags and
+  every Traefik router and service label in `docker-compose.prod.yml`. **`PROJECT_NAME`**
+  (`server/.env.<env>`) only tags the server image built by `make -C server docker-build`.
 
 ---
 
@@ -215,8 +214,7 @@ Services will be available at:
 
 | Service | URL |
 |---|---|
-| Internal portal | http://localhost:3000 |
-| Supplier portal | http://localhost:3002 |
+| Web app | http://localhost:3000 |
 | API server | http://localhost:8100 |
 | API docs (Swagger) | http://localhost:8100/docs |
 | Prometheus | http://localhost:9090 |
@@ -226,11 +224,11 @@ Services will be available at:
 
 ### Native Development (local)
 
-The API and both portals run on the host with hot reload; only Postgres runs in Docker.
+The API and the web app run on the host with hot reload; only Postgres runs in Docker.
 Install dependencies once: `uv sync` in `server/`, `pnpm install` in `web-app/`.
 
 **In VS Code**, press ⇧⌘B (Ctrl+Shift+B), the default build task: **Dev: All** checks the
-ports, starts Postgres, applies migrations, then runs the API and both portals in their own
+ports, starts Postgres, applies migrations, then runs the API and the web app in their own
 terminals. Two more tasks are under **Terminal → Run Task**:
 
 - **Dev: All + Tunnel** adds the ngrok tunnel, for Clerk webhooks.
@@ -243,8 +241,7 @@ make dev-preflight                      # fail early if a port is taken
 make docker-run-db ENV=development      # Postgres
 make -C server migrate ENV=development  # not applied for you on this path
 make -C server dev                      # API, http://localhost:8100
-make dev-internal                       # internal portal, http://localhost:3000
-make dev-supplier                       # supplier portal, http://localhost:3002
+make dev-web                            # web app, http://localhost:3000
 make dev-tunnel                         # optional — ngrok, for Clerk webhooks
 ```
 
@@ -278,7 +275,7 @@ make test-integration  # requires a live database
 make test-coverage     # HTML + XML coverage report
 
 # Frontend — from the repo root, or `pnpm test` / `pnpm test:watch` in web-app/
-make test-web          # Vitest: packages and both portals
+make test-web          # Vitest: packages and the web app
 
 # Repo-level checks
 make check                       # ruff, import-linter, ESLint, Prettier — read-only
@@ -300,7 +297,7 @@ with `git config core.hooksPath .githooks`.
 | `git push` with `server/` changes | `make check-server` — ruff, ruff format, import-linter (module boundaries) | `--no-verify` |
 | `git push` with `web-app/` changes | `make check-web` — ESLint, Prettier; then `make test-web` | `--no-verify` |
 | Pull request, push to `main` | **API Contract** workflow — `check-contract`, the OpenAPI contract tests, `tsc` across the workspace | — |
-| Pull request, push to `main` | **Module Boundaries** workflow — import-linter, ruff, the module-contract, tenant-table and event tests | — |
+| Pull request, push to `main` | **Module Boundaries** workflow — import-linter, ruff, the module-contract, owned-table and event tests | — |
 | Building an image | `make docker-build` / `docker-build-web` run `check-contract` first | — |
 | By hand only | the server's full pytest suite (`cd server && make test`), `make deploy-check` | — |
 
@@ -335,11 +332,18 @@ What `deploy-check` proves and what it cannot is in [`CLAUDE.md`](CLAUDE.md) und
 | [`docs/`](docs/) | Index of everything below |
 | [`docs/ROADMAP.md`](docs/ROADMAP.md) | Where the work stands — the one file that records progress |
 | [`docs/BUGS.md`](docs/BUGS.md), [`docs/TODO.md`](docs/TODO.md) | What is wrong today, and what is deferred to the change that should make it |
-| [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — the Clerk setup scripts, roles, `ALLOWED_ORIGINS`, webhooks |
+| [`docs/setup/clerk.md`](docs/setup/clerk.md) | **Start here** — the Clerk setup scripts, instance settings, `ALLOWED_ORIGINS`, webhooks, dev users |
 | [`docs/setup/infrastructure.md`](docs/setup/infrastructure.md) | Root `.env`, Prometheus/Grafana/cAdvisor, and what production omits |
-| [`docs/setup/making-it-yours.md`](docs/setup/making-it-yours.md) | Renaming this template for your project |
 | [`docs/setup/deploy-dokploy.md`](docs/setup/deploy-dokploy.md) | Deploying behind Dokploy's Traefik — what `deploy-check` cannot prove |
-| [`docs/architecture/`](docs/architecture/) | How the server, the web app and authorization are built |
+| [`docs/architecture/`](docs/architecture/) | How the server, the web app, authentication and ownership are built |
 | [`docs/guides/`](docs/guides/) | Patterns portable beyond this repo — the API codegen pipeline |
 | [`CLAUDE.md`](CLAUDE.md), [`server/CLAUDE.md`](server/CLAUDE.md), [`web-app/CLAUDE.md`](web-app/CLAUDE.md) | Working conventions and the most detailed operational notes in the repo |
 
+
+---
+
+## History
+
+The previous version of this app lives at the git tag `legacy-v0`. The `template` git
+remote points at the multi-tenant template this base was ported from, for merging template
+updates.

@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/items/add-items-dialog.tsx
+// apps/web/src/components/items/add-items-dialog.tsx
 // Illustrative: an invented `listItems` route (offset/limit, ordering, search,
 // status). A table inside a dialog keeps its state local: paging in the URL
 // would make Back page the table instead of closing the dialog.

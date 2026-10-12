@@ -15,7 +15,6 @@ async def db_user(db_session):
     """A user to own test conversations."""
     user = User(
         clerk_id="clerk_conv_owner_001",
-        org_id="test_org_123",
         email="conv_owner@example.com",
     )
     db_session.add(user)
@@ -77,7 +76,7 @@ class TestGetUserConversations:
 
     async def test_does_not_return_other_users_conversations(self, db_session, db_user):
         # Create a second user with their own conversation
-        other_user = User(clerk_id="clerk_other_002", org_id="test_org_123", email="other@example.com")
+        other_user = User(clerk_id="clerk_other_002", email="other@example.com")
         db_session.add(other_user)
         await db_session.flush()
         await db_session.refresh(other_user)

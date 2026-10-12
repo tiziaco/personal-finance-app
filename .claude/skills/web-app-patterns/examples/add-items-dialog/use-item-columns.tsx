@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/items/use-item-columns.tsx
+// apps/web/src/components/items/use-item-columns.tsx
 "use client"
 
 import { useMemo } from "react"

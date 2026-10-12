@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/items/add-items-dialog.test.tsx
+// apps/web/src/components/items/add-items-dialog.test.tsx
 import { beforeEach, describe, it, expect, vi } from "vitest"
 import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"

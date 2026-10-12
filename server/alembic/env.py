@@ -28,7 +28,6 @@ elif os.path.exists(".env"):
 # Every module's models slot, so SQLModel.metadata is complete (architecture R8).
 import app.modules.account.models
 import app.modules.conversation.models
-import app.modules.supplier.models
 from app.core.config import settings
 
 # this is the Alembic Config object, which provides

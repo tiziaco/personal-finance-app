@@ -2,7 +2,7 @@
 
 How `server/` is put together: one FastAPI process partitioned into modules, the layers
 and rules between them, what happens to a request on its way in and out, how errors and
-events travel, and where tenancy is held. This describes the system as it stands and is
+events travel, and where ownership is held. This describes the system as it stands and is
 kept current. How the code inside a module is written — services, repositories, routes,
 exceptions, subscribers — is in [`server/CLAUDE.md`](../../server/CLAUDE.md) and the
 `server-patterns` skill; how a token becomes a user is in
@@ -15,8 +15,8 @@ exceptions, subscribers — is in [`server/CLAUDE.md`](../../server/CLAUDE.md) a
 
 **A modular monolith: one package per bounded context, boundaries enforced by a linter.**
 One process, one database, one migration history. The modules are the seams a split would
-follow; the value the template ships is the rules a fork's fourth module must obey and the
-tooling that fails the push when it does not.
+follow; the rules a new module must obey are enforced by tooling that fails the push when
+they are broken.
 
 Four layers, top to bottom. A layer imports downward only.
 
@@ -35,10 +35,9 @@ server/app/
 │   ├── system/               # /, /health, /ready, and their schemas
 │   └── v1/api.py             # assembles the modules' routers — nothing else
 ├── modules/
-│   ├── account/              # the Clerk-backed identity: user row, Role, CurrentUser/CurrentRole/CurrentOrgId,
-│   │                         #   require_role, Clerk webhook handlers, JIT provisioning, erasure
-│   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
-│   └── supplier/             # the example domain: the supplier row, its contact link, SupplierID
+│   ├── account/              # the Clerk-backed identity: user row, CurrentUser, Clerk webhook handlers,
+│   │                         #   JIT provisioning, erasure
+│   └── conversation/         # the chatbot: conversations and chat routes, the agent dependency
 ├── integrations/
 │   ├── clerk/                # client, exceptions, timestamps, webhooks/{verification,schemas} — the provider half
 │   └── llm/                  # a provider adapter, not a domain
@@ -46,7 +45,7 @@ server/app/
 ├── core/                     # config, logging, metrics, limiter, metadata, events.py (§8)
 ├── database/                 # engine, dependencies.py (DbSession, the transaction boundary — §6)
 ├── exceptions/               # the exception hierarchy and the handlers (§7)
-├── models/base.py            # shared mixins only, TenantMixin among them; the domain models live in their modules
+├── models/base.py            # shared mixins only, UserOwnedMixin among them; the domain models live in their modules
 ├── schemas/base.py           # ErrorResponse only; the domain schemas live in their modules
 └── utils/                    # token verification, sanitisation
 ```
@@ -76,9 +75,9 @@ app/modules/<name>/
 **A slot is a file until it needs to be a package, and the import path never notices.** A
 file that grows past what fits in your head, or plainly holds independent parts, becomes a
 package of the same name whose `__init__.py` re-exports what the file exported. The decision
-is per slot, not per module. A module may also hold private helper files beyond the slots
-(`account/cache.py`). A module has only the slots it uses — `supplier` has no `router.py` and no `schemas.py`,
-and one that reacts to nothing has no `handlers.py`; empty files are not created for symmetry.
+is per slot, not per module. A module may also hold private helper files beyond the slots.
+A module has only the slots it uses — one that reacts to nothing has no `handlers.py`;
+empty files are not created for symmetry.
 
 **The public surface is `__init__.py`.** It exports the service singleton(s), the response
 schemas another module may return or embed, the dependencies another module's router may use,
@@ -87,25 +86,9 @@ the names of the events it publishes. It does not export the repository or the m
 Importing the root imports `handlers.py`, so importing a module is what registers its
 subscriptions.
 
-**A FastAPI dependency lives in the module whose business it is**, on its root: `CurrentUser`,
-`CurrentRole`, `CurrentOrgId` and `require_role` are `account`'s; `UserConversation` and
-`ChatbotAgentDep` are `conversation`'s; `SupplierID` is `supplier`'s. `DbSession` has no
+**A FastAPI dependency lives in the module whose business it is**, on its root: `CurrentUser`
+is `account`'s; `UserConversation` and `ChatbotAgentDep` are `conversation`'s. `DbSession` has no
 domain in it and lives in `app/database/dependencies.py`.
-
-**The example domain.** `supplier` sits below `account` in the DAG and imports it for
-`CurrentUser`; `account` never imports `supplier`, and reaches it through three events (§8):
-
-```
-app/modules/supplier/
-  __init__.py          # supplier_service, SupplierID, get_supplier_id, SupplierNotLinkedError
-  models.py            # Supplier — contact_id is a foreign key by table name, no relationship
-  repository.py
-  service.py           # link_from_metadata, unlink_contact, get_id_for_user
-  dependencies.py      # SupplierID: the caller is the contact of a supplier
-  handlers.py          # on USER_SYNCED → link; on USER_ERASING, USER_OFFBOARDED → unlink
-  exceptions.py
-  cache.py             # the user_id → supplier_id entries, private
-```
 
 **A module grows on two rungs, and nothing outside it notices.**
 
@@ -121,30 +104,30 @@ app/modules/supplier/
 A module with several implementations of one port — three warehouse systems behind one
 `StockSource` — keeps them in a `clients` slot behind a `Protocol` declared in `domain`.
 
-**A module on both rungs**, as a fork's `orders` would be:
+**A module on both rungs**, as a `transactions` module would be:
 
 ```
-app/modules/orders/
-  __init__.py          # order_service, the response schemas, OrderOwner, ORDER_PLACED, ORDER_CANCELLED
+app/modules/transactions/
+  __init__.py          # transaction_service, the response schemas, TransactionOwner, TRANSACTION_IMPORTED
   router/
     __init__.py        # one APIRouter assembled from the files below
-    orders.py          # tag "orders": place, list, get, cancel
-    lines.py           # tag "order-lines"
-  schemas/   __init__.py  order.py  line.py
-  models/    __init__.py  order.py  line.py      # both carry TenantMixin (R7)
+    transactions.py    # tag "transactions": create, list, get, delete
+    imports.py         # tag "transaction-imports"
+  schemas/   __init__.py  transaction.py  import_.py
+  models/    __init__.py  transaction.py  import_.py   # both carry UserOwnedMixin (R7)
   service/
-    __init__.py        # order_service, line_service
-    order.py           # place, cancel: load the aggregate, call domain, persist, publish
-    lines.py           # plain child CRUD
-  repository/  __init__.py  order.py  line.py
-  domain.py            # the Order state machine and Quantity — no ORM import
-  handlers.py          # on inventory.STOCK_RESERVED
-  dependencies.py      # OrderOwner: the order exists and belongs to the caller's org
+    __init__.py        # transaction_service, import_service
+    transaction.py     # create, categorise: load the aggregate, call domain, persist, publish
+    imports.py         # plain child CRUD
+  repository/  __init__.py  transaction.py  import_.py
+  domain.py            # the categorisation rules and Money — no ORM import
+  handlers.py          # on an event from a module below it
+  dependencies.py      # TransactionOwner: the transaction exists and is the caller's, else 404
   exceptions.py
 ```
 
-On every rung the root stays the only import surface and R1–R9 hold. A fork whose `orders` is
-on the second rung and whose `carriers` is all files is the intended state.
+On every rung the root stays the only import surface and R1–R9 hold. A module on the second
+rung beside one that is all files is an expected state.
 
 Settings live in `app/core/config.py`; a module with settings of its own gets a nested model
 there named for it, so `settings.<module>.X` reads like the rest. Every route keeps an
@@ -180,13 +163,13 @@ did not load.
 **R5 — Tests mirror the tree.** `tests/unit/modules/<name>/` and
 `tests/integration/modules/<name>/`, one test file per slot file.
 
-**R6 — Modules form a DAG.** If `supplier` imports `account`, `account` does not import
-`supplier` — two roots importing each other is a circular import that fails at startup. When
+**R6 — Modules form a DAG.** If `conversation` imports `account`, `account` does not import
+`conversation` — two roots importing each other is a circular import that fails at startup. When
 a lower module needs a higher one to *act*, it publishes an event (§8). When it needs the
 higher one's *data*, the data belongs elsewhere.
 
-**R7 — A tenant-owned table carries `TenantMixin`**, and every repository method on it takes
-the org id. A table that is not tenant-owned is allowlisted with its reason (§9).
+**R7 — A user-owned table carries `UserOwnedMixin`**, and every repository method on it takes
+the user id. A table that is not user-owned is allowlisted with its reason (§9).
 
 **R8 — Migrations are global.** One Alembic history in `server/alembic/versions/`.
 `alembic/env.py` imports every module's `models` slot so autogenerate sees the whole schema;
@@ -212,14 +195,14 @@ contract**).
 A new module is three edits to `pyproject.toml` before it is enforced.
 `tests/unit/test_module_contracts.py` fails when a module is missing its R1 contract, is absent
 from the R6 order, has a `models` slot `alembic/env.py` does not import (R8), or is not imported
-by `app/main.py` (§4). R7 is `tests/unit/models/test_tenant_tables.py`. R3, R4 and R5 are review
+by `app/main.py` (§4). R7 is `tests/unit/models/test_owned_tables.py`. R3, R4 and R5 are review
 items.
 
 ## 4. Startup
 
 `app/main.py` builds the app at import time and does the rest in its lifespan.
 
-**At import:** every module is imported by name — `account`, `conversation`, `supplier` —
+**At import:** every module is imported by name — `account`, `conversation` —
 whether or not it has a router. A module that only subscribes to events would otherwise
 never load, and `publish()` would run zero handlers with no error. Then `.env` is loaded,
 the Langfuse client is created, the middlewares (§5) and exception handlers (§7) are
@@ -244,7 +227,7 @@ The middlewares, outermost first:
 | `CorrelationIdMiddleware` | reads or mints `X-Request-ID`; the id is bound to every log line and returned in `ErrorResponse` bodies (§7) |
 | `CORSMiddleware` | allows `settings.cors.ALLOWED_ORIGINS`, with credentials |
 | `AccessLogMiddleware` | one structured line per request with status and duration; skips `/health`, `/ready`, `/metrics` |
-| `AuthMiddleware` | verifies a Bearer token if present and sets `clerk_id`, `org_id`, `org_role` on `request.state`; never rejects |
+| `AuthMiddleware` | verifies a Bearer token if present and sets `clerk_id` (from `sub`) on `request.state`; never rejects |
 | `LoggingContextMiddleware` | binds `clerk_id` to the log context for the rest of the request, and clears it after |
 | Prometheus instrumentator | records `http_requests_total` and latency per route template; serves `/metrics` |
 
@@ -278,8 +261,8 @@ Consequences code relies on:
   session is committed and closed. They take plain values and, if they need the database,
   open a session from `request.app.state.session_factory`.
 
-**The other dependencies are the modules'** (§2): identity and role guards from `account`,
-ownership checks (`UserConversation`, `SupplierID`) from the module that owns the row. A route
+**The other dependencies are the modules'** (§2): identity from `account`,
+ownership checks (`UserConversation`) from the module that owns the row. A route
 never receives `None` — the service or the ownership dependency raises first.
 
 ## 7. Errors
@@ -353,13 +336,12 @@ there is no `DbSession`, so an entry point that publishes calls `events.begin()`
 handler that fails is lost ([`../TODO.md`](../TODO.md), **Server — events beyond the
 request**).
 
-**The events as they stand.** All three are cascades, and inline.
+**The events as they stand.** Both are inline.
 
 | Event | Published by | Payload | Subscribers | Why inline |
 | :---- | :---- | :---- | :---- | :---- |
-| `account.USER_SYNCED` | JIT provisioning; the `user.created` and `organization_membership.created` webhook handlers | `user_id`, `metadata` (Clerk public metadata — merged from the API on JIT, the webhook's own on the webhook paths) | `supplier` — links the supplier named in the metadata to this user | a supplier's first request JIT-provisions the user and resolves `SupplierID` in the same transaction |
-| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `supplier` — clears `contact_id` | an anonymised row still referenced by `Supplier.contact_id` is the association erasure exists to remove |
-| `account.USER_OFFBOARDED` | the `organization_membership.deleted` webhook handler | `user_id` | `supplier` — clears `contact_id` | part of the revocation |
+| `account.USER_SYNCED` | JIT provisioning; the `user.created` webhook handler | `user_id`, `metadata` (Clerk public metadata — merged from the API on JIT, the webhook's own on the webhook path) | none yet — the hook for seeding a new user's data on first sign-up | the seeding it is for runs in the request that provisions the user |
+| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints | the subscriber's identifiers are what `anonymize_user()` destroys |
 
 `erase_user` logs `subscriber_count`: zero means the modules were never imported. Memory
 deletion during erasure is a direct call — `agents/` is an adapter, below every module.
@@ -367,23 +349,24 @@ deletion during erasure is a direct call — `agents/` is an adapter, below ever
 When to publish, which mode to pick and the pitfalls are in the `server-patterns` skill,
 `references/events.md`.
 
-## 9. Tenancy
+## 9. Ownership
 
-Multi-tenancy is Clerk Organizations. The org id arrives on the JWT, `AuthMiddleware` puts it
-on `request.state`, and JIT provisioning writes it to the user row — from Clerk's membership
-API when the token carries none — so the row is authoritative once the user is resolved.
+The user is the tenant: there are no organisations and no roles. A request's identity is
+the `sub` claim, which `AuthMiddleware` puts on `request.state` as `clerk_id` and which
+`CurrentUser` resolves to the `user` row — provisioning it on first sight.
 
-Three pieces hold the boundary:
+Four pieces hold the boundary:
 
-- **`TenantMixin`** in `app/models/base.py` declares the indexed, non-null `org_id` a
-  tenant-owned table carries (R7).
-- **`CurrentOrgId`**, on `account`'s root, yields the resolved user's `org_id` — from the
-  row, not `request.state` — and raises `AuthorizationError` when it is null.
-- **`tests/unit/models/test_tenant_tables.py`** fails on any table under `app/modules/` that
-  neither carries the mixin nor is in its allowlist with a reason.
+- **`UserOwnedMixin`** in `app/models/base.py` declares the indexed, non-null `user_id` an
+  owned table carries (R7).
+- **`CurrentUser`**, on `account`'s root, yields the resolved user.
+- **Ownership dependencies** in the owning module (`UserConversation`) answer 404 for a row
+  that is missing, soft-deleted or another user's — the same code for all three.
+- **`tests/unit/models/test_owned_tables.py`** fails on any table under `app/modules/` that
+  neither carries the mixin nor is in its allowlist with a reason. The allowlist holds
+  `user`, the owner itself.
 
-No table carries the mixin today. Each table's allowlist reason is stated in its data-model
-doc ([`../data-model/`](../data-model/README.md)).
+Each table's reasoning is stated in its data-model doc ([`../data-model/`](../data-model/README.md)).
 
 ## 10. Observability and configuration
 
@@ -408,7 +391,7 @@ doc ([`../data-model/`](../data-model/README.md)).
 | :---- | :---- |
 | Middleware order, handler registration, lifespan | `app/main.py` |
 | Token parsing | `app/api/middlewares/auth.py`, `app/utils/auth.py` |
-| Identity and role dependencies | `app/modules/account/dependencies.py` |
+| Identity dependency | `app/modules/account/dependencies.py` |
 | The transaction, DB error translation, the deferred flush | `app/database/dependencies.py` |
 | Exception categories and handlers | `app/exceptions/base.py`, `app/exceptions/handlers.py` |
 | The event dispatcher | `app/core/events.py` |
@@ -416,4 +399,4 @@ doc ([`../data-model/`](../data-model/README.md)).
 | Rate limiter | `app/core/limiter.py`, limits in `settings.rate_limits` |
 | Metrics | `app/core/metrics.py`, `app/api/middlewares/prometheus.py` |
 | Module boundaries | `server/pyproject.toml` (import-linter), `tests/unit/test_module_contracts.py` |
-| Tenancy | `app/models/base.py`, `tests/unit/models/test_tenant_tables.py` |
+| Ownership | `app/models/base.py`, `tests/unit/models/test_owned_tables.py` |

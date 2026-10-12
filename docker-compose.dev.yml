@@ -3,40 +3,24 @@
 # (`make worktree-init`). Service DNS (`db`, `server:8000`) is per-project
 # network, so it is unaffected. Same rule as docker-compose.prod.yml.
 services:
-  internal-portal:
+  web:
     env_file:
-      - ./web-app/apps/internal-portal/.env.local
+      - ./web-app/apps/web/.env.local
     build:
       context: ./web-app
       dockerfile: Dockerfile
       args:
-        APP_NAME: internal-portal
+        APP_NAME: web
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: always
     ports:
-      - "${INTERNAL_PORTAL_HOST_PORT:-3000}:3000"
+      - "${WEB_HOST_PORT:-3000}:3000"
     networks:
       - app-network
 
-  supplier-portal:
-    env_file:
-      - ./web-app/apps/supplier-portal/.env.local
-    build:
-      context: ./web-app
-      dockerfile: Dockerfile
-      args:
-        APP_NAME: supplier-portal
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:${API_HOST_PORT:-8100}}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
-        NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
-    restart: always
-    ports:
-      - "${SUPPLIER_PORTAL_HOST_PORT:-3002}:3000"
-    networks:
-      - app-network
-  
   # One-shot release phase: applies Alembic migrations, then exits.
   # `server` is gated on this exiting 0, so a failed migration fails the whole
   # `up` instead of starting an app against a stale schema.

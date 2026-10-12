@@ -15,8 +15,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     Stores the following in request.state after a valid token:
       - clerk_id  : Clerk user ID (sub claim)
-      - org_id    : Clerk organisation ID (org_id claim), or None
-      - org_role  : Role slug with 'org:' prefix stripped (org_role claim), or None
 
     The middleware is permissive — it does not block requests with invalid/missing
     tokens. Route-level dependencies determine if authentication is required.
@@ -28,14 +26,6 @@ class AuthMiddleware(BaseHTTPMiddleware):
         """Parse the Clerk token, if any, and stash the identity on request.state."""
         request.state.clerk_id = None
         request.state.user_id = None
-        request.state.org_id = None
-        request.state.org_role = None
-
-        # PUBLIC ROUTES (Phase 7, D-04): skip Clerk parsing entirely.
-        # No identity is needed for /public/* endpoints — link_token is the credential.
-        # Mirrors the /health, /metrics log-silence carve-out below but is a *literal skip*.
-        if request.url.path.startswith("/public/"):
-            return await call_next(request)
 
         auth_header = request.headers.get("authorization")
         if auth_header and auth_header.startswith("Bearer "):
@@ -46,17 +36,9 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 if payload:
                     request.state.clerk_id = payload.get("sub")
 
-                    # Clerk JWT v2 (SDK ≥ v5): org claims nested under "o"
-                    org_data = payload.get("o") or {}
-                    request.state.org_id = org_data.get("id")
-                    raw_role = org_data.get("rol") or ""
-                    request.state.org_role = raw_role.removeprefix("org:") or None
-
                     logger.debug(
                         "token_verified_in_middleware",
                         clerk_id=request.state.clerk_id,
-                        org_id=request.state.org_id,
-                        org_role=request.state.org_role,
                         path=request.url.path,
                     )
                 else:

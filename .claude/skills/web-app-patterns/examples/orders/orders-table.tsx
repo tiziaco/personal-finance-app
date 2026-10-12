@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/orders/orders-table.tsx
+// apps/web/src/components/orders/orders-table.tsx
 "use client"
 
 import { keepPreviousData } from "@tanstack/react-query"

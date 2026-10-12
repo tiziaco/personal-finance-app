@@ -1,15 +1,11 @@
-"""Integration tests for DELETE /api/v1/auth/me — GDPR erasure and cache cleanup."""
+"""Integration tests for DELETE /api/v1/auth/me — GDPR erasure."""
 
 import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.modules.account.cache import user_cache
 from app.modules.conversation.models import Conversation
-from app.modules.supplier.cache import supplier_cache
-from app.modules.supplier.models import Supplier
-from app.utils.cache import MISS
 
 pytestmark = pytest.mark.integration
 
@@ -31,75 +27,34 @@ def mocked_externals(stub_checkpoint_deletion):
         yield {"clerk": clerk, "memory": memory, "checkpoints": stub_checkpoint_deletion}
 
 
-class TestDeleteMeCacheInvalidation:
-    """Account deletion must not leave cached auth data behind.
+class TestDeleteMeOverHttp:
+    """The route end to end: Clerk first, then the cascade, then a 204."""
 
-    Both caches are keyed differently — org role by clerk_id, supplier link
-    by user_id — so clearing one is not enough.
-    """
-
-    async def test_clears_both_caches(self, authenticated_client_with_agent, test_user, mocked_externals):
-        await user_cache.set_org_role(test_user.clerk_id, "supplier")
-        await supplier_cache.set_supplier_id(test_user.id, "supplier_42")
-        original_clerk_id = test_user.clerk_id
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert await user_cache.get_org_role(original_clerk_id) is MISS
-        assert await supplier_cache.get_supplier_id(test_user.id) is MISS
-
-    async def test_uses_pre_anonymisation_clerk_id(self, authenticated_client_with_agent, test_user, mocked_externals):
-        """The role is cached under the ORIGINAL clerk_id.
-
-        anonymize_user() rewrites user.clerk_id during the flow, so invalidating
-        with the post-anonymisation value would clear the wrong key and leave
-        the real entry behind.
-        """
-        original_clerk_id = test_user.clerk_id
-        await user_cache.set_org_role(original_clerk_id, "project_manager")
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert test_user.clerk_id != original_clerk_id  # anonymised in-flight
-        assert await user_cache.get_org_role(original_clerk_id) is MISS
-
-    async def test_supplier_is_unlinked(
+    async def test_delete_me_deletes_in_clerk_anonymises_user_and_soft_deletes_conversations(
         self, authenticated_client_with_agent, test_user, db_session, mocked_externals
     ):
-        """Supplier.contact_id must not keep pointing at the erased user."""
-        supplier = Supplier(
-            contact_id=test_user.id,
-            name="Acme Forgings",
-            code="ACME-DEL",
-            vat_number="IT99999999999",
-        )
-        db_session.add(supplier)
+        original_clerk_id = test_user.clerk_id
+        conv = Conversation(user_id=test_user.id, name="Private chat")
+        db_session.add(conv)
         await db_session.flush()
 
         response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
 
         assert response.status_code == 204
-        await db_session.refresh(supplier)
-        assert supplier.contact_id is None
+        mocked_externals["clerk"].assert_awaited_once_with(original_clerk_id)
 
-    async def test_org_id_is_cleared(self, authenticated_client_with_agent, test_user, mocked_externals):
-        """org_id is dropped so a single-contact supplier org cannot single the user out."""
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
+        await db_session.flush()  # the route does not flush; refresh would discard pending changes
+        await db_session.refresh(test_user)
+        assert test_user.anonymized_at is not None
+        assert test_user.clerk_id == f"deleted_user_{test_user.id}"
+        assert test_user.email == f"deleted_user_{test_user.id}@anonymized.local"
+        assert test_user.first_name is None
+        assert test_user.last_name is None
+        assert test_user.avatar_url is None
 
-        assert response.status_code == 204
-        assert test_user.org_id is None
-
-    async def test_unrelated_users_are_untouched(self, authenticated_client_with_agent, test_user, mocked_externals):
-        await user_cache.set_org_role("clerk_someone_else", "reviewer")
-        await supplier_cache.set_supplier_id("user_someone_else", "supplier_99")
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert await user_cache.get_org_role("clerk_someone_else") == "reviewer"
-        assert await supplier_cache.get_supplier_id("user_someone_else") == "supplier_99"
+        await db_session.refresh(conv)
+        assert conv.deleted_at is not None
+        assert conv.name == ""
 
 
 class TestDeleteMeCheckpointCleanup:

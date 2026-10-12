@@ -5,9 +5,8 @@
 # with a dashboard login and with no review and no audit trail. scripts/clerk/config.json
 # is the reviewable copy; this is what notices when the two have parted company.
 # It matters most for the settings whose failure mode is not an error: a re-enabled
-# HIBP check refuses seeded passwords at sign-in, and a renamed role key sends its
-# members to /unauthorized, which looks like a permissions bug rather than a
-# configuration one.
+# HIBP check refuses seeded passwords at sign-in, which looks like a credentials
+# bug rather than a configuration one.
 #
 # Refresh-then-diff, exactly like scripts/check-contract.sh — pull-config.sh holds
 # the refresh so the two commands cannot drift apart, and git is the differ.
@@ -16,9 +15,6 @@
 # precisely why it is not in `make check` and not in either git hook: it cannot run
 # on a fresh clone, in CI, or offline. Run it by hand when you suspect the dashboard
 # has been touched.
-#
-# Roles are covered too: pull-config.sh rebuilds x_organization_roles from the
-# Backend API, so a role renamed in the dashboard shows up in the same diff.
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # Two levels: this script lives in scripts/clerk/, not scripts/.
@@ -54,7 +50,7 @@ case "$STATUS" in
     echo
     echo "  Keep the committed values — restore the file first, because the pull"
     echo "  above already overwrote it with the instance's values:"
-    echo "    git checkout -- $BASELINE && make clerk-apply-config clerk-apply-roles"
+    echo "    git checkout -- $BASELINE && make clerk-apply-config"
     echo
     echo "  Keep the dashboard change — commit the diff below as the new baseline."
     echo

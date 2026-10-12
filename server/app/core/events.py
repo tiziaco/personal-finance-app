@@ -1,7 +1,7 @@
 """In-process domain events — the downward-pointing seam between modules.
 
 Modules form a DAG (docs/architecture/server.md, R6): `conversation`
-and `supplier` import `account`, so `account` cannot import them. When the
+imports `account`, so `account` cannot import it. When the
 lower module needs a higher one to act — erasing an account must clean up
 its conversations — it publishes here and the higher module subscribes.
 

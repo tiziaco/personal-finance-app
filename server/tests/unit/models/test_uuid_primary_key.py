@@ -7,14 +7,12 @@ import sqlalchemy as sa
 
 from app.modules.account.models import User
 from app.modules.conversation.models import Conversation
-from app.modules.supplier.models import Supplier
 
 pytestmark = pytest.mark.unit
 
-TABLES = [User, Supplier, Conversation]
+TABLES = [User, Conversation]
 NEW_ROW = {
     User: lambda: User(clerk_id="clerk_pk", email="pk@example.com"),
-    Supplier: lambda: Supplier(name="Acme", code="ACME", vat_number="IT1"),
     Conversation: lambda: Conversation(user_id=uuid.uuid4()),
 }
 
@@ -42,8 +40,6 @@ def test_a_new_row_has_a_v7_id_before_flush(model):
     assert row.id.version == 7
 
 
-@pytest.mark.parametrize(
-    "column", [Conversation.__table__.c.user_id, Supplier.__table__.c.contact_id], ids=lambda c: c.name
-)
+@pytest.mark.parametrize("column", [Conversation.__table__.c.user_id], ids=lambda c: c.name)
 def test_foreign_keys_to_user_are_native_uuids(column):
     assert isinstance(column.type, sa.Uuid)

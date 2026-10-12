@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-internal dev-supplier dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-apply-roles clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
+.PHONY: help dev-preflight dev-web dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -8,10 +8,9 @@ COMPOSE_FILE ?= docker-compose.dev.yml
 # compose healthcheck, the prometheus target and `server:8000` are unaffected.
 # Overridable: set API_HOST_PORT in the root .env.
 API_HOST_PORT ?= 8100
-# Host ports for the two portals, on both paths: compose publishes them, and
-# dev-internal / dev-supplier hand them to `next dev` as PORT.
-INTERNAL_PORTAL_HOST_PORT ?= 3000
-SUPPLIER_PORTAL_HOST_PORT ?= 3002
+# Host port for the web app, on both paths: compose publishes it, and
+# dev-web hands it to `next dev` as PORT.
+WEB_HOST_PORT ?= 3000
 # The ports above are slot 0's — the main checkout's. A linked worktree gets
 # slot N from `make worktree-init`, which writes base + 10·N for each (and
 # WORKTREE_SLOT) into that worktree's root .env. Absent means 0.
@@ -27,7 +26,7 @@ DEPLOY_ENV ?= staging
 # start grafana, fail with compose's own clear
 # "GRAFANA_ADMIN_PASSWORD is required" instead of a bare `make` error.
 -include .env
--include web-app/apps/internal-portal/.env.local
+-include web-app/apps/web/.env.local
 .EXPORT_ALL_VARIABLES:
 
 # Host port for postgres: the server's POSTGRES_PORT, read here because Compose
@@ -36,16 +35,15 @@ POSTGRES_PORT := $(or $(shell sed -nE 's/^[[:space:]]*(export[[:space:]]+)?POSTG
 
 # Name of the Clerk application clerk-bootstrap-env creates; its id lands in the
 # root .env as CLERK_APP_ID. One per developer:
-#   make clerk-bootstrap-env CLERK_APP_NAME="Template App Dev — <name>"
-CLERK_APP_NAME ?= Template App Dev
+#   make clerk-bootstrap-env CLERK_APP_NAME="Personal Finance Dev — <name>"
+CLERK_APP_NAME ?= Personal Finance Dev
 
 # Default target
 help:
 	@echo "Native Dev Commands (no Docker for the app processes):"
-	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/$(INTERNAL_PORTAL_HOST_PORT)/$(SUPPLIER_PORTAL_HOST_PORT) are free"
-	@echo "  make dev-internal       - Internal portal (next dev) on port $(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "  make dev-supplier       - Supplier portal (next dev) on port $(SUPPLIER_PORTAL_HOST_PORT)"
-	@echo "  make dev-kill           - Kill whatever listens on $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and 4040"
+	@echo "  make dev-preflight      - Check ports $(API_HOST_PORT)/$(WEB_HOST_PORT) are free"
+	@echo "  make dev-web       - Web app (next dev) on port $(WEB_HOST_PORT)"
+	@echo "  make dev-kill           - Kill whatever listens on $(API_HOST_PORT), $(WEB_HOST_PORT) and 4040"
 	@echo "  make dev-tunnel         - ngrok tunnel from NGROK_DOMAIN to localhost:$(API_HOST_PORT)"
 	@echo ""
 	@echo "Parallel worktrees (one dev stack per git worktree):"
@@ -66,18 +64,17 @@ help:
 	@echo "  make deploy-check       - Verify docker-compose.prod.yml builds and runs (DEPLOY_ENV=staging)"
 	@echo ""
 	@echo "Clerk (development instance — docs/setup/clerk.md):"
-	@echo "  make clerk-setup           - The next four, in order; a re-run skips creating the app"
+	@echo "  make clerk-setup           - The next three, in order; a re-run skips creating the app"
 	@echo "  make clerk-bootstrap-env   - Create the app and write its keys to the env files"
 	@echo "  make clerk-apply-config    - Apply scripts/clerk/config.json to the instance"
-	@echo "  make clerk-apply-roles     - Apply its x_organization_roles: roles, creator and default role"
-	@echo "  make clerk-seed-users      - Create the dev org and users in server/data/clerk-dev-seed.json"
+	@echo "  make clerk-seed-users      - Create the dev users in server/data/clerk-dev-seed.json"
 	@echo "  make clerk-check-config    - Fail if the instance has drifted from config.json"
 	@echo "  make clerk-pull-config     - Refresh config.json from the instance"
 	@echo "  make clerk-bootstrap-oauth - Register Swagger's Authorize button (optional)"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
-	@echo "  make docker-build-web   - Build internal-portal and supplier-portal only"
+	@echo "  make docker-build-web   - Build the web app only"
 	@echo "  make docker-build-api   - Build server service only"
 	@echo ""
 	@echo "Up/Down Commands:"
@@ -106,32 +103,25 @@ help:
 # -sTCP:LISTEN matters: a bare `lsof -ti :PORT` also matches outbound
 # connections and dead CLOSED sockets, neither of which blocks a bind.
 dev-preflight:
-	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT); do \
+	@for port in $(API_HOST_PORT) $(WEB_HOST_PORT); do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "❌ Port $$port is already in use (PIDs: $$pids)."; \
-			echo "   The Docker stack publishes $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) and $(API_HOST_PORT) — run 'make docker-stop',"; \
+			echo "   The Docker stack publishes $(WEB_HOST_PORT) and $(API_HOST_PORT) — run 'make docker-stop',"; \
 			echo "   or 'make dev-kill' if a previous native run is still alive."; \
 			exit 1; \
 		fi; \
 	done
-	@echo "✅ Ports $(API_HOST_PORT), $(INTERNAL_PORTAL_HOST_PORT), $(SUPPLIER_PORTAL_HOST_PORT) are free"
+	@echo "✅ Ports $(API_HOST_PORT), $(WEB_HOST_PORT) are free"
 
 # Through make rather than `pnpm dev:*` directly: only the Makefile has read
 # the root .env that says which ports this checkout owns.
-dev-internal:
-	@cd web-app && PORT=$(INTERNAL_PORTAL_HOST_PORT) pnpm dev:internal
-
-# The internal portal's .env.local is included and exported above, and an
-# exported variable beats the supplier's own .env.local in Next.js: unset its keys.
-INTERNAL_PORTAL_ENV_KEYS := $(shell sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' web-app/apps/internal-portal/.env.local 2>/dev/null)
-
-dev-supplier:
-	@cd web-app && env $(addprefix -u ,$(INTERNAL_PORTAL_ENV_KEYS)) PORT=$(SUPPLIER_PORTAL_HOST_PORT) pnpm dev:supplier
+dev-web:
+	@cd web-app && PORT=$(WEB_HOST_PORT) pnpm dev
 
 # 4040 is dev-tunnel's ngrok inspector.
 dev-kill:
-	@for port in $(API_HOST_PORT) $(INTERNAL_PORTAL_HOST_PORT) $(SUPPLIER_PORTAL_HOST_PORT) 4040; do \
+	@for port in $(API_HOST_PORT) $(WEB_HOST_PORT) 4040; do \
 		pids=$$(lsof -ti :$$port -sTCP:LISTEN 2>/dev/null); \
 		if [ -n "$$pids" ]; then \
 			echo "Killing port $$port (PIDs: $$pids)"; \
@@ -227,7 +217,7 @@ docker-build docker-build-web: check-contract
 
 # Clerk development instance. CLERK_APP_ID comes from the root .env (-include).
 # clerk-setup runs the scripts, not the targets: under -j prerequisites run in
-# parallel, and seeding needs the roles. Only bootstrap-env refuses a re-run.
+# parallel, and seeding needs the applied config. Only bootstrap-env refuses a re-run.
 clerk-setup:
 	@if [ -n "$$CLERK_APP_ID" ]; then \
 		echo "==> CLERK_APP_ID is set ($$CLERK_APP_ID); skipping app creation"; \
@@ -235,7 +225,6 @@ clerk-setup:
 		CLERK_APP_NAME="$(CLERK_APP_NAME)" ./scripts/clerk/bootstrap-env.sh; \
 	fi
 	@./scripts/clerk/apply-config.sh
-	@./scripts/clerk/apply-roles.sh
 	@./scripts/clerk/seed-users.sh
 
 clerk-bootstrap-env:
@@ -243,9 +232,6 @@ clerk-bootstrap-env:
 
 clerk-apply-config:
 	@./scripts/clerk/apply-config.sh
-
-clerk-apply-roles:
-	@./scripts/clerk/apply-roles.sh
 
 clerk-pull-config:
 	@./scripts/clerk/pull-config.sh
@@ -265,12 +251,12 @@ clerk-bootstrap-oauth:
 # refreshes both and they can never run different code.
 docker-build:
 	@echo "🔨 Building all services..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal supplier-portal server
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build web server
 	@echo "✅ All services built"
 
 docker-build-web:
 	@echo "🔨 Building web-app service..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build internal-portal supplier-portal
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) build web
 	@echo "✅ web-app built"
 
 docker-build-api:
@@ -290,12 +276,11 @@ guard-main:
 
 docker-run: guard-main
 	@echo "🚀 Starting full stack (development mode)"
-	@echo "Services: internal-portal, supplier-portal, server, db, prometheus, grafana, cadvisor, ngrok"
+	@echo "Services: web, server, db, prometheus, grafana, cadvisor, ngrok"
 	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d
 	@echo ""
 	@echo "✅ Full stack is running!"
-	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
+	@echo "   Web app:            http://localhost:$(WEB_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Prometheus:          http://localhost:9090"
 	@echo "   Grafana:             http://localhost:3001 (admin / GRAFANA_ADMIN_PASSWORD)"
@@ -308,12 +293,11 @@ docker-run: guard-main
 # before `server` starts.
 docker-run-core:
 	@echo "🚀 Starting core stack (essential services only)"
-	@echo "Services: internal-portal, supplier-portal, server, db"
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d internal-portal supplier-portal server db
+	@echo "Services: web, server, db"
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) up -d web server db
 	@echo ""
 	@echo "✅ Core stack is running!"
-	@echo "   Internal Portal:     http://localhost:$(INTERNAL_PORTAL_HOST_PORT)"
-	@echo "   Supplier Portal:     http://localhost:$(SUPPLIER_PORTAL_HOST_PORT)"
+	@echo "   Web app:            http://localhost:$(WEB_HOST_PORT)"
 	@echo "   Server:              http://localhost:$(API_HOST_PORT)"
 	@echo "   Database:            localhost:$(POSTGRES_PORT)"
 
@@ -364,7 +348,7 @@ docker-logs:
 
 docker-logs-core:
 	@echo "📋 Following logs for core stack..."
-	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f internal-portal supplier-portal server migrate db
+	@$(DOCKER_COMPOSE) -f $(COMPOSE_FILE) logs -f web server migrate db
 
 # Clean up everything
 clean:

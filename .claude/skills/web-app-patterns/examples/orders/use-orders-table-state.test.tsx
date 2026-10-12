@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/orders/use-orders-table-state.test.tsx
+// apps/web/src/components/orders/use-orders-table-state.test.tsx
 import { describe, it, expect } from "vitest"
 import { act, renderHook } from "@testing-library/react"
 import { withNuqsTestingAdapter } from "@app/data-table/url-state/testing"

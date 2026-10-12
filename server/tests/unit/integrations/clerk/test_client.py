@@ -32,8 +32,7 @@ def _client_returning(status: int, body: dict | None = None) -> ClerkClient:
     The routing under test is the SDK's, not ours: which exception class a given
     status produces is decided by the generated `match_response` ladder in
     clerk_backend_api/users.py, and it differs per operation — `users.get` sends
-    400/401/404 to ClerkErrors, `get_organization_memberships` sends only 403,
-    and everything else becomes SDKError.
+    400/401/404 to ClerkErrors and everything else becomes SDKError.
 
     This file used to fabricate a ClerkErrors carrying the status it wanted,
     which asserts our mapping against an object the SDK would never raise. Four
@@ -131,47 +130,6 @@ class TestDeleteUser:
 
         with pytest.raises(ClerkAPIError, match="Unexpected error"):
             service.delete_user("user_123")
-
-
-class TestGetFirstOrgMembership:
-    """Tests for ClerkClient.get_first_org_membership()."""
-
-    def test_returns_org_id_and_unprefixed_role(self, service):
-        membership = MagicMock()
-        membership.organization.id = "org_abc"
-        membership.role = "org:project_manager"
-        service._client.users.get_organization_memberships.return_value = MagicMock(data=[membership])
-
-        assert service.get_first_org_membership("user_123") == ("org_abc", "project_manager")
-
-    def test_no_memberships_returns_none(self, service):
-        service._client.users.get_organization_memberships.return_value = MagicMock(data=[])
-
-        assert service.get_first_org_membership("user_123") is None
-
-    def test_403_raises_generic_api_error(self):
-        """403 is the one status this operation routes to ClerkErrors."""
-        with pytest.raises(ClerkAPIError):
-            _client_returning(403).get_first_org_membership("user_123")
-
-    def test_401_raises_authentication_error(self):
-        """`get_organization_memberships` routes only 403 to ClerkErrors.
-
-        So unlike `users.get`, a 401 here arrives as SDKError — which is why
-        this method's 401 branch was unreachable too, not just its 429 one.
-        """
-        with pytest.raises(ClerkAuthenticationError):
-            _client_returning(401).get_first_org_membership("user_123")
-
-    def test_429_raises_rate_limit_error(self):
-        with pytest.raises(ClerkRateLimitError):
-            _client_returning(429).get_first_org_membership("user_123")
-
-    def test_unexpected_exception_raises_api_error(self, service):
-        service._client.users.get_organization_memberships.side_effect = RuntimeError("down")
-
-        with pytest.raises(ClerkAPIError, match="Unexpected error"):
-            service.get_first_org_membership("user_123")
 
 
 class TestGetPrimaryEmail:

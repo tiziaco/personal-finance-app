@@ -7,7 +7,6 @@ import { AuthProvider, useAppAuth } from "./provider"
 // Only Clerk's hooks are mocked: the mapping from them to the seam's
 // vendor-free context is what is under test.
 const clerk = vi.hoisted(() => ({
-  orgRole: "org:reviewer" as string | null,
   user: null as Record<string, unknown> | null,
   endSession: vi.fn(),
 }))
@@ -15,7 +14,6 @@ const clerk = vi.hoisted(() => ({
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
     isLoaded: true,
-    orgRole: clerk.orgRole,
     getToken: async () => "jwt",
     signOut: clerk.endSession,
   }),
@@ -41,7 +39,6 @@ const assign = vi.fn()
 const realLocation = window.location
 
 beforeEach(() => {
-  clerk.orgRole = "org:reviewer"
   clerk.user = null
   clerk.endSession.mockReset()
   assign.mockReset()
@@ -58,18 +55,11 @@ afterEach(() => {
   })
 })
 
-describe("role", () => {
-  it("narrows Clerk's orgRole", () => {
-    expect(renderAuth().current.role).toBe("reviewer")
-  })
-
-  it("is null without an active organization", () => {
-    clerk.orgRole = null
-    expect(renderAuth().current.role).toBeNull()
-  })
-})
-
 describe("user", () => {
+  it("exposes no role", () => {
+    expect(renderAuth().current).not.toHaveProperty("role")
+  })
+
   it("is AppUser: these three fields and no vendor field", () => {
     clerk.user = ada
     expect(renderAuth().current.user).toEqual({

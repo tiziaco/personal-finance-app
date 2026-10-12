@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/products/products-table.tsx
+// apps/web/src/components/products/products-table.tsx
 // Illustrative: an invented `listProducts` route returning every product (a
 // small, bounded catalogue), so sorting, search and paging run in memory.
 "use client"

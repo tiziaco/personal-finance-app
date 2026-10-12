@@ -12,7 +12,7 @@ from fastapi import (
 from app.agents.chatbot.graph import ChatbotAgent
 from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
-from app.modules.conversation.exceptions import ConversationAccessDeniedError, ConversationNotFoundError
+from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.service import conversation_service
 
@@ -33,20 +33,14 @@ async def get_user_conversation(
         Conversation: The verified conversation
 
     Raises:
-        ConversationNotFoundError: If conversation not found
-        ConversationAccessDeniedError: If access denied
+        ConversationNotFoundError: If the conversation is missing, deleted, or not the caller's
     """
     conversation = await conversation_service.get_conversation(db_session, conversation_id)
 
-    if not conversation or conversation.deleted_at is not None:
+    # Another user's conversation answers exactly as a missing one, so an id
+    # cannot be probed for existence (architecture/authorization.md).
+    if not conversation or conversation.deleted_at is not None or conversation.user_id != user.id:
         raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
-
-    if conversation.user_id != user.id:
-        raise ConversationAccessDeniedError(
-            f"User {user.id} does not have access to conversation {conversation_id}",
-            conversation_id=conversation_id,
-            user_id=user.id,
-        )
 
     return conversation
 
