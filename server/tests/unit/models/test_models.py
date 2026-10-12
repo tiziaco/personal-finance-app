@@ -7,7 +7,7 @@ import uuid
 
 import pytest
 
-from app.models.base import TenantMixin
+from app.models.base import UserOwnedMixin
 from app.modules.account.models import User
 from app.modules.conversation.models import Conversation
 
@@ -83,17 +83,18 @@ class TestAnonymizableMixin:
 
 
 # ============================================================================
-# TenantMixin
+# UserOwnedMixin
 # ============================================================================
 
 
-class TestTenantMixin:
-    """The column every tenant-owned table gets (architecture §9)."""
+class TestUserOwnedMixin:
+    """The column every user-owned table gets (architecture §9)."""
 
-    def test_org_id_is_indexed_and_not_nullable(self):
-        field = TenantMixin.model_fields["org_id"]
+    def test_user_id_is_an_indexed_not_nullable_foreign_key_to_user(self):
+        field = UserOwnedMixin.model_fields["user_id"]
         assert field.index is True
         assert field.nullable is False
+        assert field.foreign_key == "user.id"
 
-    def test_org_id_is_a_required_string(self):
-        assert TenantMixin.model_fields["org_id"].is_required()
+    def test_user_id_is_required(self):
+        assert UserOwnedMixin.model_fields["user_id"].is_required()

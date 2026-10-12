@@ -30,25 +30,6 @@ class TestServiceErrorHandler:
         assert "message" in data
         assert "correlation_id" in data
 
-    async def test_access_denied_returns_403(self, db_session, authenticated_client):
-        """ConversationAccessDeniedError (AuthorizationError subclass) → 403."""
-        from app.modules.account.models import User
-
-        other_user = User(clerk_id="clerk_handler_other", org_id="test_org_123", email="handler_other@example.com")
-        db_session.add(other_user)
-        await db_session.flush()
-        await db_session.refresh(other_user)
-
-        other_conv = Conversation(
-            user_id=other_user.id,
-            name="Not Mine",
-        )
-        db_session.add(other_conv)
-        await db_session.flush()
-
-        response = await authenticated_client.delete(f"/api/v1/conversation/conversation/{other_conv.id}")
-        assert response.status_code == 403
-
     async def test_unauthenticated_returns_401(self, client):
         """AuthenticationError (no clerk_id) → 401."""
         response = await client.get("/api/v1/auth/me")

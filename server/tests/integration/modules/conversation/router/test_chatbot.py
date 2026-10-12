@@ -59,7 +59,7 @@ class TestChatEndpoint:
         )
         assert response.status_code == 422
 
-    async def test_chat_other_users_conversation_returns_403(self, db_session, authenticated_client_with_agent):
+    async def test_chat_other_users_conversation_returns_404(self, db_session, authenticated_client_with_agent):
         from app.modules.account.models import User
 
         other_user = User(clerk_id="clerk_chat_other", org_id="test_org_123", email="chat_other@example.com")
@@ -78,7 +78,7 @@ class TestChatEndpoint:
             f"/api/v1/chatbot/chat/{other_conv.id}",
             json={"message": "Hello"},
         )
-        assert response.status_code == 403
+        assert response.status_code == 404
 
 
 class TestStreamChatEndpoint:
