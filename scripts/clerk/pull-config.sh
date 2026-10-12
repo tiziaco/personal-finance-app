@@ -11,13 +11,9 @@
 #      by truthiness and would drop every `false` — most of this file.
 #   2. Where the instance reports null, the file keeps its own value.
 #
-# x_organization_roles is not instance config. It is rebuilt from the Backend
-# API (/organization_roles, /role_sets/role_set:default), sorted so diffs show
-# changed values, not reordering. With Organizations disabled it becomes null.
-#
 # Usage:
 #   pull-config.sh           rewrite the committed file
-#   pull-config.sh --full    print the untrimmed instance config plus the roles
+#   pull-config.sh --full    print the untrimmed instance config
 set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR/../.."
@@ -39,8 +35,6 @@ if [ -z "${CLERK_APP_ID:-}" ]; then
   exit 1
 fi
 
-api() { clerk api "$@" --app "$CLERK_APP_ID" --instance dev < /dev/null; }
-
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
@@ -53,36 +47,19 @@ if ! jq -e . "$TMP/live.json" > /dev/null 2>&1; then
   exit 1
 fi
 
-echo "==> Pulling organization roles" >&2
-if jq -e '.organization_settings.enabled == true' "$TMP/live.json" > /dev/null; then
-  api '/organization_roles?limit=100' > "$TMP/roles.json"
-  api '/role_sets/role_set:default' > "$TMP/set.json"
-  jq -S -n --slurpfile r "$TMP/roles.json" --slurpfile s "$TMP/set.json" '{
-    creator_role: $s[0].creator_role.key,
-    default_role: $s[0].default_role.key,
-    roles: ([ ($r[0] | .data // .)[]
-              | {description, key, name, permissions: ([.permissions[]?.key] | sort)} ]
-            | sort_by(.key))
-  }' > "$TMP/x.json"
-else
-  echo null > "$TMP/x.json"
-fi
-
 if [ "${1:-}" = "--full" ]; then
-  jq -S --slurpfile x "$TMP/x.json" '. + {x_organization_roles: $x[0]}' "$TMP/live.json"
+  jq -S . "$TMP/live.json"
   exit 0
 fi
 
 echo "==> Projecting onto $BASELINE" >&2
 jq -S -n \
   --slurpfile baseArr "$BASELINE" \
-  --slurpfile liveArr "$TMP/live.json" \
-  --slurpfile x "$TMP/x.json" '
+  --slurpfile liveArr "$TMP/live.json" '
   $baseArr[0] as $base
   | $liveArr[0] as $live
   | [ $base
       | paths as $p
-      | select($p[0] != "x_organization_roles")
       | ($base | getpath($p)) as $v
       | ($v | type) as $t
       | select(($t != "object" and $t != "array") or ($v | length) == 0)
@@ -92,7 +69,6 @@ jq -S -n \
       setpath($p;
         ($live | getpath($p)) as $lv
         | if $lv == null then ($base | getpath($p)) else $lv end))
-  | .x_organization_roles = $x[0]
 ' > "$TMP/next.json"
 
 mv "$TMP/next.json" "$BASELINE"
