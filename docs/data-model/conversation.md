@@ -45,8 +45,7 @@ CREATE TABLE conversation (
   which erasure blanks. The personal content is the messages, and erasure hard-deletes the
   checkpoints of every conversation the user owns, soft-deleted ones included
   ([`server/CLAUDE.md`](../../server/CLAUDE.md), **GDPR — Right to Erasure**).
-- **D2 — no `org_id`.** Its entry in the tenancy allowlist (`test_tenant_tables.py`):
-  owned through its user; the user's organization is the tenant.
+- **D2 — `conversation` carries `UserOwnedMixin`; its `user_id` is the owner.**
 
 ## 5. Deferred
 

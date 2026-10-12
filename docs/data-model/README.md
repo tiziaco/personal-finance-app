@@ -1,7 +1,7 @@
 # Data model
 
 **Status:** draft — each area's doc carries its own status · **Owner:** Tiziano ·
-**Last updated:** 29 Sep 2026
+**Last updated:** 12 Oct 2026
 **Scope:** what the platform stores, one doc per server module, and the conventions every
 table follows. How a feature *behaves* is in [`../product/features/`](../product/features/).
 
@@ -13,10 +13,9 @@ table follows. How a feature *behaves* is in [`../product/features/`](../product
 |---|---|---|---|---|
 | [`account.md`](./account.md) | [`account`](../product/features/account.md) | `account` | `"user"` | built |
 | [`conversation.md`](./conversation.md) | no feature doc yet | `conversation` | `conversation` | built |
-| [`supplier.md`](./supplier.md) | [`suppliers`](../product/features/suppliers.md) | `supplier` | `supplier` | built — the company row and the contact link |
 
-**A feature doc is named for the product area** (`suppliers.md`), **a data-model doc for the
-server module that owns its tables** (`supplier.md`). The mapping is not one-to-one: a doc
+**A feature doc is named for the product area** (`transactions.md`), **a data-model doc for
+the server module that owns its tables** (`transaction.md`). The mapping is not one-to-one: a doc
 covers the features that share its tables. A doc that outgrows one file splits by server
 module ([`../architecture/server.md`](../architecture/server.md)) — every table belongs to exactly
 one — **never by feature**.
@@ -58,9 +57,9 @@ Every table follows these. A doc lists only its own table's exceptions.
   personal fields, keeps the row id so foreign keys hold, and stamps `anonymized_at`.
   `SoftDeleteMixin` (`deleted_at`) is for rows that must be retained and hidden. Each doc
   says which its table uses, and why.
-- **Tenancy is a test, not a convention.** A table owned by one organization carries
-  `TenantMixin`, or sits in the allowlist of
-  `server/tests/unit/models/test_tenant_tables.py` with a reason —
+- **Ownership is a test, not a convention.** A table owned by one user carries
+  `UserOwnedMixin`, or sits in the allowlist of
+  `server/tests/unit/models/test_owned_tables.py` with a reason —
   [`../architecture/server.md`](../architecture/server.md) §9. Each doc states its own table's entry.
 - **Clerk's user id is the external key**, stored on `"user".clerk_id` only. Every foreign
   key references the internal `user.id`.

@@ -27,7 +27,7 @@ organization at a time and sees only its data.
 ## 3. Roles
 
 A member has one role in their organization. These four are the template's example
-domain's; a fork renames them ([`../../setup/making-it-yours.md`](../../setup/making-it-yours.md) §4).
+domain's; a fork renames them.
 
 | Slug | Label (UI) | Portal | What it is for |
 |---|---|---|---|

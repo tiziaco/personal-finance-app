@@ -157,5 +157,3 @@ the tab still shows an icon; the 404s are in the network panel only.
 
 **Fixing it** is either adding the three files to both portals' `public/icons/`, or
 deleting the three entries so `metadata.icons` declares only what ships.
-[`docs/setup/making-it-yours.md`](./setup/making-it-yours.md)'s branding table then needs
-to match.

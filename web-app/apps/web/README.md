@@ -1,8 +1,9 @@
-# Internal Portal
+# Web
 
-The template's internal portal — the app staff sign in to. In the shipped example domain it manages projects, suppliers, purchase orders and document compliance tracking.
+The Personal Finance app — what a signed-in person uses to track their money. Finance
+screens are not built yet.
 
-Runs on **http://localhost:3000** in the main checkout; `make dev-internal` from the repo
+Runs on **http://localhost:3000** in the main checkout; `make dev-web` from the repo
 root follows the checkout's own port, which differs in a git worktree.
 
 ---
@@ -15,9 +16,11 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 
 | Route | Description |
 |---|---|
-| `/home` | Placeholder page in `src/app/(dashboard)/` — finance screens are not built yet |
-| `/sign-in` | Clerk's sign-in |
+| `/home` | Placeholder page in `src/app/(dashboard)/` — finance screens are not built yet. `/` redirects here |
+| `/sign-in` | Clerk's sign-in — public |
 | `/sign-up` | Clerk's sign-up — public; the first request provisions the account |
+
+Every other route needs a session. There are no roles and no `/unauthorized` page.
 
 ---
 
@@ -39,6 +42,8 @@ CLERK_SECRET_KEY=sk_test_...
 
 NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
 NEXT_PUBLIC_CLERK_SIGN_IN_FALLBACK_REDIRECT_URL=/home
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home
 ```
 
 The `NEXT_PUBLIC_CLERK_*` values are read by the Clerk SDK straight from the
@@ -48,7 +53,7 @@ docs.
 The `NEXT_PUBLIC_*` values are **inlined at image build time**, not read at runtime, so
 changing one means rebuilding the image.
 
-Getting the keys is only half of it — this portal's origin must be listed in the server's
+Getting the keys is only half of it — this app's origin must be listed in the server's
 `ALLOWED_ORIGINS`. See [`docs/setup/clerk.md`](../../../docs/setup/clerk.md).
 
 ### 2. Install dependencies
@@ -62,11 +67,11 @@ pnpm install
 ### 3. Run the dev server
 
 ```bash
-# from web-app/
-pnpm dev:internal
-
-# or from this directory
+# from web-app/ or from this directory
 pnpm dev
+
+# from the repo root, on the checkout's own port
+make dev-web
 ```
 
 The app will be available at http://localhost:3000.
@@ -97,10 +102,10 @@ src/
 │   ├── (auth)/        # sign-in, sign-up
 │   └── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
 ├── components/
-│   ├── layout/        # This portal's user panel
-│   └── settings/      # This portal's settings tabs and server-status wrapper
+│   ├── layout/        # The user panel
+│   └── settings/      # The settings tabs and server-status wrapper
 ├── lib/               # Navigation items
-├── proxy.ts           # Clerk middleware — the role gate
+├── proxy.ts           # Clerk middleware — requires a session; /sign-in and /sign-up are public
 └── styles/            # Global CSS, and the @source lines for the shared packages
 ```
 
@@ -123,12 +128,12 @@ The accompanying `logoAlt` and `metadata.title` strings live in
 
 ## Auth
 
-Authentication is handled by Clerk. There are no organisations or roles: the signed-in user is the tenant. Components read identity through `@app/auth`:
+Authentication is handled by Clerk. There are no organisations or roles: the signed-in user is the tenant. Components read identity through `@app/auth`, which exports `AuthProvider`, `useAppAuth` and the `AppUser` type:
 
 ```typescript
 import { useAppAuth } from '@app/auth'
 
-const { user, isLoaded } = useAppAuth()
+const { user, isLoaded, getToken, signOut } = useAppAuth()
 ```
 
 ---
@@ -138,8 +143,9 @@ const { user, isLoaded } = useAppAuth()
 - **`@app/core`** — `cn()`, `NavItem`, shared copy — no render dependency
 - **`@app/ui`** — shadcn/Base UI primitives, web-only
 - **`@app/components`** — composed chrome (sidebar, settings dialog) built on `@app/ui`
-- **`@app/auth`** — `useAppAuth()`, `AuthProvider`
+- **`@app/auth`** — `AuthProvider`, `useAppAuth()`, `AppUser`
+- **`@app/data-table`** — tables, filters and URL list state
 - **`@app/api-client`** — generated API client (types, endpoints, hooks) from the OpenAPI spec
 
 See `web-app/CLAUDE.md`'s "Where a new component goes" table before creating new
-components — there are five candidate homes now, not just `packages/ui`.
+components — there are several candidate homes, not just `packages/ui`.

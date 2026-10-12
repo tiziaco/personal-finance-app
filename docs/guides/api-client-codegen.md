@@ -21,9 +21,9 @@ hand-written files).
 
 | The guide shows | This repo has | Why |
 |---|---|---|
-| `QueryProvider` in each app's `providers/` | `@app/api-client/query-provider`, shared by both portals | Two portals, one error policy — see `references/components.md` in the `web-app-patterns` skill on where shared code goes |
-| Providers in the root layout (§6.3) | `QueryProvider` in the signed-in route group's layout (`(dashboard)`, `(portal)`) | The cache must not outlive the session; sign-out loads a new document |
-| `messages` from `@/lib/messages` (§6.4) | `messages` from `@app/core` (`constants/messages.ts`) | Both portals map a status to the same copy |
+| `QueryProvider` in each app's `providers/` | `@app/api-client/query-provider`, shared by the app's pages | One error policy for every page — see `references/components.md` in the `web-app-patterns` skill on where shared code goes |
+| Providers in the root layout (§6.3) | `QueryProvider` in the signed-in route group's layout (`(dashboard)`) | The cache must not outlive the session; sign-out loads a new document |
+| `messages` from `@/lib/messages` (§6.4) | `messages` from `@app/core` (`constants/messages.ts`) | Every page maps a status to the same copy |
 | `ApiError` beside the mutator | `src/errors.ts`, re-exported from `src/index.ts` | — |
 | `src/hooks/api/` wrappers (§7), `lib/zod-config.ts` (§8) | Neither yet | No mutation or form has shipped. Add them with the first one, in the shape shown |
 
@@ -719,9 +719,9 @@ Something — usually a thin `ApiClientProvider` — must call `createApiClient(
 any generated call fires. That ordering is load-bearing: a `useEffect` races the first
 render's query, so the call has to happen synchronously in the render body, guarded so
 it runs exactly once (a `useRef` flag is the usual shape), *before* any child mounts.
-This is strictly more machinery than the hook mutator removes, and in a multi-tenant
-server process a module-scope `_instance` is shared across concurrent requests — one
-tenant's token can serve another tenant's request unless every call site is careful to
+This is strictly more machinery than the hook mutator removes, and in a server
+process a module-scope `_instance` is shared across concurrent requests — one
+user's token can serve another user's request unless every call site is careful to
 reconfigure it first.
 
 **Default to the hook mutator in §6.1.** Reach for `createApiClient` / `customInstance`

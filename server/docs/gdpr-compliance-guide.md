@@ -9,12 +9,11 @@
 
 ## Overview
 
-GDPR (General Data Protection Regulation) applies to this platform even though its
-customers are businesses. A named person's work email, their name, and what they typed
-into a conversation are personal data, whether they are an internal project manager or
-a supplier's contact, and Article 17 gives that person the right to erasure. This guide
-explains how to handle user data deletion properly. The `Transaction` and `FraudRecord`
-examples below are illustrative: the template has neither table.
+GDPR (General Data Protection Regulation) applies to this app: a person's email, their
+name, and what they typed into a conversation are personal data, and Article 17 gives that
+person the right to erasure. This guide explains how to handle user data deletion
+properly. The `Transaction` and `FraudRecord` examples below are illustrative: the app
+has neither table.
 
 ## Key GDPR Principle: Right to Erasure (Article 17)
 
@@ -75,21 +74,8 @@ class User(BaseModel, AnonymizableMixin, table=True):
         self.first_name = None
         self.last_name = None
         self.avatar_url = None
-        self.org_id = None
         self.mark_anonymized()
 ```
-
-**Why `org_id` is cleared.** It looks like organisation-level data that
-identifies nobody, but `Supplier.contact_id` links a supplier company to a
-*single* portal user. Retaining `org_id` on an anonymised record would still
-mean "the one person from supplier org X" — singling that individual out at
-k=1, which fails the singling-out limb of the Art 29 WP 05/2014 tests carried
-into EDPB Guidelines 04/2025. The column is nullable for this reason.
-
-For the same reason the deletion flow also clears `Supplier.contact_id` —
-`supplier`'s `USER_ERASING` subscriber (`SupplierService.unlink_contact`,
-`app/modules/supplier/handlers.py`) — which would otherwise keep recording
-which supplier the erased individual managed.
 
 > **Terminology caution.** The end state is strong *pseudonymisation*, not
 > anonymisation: the row keeps its `id`, still referenced by

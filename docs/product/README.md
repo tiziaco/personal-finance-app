@@ -18,7 +18,7 @@ How one feature behaves, in more depth than a milestone PRD can hold. One file p
 
 The template ships these as worked examples: `account` is what a `shipped` feature doc
 looks like, `suppliers` a `draft` one. A fork keeps the conventions below and replaces the
-content ([`../setup/making-it-yours.md`](../setup/making-it-yours.md) §4).
+content.
 
 ## Conventions
 
