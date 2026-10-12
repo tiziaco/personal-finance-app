@@ -1,12 +1,12 @@
 "use client"
 
 import { useClerk } from "@clerk/nextjs"
-import { useAppAuth, Role } from "@app/auth"
+import { useAppAuth } from "@app/auth"
 import { UserDetailsPanel } from "@app/components/layout/user-panel"
 
 export function ClerkUserPanel() {
-  const { isLoaded, user, role, signOut } = useAppAuth()
-  const { openUserProfile, openOrganizationProfile } = useClerk()
+  const { isLoaded, user, signOut } = useAppAuth()
+  const { openUserProfile } = useClerk()
 
   return (
     <UserDetailsPanel
@@ -21,11 +21,6 @@ export function ClerkUserPanel() {
       }
       onSignOut={() => void signOut()}
       onOpenProfile={() => openUserProfile()}
-      onOpenOrganizationProfile={
-        role === Role.PROJECT_MANAGER
-          ? () => openOrganizationProfile()
-          : undefined
-      }
     />
   )
 }

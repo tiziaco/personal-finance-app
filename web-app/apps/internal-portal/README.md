@@ -15,11 +15,9 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 
 | Route | Description |
 |---|---|
-| `/home`, `/projects`, `/orders` | Placeholder pages in `src/app/(dashboard)/` — the example domain's screens are not built yet |
+| `/home` | Placeholder page in `src/app/(dashboard)/` — finance screens are not built yet |
 | `/sign-in` | Clerk's sign-in |
-| `/unauthorized` | Shown to a signed-in user without internal-portal access |
-
-No sign-up page: sign-up is invitation-only ([`docs/setup/clerk.md`](../../../docs/setup/clerk.md) §7).
+| `/sign-up` | Clerk's sign-up — public; the first request provisions the account |
 
 ---
 
@@ -50,8 +48,7 @@ docs.
 The `NEXT_PUBLIC_*` values are **inlined at image build time**, not read at runtime, so
 changing one means rebuilding the image.
 
-Getting the keys is only half of it — Clerk also needs Organizations enabled, four org
-roles created with exact slugs, and this portal's origin listed in the server's
+Getting the keys is only half of it — this portal's origin must be listed in the server's
 `ALLOWED_ORIGINS`. See [`docs/setup/clerk.md`](../../../docs/setup/clerk.md).
 
 ### 2. Install dependencies
@@ -97,9 +94,8 @@ The app will be available at http://localhost:3000.
 src/
 ├── app/
 │   ├── (dashboard)/   # Signed-in routes, their layout (sidebar, QueryProvider)
-│   ├── (auth)/        # sign-in
-│   ├── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
-│   └── unauthorized/  # Wrong-role landing page
+│   ├── (auth)/        # sign-in, sign-up
+│   └── layout.tsx     # Root layout — metadata, Clerk and AuthProvider, theme
 ├── components/
 │   ├── layout/        # This portal's user panel
 │   └── settings/      # This portal's settings tabs and server-status wrapper
@@ -125,18 +121,15 @@ The accompanying `logoAlt` and `metadata.title` strings live in
 
 ---
 
-## Auth & Roles
+## Auth
 
-Authentication is handled by Clerk. Role-based access control uses org roles mapped through `@app/auth`:
+Authentication is handled by Clerk. There are no organisations or roles: the signed-in user is the tenant. Components read identity through `@app/auth`:
 
 ```typescript
-import { useAppAuth, Role } from '@app/auth'
+import { useAppAuth } from '@app/auth'
 
-const { user, role, isLoaded } = useAppAuth()
-if (role === Role.PROJECT_MANAGER) { ... }
+const { user, isLoaded } = useAppAuth()
 ```
-
-Use `<Protect role="org:project_manager">` from `@clerk/nextjs` for declarative role gates.
 
 ---
 
@@ -145,7 +138,7 @@ Use `<Protect role="org:project_manager">` from `@clerk/nextjs` for declarative 
 - **`@app/core`** — `cn()`, `NavItem`, shared copy — no render dependency
 - **`@app/ui`** — shadcn/Base UI primitives, web-only
 - **`@app/components`** — composed chrome (sidebar, settings dialog) built on `@app/ui`
-- **`@app/auth`** — `Role` enum, `useAppAuth()`, `getUserRole()`
+- **`@app/auth`** — `useAppAuth()`, `AuthProvider`
 - **`@app/api-client`** — generated API client (types, endpoints, hooks) from the OpenAPI spec
 
 See `web-app/CLAUDE.md`'s "Where a new component goes" table before creating new

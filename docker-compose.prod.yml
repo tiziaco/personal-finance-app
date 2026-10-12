@@ -25,6 +25,7 @@ services:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?required at build time - Next.js inlines it. Set it to the API's public origin, e.g. https://api.example.com}
         NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?required at build time - Next.js inlines it. Set it in web-app/apps/*/.env.local (the Makefile exports it) or in the Dokploy environment}
         NEXT_PUBLIC_CLERK_SIGN_IN_URL: ${NEXT_PUBLIC_CLERK_SIGN_IN_URL:-/sign-in}
+        NEXT_PUBLIC_CLERK_SIGN_UP_URL: ${NEXT_PUBLIC_CLERK_SIGN_UP_URL:-/sign-up}
     restart: unless-stopped
     # Documentation, not a binding: the proxy reaches this on the compose
     # network. The load-bearing part is the absence of `ports:`.

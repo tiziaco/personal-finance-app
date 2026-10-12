@@ -1,6 +1,6 @@
 "use client"
 
-import { BadgeCheck, Building2, ChevronsUpDown, LogOut } from "lucide-react"
+import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@app/ui/avatar"
 import {
   DropdownMenu,
@@ -24,7 +24,6 @@ interface UserDetailsPanelProps {
   user: UserPanelUser | null
   onSignOut: () => void
   onOpenProfile?: () => void
-  onOpenOrganizationProfile?: () => void
 }
 
 function getInitials(name: string): string {
@@ -40,7 +39,6 @@ export function UserDetailsPanel({
   user,
   onSignOut,
   onOpenProfile,
-  onOpenOrganizationProfile,
 }: UserDetailsPanelProps) {
   const { isMobile } = useSidebar()
 
@@ -119,9 +117,9 @@ export function UserDetailsPanel({
             </DropdownMenuLabel>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          {(onOpenProfile || onOpenOrganizationProfile) && (
-            <DropdownMenuGroup>
-              {onOpenProfile && (
+          {onOpenProfile && (
+            <>
+              <DropdownMenuGroup>
                 <DropdownMenuItem
                   className="cursor-pointer"
                   onClick={onOpenProfile}
@@ -129,20 +127,9 @@ export function UserDetailsPanel({
                   <BadgeCheck />
                   Account
                 </DropdownMenuItem>
-              )}
-              {onOpenOrganizationProfile && (
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={onOpenOrganizationProfile}
-                >
-                  <Building2 />
-                  Organisation
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuGroup>
-          )}
-          {(onOpenProfile || onOpenOrganizationProfile) && (
-            <DropdownMenuSeparator />
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+            </>
           )}
           <DropdownMenuItem className="cursor-pointer" onClick={onSignOut}>
             <LogOut />

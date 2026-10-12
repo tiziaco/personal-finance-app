@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { Role } from "@app/auth"
 import { SidebarProvider } from "@app/ui/sidebar"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -11,23 +10,17 @@ const mocks = vi.hoisted(() => ({
   signOut: vi.fn(),
   clerk: {
     openUserProfile: vi.fn(),
-    openOrganizationProfile: vi.fn(),
     signOut: vi.fn(),
   },
 }))
 
-// Role stays real; only the hook is replaced.
-vi.mock("@app/auth", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("@app/auth")>()),
-  useAppAuth: () => mocks.auth,
-}))
+vi.mock("@app/auth", () => ({ useAppAuth: () => mocks.auth }))
 
 vi.mock("@clerk/nextjs", () => ({ useClerk: () => mocks.clerk }))
 
 function setAuth(overrides: Record<string, unknown> = {}) {
   mocks.auth = {
     isLoaded: true,
-    role: Role.REVIEWER,
     user: { name: "Ada Lovelace", email: "ada@test.dev", imageUrl: null },
     signOut: mocks.signOut,
     ...overrides,
@@ -75,30 +68,16 @@ describe("ClerkUserPanel", () => {
     expect(mocks.clerk.openUserProfile).toHaveBeenCalledOnce()
   })
 
-  it("offers Organisation to a project manager", async () => {
-    setAuth({ role: Role.PROJECT_MANAGER })
+  it("never offers Organisation", async () => {
+    setAuth()
     renderPanel()
     await openMenu(/Ada Lovelace/)
 
-    await userEvent.click(
-      await screen.findByRole("menuitem", { name: /Organisation/ }),
-    )
-    expect(mocks.clerk.openOrganizationProfile).toHaveBeenCalledOnce()
+    await screen.findByRole("menuitem", { name: /Log out/ })
+    expect(
+      screen.queryByRole("menuitem", { name: /Organisation/ }),
+    ).not.toBeInTheDocument()
   })
-
-  it.each([Role.REVIEWER, Role.APPROVER, Role.SUPPLIER, null])(
-    "does not offer Organisation to %s",
-    async (role) => {
-      setAuth({ role })
-      renderPanel()
-      await openMenu(/Ada Lovelace/)
-
-      await screen.findByRole("menuitem", { name: /Log out/ })
-      expect(
-        screen.queryByRole("menuitem", { name: /Organisation/ }),
-      ).not.toBeInTheDocument()
-    },
-  )
 
   it("signs out through @app/auth, never Clerk directly", async () => {
     renderPanel()

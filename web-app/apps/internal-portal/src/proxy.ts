@@ -1,12 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server"
 import { NextResponse } from "next/server"
-import { getUserRole, isInternalRole } from "@app/auth"
 
-const isPublicRoute = createRouteMatcher(["/sign-in(.*)"])
-// Reachable only when signed in, and deliberately NOT in isPublicRoute: this is
-// where the role guard below sends people, so it has to sit outside that guard
-// or it redirects to itself until the browser gives up.
-const isUnauthorizedRoute = createRouteMatcher(["/unauthorized"])
+// Sign-up is public: anyone may create an account, and their first request
+// provisions it. Every other route needs a session.
+const isPublicRoute = createRouteMatcher(["/sign-in(.*)", "/sign-up(.*)"])
 
 export default clerkMiddleware(async (auth, req) => {
   // `/` is an alias for `/home`, and the redirect has to happen here rather
@@ -21,31 +18,9 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/home", req.url))
   }
 
-  // Sign-in is the only public route: sign-up is invitation-only, on Clerk's Account Portal
   if (isPublicRoute(req)) return
 
-  // Enforce authentication
   await auth.protect()
-
-  // Enforce internal-portal access: project_manager, reviewer, or approver only.
-  // orgRole is null if the user has no active org (e.g. mid-invitation flow).
-  const { orgRole } = await auth()
-  const role = getUserRole(orgRole)
-
-  // The role guard's own destination, so it has to sit outside that guard or it
-  // redirects to itself until the browser gives up. Someone who *does* have
-  // access has no business here: send them home rather than telling them they
-  // lack a permission they hold.
-  if (isUnauthorizedRoute(req)) {
-    if (isInternalRole(role)) {
-      return NextResponse.redirect(new URL("/home", req.url))
-    }
-    return
-  }
-
-  if (!role || !isInternalRole(role)) {
-    return NextResponse.redirect(new URL("/unauthorized", req.url))
-  }
 })
 
 export const config = {

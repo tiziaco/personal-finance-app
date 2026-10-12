@@ -50,9 +50,6 @@ describe("UserDetailsPanel", () => {
     expect(
       screen.queryByRole("menuitem", { name: /Account/ }),
     ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("menuitem", { name: /Organisation/ }),
-    ).not.toBeInTheDocument()
 
     await userEvent.click(logOut)
     expect(onSignOut).toHaveBeenCalledOnce()
@@ -64,27 +61,8 @@ describe("UserDetailsPanel", () => {
     await openMenu()
 
     const account = await screen.findByRole("menuitem", { name: /Account/ })
-    expect(
-      screen.queryByRole("menuitem", { name: /Organisation/ }),
-    ).not.toBeInTheDocument()
 
     await userEvent.click(account)
     expect(onOpenProfile).toHaveBeenCalledOnce()
-  })
-
-  it("offers Organisation alone when given only onOpenOrganizationProfile", async () => {
-    const onOpenOrganizationProfile = vi.fn()
-    renderPanel({ onOpenOrganizationProfile })
-    await openMenu()
-
-    const organisation = await screen.findByRole("menuitem", {
-      name: /Organisation/,
-    })
-    expect(
-      screen.queryByRole("menuitem", { name: /Account/ }),
-    ).not.toBeInTheDocument()
-
-    await userEvent.click(organisation)
-    expect(onOpenOrganizationProfile).toHaveBeenCalledOnce()
   })
 })

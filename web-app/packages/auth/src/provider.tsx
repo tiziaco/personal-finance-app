@@ -1,7 +1,7 @@
 /**
  * AuthProvider and useAppAuth hook.
  *
- * Portability seam: AuthProvider wraps Clerk's hooks to derive identity and role.
+ * Portability seam: AuthProvider wraps Clerk's hooks to derive identity.
  * When migrating to WorkOS, only AuthProvider's internals change.
  * All components call useAppAuth() — they never call useAuth() or useUser()
  * directly — and the context exposes no vendor type.
@@ -10,7 +10,6 @@
 
 import { createContext, useCallback, useContext, useMemo } from "react"
 import { useAuth, useUser } from "@clerk/nextjs"
-import { getUserRole, Role } from "./permissions"
 
 /** The signed-in user's profile, as the vendor reports it. */
 export interface AppUser {
@@ -23,8 +22,6 @@ export interface AppUser {
 interface AuthContextValue {
   /** The signed-in user, or null while loading or signed out. */
   user: AppUser | null
-  /** The current user's org role, or null if no active org context. */
-  role: Role | null
   /** True once Clerk has finished initialising the session. */
   isLoaded: boolean
   /**
@@ -43,7 +40,6 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue>({
   user: null,
-  role: null,
   isLoaded: false,
   getToken: async () => null,
   signOut: async () => {},
@@ -60,9 +56,8 @@ export function AuthProvider({
   children: React.ReactNode
   signOutUrl?: string
 }) {
-  const { isLoaded, orgRole, getToken, signOut: endSession } = useAuth()
+  const { isLoaded, getToken, signOut: endSession } = useAuth()
   const { user: clerkUser } = useUser()
-  const role = getUserRole(orgRole)
 
   const user = useMemo<AppUser | null>(
     () =>
@@ -92,17 +87,17 @@ export function AuthProvider({
   }, [endSession, signOutUrl])
 
   return (
-    <AuthContext.Provider value={{ user, role, isLoaded, getToken, signOut }}>
+    <AuthContext.Provider value={{ user, isLoaded, getToken, signOut }}>
       {children}
     </AuthContext.Provider>
   )
 }
 
 /**
- * Hook for the current user's identity and role.
+ * Hook for the current user's identity.
  *
- * Never call useAuth() or useUser() directly in a component, and always check
- * isLoaded before rendering role-dependent UI.
+ * Never call useAuth() or useUser() directly in a component, and check
+ * isLoaded before rendering user-dependent UI.
  */
 export function useAppAuth(): AuthContextValue {
   return useContext(AuthContext)
