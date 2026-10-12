@@ -61,7 +61,6 @@ async def delete_me(
     3. Clear LangGraph checkpoint data for each conversation (message PII)
     4. Delete mem0 long-term memory (extracted fact PII)
     5. Anonymize the user record in DB
-    6. Invalidate the org-role cache
 
     Args:
         request: The FastAPI request object for rate limiting.

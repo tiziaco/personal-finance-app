@@ -141,7 +141,7 @@ class TestRenameConversation:
     async def test_rename_other_users_conversation_returns_404(self, db_session, authenticated_client):
         from app.modules.account.models import User
 
-        other_user = User(clerk_id="clerk_other_conv", org_id="test_org_123", email="other_conv@example.com")
+        other_user = User(clerk_id="clerk_other_conv", email="other_conv@example.com")
         db_session.add(other_user)
         await db_session.flush()
         await db_session.refresh(other_user)
@@ -193,7 +193,7 @@ class TestDeleteConversation:
     async def test_delete_other_users_conversation_returns_404(self, db_session, authenticated_client_with_agent):
         from app.modules.account.models import User
 
-        other_user = User(clerk_id="clerk_other_del", org_id="test_org_123", email="other_del@example.com")
+        other_user = User(clerk_id="clerk_other_del", email="other_del@example.com")
         db_session.add(other_user)
         await db_session.flush()
         await db_session.refresh(other_user)

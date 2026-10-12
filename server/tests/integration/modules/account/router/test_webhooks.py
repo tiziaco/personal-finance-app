@@ -29,20 +29,6 @@ USER_DATA = {
     "updated_at": 1754000000000,
 }
 
-MEMBERSHIP_DATA = {
-    "id": "orgmem_e2e",
-    "role": "org:supplier",
-    "organization": {"id": "org_e2e"},
-    "public_user_data": {
-        "user_id": "user_e2e",
-        "identifier": "ada@e2e.test",
-        "first_name": "Ada",
-        "last_name": "Lovelace",
-    },
-    "public_metadata": {},
-    "updated_at": 1754000000000,
-}
-
 
 def signed(body: str, msg_id: str = "msg_1") -> dict:
     ts = datetime.now(tz=UTC)
@@ -172,7 +158,7 @@ def clerk_has_the_user():
 
     Without this the suite would issue a real Backend API call per new user.
     True is the answer for every legitimate delivery — Clerk fires
-    user.created and organizationMembership.created only once it holds the
+    user.created only once it holds the
     user — so defaulting to it keeps these sequences exercising the paths
     they were written for.
     """
@@ -207,7 +193,6 @@ async def test_user_created_persists_the_row(client, db_session):
     user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
     assert user is not None
     assert user.email == "ada@e2e.test"
-    assert user.org_id is None  # membership is a separate event
 
 
 async def test_user_created_replayed_does_not_duplicate(client, db_session):
@@ -226,33 +211,13 @@ async def test_create_declines_when_clerk_no_longer_has_the_user(client, db_sess
     is unreachable by the payload's id — the handler cannot tell "erased"
     from "create has not landed yet" on its own, and the payload carries the
     email and names it would re-insert. Clerk is the authority that settles
-    it. Both create paths are checked here because both build rows.
-    """
+    it."""
     clerk_has_the_user.return_value = False
 
     assert (await post(client, "user.created", USER_DATA)).status_code == 204
-    assert (await post(client, "organization_membership.created", MEMBERSHIP_DATA)).status_code == 204
 
     result = await db_session.execute(select(User).where(User.clerk_id == "user_e2e"))
     assert result.scalars().all() == []
-
-
-async def test_membership_before_create_leaves_correct_state(client, db_session):
-    """The reversed-delivery case. The membership handler builds the row from
-    public_user_data (email_verified defaults False there), and the later
-    user.created applies as an update, correcting it to True. This only
-    converges because the membership-created row seeds last_synced_at at the
-    epoch (UNSYNCED_EPOCH) rather than at the membership's own updated_at — with
-    the latter, the ordering guard in _apply_profile would see the following
-    user.created as stale and silently drop it, leaving email_verified=False
-    forever."""
-    assert (await post(client, "organization_membership.created", MEMBERSHIP_DATA)).status_code == 204
-    assert (await post(client, "user.created", USER_DATA)).status_code == 204
-
-    user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
-    assert user is not None
-    assert user.org_id == "org_e2e"
-    assert user.email_verified is True  # corrected by the later user.created
 
 
 async def test_stale_update_does_not_overwrite_newer_data(client, db_session):
@@ -270,35 +235,10 @@ async def test_stale_update_does_not_overwrite_newer_data(client, db_session):
     assert user.first_name == "Newer"
 
 
-async def test_membership_deleted_clears_org(client, db_session):
-    await post(client, "organization_membership.created", MEMBERSHIP_DATA)
-    assert (await post(client, "organization_membership.deleted", MEMBERSHIP_DATA)).status_code == 204
-
-    user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
-    assert user.org_id is None
-
-
-async def test_membership_deleted_for_different_org_leaves_state_intact(client, db_session):
-    """Ruling 3's second invariant. An admin reassigning a user between orgs
-    emits organizationMembership.created(B) and .deleted(A) with no ordering
-    guarantee. A deleted(A) landing after created(B) must be a no-op: org_id
-    would self-heal via JIT, so a spurious clear here is avoidable churn."""
-    await post(client, "organization_membership.created", MEMBERSHIP_DATA)  # org_e2e
-    user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
-    assert user is not None
-
-    deleted_wrong_org = {**MEMBERSHIP_DATA, "organization": {"id": "org_other"}}
-    assert (
-        await post(
-            client,
-            "organization_membership.deleted",
-            deleted_wrong_org,
-            msg_id="msg_wrong_org",
-        )
-    ).status_code == 204
-
-    await db_session.refresh(user)
-    assert user.org_id == "org_e2e"
+async def test_membership_events_are_acknowledged_and_ignored(client, db_session):
+    """The app has no organisations: a membership event is an unregistered type."""
+    response = await post(client, "organizationMembership.created", {"id": "orgmem_1"})
+    assert response.status_code == 204
 
 
 async def test_user_deleted_anonymises_and_replay_is_a_noop(client, db_session, mocked_memory):
@@ -318,7 +258,6 @@ async def test_user_deleted_anonymises_and_replay_is_a_noop(client, db_session, 
     assert anonymised.first_name is None
     assert anonymised.last_name is None
     assert anonymised.avatar_url is None
-    assert anonymised.org_id is None
     assert anonymised.anonymized_at is not None
 
     # Replay — and the echo of our own DELETE /me — must not error.

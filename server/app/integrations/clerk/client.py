@@ -40,8 +40,7 @@ class ClerkClient:
         except ClerkBaseError as e:
             # ClerkBaseError, not ClerkErrors: the generated SDK routes only a
             # fixed status list per operation to ClerkErrors and raises SDKError
-            # for the rest, and the lists differ — users.get sends 400/401/404,
-            # get_organization_memberships sends 403 alone. Catching the one
+            # for the rest — users.get sends 400/401/404. Catching the one
             # subclass left every 429 here unreachable, logged as an unexpected
             # error with a full traceback. ClerkBaseError is the declared base of
             # both and carries status_code directly.
@@ -134,52 +133,6 @@ class ClerkClient:
             email=fallback_email,
         )
         return fallback_email
-
-    def get_first_org_membership(self, clerk_id: str) -> Optional[tuple[str, str]]:
-        """Return (org_id, role) for a user's first org membership, or None.
-
-        The fallback for a JWT carrying no org context (e.g. an OIDC token).
-        Role has the 'org:' prefix stripped, to match the Role enum values.
-        """
-        try:
-            memberships = self.client.users.get_organization_memberships(user_id=clerk_id, limit=1)
-            if memberships.data:
-                m = memberships.data[0]
-                org_id = m.organization.id
-                role = m.role.removeprefix("org:")
-                logger.debug("clerk_org_membership_resolved", clerk_id=clerk_id, org_id=org_id, role=role)
-                return (org_id, role)
-            logger.debug("clerk_user_no_org_memberships", clerk_id=clerk_id)
-            return None
-
-        except ClerkBaseError as e:
-            status_code = e.status_code
-
-            if status_code == 401:
-                logger.error("clerk_authentication_failed_get_org", clerk_id=clerk_id)
-                raise ClerkAuthenticationError(
-                    "Authentication with Clerk API failed",
-                    clerk_id=clerk_id,
-                ) from e
-            if status_code == 429:
-                logger.warning("clerk_rate_limit_exceeded_get_org", clerk_id=clerk_id)
-                raise ClerkRateLimitError(
-                    "Clerk API rate limit exceeded",
-                    clerk_id=clerk_id,
-                ) from e
-
-            logger.error("clerk_api_error_get_org", clerk_id=clerk_id, status_code=status_code, error=str(e))
-            raise ClerkAPIError(
-                f"Clerk API error: {str(e)}",
-                clerk_id=clerk_id,
-            ) from e
-
-        except Exception as e:
-            logger.exception("clerk_unexpected_error_get_org", clerk_id=clerk_id, error=str(e))
-            raise ClerkAPIError(
-                f"Unexpected error fetching org membership from Clerk: {str(e)}",
-                clerk_id=clerk_id,
-            ) from e
 
 
 clerk_client = ClerkClient()

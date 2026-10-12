@@ -65,17 +65,10 @@ after each test. External services are mocked:
 | `unauthenticated_client` | function | `AsyncClient`, no overrides |
 | `reset_app_state` | function (autouse) | Clears `dependency_overrides` before and after |
 
-### Unit (`tests/unit/conftest.py`)
-
-| Fixture | Scope | Description |
-|---------|-------|-------------|
-| `clear_user_cache` | function (autouse) | Resets the user cache |
-
 ### Integration (`tests/integration/conftest.py`)
 
 | Fixture | Scope | Description |
 |---------|-------|-------------|
-| `clear_user_cache` | function (autouse) | Resets the user cache |
 | `test_user` | function | A user created in the database for the current test |
 | `authenticated_client` | function | `client` + `get_current_user → test_user` |
 | `mock_agent` | function | Mock `ChatbotAgent` with async method stubs |

@@ -62,7 +62,7 @@ class TestChatEndpoint:
     async def test_chat_other_users_conversation_returns_404(self, db_session, authenticated_client_with_agent):
         from app.modules.account.models import User
 
-        other_user = User(clerk_id="clerk_chat_other", org_id="test_org_123", email="chat_other@example.com")
+        other_user = User(clerk_id="clerk_chat_other", email="chat_other@example.com")
         db_session.add(other_user)
         await db_session.flush()
         await db_session.refresh(other_user)

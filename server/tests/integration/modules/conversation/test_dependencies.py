@@ -38,7 +38,6 @@ class TestConversationAccessDependency:
         """Conversation exists but belongs to a different user → 404, as if missing."""
         other_user = User(
             clerk_id="clerk_access_other",
-            org_id="test_org_123",
             email="access_other@example.com",
         )
         db_session.add(other_user)
@@ -64,7 +63,6 @@ class TestConversationAccessDependency:
         """Same error code as a missing id, and no user id in the message."""
         other_user = User(
             clerk_id="clerk_access_other_2",
-            org_id="test_org_123",
             email="access_other_2@example.com",
         )
         db_session.add(other_user)

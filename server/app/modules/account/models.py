@@ -1,7 +1,6 @@
-"""The user row and the organisation roles."""
+"""The user row."""
 
 from datetime import UTC, datetime
-from enum import StrEnum
 from typing import Optional
 
 from sqlalchemy import DateTime
@@ -24,11 +23,6 @@ class User(BaseModel, UUIDPrimaryKeyMixin, AnonymizableMixin, table=True):
     Attributes:
         id: UUID v7 primary key (UUIDPrimaryKeyMixin)
         clerk_id: External Clerk user ID for auth lookups (anonymized on deletion)
-        org_id: Clerk organisation ID. Set from JWT on every login; used for
-            tenant-scoped DB queries. Intentionally not the role (see design spec).
-            Nullable because GDPR erasure clears it: a supplier organisation
-            typically has a single portal contact, so retaining it on an
-            anonymised record would still single that person out.
         email: User's email address (anonymized on deletion)
         email_verified: Whether the email is verified in Clerk
         first_name: User's first name from Clerk (anonymized on deletion)
@@ -41,7 +35,6 @@ class User(BaseModel, UUIDPrimaryKeyMixin, AnonymizableMixin, table=True):
     """
 
     clerk_id: str = Field(unique=True, index=True)
-    org_id: Optional[str] = Field(default=None, index=True)
     email: str = Field(unique=True, index=True)
     email_verified: bool = Field(default=False)
     first_name: Optional[str] = Field(default=None)
@@ -68,23 +61,5 @@ class User(BaseModel, UUIDPrimaryKeyMixin, AnonymizableMixin, table=True):
         self.first_name = None
         self.last_name = None
         self.avatar_url = None
-        self.org_id = None
 
         self.mark_anonymized()
-
-
-class Role(StrEnum):
-    """Clerk organisation roles.
-
-    Values match the Clerk org role slugs with the 'org:' prefix stripped.
-    The AuthMiddleware extracts org_role from the JWT and strips the prefix
-    before storing it in request.state.org_role.
-
-    Migration note: when switching auth providers, only AuthMiddleware changes.
-    This enum and all consumers remain unchanged.
-    """
-
-    PROJECT_MANAGER = "project_manager"
-    REVIEWER = "reviewer"
-    APPROVER = "approver"
-    SUPPLIER = "supplier"

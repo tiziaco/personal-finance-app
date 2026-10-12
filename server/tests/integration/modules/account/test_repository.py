@@ -16,7 +16,6 @@ async def saved_user(db_session):
     """A committed user available for lookup tests."""
     user = User(
         clerk_id="clerk_repo_test_001",
-        org_id="test_org_123",
         email="repo_test@example.com",
         first_name="Repo",
         last_name="Test",
@@ -34,7 +33,6 @@ class TestCreateUser:
         user = await UserRepository.create(
             db_session,
             clerk_id="clerk_create_001",
-            org_id="test_org_123",
             email="create@example.com",
         )
         assert user.id is not None
@@ -45,7 +43,6 @@ class TestCreateUser:
         user = await UserRepository.create(
             db_session,
             clerk_id="clerk_create_002",
-            org_id="test_org_123",
             email="create2@example.com",
             first_name="Alice",
             last_name="Smith",
@@ -61,7 +58,6 @@ class TestCreateUser:
             await UserRepository.create(
                 db_session,
                 clerk_id=saved_user.clerk_id,  # duplicate
-                org_id="test_org_123",
                 email="different@example.com",
             )
 
@@ -70,7 +66,6 @@ class TestCreateUser:
             await UserRepository.create(
                 db_session,
                 clerk_id="clerk_unique_999",
-                org_id="test_org_123",
                 email=saved_user.email,  # duplicate
             )
 
@@ -82,7 +77,6 @@ class TestCreateOrGetUser:
         user = await UserRepository.create_or_get(
             db_session,
             clerk_id="clerk_cog_001",
-            org_id="test_org_123",
             email="cog@example.com",
         )
         assert user.id is not None
@@ -100,7 +94,6 @@ class TestCreateOrGetUser:
         user = await UserRepository.create_or_get(
             db_session,
             clerk_id=saved_user.clerk_id,  # duplicate — simulates the losing request
-            org_id="test_org_123",
             email="different@example.com",
         )
         assert user.id == saved_user.id
@@ -112,7 +105,6 @@ class TestCreateOrGetUser:
             await UserRepository.create_or_get(
                 db_session,
                 clerk_id="clerk_cog_never_created",
-                org_id="test_org_123",
                 email=saved_user.email,  # duplicate, but clerk_id differs
             )
 
@@ -165,16 +157,3 @@ class TestUpdateUser:
         original_first_name = saved_user.first_name
         updated = await UserRepository.update_from_clerk(db_session, saved_user, first_name=None)
         assert updated.first_name == original_first_name  # None → no change
-
-
-class TestUpdateOrgId:
-    """Tests for UserRepository.update_org_id()."""
-
-    async def test_update_org_id_changes_org(self, db_session, saved_user):
-        updated = await UserRepository.update_org_id(db_session, saved_user, "new_org_456")
-        assert updated.org_id == "new_org_456"
-
-    async def test_update_org_id_persists(self, db_session, saved_user):
-        await UserRepository.update_org_id(db_session, saved_user, "new_org_789")
-        found = await UserRepository.get_by_id(db_session, saved_user.id)
-        assert found.org_id == "new_org_789"

@@ -1,13 +1,11 @@
-"""Integration tests for DELETE /api/v1/auth/me — GDPR erasure and cache cleanup."""
+"""Integration tests for DELETE /api/v1/auth/me — GDPR erasure."""
 
 import uuid
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from app.modules.account.cache import user_cache
 from app.modules.conversation.models import Conversation
-from app.utils.cache import MISS
 
 pytestmark = pytest.mark.integration
 
@@ -27,50 +25,6 @@ def mocked_externals(stub_checkpoint_deletion):
         patch("app.modules.account.service.delete_user_memory", new=AsyncMock()) as memory,
     ):
         yield {"clerk": clerk, "memory": memory, "checkpoints": stub_checkpoint_deletion}
-
-
-class TestDeleteMeCacheInvalidation:
-    """Account deletion must not leave the cached org role behind."""
-
-    async def test_clears_the_role_cache(self, authenticated_client_with_agent, test_user, mocked_externals):
-        await user_cache.set_org_role(test_user.clerk_id, "reviewer")
-        original_clerk_id = test_user.clerk_id
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert await user_cache.get_org_role(original_clerk_id) is MISS
-
-    async def test_uses_pre_anonymisation_clerk_id(self, authenticated_client_with_agent, test_user, mocked_externals):
-        """The role is cached under the ORIGINAL clerk_id.
-
-        anonymize_user() rewrites user.clerk_id during the flow, so invalidating
-        with the post-anonymisation value would clear the wrong key and leave
-        the real entry behind.
-        """
-        original_clerk_id = test_user.clerk_id
-        await user_cache.set_org_role(original_clerk_id, "project_manager")
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert test_user.clerk_id != original_clerk_id  # anonymised in-flight
-        assert await user_cache.get_org_role(original_clerk_id) is MISS
-
-    async def test_org_id_is_cleared(self, authenticated_client_with_agent, test_user, mocked_externals):
-        """org_id is dropped with the rest of the user's personal data."""
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert test_user.org_id is None
-
-    async def test_unrelated_users_are_untouched(self, authenticated_client_with_agent, test_user, mocked_externals):
-        await user_cache.set_org_role("clerk_someone_else", "reviewer")
-
-        response = await authenticated_client_with_agent.delete("/api/v1/auth/me")
-
-        assert response.status_code == 204
-        assert await user_cache.get_org_role("clerk_someone_else") == "reviewer"
 
 
 class TestDeleteMeCheckpointCleanup:

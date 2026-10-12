@@ -6,10 +6,8 @@ import pytest
 import pytest_asyncio
 
 from app.integrations.clerk.exceptions import ClerkUserNotFoundError
-from app.modules.account.cache import user_cache
 from app.modules.account.models import User
 from app.modules.account.service import UserService
-from app.utils.cache import MISS
 
 pytestmark = pytest.mark.integration
 
@@ -24,7 +22,6 @@ async def existing_user(db_session):
     """A user that already exists in the database."""
     user = User(
         clerk_id="clerk_provider_existing",
-        org_id="test_org_123",
         email="provider_existing@example.com",
         first_name="Existing",
         last_name="User",
@@ -40,17 +37,11 @@ class TestDbHit:
 
     async def test_db_hit_returns_user_without_calling_clerk(self, service, db_session, existing_user):
         with patch("app.modules.account.service.clerk_client.get_user") as mock_get:
-            user = await service.resolve_user(db_session, existing_user.clerk_id, "test_org_123")
+            user = await service.resolve_user(db_session, existing_user.clerk_id)
             mock_get.assert_not_called()
 
         assert user.id == existing_user.id
         assert user.clerk_id == existing_user.clerk_id
-
-    async def test_db_hit_syncs_org_id(self, service, db_session, existing_user):
-        with patch("app.modules.account.service.clerk_client.get_user"):
-            user = await service.resolve_user(db_session, existing_user.clerk_id, "org_moved")
-
-        assert user.org_id == "org_moved"
 
 
 class TestJITProvisioning:
@@ -71,7 +62,7 @@ class TestJITProvisioning:
         mock_get_user.return_value = self._make_clerk_user(clerk_id)
         mock_get_email.return_value = "jit_new@example.com"
 
-        user = await service.resolve_user(db_session, clerk_id, "test_org_123")
+        user = await service.resolve_user(db_session, clerk_id)
 
         assert user.clerk_id == clerk_id
         assert user.email == "jit_new@example.com"
@@ -82,4 +73,4 @@ class TestJITProvisioning:
         mock_get_user.side_effect = ClerkUserNotFoundError("not found")
 
         with pytest.raises(ClerkUserNotFoundError):
-            await service.resolve_user(db_session, "clerk_nonexistent_jit", "test_org_123")
+            await service.resolve_user(db_session, "clerk_nonexistent_jit")
