@@ -12,7 +12,7 @@
   "prettier.configPath": "web-app/.prettierrc",
   "prettier.ignorePath": "web-app/.prettierignore",
   "eslint.workingDirectories": [
-    "web-app/apps/internal-portal",
+    "web-app/apps/web",
     "web-app/packages/ui",
     "web-app/packages/auth"
   ]

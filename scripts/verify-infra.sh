@@ -102,7 +102,7 @@ fi
 
 # Prod compose cannot be validated with `docker compose config`: it points env_file at
 # ./web-app/.env.local, which does not exist (prod compose is stale — it still models a
-# single web-app service from before the two-portal split). Reshaping it is WS2's scope.
+# single web-app service from before the web app moved to apps/web). Reshaping it is WS2's scope.
 # Structural validation instead: every service network reference must resolve.
 if python3 -c "import yaml" >/dev/null 2>&1; then
   check "prod compose network refs all resolve" python3 -c "

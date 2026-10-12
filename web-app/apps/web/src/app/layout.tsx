@@ -10,16 +10,11 @@ import "@/styles/globals.css"
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
-  title: "Template App",
+  title: "Personal Finance",
   description:
     "Personal Finance — track your spending, understand where it goes, and save more.",
   icons: {
-    icon: [
-      { url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" },
-      { url: "/icons/favicon-16x16.ico", sizes: "16x16", type: "image/x-icon" },
-      { url: "/icons/favicon-32x32.ico", sizes: "32x32", type: "image/x-icon" },
-    ],
-    apple: [{ url: "/icons/favicon-ios-57x57.ico", sizes: "57x57" }],
+    icon: [{ url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" }],
   },
 }
 

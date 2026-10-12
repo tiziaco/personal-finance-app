@@ -51,7 +51,7 @@ done <<< "$dirs"
 # this worktree are stopped. Closing a VS Code terminal does not reliably end
 # uvicorn's reloader or next-server, and once the directory is gone nothing
 # points at them. 4040 is dev-tunnel's ngrok inspector.
-PORTS="${API_HOST_PORT:?} ${INTERNAL_PORTAL_HOST_PORT:?} 4040"
+PORTS="${API_HOST_PORT:?} ${WEB_HOST_PORT:?} 4040"
 echo "🛑 Stopping this worktree's native dev servers (ports $PORTS)..."
 pids=()
 for port in $PORTS; do
@@ -93,7 +93,7 @@ ${DOCKER_COMPOSE:-docker-compose} -p "$PROJECT" -f docker-compose.dev.yml down -
 
 # Not `down --rmi all`, which also removes pulled images (pgvector, ngrok) main
 # uses. Only the two this project built.
-for image in "$PROJECT-server" "$PROJECT-internal-portal"; do
+for image in "$PROJECT-server" "$PROJECT-web"; do
   if docker image inspect "$image" > /dev/null 2>&1; then
     docker image rm "$image" > /dev/null && echo "    removed image $image"
   fi

@@ -30,8 +30,8 @@ set -a
 # shellcheck disable=SC1091
 [ -f "$SERVER_DIR/../.env" ] && source "$SERVER_DIR/../.env"
 # shellcheck disable=SC1091
-[ -f "$SERVER_DIR/../web-app/apps/internal-portal/.env.local" ] &&
-    source "$SERVER_DIR/../web-app/apps/internal-portal/.env.local"
+[ -f "$SERVER_DIR/../web-app/apps/web/.env.local" ] &&
+    source "$SERVER_DIR/../web-app/apps/web/.env.local"
 set +a
 
 compose() {

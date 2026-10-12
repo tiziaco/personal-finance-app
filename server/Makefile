@@ -16,7 +16,7 @@ COMPOSE_FILE ?= ../docker-compose.dev.yml
 # exported values win. Without this, `docker-run` dies on
 # "GRAFANA_ADMIN_PASSWORD is required" without ever reaching db or server.
 -include ../.env
--include ../web-app/apps/internal-portal/.env.local
+-include ../web-app/apps/web/.env.local
 .EXPORT_ALL_VARIABLES:
 
 # Host port for the native (non-Docker) server. Follows API_HOST_PORT from the

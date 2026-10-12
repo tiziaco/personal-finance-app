@@ -44,7 +44,7 @@ port_busy() { lsof -ti ":$1" -sTCP:LISTEN > /dev/null 2>&1; }
 
 # ── Env files ────────────────────────────────────────────────────────────────
 # server/.env.test is optional: only `make test` reads it, against a testcontainer.
-REQUIRED_ENV_FILES=".env server/.env.development web-app/apps/internal-portal/.env.local"
+REQUIRED_ENV_FILES=".env server/.env.development web-app/apps/web/.env.local"
 for f in $REQUIRED_ENV_FILES; do
   if [ ! -f "$f" ] && [ ! -f "$MAIN/$f" ]; then
     echo "FAIL: $MAIN/$f does not exist. Set up the main checkout first"
@@ -64,12 +64,12 @@ base_port() { # base_port <key> <default> [file, default .env]
   fi
   echo "$v"
 }
-BASE_INTERNAL="$(base_port INTERNAL_PORTAL_HOST_PORT 3000)"
+BASE_WEB="$(base_port WEB_HOST_PORT 3000)"
 BASE_API="$(base_port API_HOST_PORT 8100)"
 BASE_DB="$(base_port POSTGRES_PORT 5434 server/.env.development)"
 
-slot_ports() { # slot_ports <n> -> "internal api db"
-  echo $((BASE_INTERNAL + STEP * $1)) $((BASE_API + STEP * $1)) $((BASE_DB + STEP * $1))
+slot_ports() { # slot_ports <n> -> "web api db"
+  echo $((BASE_WEB + STEP * $1)) $((BASE_API + STEP * $1)) $((BASE_DB + STEP * $1))
 }
 
 # ── Slot ─────────────────────────────────────────────────────────────────────
@@ -109,7 +109,7 @@ else
   echo "==> Slot $SLOT (newly assigned)"
 fi
 
-read -r INTERNAL_PORT API_PORT DB_PORT <<< "$(slot_ports "$SLOT")"
+read -r WEB_PORT API_PORT DB_PORT <<< "$(slot_ports "$SLOT")"
 
 # ── Compose project ──────────────────────────────────────────────────────────
 NAME="$(normalize_project_name "$(basename "$HERE")")"
@@ -163,12 +163,12 @@ done
 echo "==> Writing slot $SLOT values"
 upsert .env WORKTREE_SLOT "$SLOT"
 upsert .env COMPOSE_PROJECT_NAME "$PROJECT"
-upsert .env INTERNAL_PORTAL_HOST_PORT "$INTERNAL_PORT"
+upsert .env WEB_HOST_PORT "$WEB_PORT"
 upsert .env API_HOST_PORT "$API_PORT"
 upsert server/.env.development POSTGRES_PORT "$DB_PORT"
 upsert server/.env.development ALLOWED_ORIGINS \
-  "'[\"http://localhost:$INTERNAL_PORT\", \"http://localhost:$API_PORT\"]'"
-for f in web-app/apps/internal-portal/.env.local; do
+  "'[\"http://localhost:$WEB_PORT\", \"http://localhost:$API_PORT\"]'"
+for f in web-app/apps/web/.env.local; do
   upsert "$f" NEXT_PUBLIC_API_URL "http://localhost:$API_PORT"
 done
 
@@ -184,13 +184,13 @@ cat <<EOF
 
 ✅ Worktree ready — slot $SLOT, compose project $PROJECT
 
-   Internal portal:  http://localhost:$INTERNAL_PORT
+   Web app:          http://localhost:$WEB_PORT
    API server:       http://localhost:$API_PORT   (Swagger: /docs)
    PostgreSQL:       localhost:$DB_PORT
 
 Next, natively (or VS Code 'Dev: All' with this folder open):
    make docker-run-db ENV=development && make -C server migrate ENV=development
-   make -C server dev   |   make dev-internal
+   make -C server dev   |   make dev-web
 Or in Docker:
    make docker-run-core
 

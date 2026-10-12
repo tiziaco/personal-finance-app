@@ -37,7 +37,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           <AppSidebar
             items={HUB_NAV}
             logoSrc="/images/logo-small.png"
-            logoAlt="Template App"
+            logoAlt="Personal Finance"
             variant="floating"
             settingsSlot={
               <SettingsDialog

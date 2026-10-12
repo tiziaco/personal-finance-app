@@ -10,14 +10,14 @@
 # Dokploy box runs many stacks. Compose's <project>-<service>-<n> is unique.
 # docker-compose.dev.yml follows the same rule, for its per-worktree stacks.
 services:
-  internal-portal:
+  web:
     env_file:
-      - ./web-app/apps/internal-portal/.env.local
+      - ./web-app/apps/web/.env.local
     build:
       context: ./web-app
       dockerfile: Dockerfile
       args:
-        APP_NAME: internal-portal
+        APP_NAME: web
         # Every NEXT_PUBLIC_* value is inlined into the bundle at build time,
         # so these are build args, not runtime env. Required, not defaulted:
         # a default here bakes a wrong origin into a shipped image, and the
@@ -40,18 +40,18 @@ services:
     labels:
       - traefik.enable=true                       # Dokploy sets exposedByDefault: false
       - traefik.docker.network=dokploy-network
-      - traefik.http.services.${COMPOSE_PROJECT_NAME}-internal-portal.loadbalancer.server.port=3000
+      - traefik.http.services.${COMPOSE_PROJECT_NAME}-web.loadbalancer.server.port=3000
       # HTTP router — no TLS config, so port 80 stays plain HTTP.
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.rule=Host(`${INTERNAL_PORTAL_DOMAIN:?set to the internal portal hostname, e.g. app.example.com}`)
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.entrypoints=web
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-web.service=${COMPOSE_PROJECT_NAME}-internal-portal
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-web.rule=Host(`${WEB_DOMAIN:?set to the web app hostname, e.g. app.example.com}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-web.entrypoints=web
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-web.service=${COMPOSE_PROJECT_NAME}-web
       # HTTPS router — a second router rather than a conditional label, because
       # tls.certresolver enables TLS on whatever entrypoint its router binds to,
       # and compose cannot omit a label conditionally.
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.rule=Host(`${INTERNAL_PORTAL_DOMAIN}`)
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.entrypoints=websecure
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.tls.certresolver=letsencrypt
-      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-internal-portal-secure.service=${COMPOSE_PROJECT_NAME}-internal-portal
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-secure.rule=Host(`${WEB_DOMAIN}`)
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-secure.entrypoints=websecure
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-secure.tls.certresolver=letsencrypt
+      - traefik.http.routers.${COMPOSE_PROJECT_NAME}-web-secure.service=${COMPOSE_PROJECT_NAME}-web
 
   # One-shot release phase: applies Alembic migrations, then exits.
   # Dokploy deploys with `docker compose up -d --build` and offers no

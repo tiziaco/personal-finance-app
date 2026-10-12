@@ -44,7 +44,7 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
-for app in internal-portal; do
+for app in web; do
   if [ ! -f "web-app/apps/$app/.env.local" ]; then
     echo "FAIL: web-app/apps/$app/.env.local not found."
     echo "Copy it from the matching .env.example — see the root CLAUDE.md."
@@ -66,7 +66,7 @@ fi
 # with nothing in the logs to explain it. Nothing resolves these values; they
 # exist so the labels render.
 export APP_ENV="$DEPLOY_ENV"
-export INTERNAL_PORTAL_DOMAIN="${INTERNAL_PORTAL_DOMAIN:-internal.localhost}"
+export WEB_DOMAIN="${WEB_DOMAIN:-web.localhost}"
 export API_DOMAIN="${API_DOMAIN:-api.localhost}"
 export NEXT_PUBLIC_API_URL="${NEXT_PUBLIC_API_URL:-https://$API_DOMAIN}"
 
@@ -80,13 +80,13 @@ echo "==> 1/5 Parsing $COMPOSE_FILE (APP_ENV=$DEPLOY_ENV)"
 "${COMPOSE[@]}" config -q
 
 echo "==> 2/5 Building both portals and the server"
-"${COMPOSE[@]}" build internal-portal server
+"${COMPOSE[@]}" build web server
 
 echo "==> 3/5 Checking the web image baked its APP_NAME"
 # web-app/Dockerfile:65-66 re-declares ARG APP_NAME in the runner stage and
 # promotes it to ENV, so the build arg is readable off the finished image.
 # Without it `pnpm --filter $APP_NAME build` has an empty filter.
-for app in internal-portal; do
+for app in web; do
   baked=$(docker image inspect -f '{{range .Config.Env}}{{println .}}{{end}}' \
     "$PROJECT-$app" | sed -n 's/^APP_NAME=//p' | head -1)
   if [ "$baked" != "$app" ]; then

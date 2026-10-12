@@ -43,7 +43,7 @@ source "$SCRIPT_DIR/lib.sh"
 
 ENV_NAME="${APP_ENV:-development}"
 ENV_FILE="server/.env.$ENV_NAME"
-OAUTH_APP_NAME="${CLERK_OAUTH_APP_NAME:-Template App Swagger Docs}"
+OAUTH_APP_NAME="${CLERK_OAUTH_APP_NAME:-Personal Finance Swagger Docs}"
 
 # Must match swagger_ui_oauth2_redirect_url in app/main.py, which FastAPI serves
 # at /oauth2-redirect. Clerk rejects the whole authorize request when the

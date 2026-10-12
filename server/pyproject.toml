@@ -4,7 +4,7 @@ name = "server"
 # and FastAPI serves it, so this is the number that appears in openapi.json and
 # in the status widget. Bumping it is a contract change — regenerate.
 version = "1.0.0"
-description = "Template App Server - A backend server for the Template App platform"
+description = "Personal Finance Server - the API behind the Personal Finance app"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
@@ -106,8 +106,8 @@ constraint-dependencies = [
 #
 # Change any of these, then run `make gen-contract` from the repo root and
 # commit the regenerated artifacts in the same commit.
-title = "Template App - Server"
-description = "A production-ready FastAPI service with LangGraph and Clerk authentication"
+title = "Personal Finance - Server"
+description = "API for Personal Finance: transactions, analytics and insights for one user's money."
 api_v1_str = "/api/v1"
 
 [tool.coverage.run]

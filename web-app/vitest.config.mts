@@ -41,7 +41,7 @@ export default defineConfig({
         extends: true,
         test: { name: "packages", include: [`packages/*/${TEST_FILES}`] },
       },
-      portal("internal-portal"),
+      portal("web"),
     ],
   },
 })
