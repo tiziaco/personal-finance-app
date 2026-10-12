@@ -11,8 +11,8 @@ carries both goes stale in the half a reader cannot check.
 - **This file says where we are** — one row per change in flight, updated in the same
   commit (or the same PR) as the work that moves it.
 
-**States:** `not started` → `in progress`, plus `deferred` and `blocked`, each with a
-reason. A row is deleted in the PR that merges its change to `main`, not when its branch
+**States:** `not started` → `in progress` → `complete`, plus `deferred` and `blocked`, each
+with a reason. A row is deleted in the PR that merges its change to `main`, not when its branch
 is green. What shipped is in `git log`.
 
 Links are relative to `docs/`.
@@ -23,7 +23,7 @@ Links are relative to `docs/`.
 
 | Change | State | Branch | Where it is specified |
 |---|---|---|---|
-| **Foundation** — single-tenant B2C base | in progress — complete on `port/template`, merges at Cutover | `port/template` | [`architecture/`](./architecture/), [`setup/clerk.md`](./setup/clerk.md) |
+| **Foundation** — single-tenant B2C base | complete — [PR #9](https://github.com/tiziaco/personal-finance-app/pull/9) into `template-base`; reaches `main` at Cutover | `port/template` | [`architecture/`](./architecture/), [`setup/clerk.md`](./setup/clerk.md) |
 | **Backend modules** — transactions, CSV import, analytics, insights, finance agents | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
 | **Frontend** — finance pages on the generated client | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
 | **Cutover** — merge into `main`, retire legacy | not started | — | — |
