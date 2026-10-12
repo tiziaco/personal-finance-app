@@ -8,9 +8,7 @@ ServiceError (500, INTERNAL_ERROR)                              app/exceptions/b
 ├── AuthenticationError (401)
 │   ├── InvalidCredentialsError
 │   └── InvalidWebhookSignatureError                            app/integrations/clerk/webhooks/exceptions.py
-├── AuthorizationError (403)
-│   ├── ConversationAccessDeniedError                           app/modules/conversation/exceptions.py
-│   └── SupplierNotLinkedError                                  app/modules/supplier/exceptions.py
+├── AuthorizationError (403)                                    no subclass today: ownership answers 404
 ├── NotFoundError (404)
 │   ├── ConversationNotFoundError                               app/modules/conversation/exceptions.py
 │   └── ClerkUserNotFoundError                                  app/integrations/clerk/exceptions.py
@@ -57,11 +55,6 @@ class ConversationNotFoundError(NotFoundError):
 
     error_code = "CONVERSATION_NOT_FOUND"
 
-
-class ConversationAccessDeniedError(AuthorizationError):
-    """Exception raised when user attempts to access a conversation they don't own."""
-
-    error_code = "CONVERSATION_ACCESS_DENIED"
 ```
 
 Inheriting the category sets the status; the subclass sets only `error_code` and the docstring. Go direct to
@@ -114,8 +107,8 @@ Inbound webhook ingestion gets its own `exceptions.py` beside the outbound clien
 ```json
 {
   "error": "CONVERSATION_NOT_FOUND",
-  "message": "Conversation 42 not found",
+  "message": "Conversation 3f2b8c1e-0d4a-4b7e-9a51-6c2d8e7f1a90 not found",
   "correlation_id": "abc-123",
-  "details": {"conversation_id": "42"}
+  "details": {"conversation_id": "3f2b8c1e-0d4a-4b7e-9a51-6c2d8e7f1a90"}
 }
 ```

@@ -125,9 +125,9 @@ Handlers are the anti-corruption layer: they translate one provider event into d
 their own. They live in the module that owns the rows they write (`app/modules/account/webhooks.py`), beside the
 dispatcher; the provider package under `app/integrations/` only verifies and parses, and imports nothing from
 `app/modules/`. When an event needs a higher module to act, the handler publishes rather than imports it — the
-`user.created` and `organization_membership.created` handlers publish `USER_SYNCED`, the `.deleted` membership one
-`USER_OFFBOARDED`, and `supplier` subscribes (`references/services.md`,
-**Event subscribers**).
+`user.created` handler publishes `USER_SYNCED` (nothing subscribes yet; `references/services.md`,
+**Event subscribers**, is the shape a subscriber takes). The only events handled are `user.created`, `user.updated`
+and `user.deleted`.
 
 **Every handler must be idempotent.** Delivery is at-least-once. Without a dedup table, a replay inside the
 signature's tolerance window has to converge rather than duplicate — so a create handler applies its payload as an

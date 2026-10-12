@@ -1,6 +1,6 @@
 # Data Tables
 
-Every table in a portal is one of two components from `@app/data-table`
+Every table in the app is one of two components from `@app/data-table`
 (`packages/data-table/src/table/`); the package source is the reference for their props. Where a
 table's rows come from is `data-access.md`; a list whose state lives in the URL is `url-state.md`.
 Paths below are relative to `web-app/`.
@@ -95,7 +95,7 @@ export function useOrderColumns({ canEdit, onEdit }: { canEdit: boolean; onEdit:
 }
 ```
 
-- Types come from `@app/data-table/columns` — a portal has no `@tanstack/react-table` dependency —
+- Types come from `@app/data-table/columns` — the app has no `@tanstack/react-table` dependency —
   and row types from `@app/api-client/types`.
 - The hook's parameters equal its `useMemo` deps. Pass narrowed values (`canEdit`, not `user`), and
   callbacks the caller wrapped in `useCallback` — a new function each render rebuilds every column.

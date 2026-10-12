@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/orders/orders-table-params.ts
+// apps/web/src/components/orders/orders-table-params.ts
 // Illustrative: written against an invented `listOrders` route
 // (GET /orders → OrderListResponse, `ordering: Literal[...]`, `search`, filters).
 import {

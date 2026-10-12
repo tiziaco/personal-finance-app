@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/orders/use-order-columns.tsx
+// apps/web/src/components/orders/use-order-columns.tsx
 "use client"
 
 import { useMemo } from "react"

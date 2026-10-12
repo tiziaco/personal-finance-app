@@ -10,7 +10,7 @@ publisher never imports the subscriber. What it is and the events that exist are
 |---|---|
 | A module needs a module *above* it in the DAG to act (erasing a user must clean up conversations) | Publish an event; the higher module subscribes |
 | A module needs a module *below* it to act | Call its service singleton through its root — not an event |
-| A module needs data from a module above it (`account`'s `/auth/me` wants the supplier's name) | Not an event: `publish()` returns a count, never data. The route or the data belongs in the higher module (R6) |
+| A module needs data from a module above it (`account`'s `/auth/me` wants a conversation count) | Not an event: `publish()` returns a count, never data. The route or the data belongs in the higher module (R6) |
 | A module needs an adapter (`app/agents/`, `app/integrations/`) to act | Call it directly; adapters are below every module |
 | One part of a module needs another part of the same module | A plain function call |
 | Work that must survive a crash, retry, or run off the request | Not this dispatcher yet — see **Limits** |
@@ -60,7 +60,7 @@ from app.modules.conversation import handlers
 Ask: **if this handler fails, should the publisher's write be undone?**
 
 - **Yes → `inline=True`.** A cascade that is part of the command's own consistency: erasure is not done while a
-  supplier row still points at the anonymised user. The handler runs inside `publish()`, in the publisher's session
+  conversation row still points at the anonymised user. The handler runs inside `publish()`, in the publisher's session
   and transaction; an exception propagates and the request rolls back. It never commits. Every subscription today
   is inline.
 - **No → deferred (the default).** A reaction to something that already happened: a notification, a cache warm-up,
@@ -80,7 +80,7 @@ failure is unacceptable, that is the case **Limits** describes, not a reason to 
   in the handler's session. Inline handlers share the session, so an instance is safe there — but a plain id is
   safe in both, and a subscription's mode may change later.
 - **Handlers must be idempotent.** An event can be published more than once for one fact: `USER_SYNCED` fires on JIT
-  provisioning *and* on each `user.created` / `organization_membership.created` webhook, and Clerk redelivers
+  provisioning *and* on each `user.created` webhook, and Clerk redelivers
   webhooks. A handler that sends an email records that it did.
 - **No ordering between subscribers.** Handlers for one event run in registration order, which is import order,
   which isort decides. A handler that needs another's result is one handler, or one handler calling a service.

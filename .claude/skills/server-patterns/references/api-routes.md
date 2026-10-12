@@ -19,7 +19,7 @@ router.include_router(chatbot_router)
 api_router.include_router(conversation.router)
 ```
 
-A module with no routes has no `router` slot and no line in `api.py` — `supplier` today. The system routes
+A module with no routes has no `router` slot and no line in `api.py` — none today. The system routes
 (`app/api/system/health.py`, tag `system`) belong to no module and are mounted outside `/api/v1`.
 
 ## Dependencies
@@ -101,10 +101,9 @@ async def get_user_conversation(
 ) -> Conversation:
     conversation = await conversation_service.get_conversation(db_session, conversation_id)
 
-    if not conversation or conversation.deleted_at is not None:
+    # Another user's row answers exactly as a missing one, so an id cannot be probed for existence.
+    if not conversation or conversation.deleted_at is not None or conversation.user_id != user.id:
         raise ConversationNotFoundError(f"Conversation {conversation_id} not found", conversation_id=conversation_id)
-    if conversation.user_id != user.id:
-        raise ConversationAccessDeniedError(..., conversation_id=conversation_id, user_id=user.id)
 
     return conversation
 
@@ -112,10 +111,12 @@ async def get_user_conversation(
 UserConversation = Annotated[Conversation, Depends(get_user_conversation)]
 ```
 
-Not-found and access-denied are raised here, once, for every route on that resource. The route and the service never
-re-check ownership. A new module with an owned resource writes the same dependency — `OrderOwner` in the `orders`
-sketch of `docs/architecture/server.md` §2, which checks the caller's org rather than the user — and exports
-it from its root only if another module's router needs it.
+A missing, soft-deleted or another user's row is one answer — the module's `NotFoundError` subclass, a 404 with the
+same error code and a message that names no user id — raised here, once, for every route on that resource. There is
+no 403 for ownership: it would confirm the id exists. The route and the service never re-check ownership. A new
+module with an owned resource writes the same dependency — `TransactionOwner` in the `transactions` sketch of
+`docs/architecture/server.md` §2, which raises `TransactionNotFoundError` when `transaction.user_id != user.id` —
+and exports it from its root only if another module's router needs it.
 
 ## The contract
 
@@ -204,12 +205,12 @@ class PaymentFilters(BaseModel):
 
 ## Batch operations
 
-Invented. Named paths like `/batch` must be declared **before** `/{payment_id}` — otherwise FastAPI tries to parse
-`"batch"` as an ID.
+Invented. Named paths like `/batch` must be declared **before** `/{payment_id}` — otherwise FastAPI matches `/{payment_id}`
+first and rejects `"batch"` as a malformed id with a 422.
 
 ```python
 class BatchDeleteRequest(BaseModel):
-    ids: List[int] = Field(..., min_length=1, max_length=100)
+    ids: List[uuid.UUID] = Field(..., min_length=1, max_length=100)
 
 class BatchDeleteResponse(BaseModel):
     deleted: int

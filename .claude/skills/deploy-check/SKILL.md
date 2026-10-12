@@ -20,14 +20,14 @@ it tears itself down afterwards. It needs `server/.env.<env>` (gitignored, never
 committed) and, once per machine, `docker network create dokploy-network` — the
 deploy file declares that network `external` because a Dokploy host provides it.
 
-**What it proves:** the file parses under `APP_ENV`; both portals build as
-genuinely distinct images with their own `APP_NAME`; a failed migration fails the
+**What it proves:** the file parses under `APP_ENV`; the web app builds as one
+image with its `APP_NAME`; a failed migration fails the
 stack instead of starting the server against a stale schema; the server reaches
 healthy with no ingress but its own healthcheck; nothing publishes a host port.
 
 **What it does not prove:** the Traefik labels — nothing routes a request through a
-proxy — nor that `ALLOWED_ORIGINS` lists both portal origins, which gates the Clerk
-`azp` check as well as CORS, so a missing one looks like broken auth. Both portal
-images are also built with the same `NEXT_PUBLIC_*` values. The label checklist, the
+proxy — nor that `ALLOWED_ORIGINS` lists the web origin, which gates the Clerk
+`azp` check as well as CORS, so a missing one looks like broken auth. The web image is
+also built with the check's own `NEXT_PUBLIC_*` values, not the deployed ones. The label checklist, the
 Dokploy facts and a 404 triage are in
 [`docs/setup/deploy-dokploy.md`](../../../docs/setup/deploy-dokploy.md).

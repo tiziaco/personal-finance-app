@@ -1,4 +1,4 @@
-// apps/internal-portal/src/app/(dashboard)/orders/page.tsx — a Server Component
+// apps/web/src/app/(dashboard)/orders/page.tsx — a Server Component
 import { OrdersTable } from "@/components/orders/orders-table"
 
 function OrdersPage() {

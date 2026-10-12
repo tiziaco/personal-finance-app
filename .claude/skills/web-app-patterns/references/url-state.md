@@ -9,13 +9,13 @@ search box and rows can't disagree, the view is shareable, and Back works. The U
 `shallow`: nothing re-renders on the server. The rows come from the list's generated hook, keyed on the
 state hook's `query`, so a URL change is a new query key.
 
-`UrlStateAdapter` is already mounted next to `QueryProvider` in each signed-in route group. A portal
+`UrlStateAdapter` is already mounted next to `QueryProvider` in the signed-in route group. The app
 imports nuqs only through `@app/data-table` — parsers from `@app/data-table/url-state/params`, the test
 adapter from `@app/data-table/url-state/testing`.
 
 ## Files per list
 
-In `apps/<portal>/src/components/<area>/`:
+In `apps/web/src/components/<area>/`:
 
 | File | Contents |
 | --- | --- |

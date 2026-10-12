@@ -3,11 +3,11 @@ name: server-testing
 description: >
   Writing, running and debugging tests for the FastAPI server (pytest, pytest-asyncio, a testcontainers
   Postgres). Use when adding or changing a test under server/tests/, choosing unit or integration, picking a
-  client fixture, testing a role guard, an org-scoped query, an event subscriber or a webhook, mocking Clerk or
+  client fixture, testing an ownership 404, an event subscriber or a webhook, mocking Clerk or
   the agent, touching a conftest.py, or debugging a test that fails for no obvious reason or silently never
   runs. Trigger on "write a test for X", "add tests", "this test fails", "make test-unit doesn't run my test",
-  "expected 401, got 403", "500 instead of 429", "Docker is not running", a failing test_module_contracts,
-  test_tenant_tables or test_openapi_contract, or any work on server/tests/.
+  "500 instead of 429", "Docker is not running", a failing test_module_contracts,
+  test_owned_tables or test_openapi_contract, or any work on server/tests/.
 ---
 
 # Server Testing
@@ -54,32 +54,22 @@ for `integration`. `--strict-markers` is on, so a new marker goes in `pytest.ini
 directory gets an empty `__init__.py` like its siblings, because file names repeat across modules
 (`test_repository.py`, `test_dependencies.py`).
 
-### 2. `authenticated_client` has a user and no role
+### 2. No token is 401
 
-It overrides `get_current_user` only. A route behind `PMOnly` / `InternalUserRole` / `SupplierRole`
-answers 403 until the test sets the role too:
+`CurrentUser` is the only identity dependency and nothing else gates a route, so a request with no token
+answers 401. Use `client` for the no-user request: `unauthenticated_client` leaves `get_db_session`
+un-overridden, so a route that opens a session raises `RuntimeError: Database session factory not
+initialized`.
 
-```python
-app.dependency_overrides[get_current_role] = lambda: Role.PROJECT_MANAGER  # reset_app_state clears it
-```
+`tests/integration/modules/conversation/test_dependencies.py` mounts the ownership dependency through a real
+route; for a dependency no route uses yet, mount a sentinel router in a module-scoped fixture.
 
-`tests/integration/modules/account/test_dependencies.py` does this per role. It also mounts a
-sentinel router in a module-scoped fixture: that is how to test a dependency no route uses yet.
+### 3. The error body's key is `error`
 
-### 3. No token on a guarded route is 403, not 401
-
-The guard in `dependencies=[...]` resolves before `CurrentUser`, and `oauth2_scheme` has
-`auto_error=False`, so `get_current_role` raises `AuthorizationError` first. Only a route with
-`CurrentUser` and no guard answers 401. Assert the exact code, never `in (401, 403)`. Use `client` for
-the no-user request: `unauthenticated_client` leaves `get_db_session` un-overridden, so a route that
-opens a session raises `RuntimeError: Database session factory not initialized`.
-
-### 4. The error body's key is `error`
-
-`{"error": "SUPPLIER_NOT_LINKED", "message": …, "correlation_id": …}`. Assert
+`{"error": "CONVERSATION_NOT_FOUND", "message": …, "correlation_id": …}`. Assert
 `response.json()["error"]`, not `error_code`.
 
-### 5. No lifespan runs under test
+### 4. No lifespan runs under test
 
 The clients call the app through `ASGITransport`. `client` sets `app.state.engine` itself, and
 nothing sets the rest:
@@ -90,13 +80,13 @@ nothing sets the rest:
 - **Checkpoints:** a route that clears a conversation blocks until `PoolTimeout` without
   `stub_checkpoint_deletion`.
 
-### 6. Deferred event subscribers never run in a route test
+### 5. Deferred event subscribers never run in a route test
 
 `client` replaces `get_db_session`, and with it the `events.flush()` that runs deferred handlers after
 the commit. Inline subscribers (every one today) run. For a deferred one, unit-test the handler by
 calling it, and assert the publish separately.
 
-### 7. Writes roll back, commits don't commit
+### 6. Writes roll back, commits don't commit
 
 `db_session` joins an outer transaction with savepoints, so a route's commit releases a savepoint and
 everything is undone at teardown. Fixtures `add` → `flush` → `refresh`. Services never commit (the
@@ -105,19 +95,16 @@ request's `DbSession` does). A unit test pins that with `session.commit.assert_n
 ## Mocking
 
 - **Patch where it is looked up:** `app.modules.account.service.clerk_client.get_user`, not the
-  integration package. Same for `…service.events.publish` and `…service.user_cache.invalidate_user`.
-- **A new module cache** gets its `reset()` line in the autouse `clear_user_cache` of **both**
-  `tests/unit/conftest.py` and `tests/integration/conftest.py`, or its state leaks between tests.
-  Within one test the cache is live: `supplier_cache` remembers a `None` too, so a test that links a
-  supplier after the first lookup reads the stale answer unless it invalidates.
+  integration package. Same for `…service.events.publish`.
 - **Clerk webhooks** go in signed with svix: `tests/integration/modules/account/router/test_webhooks.py`
   has the `signed()` helper and the test secret.
 
-## Tenancy
+## Ownership
 
-`CurrentOrgId` reads the user row: `test_user.org_id` is `"test_org_123"`. A query scoped by org needs a
-row in another org that the route must not return: absent from a list, 404 by id. No table carries
-`TenantMixin` yet. The first one that does gets that test.
+The user is the tenant. A query or route scoped by `user_id` needs a second `User` that owns a row the caller must
+not see: absent from a list, and 404 by id with the module's not-found code (`CONVERSATION_NOT_FOUND`), the same
+answer as a missing id. `tests/integration/modules/conversation/test_dependencies.py` does this for conversations:
+`test_other_users_conversation_returns_404` and its indistinguishable-from-missing sibling.
 
 ## Gate tests
 
@@ -126,7 +113,7 @@ These fail on purpose when wiring is missing. Fix the wiring, never the test.
 | Fails | Because | Fix |
 |---|---|---|
 | `tests/unit/test_module_contracts.py` | a module lacks import contracts, its alembic line or its `app/main.py` import | `server-patterns` → `references/new-module.md` |
-| `tests/unit/models/test_tenant_tables.py` | a table has no `org_id` | `TenantMixin`, or an `ALLOWLIST` row with the reason |
+| `tests/unit/models/test_owned_tables.py` | a table has no `user_id` | `UserOwnedMixin`, or an `ALLOWLIST` row with the reason |
 | `tests/unit/api/test_openapi_contract.py` | a route lacks an explicit tag, a camelCase `operation_id`, or a `response_model` / `status_code=204` | `server-patterns` → `references/api-routes.md` |
 
 ## Assertions

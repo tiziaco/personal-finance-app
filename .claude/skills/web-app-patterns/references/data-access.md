@@ -70,7 +70,7 @@ Rules:
 - Never return `null` while loading. Return a skeleton.
 - A background refetch that fails does **not** toast if the query already has data — that is
   intentional. A polling query that should never toast sets `meta: { silentError: true }`.
-- `QueryProvider` lives in the signed-in route group's layout (`(dashboard)`, `(portal)`), never the
+- `QueryProvider` lives in the signed-in route group's layout (`(dashboard)`), never the
   root: the cache must not outlive the session. A generated hook outside that group has no client.
 
 ## Shaping the fetch — patterns that hold on either path

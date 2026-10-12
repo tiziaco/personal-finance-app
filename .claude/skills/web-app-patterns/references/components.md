@@ -16,19 +16,19 @@ section fails somewhere other than where the edit is missing.
 | is a shadcn/Base UI primitive | `packages/ui` |
 | is generic table, filter or list-state machinery — no domain, no API client | `packages/data-table` |
 | composes primitives, no Clerk and no API client | `packages/components` |
-| is shared by both portals and needs the API client | `packages/api-client` |
-| is bound to **one portal's** auth, routes or payloads | that portal's `src/components/` |
-| is a shipped example a fork should **rewrite, not configure** | that portal's `src/components/`, even with no such binding |
+| is shared and needs the API client | `packages/api-client` |
+| is bound to the app's auth, routes or payloads | `apps/web/src/components/` |
+| is a shipped example a fork should **rewrite, not configure** | `apps/web/src/components/`, even with no such binding |
 
 Take the first row that matches. The last row is `general-settings.tsx`: it imports only `@app/ui`,
-`next-themes` and `lucide-react`, so the table says "promote", and it stays in both portals anyway. Its
-body *is* the customization — `SETTINGS_TABS`, defined inline in each route-group layout, is the
+`next-themes` and `lucide-react`, so the table says "promote", and it stays in the app anyway. Its
+body *is* the customization — `SETTINGS_TABS`, defined inline in the route-group layout, is the
 extension point it hangs off. The question that decides the row: **does a fork configure this, or
 rewrite it?**
 
 `packages/components` depends on `@app/core`, `@app/ui` and `lucide-react` — and nothing else, ever.
 Shared code that needs Clerk or the API client goes into the package it is already coupled to
-(`@app/api-client` holds `useServerStatus` and `QueryProvider`), or stays in each portal.
+(`@app/api-client` holds `useServerStatus` and `QueryProvider`), or stays in the app.
 
 ## Slots move a component up
 
@@ -40,8 +40,7 @@ component moves to `packages/components`. The existing slots:
 | `AppSidebar` (`layout/app-sidebar.tsx`) | `settingsSlot`, `userSlot` | `<SettingsDialog …>`, `<ClerkUserPanel />` |
 | `SettingsDialog` (`settings/settings-dialog.tsx`) | `footerSlot` | `<ServerHealthIndicator />` |
 
-Both are filled in `apps/internal-portal/src/app/(dashboard)/layout.tsx`; the supplier portal's
-`(portal)/layout.tsx` is identical. A slot is a `ReactNode` prop, rendered where the impure piece was.
+Both are filled in `apps/web/src/app/(dashboard)/layout.tsx`. A slot is a `ReactNode` prop, rendered where the impure piece was.
 
 ## Using Base UI
 
@@ -68,7 +67,7 @@ primitive into the client graph; nothing in the repo imports it. `@app/component
 
 ## Adding a primitive
 
-Every primitive goes in `packages/ui`, even one only a single portal uses.
+Every primitive goes in `packages/ui`, even one only a single screen uses.
 
 1. Install it by hand from the shadcn docs (`ui.shadcn.com/docs/components/base/<name>`, the **Manual**
    tab — the Base UI variant, never the Radix one): its dependencies go in `packages/ui/package.json`,

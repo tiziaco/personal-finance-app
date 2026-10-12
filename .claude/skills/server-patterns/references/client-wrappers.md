@@ -5,7 +5,7 @@
 **Third-party code lives in `app/integrations/<provider>/`, never in `app/modules/`.**
 
 The two trees answer different questions. `app/modules/` holds *domain* logic — the things this product would do
-under any vendor (`account/`, `conversation/`, `supplier/`). `app/integrations/` holds code that exists **only because a third
+under any vendor (`account/`, `conversation/`). `app/integrations/` holds code that exists **only because a third
 party does**: if you dropped the vendor, the folder would disappear with it. `llm/` is an integration, not a module,
 for exactly that reason (`docs/architecture/server.md` §1).
 

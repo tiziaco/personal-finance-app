@@ -6,7 +6,7 @@ description: >
   subscribing to or publishing an event between modules, or integrating a third-party provider in either direction.
   Trigger on tasks like "add a module", "add a service", "create an exception", "add an endpoint",
   "change a route's response", "handle this error", "implement a repository", "subscribe to an event",
-  "react to another module's action", "inline or deferred", "my event handler never ran", "add a tenant-owned table", "wrap this SDK", "handle a webhook", or any
+  "react to another module's action", "inline or deferred", "my event handler never ran", "add a user-owned table", "wrap this SDK", "handle a webhook", or any
   feature work touching app/modules/, app/integrations/, app/api/, app/exceptions/ or app/core/events.py. Use even
   for partial tasks like "add a method to XService" — always follow the patterns below.
 ---
@@ -14,7 +14,7 @@ description: >
 # Server Patterns
 
 The server is a modular monolith: one package per bounded context under `app/modules/`, four layers that import
-downward only. The architecture — the layers, the slots, rules R1–R9, the request path, errors, events and tenancy —
+downward only. The architecture — the layers, the slots, rules R1–R9, the request path, errors, events and ownership —
 is in `docs/architecture/server.md`, and this skill does not restate it. This skill covers how the code
 inside that structure is written, and how a new module is put together and wired up. Read the relevant reference
 file before writing any code.
@@ -24,7 +24,7 @@ file before writing any code.
 | Topic | File | Read when… |
 |---|---|---|
 | Creating a module | `references/new-module.md` | **Adding a module** — the whole task: the two decisions, the slots, the four wiring edits, the tests that gate them. Start here; it cites the doc for the reasoning |
-| Module boundaries, layers, tenancy | `docs/architecture/server.md` §1–§3, §9 | Importing across modules, a foreign key or type hint to another module's table, adding a table to an existing module, or a module that has outgrown flat slots (packages-as-slots, a `domain` slot) |
+| Module boundaries, layers, ownership | `docs/architecture/server.md` §1–§3, §9 | Importing across modules, a foreign key or type hint to another module's table, adding a table to an existing module, or a module that has outgrown flat slots (packages-as-slots, a `domain` slot) |
 | Events between modules | `references/events.md` | Publishing or subscribing to an event, choosing inline vs deferred, a subscriber that never runs, publishing from a script or worker |
 | Services and repositories | `references/services.md` | Adding/modifying a service, a repository, or an event subscriber |
 | Exceptions | `references/exceptions.md` | Defining new exception classes |
@@ -32,7 +32,7 @@ file before writing any code.
 | External API adapters | `references/client-wrappers.md` | Wrapping a third-party SDK or HTTP client (outbound) |
 | Inbound webhooks | `references/webhooks.md` | Receiving events a provider pushes to us (signature, dispatch, handlers) |
 | API routes | `references/api-routes.md` | Adding or changing endpoints, ownership dependencies, the OpenAPI contract, input bounds, pagination, batch ops, deletes |
-| Database operations | `references/database.md` | Querying, tenant scoping, bulk ops, relationship loading, N+1 avoidance |
+| Database operations | `references/database.md` | Querying, owner scoping, bulk ops, relationship loading, N+1 avoidance |
 
 ## Quick rules (always apply)
 
@@ -63,8 +63,8 @@ file before writing any code.
 - Structured logging: `logger.info("snake_case_event", key=value)` — never f-strings
 - Rows that must be retained but hidden soft-delete (`SoftDeleteMixin.soft_delete()`). Personal data does not: it is
   erased — see the GDPR section of `server/CLAUDE.md`
-- A tenant-owned table carries `TenantMixin`, and every repository method on it takes and filters by `org_id`; a
-  table that is not tenant-owned is allowlisted with its reason in `tests/unit/models/test_tenant_tables.py` (R7)
+- A user-owned table carries `UserOwnedMixin` (`user_id`, FK `user.id`) or a row in `test_owned_tables.py`'s ALLOWLIST
+  (R7); every repository query on it filters `user_id`
 - Across modules, import only from the package root: `from app.modules.account import CurrentUser`. Never
   `.repository`, `.models` or `.service` of another module (R1)
 - Layers import downward only: modules → adapters (`app/integrations`, `app/agents`) → foundation (`app/core`,
@@ -77,8 +77,8 @@ file before writing any code.
   file (R5). Load the `server-testing` skill before writing one
 - Modules form a DAG. When a lower module needs a higher one to act, it publishes on `app/core/events.py` and the
   higher module subscribes with `@events.on(NAME)` in its `handlers.py`, choosing inline or deferred on purpose; the
-  event name is a constant exported from the publisher's root. `account` publishes `USER_SYNCED`, `USER_ERASING`
-  and `USER_OFFBOARDED` (R6; `references/events.md`)
+  event name is a constant exported from the publisher's root. `account` publishes `USER_SYNCED` and `USER_ERASING`
+  (R6; `references/events.md`)
 
 ## File layout for a new module
 
@@ -87,7 +87,7 @@ app/modules/payment/
   __init__.py      # public surface: payment_service, public schemas, dependencies, exceptions, event names
   router.py        # APIRouter(prefix="/payments", tags=["payments"]); mounted by app/api/v1/api.py
   schemas.py
-  models.py        # the tables this module owns; TenantMixin or an allowlist row; FK to other modules by name
+  models.py        # the tables this module owns; UserOwnedMixin or an allowlist row; FK to other modules by name
   service.py       # PaymentService (orchestrator) + payment_service singleton
   repository.py    # PaymentRepository (DB ops) + payment_repository singleton
   dependencies.py
@@ -96,7 +96,7 @@ app/modules/payment/
 ```
 
 A slot becomes a package of the same name when it outgrows one file, and a module without routes has no
-`router.py` (`supplier`). Wiring it up is four edits — `app/api/v1/api.py`, `app/main.py`, `alembic/env.py` and
+`router.py` (every module has routes today). Wiring it up is four edits — `app/api/v1/api.py`, `app/main.py`, `alembic/env.py` and
 the import-linter contracts in `pyproject.toml` — and the last of those touches *every* module, not just the new
 one: the R1 contracts are symmetric and `tests/unit/test_module_contracts.py` checks each one names all the
 others. Follow `references/new-module.md`; it has the order, the exact edits and the tests that gate them.

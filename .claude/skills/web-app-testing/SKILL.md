@@ -4,7 +4,7 @@ description: >
   Writing, running and debugging tests in the Next.js workspace (Vitest + Testing Library in jsdom).
   Use when adding or changing a test under web-app/, deciding whether a component needs one,
   debugging a test that fails for no obvious reason or passes while covering nothing, touching
-  vitest.config.mts or vitest.setup.ts, adding a third app, or hitting a type-check error that only
+  vitest.config.mts or vitest.setup.ts, adding a second app, or hitting a type-check error that only
   appears in a test file. Trigger on "write a test for X", "add tests", "this test fails",
   "matchMedia is not a function", "useSidebar must be used within a SidebarProvider", "does this
   need a test", or any work on *.test.ts(x) under web-app/.
@@ -12,13 +12,12 @@ description: >
 
 # Web App Testing
 
-Vitest + Testing Library in jsdom. One config, `web-app/vitest.config.mts`, three projects:
+Vitest + Testing Library in jsdom. One config, `web-app/vitest.config.mts`, two projects:
 
 | Project | Runs | `@/` |
 |---|---|---|
 | `packages` | `packages/*/src/**/*.test.*` | — |
-| `internal-portal` | `apps/internal-portal/src/**/*.test.*` | that app's `src/` |
-| `supplier-portal` | `apps/supplier-portal/src/**/*.test.*` | that app's `src/` |
+| `web` | `apps/web/src/**/*.test.*` | the app's `src/` |
 
 ```bash
 pnpm test                          # from web-app/, once
@@ -32,9 +31,9 @@ make test-web                      # from the repo root; also what pre-push runs
 
 Ask whether it has a **branch** or is a pass-through. `packages/ui/src/primitives/` is vendored
 shadcn — testing it tests Base UI. What earns a test is a condition, state, or a mapping:
-`getUserRole`'s prefix rule, `AuthProvider`'s `AppUser` mapping and `signOut` ordering,
-`useServerStatus`'s 503 recovery, `UserDetailsPanel`'s optional items, `ClerkUserPanel`'s PM-only
-Organisation item.
+`AuthProvider`'s `AppUser` mapping and `signOut` ordering,
+`useServerStatus`'s 503 recovery, `UserDetailsPanel`'s optional items, `ClerkUserPanel`'s loading and
+fallback states.
 
 A test written after its subject proves nothing until it has failed once: break the branch it
 pins, watch it go red, revert.
@@ -57,27 +56,27 @@ which jsdom lacks: `vitest.setup.ts` stubs it. Do not delete the stub.
   `try/catch` that narrows.
 - jest-dom's matchers (`toBeInTheDocument`, …) need a `src/testing.d.ts` importing
   `@testing-library/jest-dom/vitest` in **each** package or app that uses them —
-  `vitest.setup.ts` belongs to no tsconfig. `components` and both portals have one; add it to a new
+  `vitest.setup.ts` belongs to no tsconfig. `components` and the app have one; add it to a new
   package the first time it uses a matcher.
 
 ### 3. `NODE_ENV` is pinned in `vitest.config.mts`
 
 Vitest defaults it only when unset, and the root Makefile exports
-`apps/internal-portal/.env.local` wholesale. Under `NODE_ENV=production` React loads its production
+`apps/web/.env.local` wholesale. Under `NODE_ENV=production` React loads its production
 build and every render test fails nowhere near the cause. The pin covers every entry point. **Keep
 the line**, and keep `NODE_ENV` out of env files.
 
-### 4. The root React pin must match the portals
+### 4. The root React pin must match the app's
 
-`web-app/package.json` pins `react` / `react-dom` to the portals' exact version, and
-`resolve.dedupe` resolves every test to that root copy. Bump React in `apps/*` alone and
-the tests silently run a different React than the portals ship. Bump all three together.
+`web-app/package.json` pins `react` / `react-dom` to the app's exact version, and
+`resolve.dedupe` resolves every test to that root copy. Bump React in `apps/web` alone and
+the tests silently run a different React than the app ships. Bump all three together.
 
 ### 5. Module-load constants cover half a component
 
 `isDevelopment` (`packages/core/src/lib/env.ts`) is computed once at import, so under Vitest it is
 always `false`. Reassigning `process.env.NODE_ENV` mid-test changes nothing. `ServerStatusIndicator`
-avoids this by taking `showDetail` as a prop, and the portal wrapper passes `isDevelopment` —
+avoids this by taking `showDetail` as a prop, and the app's wrapper (`apps/web/src/components/settings/server-status.tsx`) passes `isDevelopment` —
 test the prop. Hoist the next such read the same way before reaching for a module mock.
 
 ## Mocking
@@ -101,7 +100,7 @@ test the prop. Hoist the next such read the same way before reaching for a modul
   package is private.
 - **`*.test.*` is Vitest, `*.spec.*` is Playwright** (none yet; `e2e/**` is excluded).
 - **Explicit imports**: `globals: false`, so `import { describe, it, expect, vi } from "vitest"`.
-- **A third app** gets `portal("<app>")` in the config's `projects`, a `src/testing.d.ts`, and its
+- **A second app** gets `portal("<app>")` in the config's `projects`, a `src/testing.d.ts`, and its
   own copy of any duplicated component's test.
 - **A test that pins known-wrong behaviour names its [`BUGS.md`](../../../docs/BUGS.md) entry** in a
   comment, so the fix is what changes it — invert it then, don't delete it. Before "fixing" a test

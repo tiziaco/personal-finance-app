@@ -1,4 +1,4 @@
-// apps/internal-portal/src/components/orders/orders-table-params.test.ts
+// apps/web/src/components/orders/orders-table-params.test.ts
 import { describe, it, expect } from "vitest"
 import {
   fromOrdersFilters,
