@@ -24,8 +24,15 @@ What the product does, for the people deciding scope. Conventions are in
 
 | Doc | What it covers |
 |---|---|
-| [`product/prd-mvp.md`](./product/prd-mvp.md) | The first release's scope — a skeleton for a fork to fill |
-| [`product/features/account.md`](./product/features/account.md) | Signing up, the profile, deleting an account |
+| [`product/prd-mvp.md`](./product/prd-mvp.md) | The first release's scope — a personal finance app for friends and family |
+| [`product/features/account.md`](./product/features/account.md) | Signing up and in, the profile, deleting an account |
+| [`product/features/transactions.md`](./product/features/transactions.md) | Browsing, searching, filtering, adding, correcting and deleting transactions |
+| [`product/features/csv-import.md`](./product/features/csv-import.md) | Uploading a bank CSV, confirming the column mapping, importing |
+| [`product/features/categorisation.md`](./product/features/categorisation.md) | The fixed categories, AI labelling, correcting a category |
+| [`product/features/analytics.md`](./product/features/analytics.md) | The dashboard and the four analytics views |
+| [`product/features/insights.md`](./product/features/insights.md) | AI-written observations about spending |
+| [`product/features/chat.md`](./product/features/chat.md) | The assistant — conversations, messages, memory |
+| [`product/features/budgets.md`](./product/features/budgets.md) | Spending limits by category — not built, out of scope for the port |
 
 ## Data model
 

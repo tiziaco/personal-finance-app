@@ -23,6 +23,10 @@ Links are relative to `docs/`.
 
 | Change | State | Branch | Where it is specified |
 |---|---|---|---|
+| **Foundation** — single-tenant B2C base | in progress | `port/template` | `.superpowers/specs/2026-10-12-foundation-design.md` |
+| **Backend modules** — transactions, CSV import, analytics, insights, finance agents | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
+| **Frontend** — finance pages on the generated client | not started | — | [`product/prd-mvp.md`](./product/prd-mvp.md) |
+| **Cutover** — merge into `main`, retire legacy | not started | — | — |
 | **WS7** — SSE stream disconnect handling | deferred — past the B2C fork, by decision on 14 Sep 2026 | — | [`TODO.md`](./TODO.md), **Server — the chat stream ignores a client disconnect** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -35,9 +39,5 @@ The dependencies already recorded in those two files, gathered in one place:
 
 - **The database role split comes before row-level security.** A role with `BYPASSRLS`
   ignores every policy ([`BUGS.md`](./BUGS.md), [`TODO.md`](./TODO.md)).
-- **The first organization-scoped route brings the first role guard**, and with it the
-  example domain's real screens — projects, orders, documents.
-- **`supplier` adopts `TenantMixin` with its first write route**, never before — the
-  backfill needs rows to exist.
 - **Before the first deploy behind Traefik:** `--forwarded-allow-ips`, or every caller
   shares one rate-limit bucket.

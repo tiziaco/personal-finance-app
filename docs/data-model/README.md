@@ -12,7 +12,7 @@ table follows. How a feature *behaves* is in [`../product/features/`](../product
 | Data-model doc | Describes | Module | Tables | State |
 |---|---|---|---|---|
 | [`account.md`](./account.md) | [`account`](../product/features/account.md) | `account` | `"user"` | built |
-| [`conversation.md`](./conversation.md) | no feature doc yet | `conversation` | `conversation` | built |
+| [`conversation.md`](./conversation.md) | [`chat`](../product/features/chat.md) | `conversation` | `conversation` | built |
 
 **A feature doc is named for the product area** (`transactions.md`), **a data-model doc for
 the server module that owns its tables** (`transaction.md`). The mapping is not one-to-one: a doc

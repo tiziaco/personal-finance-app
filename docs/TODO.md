@@ -14,13 +14,15 @@ this file when it is done or decided.
 
 The erasure cascade runs and is tested, but what it leaves behind is pseudonymised, not
 anonymised: `user.id` survives, `conversation.user_id` still points at it, and Langfuse
-still holds the conversations keyed by that id.
+still holds the conversations keyed by that id. Every finance table added by the backend
+modules joins the cascade.
 [`server/docs/gdpr-erasure-findings.md`](../server/docs/gdpr-erasure-findings.md) has
-eight open findings (A1–A5, B1–B3, C2), four design options and seven open questions.
+open findings, four design options and open questions; the findings that concern the
+removed example domain are moot.
 
-**Unblocks:** a truthful privacy policy, and any fork that goes to production with real
-supplier contacts. **Decide first:** C2 — one erasure flow for both user types, or two.
-It determines whether the rest is one path or two.
+**Unblocks:** a truthful privacy policy, and going to production with real users.
+**Decide first:** what "erased" means for the `user` row and for the tracing service. That
+determines whether the rest is one path or several.
 
 Two findings do not wait on that decision and are small on their own:
 
@@ -28,73 +30,6 @@ Two findings do not wait on that decision and are small on their own:
   deletion call to the cascade. The highest-impact finding.
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
-
-## Tenancy — `supplier` adopts `TenantMixin`
-
-`supplier` is on the tenancy allowlist because nothing writes the table yet, and adopting
-the mixin needs a backfill of `org_id` on existing rows. **Unblocks:** the first supplier
-write route, which must ship with the mixin, the backfill migration, and `org_id` on
-every `supplier` repository method. Reasoning: `docs/architecture/server.md` §9.
-
-## Authorization — the first organization-scoped route
-
-No route calls `require_role` today: every route is owner-scoped or about the caller
-themselves, so no role check has been needed. The first route whose data belongs to an
-organization rather than one user needs `CurrentOrgId` into a tenant-scoped repository
-**and** a role guard. **Unblocks:** projects, orders and documents — the example domain's
-actual screens. Reasoning: [`architecture/authorization.md`](./architecture/authorization.md) §3.
-
-## Authorization — strict role prefix on the server
-
-`AuthMiddleware` parses the role with `removeprefix("org:")`, so an unprefixed value
-still parses; the web app's `getUserRole()` rejects one. Clerk always sends the prefix, so
-the two agree on every real token. **Unblocks:** nothing today; make it strict before a
-second identity provider or a hand-minted token (a test fixture, a service account) can
-reach the API. Reasoning: [`architecture/authorization.md`](./architecture/authorization.md) §2.
-
-## Clerk — supplier dev seed
-
-`make clerk-seed-users` seeds the three internal roles, not a supplier. A `supplier` user
-needs a `Supplier` row whose `contact_id` points at them, or every request is 403
-`SUPPLIER_NOT_LINKED`, and that link is made only from `supplier_id` membership metadata.
-Seeding one needs a server-side dev seed that creates the `Supplier` first (its data beside
-`server/data/clerk-dev-seed.json`), then a membership carrying its id — or a real
-invitation. **Unblocks:** checking the supplier portal with one command. Reasoning:
-[`setup/clerk.md`](./setup/clerk.md) §2.
-
-## Clerk — ticket-aware sign-up pages
-
-Invitations complete on Clerk's hosted Account Portal, so an invitee leaves the portal's
-domain to create their account. Sign-up pages in both portals that accept only an
-invitation ticket (`__clerk_ticket`), with invitations whose `redirect_url` points at
-them, would keep the whole flow on the portal. Point Clerk's `paths.sign_up` at the page
-(scriptable in `config.json`) and restore
-`NEXT_PUBLIC_CLERK_SIGN_UP_FALLBACK_REDIRECT_URL=/home`, which the page reads; the
-dashboard redirect in §7 then becomes unnecessary. **Unblocks:** a branded invitation
-flow.
-Reasoning: [`setup/clerk.md`](./setup/clerk.md) §7.
-
-## Clerk — offboarding policy
-
-Removing a member deletes the membership, not the Clerk user: `handle_membership_deleted`
-clears `org_id` and the cached role, and the account stays, unable to do anything once
-user-created organizations are off. Deleting it is manual, and runs `erase_user` through
-the `user.deleted` webhook — irreversible, so not something a mistaken "Remove member"
-should trigger. The usual enterprise shape is two steps: ban on the last membership's
-removal (sessions end, sign-in is blocked, the record stays), delete after a retention
-period or on an erasure request. **Unblocks:** offboarding without an operator in Clerk's
-dashboard. **Decide first:** the retention period, and **Erasure — decide the target
-state** above, which is what the deletion runs. Reasoning:
-[`setup/clerk.md`](./setup/clerk.md) §1.
-
-## Deploy — per-portal build args
-
-Both portal images are built with the same `NEXT_PUBLIC_API_URL` and
-`NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, because the compose file gives both services the
-same variable names. Harmless while the portals share one Clerk instance and one API
-origin. **Unblocks:** a portal on its own Clerk instance or API origin. The shape:
-per-portal variable names in `docker-compose.prod.yml`, and a `deploy-check` assertion on
-what each image baked. Reasoning: [`setup/deploy-dokploy.md`](./setup/deploy-dokploy.md).
 
 ## Server — the R9 import-linter contract
 
@@ -136,12 +71,13 @@ unchanged.
 
 ## Server — row-level security
 
-Tenancy is enforced in the query layer: every tenant-owned repository method filters by
-`org_id`. A forgotten filter is a cross-tenant read, caught today only by review and by
-`test_tenant_tables.py` checking that the column exists — not that it is used. Postgres
-RLS keyed on a per-transaction `org_id` would make the database refuse the read instead.
-**Blocked by** the superuser role in [`BUGS.md`](./BUGS.md): a role with `BYPASSRLS`
-ignores every policy. **Unblocks:** defence in depth for the first tenant-owned table.
+Ownership is enforced in the query layer: every user-owned repository method filters by
+`user_id`. A forgotten filter is a cross-user read, caught today only by review and by
+`test_owned_tables.py` checking that every table uses `UserOwnedMixin` — not that its
+queries filter. Postgres RLS keyed on a per-transaction user id would make the database
+refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS.md): a
+role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the first
+finance table.
 
 ## Web — tests the suite does not have yet
 
@@ -149,7 +85,23 @@ ignores every policy. **Unblocks:** defence in depth for the first tenant-owned 
   `silentError`), that mutations always do, and that a 4xx is not retried. The mutator and
   the status-recovery hook are covered; the provider that applies their errors is not.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
-  are reserved for Playwright; the first flow worth it is sign-in through to a real
-  screen, per portal.
+  are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
+  real screen.
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
+
+## Port — carry into backend modules
+
+Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
+when it rebuilds each module (sub-project 2). One line each, pointing at the legacy file.
+
+- **N+1 in batch update** — one `SELECT` per item before updating; fetch with one
+  `WHERE id IN (...)`. `server/app/services/transaction/service.py` (`batch_update`).
+- **N+1 in batch delete** — the same, before the soft delete.
+  `server/app/services/transaction/service.py` (`batch_delete`).
+- **Services returning `None` on a miss** — `CSVMappingService.get_session` returns
+  `None` and the route checks; raise a not-found error in the service instead.
+  `server/app/services/csv_mapping/service.py`.
+- **Direct `ChatOpenAI` use** — the CSV column-mapping proposal builds its own client,
+  bypassing the LLM service's retries, model fallback and error translation. Go through
+  the LLM service. `server/app/api/v1/transactions.py` (`_propose_column_mapping`).
