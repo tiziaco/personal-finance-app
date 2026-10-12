@@ -167,7 +167,7 @@ upsert .env INTERNAL_PORTAL_HOST_PORT "$INTERNAL_PORT"
 upsert .env API_HOST_PORT "$API_PORT"
 upsert server/.env.development POSTGRES_PORT "$DB_PORT"
 upsert server/.env.development ALLOWED_ORIGINS \
-  "'[\"http://localhost:$INTERNAL_PORT\", \"\"http://localhost:$API_PORT\"]'"
+  "'[\"http://localhost:$INTERNAL_PORT\", \"http://localhost:$API_PORT\"]'"
 for f in web-app/apps/internal-portal/.env.local; do
   upsert "$f" NEXT_PUBLIC_API_URL "http://localhost:$API_PORT"
 done
