@@ -97,7 +97,8 @@ class ConversationService:
             logger.warning("conversation_title_generation_failed", conversation_id=conversation.id, error=str(e))
             return conversation
 
-        return await conversation_repository.update_name(session, conversation, title)
+        # The model call takes seconds: a rename made meanwhile wins.
+        return await conversation_repository.set_name_if_untitled(session, conversation, title)
 
 
 conversation_service = ConversationService()

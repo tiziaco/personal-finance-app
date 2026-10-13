@@ -4,6 +4,7 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
 from app.agents.messages import Message
@@ -248,6 +249,27 @@ class TestGenerateConversationTitle:
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.json()["name"] == "My name"
         mock_agent.generate_title.assert_not_awaited()
+
+    async def test_rename_during_the_model_call_wins(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+    ):
+        # A rename lands while the model is still writing the title: the title
+        # must not overwrite it, and the route answers with the user's name.
+        # synchronize_session=False leaves the route's loaded row stale, as a
+        # rename committed by another request would.
+        async def rename_then_title(*_):
+            await db_session.execute(
+                update(Conversation)
+                .where(Conversation.id == untitled_conversation.id)
+                .values(name="User rename")
+                .execution_options(synchronize_session=False)
+            )
+            return "Generated"
+
+        mock_agent.generate_title = AsyncMock(side_effect=rename_then_title)
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == "User rename"
 
     async def test_no_reply_yet_is_unchanged(self, authenticated_client_with_agent, untitled_conversation, mock_agent):
         mock_agent.get_chat_history.return_value = [Message(role="user", content="Hello")]

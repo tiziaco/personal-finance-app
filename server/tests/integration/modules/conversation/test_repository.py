@@ -3,6 +3,7 @@
 from datetime import UTC, datetime, timedelta
 
 import pytest
+from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
 from app.modules.account.models import User
@@ -95,6 +96,32 @@ class TestUpdateName:
         updated = await ConversationRepository.update_name(db_session, conv, "New")
         assert updated.name == "New"
         assert (await ConversationRepository.get_by_id(db_session, conv.id)).name == "New"
+
+
+class TestSetNameIfUntitled:
+    async def test_names_an_untitled_row(self, db_session, owner):
+        conv = await _create(db_session, owner.id)
+        result = await ConversationRepository.set_name_if_untitled(db_session, conv, "Title")
+        assert result.name == "Title"
+
+    async def test_leaves_a_name_set_since_the_row_was_loaded(self, db_session, owner):
+        conv = await _create(db_session, owner.id)
+        # Renamed behind the loaded row's back, as by a concurrent request.
+        await db_session.execute(
+            update(Conversation)
+            .where(Conversation.id == conv.id)
+            .values(name="Renamed")
+            .execution_options(synchronize_session=False)
+        )
+        result = await ConversationRepository.set_name_if_untitled(db_session, conv, "Title")
+        assert result.name == "Renamed"
+
+    async def test_leaves_a_soft_deleted_row(self, db_session, owner):
+        conv = await _create(db_session, owner.id)
+        conv.soft_delete()
+        await db_session.flush()
+        result = await ConversationRepository.set_name_if_untitled(db_session, conv, "Title")
+        assert result.name == ""
 
 
 class TestSoftDelete:
