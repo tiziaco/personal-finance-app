@@ -1676,7 +1676,7 @@ Spec §2.1, §3.2 (`PATCH /batch`, `DELETE /batch`, `DELETE ""`), §3.4.
   - routes `batchUpdateTransactionCategory`, `batchDeleteTransactions`, `deleteAllTransactions`
   - `handlers.erase_on_user_erasing` subscribed inline to `USER_ERASING`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `tests/unit/modules/transaction/test_handlers.py`:
 
@@ -1828,7 +1828,7 @@ class TestBatchRoutes:
 
 Run all three files → FAIL.
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 `schemas.py`:
 
@@ -2009,7 +2009,7 @@ async def delete_all(request: Request, db_session: DbSession, user: CurrentUser)
     return DeleteAllResponse(deleted=await transaction_service.delete_all_for_user(db_session, user.id))
 ```
 
-- [ ] **Step 3: Run, gate, regenerate, commit**
+- [x] **Step 3: Run, gate, regenerate, commit**
 
 Run: `APP_ENV=test uv run pytest tests/unit tests/integration/modules -v` → PASS (account's erasure tests too: `subscriber_count` is now 2).
 Run (repo root): `make check-server && make gen-contract`.
