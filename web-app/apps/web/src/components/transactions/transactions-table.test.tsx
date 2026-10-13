@@ -185,10 +185,31 @@ describe("TransactionsTable", () => {
   it("shows neither empty state for an empty page while rows exist", () => {
     // page 2 is the last by total, so it does not move; the rows are elsewhere
     result([], 25)
-    renderAt("?page=2")
+    const { container } = renderAt("?page=2")
     expect(screen.queryByText("No transactions yet.")).not.toBeInTheDocument()
     expect(
       screen.queryByText("No transactions match your filters."),
     ).not.toBeInTheDocument()
+    expect(
+      container.querySelectorAll('[data-slot="skeleton"]').length,
+    ).toBeGreaterThan(0)
+  })
+
+  it("shows neither empty state while the clamped page loads over the empty one", () => {
+    // keepPreviousData: the empty page stays on screen as placeholder data
+    list.mockReturnValue({
+      data: { items: [], total: 25 },
+      isPending: false,
+      isPlaceholderData: true,
+      isError: false,
+    } as unknown as ReturnType<typeof useListTransactions>)
+    const { container } = renderAt("?page=2")
+    expect(screen.queryByText("No transactions yet.")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("No transactions match your filters."),
+    ).not.toBeInTheDocument()
+    expect(
+      container.querySelectorAll('[data-slot="skeleton"]').length,
+    ).toBeGreaterThan(0)
   })
 })

@@ -68,14 +68,16 @@ export function TransactionsTable() {
   const narrowed = hasActiveTransactionsFilters(state.query)
 
   // A page past the end — its last row deleted, or a hand-edited ?page= —
-  // comes back empty with the real total. Neither empty state is true then:
-  // show the skeleton and move to the last page that has rows, without a
-  // Back entry. Only a page beyond that one moves, so this cannot loop.
+  // comes back empty with the real total. Neither empty state is true then,
+  // nor while that empty page stays on screen as placeholder data for the
+  // next one: show the skeleton. A settled one moves to the last page that
+  // has rows, without a Back entry. Only a page beyond that one moves, so
+  // this cannot loop.
   const total = data?.total ?? 0
   const lastPageIndex = Math.ceil(total / TRANSACTIONS_PAGE_SIZE) - 1
-  const emptyPageOfMany =
-    !isPlaceholderData && data?.items.length === 0 && total > 0
-  const pastTheEnd = emptyPageOfMany && state.pageIndex > lastPageIndex
+  const emptyPageOfMany = data?.items.length === 0 && total > 0
+  const pastTheEnd =
+    emptyPageOfMany && !isPlaceholderData && state.pageIndex > lastPageIndex
   const { setPage } = state
   useEffect(() => {
     if (pastTheEnd) setPage(lastPageIndex, { history: "replace" })
