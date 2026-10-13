@@ -31,20 +31,6 @@ Two findings do not wait on that decision and are small on their own:
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
 
-## Server — email uniqueness, before the first finance table
-
-`user.email` is unique, so a stale row holding an email locks out whoever signs up with it
-next ([`BUGS.md`](./BUGS.md), **A re-registered or changed email locks the new account
-out**). **Decide before** the first finance table references `user` (roadmap step 2,
-Transactions), because the choice changes the migration. Either:
-
-- drop `unique=True` on `User.email`: Clerk owns email uniqueness and `clerk_id` is the
-  identity; or
-- keep it, and on an email collision in JIT reclaim the stale row when
-  `exists_in_clerk(holder.clerk_id)` is false.
-
-**Unblocks:** closing that bug.
-
 ## Server — the R9 import-linter contract
 
 The rule that a `domain` slot imports no ORM and no framework has no contract yet,

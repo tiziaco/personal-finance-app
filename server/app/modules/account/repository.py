@@ -32,13 +32,6 @@ class UserRepository:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def get_by_email(session: AsyncSession, email: str) -> Optional[User]:
-        """Get a user by email."""
-        statement = select(User).where(User.email == email)
-        result = await session.execute(statement)
-        return result.scalar_one_or_none()
-
-    @staticmethod
     async def create(
         session: AsyncSession,
         clerk_id: str,
@@ -86,12 +79,12 @@ class UserRepository:
         """Create a user, or return the existing one if a concurrent request won the race.
 
         Two requests JIT-provisioning the same clerk_id can race; the loser's
-        insert hits the unique constraint. Roll back and return the winner's row
-        rather than surfacing a conflict.
+        insert hits the unique constraint on clerk_id. Roll back and return the
+        winner's row rather than surfacing a conflict.
 
         Raises UserAlreadyExistsError when the re-fetch by clerk_id finds
-        nothing: the IntegrityError was some other collision (an email already
-        held by a different clerk_id), so it is a genuine conflict.
+        nothing: the IntegrityError was not that race. Email is not unique
+        (Clerk owns it), so no email collision reaches here.
         """
         try:
             return await UserRepository.create(

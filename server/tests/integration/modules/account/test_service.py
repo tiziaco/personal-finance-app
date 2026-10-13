@@ -68,6 +68,20 @@ class TestJITProvisioning:
         assert user.email == "jit_new@example.com"
         assert user.id is not None
 
+    @patch("app.modules.account.service.clerk_client.get_primary_email")
+    @patch("app.modules.account.service.clerk_client.get_user")
+    async def test_jit_provisions_onto_an_email_a_stale_row_holds(
+        self, mock_get_user, mock_get_email, service, db_session, existing_user
+    ):
+        """BUGS.md reproduction: same email, new clerk_id → a new user, not UserAlreadyExistsError."""
+        mock_get_user.return_value = self._make_clerk_user("clerk_jit_reregistered")
+        mock_get_email.return_value = existing_user.email
+
+        user = await service.resolve_user(db_session, "clerk_jit_reregistered")
+
+        assert user.clerk_id == "clerk_jit_reregistered"
+        assert user.id != existing_user.id
+
     @patch("app.modules.account.service.clerk_client.get_user")
     async def test_clerk_not_found_raises(self, mock_get_user, service, db_session):
         mock_get_user.side_effect = ClerkUserNotFoundError("not found")

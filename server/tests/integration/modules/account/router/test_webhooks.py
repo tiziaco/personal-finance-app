@@ -276,3 +276,17 @@ async def test_user_updated_after_deletion_does_not_resurrect(client, db_session
 
     result = await db_session.execute(select(User).where(User.clerk_id == "user_e2e"))
     assert result.scalars().all() == []
+
+
+async def test_user_created_with_an_email_a_stale_row_holds_persists(client, db_session):
+    """A second Clerk account on a held email is provisioned, not rejected."""
+    stale = User(clerk_id="user_stale", email="ada@e2e.test")
+    db_session.add(stale)
+    await db_session.flush()
+
+    response = await post(client, "user.created", USER_DATA)
+
+    assert response.status_code == 204
+    user = await UserRepository.get_by_clerk_id(db_session, "user_e2e")
+    assert user is not None
+    assert user.email == "ada@e2e.test"
