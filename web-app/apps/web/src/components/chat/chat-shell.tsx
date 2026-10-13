@@ -73,18 +73,21 @@ export function NewChatPage() {
   return <Thread />
 }
 
-/** /chat/[conversationId] — one conversation, or not-found for an unknown or foreign id. */
+/** /chat/[conversationId] — one conversation, or not-found for an unknown, foreign or malformed id. */
 export function ConversationPage() {
   const activeId = useActiveConversationId()
   const history = useListChatMessages(activeId ?? "", {
     query: { enabled: activeId !== null, meta: { silentError: true } },
   })
+  // A malformed id is answered 422 by the path's UUID validation: to the user
+  // it is a conversation that doesn't exist, the same as a 404.
   const notFound =
-    history.error instanceof ApiError && history.error.status === 404
+    history.error instanceof ApiError &&
+    (history.error.status === 404 || history.error.status === 422)
 
   // silentError (on this query's every observer) keeps QueryProvider from
   // toasting, and a query's meta can't depend on the status. So the toast it
-  // would have shown is raised here, for every error but the 404 rendered below.
+  // would have shown is raised here, for every error but the not-found below.
   const hasData = history.data !== undefined
   useEffect(() => {
     // Mirrors QueryProvider's rule: a failed refetch behind shown data stays silent.
