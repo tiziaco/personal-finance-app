@@ -2,7 +2,6 @@
 
 import { ApiError, toastForError } from "@app/api-client"
 import { useListChatMessages } from "@app/api-client/endpoints/chatbot"
-import { useIsMobile } from "@app/ui/hooks/use-mobile"
 import { Button } from "@app/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
 import { Skeleton } from "@app/ui/skeleton"
@@ -25,19 +24,20 @@ import { Thread } from "./thread"
  */
 export function ChatShell({ children }: { children: ReactNode }) {
   const activeId = useActiveConversationId()
-  const isMobile = useIsMobile()
   const [open, setOpen] = useState(false)
 
   return (
     <ChatRuntimeProvider>
       <div className="flex h-[calc(100svh-2rem)] min-h-0 gap-4">
-        {isMobile ? null : (
-          <aside className="flex w-64 shrink-0 flex-col border-r pr-2">
-            <ConversationList activeId={activeId} />
-          </aside>
-        )}
+        {/* The breakpoint is CSS, not useIsMobile(): that flag is false on
+            first paint, so a phone would render the desktop aside for a frame
+            and the composer would size itself to the squeezed thread. md is
+            768px, the hook's MOBILE_BREAKPOINT. */}
+        <aside className="hidden w-64 shrink-0 flex-col border-r pr-2 md:flex">
+          <ConversationList activeId={activeId} />
+        </aside>
         <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-          {isMobile && (
+          <div className="md:hidden">
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger
                 render={
@@ -60,7 +60,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
                 />
               </SheetContent>
             </Sheet>
-          )}
+          </div>
           {children}
         </section>
       </div>

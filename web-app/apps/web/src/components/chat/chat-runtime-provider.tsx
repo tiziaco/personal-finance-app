@@ -133,8 +133,8 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       )
       const row = rows?.find((r) => r.conversation_id === conversationId)
       // `name` is optional in the contract: absent and "" both mean untitled.
-      // No list in the cache (mobile, Sheet closed) asks too: the server
-      // answers a named conversation unchanged.
+      // No list in the cache (its fetch failed or is still in flight) asks
+      // too: the server answers a named conversation unchanged.
       if (row?.name) return
       generateTitle.mutate({ conversationId })
     },
@@ -192,10 +192,10 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
           if (stillHere) restoreTextRef.current(text)
           return
         }
-        // Prepend only to a list already loaded: on mobile the list mounts
-        // only in the open Sheet, so its cache can be empty here, and seeding
-        // it would show a one-row list until it went stale. The refetch also
-        // covers a list whose first fetch was in flight at the create.
+        // Prepend only to a list already loaded: its cache can be empty here
+        // (its first fetch failed or is still in flight), and seeding it would
+        // show a one-row list until it went stale. The refetch also covers a
+        // list whose first fetch was in flight at the create.
         const listKey = getListConversationsQueryKey()
         queryClient.setQueryData<ConversationResponse[]>(
           listKey,

@@ -329,8 +329,8 @@ describe("ChatRuntimeProvider", () => {
     expect(mocks.replace).toHaveBeenCalledTimes(1)
   })
 
-  // On mobile the list only mounts in the open Sheet, so at the first send
-  // its cache can be empty; seeding it then would leave a one-row list.
+  // At the first send the list's cache can be empty (its fetch failed or is
+  // still in flight); seeding it then would leave a one-row list.
   it("a first send with no list loaded does not seed a one-row list, and refreshes the list", async () => {
     mocks.stream.mockImplementation(() => chunks("Hello"))
     const { client } = renderChat()
