@@ -224,6 +224,12 @@ export function DataTableCore<TData, TValue>({
         data.map((row, i) => rowIdOf(row, i)),
       )
     : {}
+  // Commit the prune to state (adjust-state-during-render): a row that leaves
+  // the screen stays deselected if it comes back. Loop-free: pruneSelection
+  // returns the same object once nothing is left to drop.
+  if (enableRowSelection && selection !== rowSelection)
+    setRowSelection(selection)
+  const selectedCount = Object.keys(selection).length
   const handleSelectionChange: OnChangeFn<RowSelectionState> = (updater) =>
     setRowSelection(
       typeof updater === "function" ? updater(selection) : updater,
@@ -416,9 +422,9 @@ export function DataTableCore<TData, TValue>({
         </div>
       )}
 
-      {enableRowSelection && Object.keys(selection).length > 0 && (
+      {enableRowSelection && selectedCount > 0 && (
         <DataTableBulkBar
-          count={Object.keys(selection).length}
+          count={selectedCount}
           onClear={() => setRowSelection({})}
         >
           {renderBulkActions?.(

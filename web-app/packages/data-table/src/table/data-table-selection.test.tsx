@@ -77,6 +77,28 @@ describe("row selection", () => {
     expect(screen.queryByText(/selected/)).toBeNull()
   })
 
+  it("a row that left the screen stays deselected when it returns", async () => {
+    const { rerender, renderBulkActions } = renderTable(page1)
+    await userEvent.click(
+      screen.getAllByRole("checkbox", { name: "Select row" })[0],
+    )
+    const table = (data: Row[]) => (
+      <ServerDataTable
+        columns={columns}
+        data={data}
+        controls={controls}
+        enableRowSelection
+        renderBulkActions={renderBulkActions}
+      />
+    )
+    rerender(table([{ id: "c", name: "C" }]))
+    rerender(table(page1))
+    expect(screen.queryByText(/selected/)).toBeNull()
+    expect(
+      screen.getAllByRole("checkbox", { name: "Select row" })[0],
+    ).not.toBeChecked()
+  })
+
   it("adds no checkbox column unless enabled", () => {
     render(
       <ServerDataTable columns={columns} data={page1} controls={controls} />,
