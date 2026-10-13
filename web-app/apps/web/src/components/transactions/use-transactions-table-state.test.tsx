@@ -34,6 +34,22 @@ describe("useTransactionsTableState", () => {
     expect(url?.get("page")).toBeNull()
   })
 
+  it("clearing categories removes the key", async () => {
+    let url: URLSearchParams | undefined
+    const { result } = renderHook(() => useTransactionsTableState(), {
+      wrapper: withNuqsTestingAdapter({
+        searchParams: "?category=atm",
+        onUrlUpdate: (u) => (url = u.searchParams),
+      }),
+    })
+    await act(async () => {
+      await (result.current.setFilters(
+        EMPTY_TRANSACTIONS_FILTERS,
+      ) as unknown as Promise<unknown>)
+    })
+    expect(url?.has("category")).toBe(false)
+  })
+
   it("search writes search", async () => {
     let url: URLSearchParams | undefined
     const { result } = renderHook(() => useTransactionsTableState(), {

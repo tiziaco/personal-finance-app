@@ -82,7 +82,8 @@ export function fromTransactionsFilters(
   f: TransactionsFilters,
 ): Partial<TransactionsValues> {
   return {
-    category: f.categories.length > 0 ? f.categories : null,
+    // nuqs drops an empty array from the URL
+    category: f.categories,
     amount_min: f.amountMin || null,
     amount_max: f.amountMax || null,
     is_recurring: f.recurring,
@@ -100,7 +101,7 @@ export function toTransactionsQuery(
     ...toOffsetLimit(v.page, TRANSACTIONS_PAGE_SIZE),
     ordering: v.ordering,
     search: v.search,
-    category: v.category.length > 0 ? v.category : null,
+    category: v.category.length > 0 ? v.category : undefined,
     amount_min: v.amount_min,
     amount_max: v.amount_max,
     is_recurring: v.is_recurring,
