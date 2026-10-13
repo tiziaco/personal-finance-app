@@ -103,6 +103,65 @@ async function* chunks(...parts: string[]) {
   for (const part of parts) yield part
 }
 
+describe("ChatRuntimeProvider — leaving and refusals", () => {
+  // Review Focus 1
+  it("switching conversation mid-stream aborts it and does not carry the reply over", async () => {
+    mocks.params = { conversationId: "c1" }
+    routes["GET /api/v1/chatbot/chat/c2/messages"] = () => ({
+      messages: [{ role: "user", content: "older question" }],
+    })
+    let signal: AbortSignal | undefined
+    mocks.stream.mockImplementation(async function* (opts: {
+      signal: AbortSignal
+    }) {
+      signal = opts.signal
+      yield "streaming in c1"
+      await new Promise((_, reject) =>
+        opts.signal.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        ),
+      )
+    })
+    const { rerender, client } = renderChat()
+    await send("hi")
+    await screen.findByText("streaming in c1")
+
+    mocks.params = { conversationId: "c2" }
+    rerender(
+      <QueryClientProvider client={client}>
+        <ChatRuntimeProvider>
+          <Thread />
+        </ChatRuntimeProvider>
+      </QueryClientProvider>,
+    )
+
+    await waitFor(() => expect(signal?.aborted).toBe(true))
+    expect(await screen.findByText("older question")).toBeInTheDocument()
+    expect(screen.queryByText("streaming in c1")).toBeNull()
+    expect(screen.queryByText(CHAT_COPY.stopped)).toBeNull()
+  })
+
+  // Review Focus 3
+  it("a refused stream start toasts, shows no bubbles and gives the text back", async () => {
+    mocks.params = { conversationId: "c1" }
+    const { ApiError } = await import("@app/api-client")
+    mocks.stream.mockImplementation(async function* () {
+      throw new ApiError("HTTP 429", 429, null, null)
+    })
+    renderChat()
+    await send("too fast")
+
+    await waitFor(() => expect(mocks.toast).toHaveBeenCalledOnce())
+    expect(mocks.toast.mock.calls[0][0]).toMatchObject({ status: 429 })
+    expect(document.querySelector('[data-role="user"]')).toBeNull()
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+      ).toHaveValue("too fast"),
+    )
+  })
+})
+
 describe("ChatRuntimeProvider", () => {
   it("creates a conversation on the first send, replaces the URL and streams the reply", async () => {
     mocks.stream.mockImplementation(() => chunks("Hel", "lo"))
