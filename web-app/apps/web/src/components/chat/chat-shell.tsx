@@ -5,7 +5,7 @@ import { useListChatMessages } from "@app/api-client/endpoints/chatbot"
 import { Button } from "@app/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
 import { Skeleton } from "@app/ui/skeleton"
-import { PanelLeftIcon } from "lucide-react"
+import { MessagesSquareIcon } from "lucide-react"
 import { useEffect, useState, type ReactNode } from "react"
 
 import {
@@ -48,7 +48,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
                   />
                 }
               >
-                <PanelLeftIcon />
+                <MessagesSquareIcon />
               </SheetTrigger>
               <SheetContent side="left" className="p-2">
                 <SheetTitle className="sr-only">

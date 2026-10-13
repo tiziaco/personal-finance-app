@@ -1,7 +1,7 @@
 /** User-facing copy for the chat screen. Server text is never rendered. */
 export const CHAT_COPY = {
   welcomeTitle: "Ask about anything",
-  welcomeBody: "Your conversations are kept in the list on the left.",
+  welcomeBody: "Your conversations are kept in the list.",
   inputLabel: "Message",
   placeholder: "Send a message…",
   send: "Send",
