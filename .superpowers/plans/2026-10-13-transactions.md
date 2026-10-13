@@ -657,7 +657,7 @@ Spec §2.3, §3.2 (`POST`, `PATCH /{id}`, `DELETE /{id}`), §3.2.2, §3.3. Revie
   - `dependencies.UserTransaction` (Annotated) and `get_user_transaction`
   - routes `createTransaction` (201), `updateTransaction`, `deleteTransaction` (204)
 
-- [ ] **Step 1: Failing unit tests for the fingerprint**
+- [x] **Step 1: Failing unit tests for the fingerprint**
 
 `tests/unit/modules/transaction/test_service.py`:
 
@@ -711,7 +711,7 @@ def test_amount_is_never_a_float():
 
 Run: `APP_ENV=test uv run pytest tests/unit/modules/transaction/test_service.py -v` → FAIL (ImportError).
 
-- [ ] **Step 2: Implement the fingerprint**
+- [x] **Step 2: Implement the fingerprint**
 
 In `service.py` add (imports at the top of the file):
 
@@ -743,7 +743,7 @@ def fingerprint(
 
 Run the unit tests → PASS.
 
-- [ ] **Step 3: Schemas**
+- [x] **Step 3: Schemas**
 
 Append to `schemas.py` (add `import datetime as dt`, `import uuid`, `from datetime import datetime`, `from decimal import Decimal`, `from typing import Annotated, Optional`, `from pydantic import StringConstraints, field_validator, model_validator` at the top):
 
@@ -826,7 +826,7 @@ class TransactionResponse(BaseModel):
 
 (`TransactionResponse.category` typed `Category`: a row whose slug was later removed from the list would fail serialisation — Task 7's seed maps unknown slugs to `miscellaneous`, and renaming a slug ships with its UPDATE, so a stored slug is always in the enum.)
 
-- [ ] **Step 4: Fill `make_transaction`, then failing integration tests for the service**
+- [x] **Step 4: Fill `make_transaction`, then failing integration tests for the service**
 
 Replace the `make_transaction` fixture in `tests/integration/modules/transaction/conftest.py`:
 
@@ -970,7 +970,7 @@ class TestImportMany:
 
 Run: `APP_ENV=test uv run pytest tests/integration/modules/transaction/test_service.py -v` → FAIL (methods missing).
 
-- [ ] **Step 5: Repository and service methods**
+- [x] **Step 5: Repository and service methods**
 
 `repository.py`:
 
@@ -1123,7 +1123,7 @@ transaction_repository = TransactionRepository()
 
 Run the service tests → PASS.
 
-- [ ] **Step 6: Ownership dependency and the three routes — failing route tests first**
+- [x] **Step 6: Ownership dependency and the three routes — failing route tests first**
 
 Append to `router/test_transactions.py` (add `import uuid` and `from uuid_utils.compat import uuid7` at the top):
 
@@ -1295,7 +1295,7 @@ async def delete_transaction(request: Request, transaction: UserTransaction, db_
 
 Add `DbSession`, `TransactionCreate`, `TransactionUpdate`, `TransactionResponse`, `UserTransaction` imports. Export `TransactionImport`, `TransactionResponse`, `UserTransaction`, `get_user_transaction` from `__init__.py`.
 
-- [ ] **Step 7: Run, gate, regenerate, commit**
+- [x] **Step 7: Run, gate, regenerate, commit**
 
 Run: `APP_ENV=test uv run pytest tests/unit/modules/transaction tests/integration/modules/transaction tests/unit/api -v` → PASS.
 Run (repo root): `make check-server && make gen-contract`.
