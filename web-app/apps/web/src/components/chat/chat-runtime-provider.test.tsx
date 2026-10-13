@@ -313,6 +313,58 @@ describe("ChatRuntimeProvider", () => {
     expect(mocks.replace).toHaveBeenCalledTimes(1)
   })
 
+  // On mobile the list only mounts in the open Sheet, so at the first send
+  // its cache can be empty; seeding it then would leave a one-row list.
+  it("a first send with no list loaded does not seed a one-row list, and refreshes the list", async () => {
+    mocks.stream.mockImplementation(() => chunks("Hello"))
+    const { client } = renderChat()
+    const invalidate = vi.spyOn(client, "invalidateQueries")
+    await send("hi")
+
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/chat/c1"))
+    expect(client.getQueryData(getListConversationsQueryKey())).toBeUndefined()
+    expect(invalidate).toHaveBeenCalledWith(
+      expect.objectContaining({ queryKey: getListConversationsQueryKey() }),
+    )
+  })
+
+  it("Stop, then leaving while the conversation is created, does not pull the user back", async () => {
+    let release: () => void = () => {}
+    routes["POST /api/v1/conversation/conversation"] = () =>
+      new Promise((resolve) => {
+        release = () =>
+          resolve({
+            conversation_id: "c1",
+            name: "",
+            created_at: "2026-10-13T10:00:00Z",
+          })
+      })
+    routes["GET /api/v1/chatbot/chat/c2/messages"] = () => ({ messages: [] })
+    const { rerender, client } = renderChat()
+    await send("hi")
+    await userEvent.click(
+      await screen.findByRole("button", { name: CHAT_COPY.stop }),
+    )
+
+    mocks.params = { conversationId: "c2" }
+    rerender(
+      <QueryClientProvider client={client}>
+        <ChatRuntimeProvider>
+          <Thread />
+        </ChatRuntimeProvider>
+      </QueryClientProvider>,
+    )
+    release()
+
+    await waitFor(() => expect(client.isMutating()).toBe(0))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(mocks.replace).not.toHaveBeenCalled()
+    expect(mocks.stream).not.toHaveBeenCalled()
+    expect(
+      screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+    ).toHaveValue("")
+  })
+
   it("Stop before the stream starts ends the send as stopped without streaming", async () => {
     let release: () => void = () => {}
     routes["POST /api/v1/conversation/conversation"] = () =>

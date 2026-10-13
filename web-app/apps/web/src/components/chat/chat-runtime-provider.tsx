@@ -56,7 +56,11 @@ type Exchange = {
   status: "running" | "stopped" | "error"
 }
 
-/** Abort reason when the user leaves the conversation (or the screen) mid-send. */
+/**
+ * Abort reason when the user leaves the conversation (or the screen) mid-send.
+ * A label for the stream's signal only: whether a send still belongs to the
+ * screen is read from controllerRef, which a Stop leaves in place.
+ */
 const LEFT = "left"
 
 const EMPTY: Message[] = []
@@ -146,8 +150,12 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       inflightIdRef.current = activeId
       const update = (change: (e: Exchange) => Exchange | null) =>
         setExchange((e) => (e?.key === key ? change(e) : e))
+      // Leaving (or unmounting) drops this send's controller from the ref;
+      // Stop aborts it but leaves it there. So ownership, not the abort
+      // reason, is what says the user is still on this send's screen.
+      const owned = () => controllerRef.current === controller
       const release = () => {
-        if (controllerRef.current !== controller) return
+        if (!owned()) return
         controllerRef.current = null
         inflightIdRef.current = null
       }
@@ -173,18 +181,25 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
           created = await createConversation.mutateAsync()
         } catch {
           // The mutation cache has already toasted.
+          const stillHere = owned()
           update(() => null)
           release()
-          if (controller.signal.reason !== LEFT) restoreTextRef.current(text)
+          if (stillHere) restoreTextRef.current(text)
           return
         }
+        // Prepend only to a list already loaded: on mobile the list mounts
+        // only in the open Sheet, so its cache can be empty here, and seeding
+        // it would show a one-row list until it went stale. The refetch also
+        // covers a list whose first fetch was in flight at the create.
+        const listKey = getListConversationsQueryKey()
         queryClient.setQueryData<ConversationResponse[]>(
-          getListConversationsQueryKey(),
-          (rows) => [created, ...(rows ?? [])],
+          listKey,
+          (rows) => rows && [created, ...rows],
         )
-        // Left for another conversation while this one was being created: it
-        // exists (it is in the list), but the user is elsewhere now.
-        if (controller.signal.reason === LEFT) return
+        void queryClient.invalidateQueries({ queryKey: listKey })
+        // Left for another conversation while this one was being created (a
+        // Stop first included): it exists, but the user is elsewhere now.
+        if (!owned()) return
         conversationId = created.conversation_id
         // A new conversation's history is known to be empty. Seeding it means
         // /chat/[id] renders the thread at once instead of a loading skeleton
