@@ -1,7 +1,7 @@
 # Transactions — design
 
 **Roadmap step:** 2 Transactions · **Branch:** `feat/transactions` (worktree slot 1) · **PR into:**
-`template-base` · **Date:** 13 Oct 2026 · **Status:** awaiting the user's review
+`template-base` · **Date:** 13 Oct 2026 · **Status:** approved 13 Oct 2026; amended with what the plan's code survey found
 
 Built beside step 3, Chat screen (`feat/chat-screen`). The ownership split and the eight
 conditions both steps follow are in `.superpowers/BRIEF.md`; this spec stays inside them.
@@ -128,7 +128,8 @@ the module, unit-tested against fixed vectors so step 4 cannot drift from it.
 and `clerk_id` is the identity; nothing on the server looks a user up by email. No reclaim, no
 Clerk call in JIT. `UserRepository.create_or_get`'s docstring drops the email-collision case;
 `UserAlreadyExistsError` stays for its remaining cause (a `clerk_id` race whose re-fetch finds
-nothing).
+nothing). `UserRepository.get_by_email` is removed: it was used only by its own tests, and with
+duplicates allowed its `scalar_one_or_none` would raise.
 
 ### 2.5 Migrations
 
@@ -237,8 +238,10 @@ filtered, active rows.
 
 `POST /transactions` computes the fingerprint and looks for an **active** row with the same
 `(user_id, fingerprint)`. On a match and `allow_duplicate` false (the default) it raises
-`DuplicateTransactionError` → 409, `details` carrying the existing row's `id`, `date`, `merchant`,
-`amount`. `allow_duplicate: true` in the body skips the check. Soft-deleted rows do not count.
+`DuplicateTransactionError` → 409, `details` carrying only `existing_transaction_id`. A fingerprint
+match means date, merchant, amount and description already equal what the caller sent, so the
+dialog words the notice from its own input; and an exception's context is logged, so merchant
+text stays out of it. `allow_duplicate: true` in the body skips the check. Soft-deleted rows do not count.
 Edits do not check.
 
 ### 3.4 Batches
@@ -284,19 +287,25 @@ delete is one batch call, not `Promise.allSettled`.
 
 ### 4.3 `@app/data-table` additions (generic — no transaction knowledge)
 
-- **Row selection:** opt-in `enableRowSelection` on `DataTableCore` / `ServerDataTable`, and a
-  `selectionColumn()` helper in `columns.ts`. Selection is per page and clears when page,
-  filters, ordering or search change; it never crosses pages, so a bulk action touches only
-  visible rows and the 100 cap holds by construction.
-- **`DataTableBulkBar`:** "N selected", Clear, and a slot for the page's action buttons; shown
-  while rows are selected.
-- **Phone layout:** a `renderCard(row)` prop; below `sm` (`useIsMobile`) the table renders a card
-  list. Sorting stays in the toolbar.
+- **Row selection:** opt-in `enableRowSelection` on the shared table props; the core adds the
+  checkbox column itself (as it does the expander). Selection holds only rows on screen: a page,
+  filter, ordering or search change that removes a row deselects it, so a bulk action touches
+  only visible rows and the 100 cap holds by construction.
+- **`DataTableBulkBar`:** "N selected", Clear, and the page's actions from
+  `renderBulkActions(selected, clear)`; shown while rows are selected, desktop only.
+- **Phone layout:** a `renderCard(row)` prop; below 768px (`useIsMobile`, the app's one
+  breakpoint) the body is a card list. Toolbar, chips and pager stay.
+- **Filters:** `DateFilterControl` gains `presets` (today, this week — Monday first —, this
+  month, last month, as a closed range); a new `FilterCheckboxGroup` picks several values from a
+  fixed list (the category filter).
 
 ### 4.4 Mutations and errors
 
 Every mutation invalidates the transaction list query on success. Errors toast through
-`QueryProvider`, except the add dialog's 409 `DUPLICATE_TRANSACTION`, which it handles inline:
+`QueryProvider`, except the add dialog's 409 `DUPLICATE_TRANSACTION`, which it handles inline.
+`QueryProvider`'s mutation cache toasts every failure today, so it gains an opt-out: a mutation
+whose `meta.silentStatuses` lists a status is not toasted for it (`@app/api-client`,
+`query-provider.tsx`). The notice:
 "You already have a transaction on 3 Mar 2026 at Späti for −€4.50." with **Add anyway** (resend
 with `allow_duplicate: true`) and **Cancel**. Changing any field clears the notice.
 
@@ -309,8 +318,12 @@ invalidate. Step 3 also edits `layout.tsx`; the second to merge takes a union.
 
 ### 4.6 `@app/ui` primitives
 
-Added with the shadcn CLI, no hand edits: `alert-dialog`, `calendar`, `checkbox`, `switch`,
-`textarea`. If step 3 merges one first, take `template-base`'s copy (condition 6).
+`alert-dialog`, `checkbox`, `switch`, `textarea`. No `calendar`: dates are native
+`<input type="date">`, as `DateFilterControl` already uses. Condition 6 asks for the shadcn CLI;
+`components.md` says the CLI cannot resolve this repo's alias and primitives are installed by
+hand. The CLI is tried first; if it fails, they are installed by hand from the Base UI docs, and
+the orchestrator is told so step 3 does the same. If step 3 merges one first, take
+`template-base`'s copy.
 
 ---
 
@@ -318,7 +331,8 @@ Added with the shadcn CLI, no hand edits: `alert-dialog`, `calendar`, `checkbox`
 
 ### 5.1 The data
 
-`server/scripts/seed_data/transactions.csv` — columns `date, merchant, amount, description,
+`server/data/transactions-seed.csv` (`server/CLAUDE.md`: seed data lives in `server/data/`, which
+`.dockerignore` keeps out of the image) — columns `date, merchant, amount, description,
 category, confidence, is_recurring, original_category`; `category` in slugs; `original_category`
 the N26 `Type` (`Presentment`, `Direct Debit`, …).
 
@@ -346,8 +360,8 @@ committed** (it must name what it masks):
 `server/scripts/seed_transactions.py`; `make -C server seed-transactions CLERK_ID=user_…`, and a
 root `make seed-transactions` that delegates (listed in `make help`).
 
-- Refuses unless `APP_ENV=development`; refuses if no `"user"` row has that `clerk_id` (sign in
-  once first).
+- Refuses unless `APP_ENV=development`. Resolves the user as a request does
+  (`user_service.resolve_user`), so a Clerk user who has never signed in is JIT-provisioned.
 - Replaces: the hard delete-all, then a bulk insert — rerunning resets rather than duplicates.
 - Date shift: `months = (today.year*12 + today.month) − (newest.year*12 + newest.month)`; each row
   moves forward that many months, its day clamped to the month's length; rows after today are
@@ -396,6 +410,8 @@ Web (load `web-app-testing`; every component with a branch):
 | `web-app/apps/web/src/lib/hub-nav.ts` | union: Home, Transactions, Chat |
 | `web-app/apps/web/src/app/(dashboard)/layout.tsx` | union: step 3's chat-route treatment, this step's Settings tab |
 | `server/app/core/config.py` | union: step 3's LLM/memory/eval settings, this step's `TRANSACTIONS` rate limit |
+| `server/CLAUDE.md` | union: step 3's OpenRouter lines, this step's two GDPR lines |
+| `web-app/packages/api-client/src/query-provider.tsx` | this step's `silentStatuses` opt-out; step 3 is not expected to touch it |
 | `web-app/packages/ui` primitives and barrel | take `template-base`'s copy of any shared primitive |
 | `server/openapi.json`, `generated/`, `uv.lock`, `pnpm-lock.yaml` | never hand-merged: `make gen-contract`, `uv lock`, `pnpm install` |
 
@@ -432,7 +448,10 @@ fixtures, `version` in `server/pyproject.toml`.
 - `docs/BUGS.md`: the email-lockout entry removed. `docs/TODO.md`: the email-uniqueness entry
   removed; a step-4 entry added — the empty state's CTA becomes "Upload a CSV".
 - `.claude/skills/web-app-patterns/references/data-tables.md`: row selection, the bulk bar,
-  `renderCard`.
+  `renderCard`, date presets, `FilterCheckboxGroup`.
+- `docs/architecture/server.md`: the module tree and the `USER_ERASING` subscriber row.
+- `server/CLAUDE.md` GDPR section: `transaction` hard-deletes on erasure; a PII model whose rows
+  nothing references may be hard-deleted by its subscriber instead of anonymised.
 - `docs/ROADMAP.md`: row 2 → `complete` with the PR link.
 
 Then this spec and its plan are deleted.
