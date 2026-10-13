@@ -106,6 +106,67 @@ describe("ConversationList", () => {
     ).toBeInTheDocument()
   })
 
+  // A mutate call's own callbacks run only for the latest call: the cache
+  // update lives in the hook's options, so an earlier rename still lands.
+  it("two renames in a row both land, the first resolving last", async () => {
+    let releaseFirst: () => void = () => {}
+    vi.mocked(globalThis.fetch).mockImplementation(async (input, init) => {
+      const path = new URL(String(input)).pathname
+      const method = init?.method ?? "GET"
+      if (method === "GET") {
+        return new Response(JSON.stringify(rows), {
+          headers: { "content-type": "application/json" },
+        })
+      }
+      const id = path.split("/").at(-2)
+      const name = new URLSearchParams(String(init?.body)).get("name")
+      const body = JSON.stringify({
+        ...rows.find((r) => r.conversation_id === id),
+        name,
+      })
+      const respond = () =>
+        new Response(body, { headers: { "content-type": "application/json" } })
+      if (id === "c1")
+        return new Promise<Response>((resolve) => {
+          releaseFirst = () => resolve(respond())
+        })
+      return respond()
+    })
+    renderList()
+
+    await openMenu("Groceries")
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: CHAT_COPY.rename }),
+    )
+    const first = screen.getByRole("textbox", { name: CHAT_COPY.rename })
+    await userEvent.clear(first)
+    await userEvent.type(first, "Food{Enter}")
+
+    // "New chat" is also the new-chat link's label: find the row's copy.
+    const untitled = (await screen.findAllByText(CHAT_COPY.untitled))
+      .map((el) => el.closest("[data-slot=conversation-row]"))
+      .find((row) => row !== null) as HTMLElement
+    await userEvent.click(
+      within(untitled).getByRole("button", { name: /options/i }),
+    )
+    await userEvent.click(
+      await screen.findByRole("menuitem", { name: CHAT_COPY.rename }),
+    )
+    await userEvent.type(
+      screen.getByRole("textbox", { name: CHAT_COPY.rename }),
+      "Trip{Enter}",
+    )
+    expect(
+      await screen.findByRole("link", { name: "Trip" }),
+    ).toBeInTheDocument()
+
+    releaseFirst()
+    expect(
+      await screen.findByRole("link", { name: "Food" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link", { name: "Trip" })).toBeInTheDocument()
+  })
+
   // Review Focus 4
   it("an empty or whitespace name sends nothing and keeps the old name", async () => {
     renderList()

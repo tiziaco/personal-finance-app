@@ -210,6 +210,22 @@ describe("ChatRuntimeProvider", () => {
     expect(screen.getAllByText("Hello")).toHaveLength(1)
   })
 
+  it("writes the generated title into the conversation list", async () => {
+    mocks.params = { conversationId: "c1" }
+    mocks.stream.mockImplementation(() => chunks("Hello"))
+    const { client } = renderChat()
+    client.setQueryData(getListConversationsQueryKey(), [
+      { conversation_id: "c1", name: "", created_at: "2026-10-13T10:00:00Z" },
+    ])
+    await send("hi")
+
+    await waitFor(() =>
+      expect(client.getQueryData(getListConversationsQueryKey())).toEqual([
+        expect.objectContaining({ conversation_id: "c1", name: "Groceries" }),
+      ]),
+    )
+  })
+
   it("does not ask for a title when the conversation already has a name", async () => {
     mocks.params = { conversationId: "c1" }
     mocks.stream.mockImplementation(() => chunks("Hello"))

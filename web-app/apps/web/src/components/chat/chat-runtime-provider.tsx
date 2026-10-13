@@ -76,7 +76,21 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const { getToken } = useAppAuth()
   const createConversation = useCreateConversation()
-  const generateTitle = useGenerateConversationTitle()
+  // The cache update is in the hook's options, not the mutate call: a call's
+  // own callbacks run only for the latest call, so a title for one
+  // conversation would be lost if another's was asked for before it landed.
+  const generateTitle = useGenerateConversationTitle({
+    mutation: {
+      onSuccess: (updated) =>
+        queryClient.setQueryData<ConversationResponse[]>(
+          getListConversationsQueryKey(),
+          (current) =>
+            current?.map((r) =>
+              r.conversation_id === updated.conversation_id ? updated : r,
+            ),
+        ),
+    },
+  })
   // silentError on both observers of this query: a query's meta is whichever
   // observer set its options last, and ConversationPage renders the 404 as a
   // not-found screen, which a "Not found." toast would only repeat.
@@ -114,24 +128,15 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
 
   const requestTitle = useCallback(
     (conversationId: string) => {
-      const listKey = getListConversationsQueryKey()
-      const rows = queryClient.getQueryData<ConversationResponse[]>(listKey)
+      const rows = queryClient.getQueryData<ConversationResponse[]>(
+        getListConversationsQueryKey(),
+      )
       const row = rows?.find((r) => r.conversation_id === conversationId)
       // `name` is optional in the contract: absent and "" both mean untitled.
+      // No list in the cache (mobile, Sheet closed) asks too: the server
+      // answers a named conversation unchanged.
       if (row?.name) return
-      generateTitle.mutate(
-        { conversationId },
-        {
-          onSuccess: (updated) =>
-            queryClient.setQueryData<ConversationResponse[]>(
-              listKey,
-              (current) =>
-                current?.map((r) =>
-                  r.conversation_id === updated.conversation_id ? updated : r,
-                ),
-            ),
-        },
-      )
+      generateTitle.mutate({ conversationId })
     },
     [generateTitle, queryClient],
   )

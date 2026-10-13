@@ -12,6 +12,7 @@ import { useQueryClient } from "@tanstack/react-query"
 import { SquarePenIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+import { useEffect, useRef } from "react"
 
 import { ConversationRow } from "./conversation-row"
 import { CHAT_COPY } from "./copy"
@@ -27,15 +28,36 @@ export function ConversationList({
   const queryClient = useQueryClient()
   const listKey = getListConversationsQueryKey()
   const { data, isPending } = useListConversations()
-  const rename = useRenameConversation()
-  const remove = useDeleteConversation()
 
-  const replaceRow = (updated: ConversationResponse) =>
-    queryClient.setQueryData<ConversationResponse[]>(listKey, (rows) =>
-      rows?.map((r) =>
-        r.conversation_id === updated.conversation_id ? updated : r,
-      ),
-    )
+  // Read when a delete succeeds, not when it was asked for.
+  const activeIdRef = useRef(activeId)
+  useEffect(() => {
+    activeIdRef.current = activeId
+  }, [activeId])
+
+  // Cache updates go in the hooks' options, not in each mutate call: a
+  // call's own callbacks run only for the latest call, so a second rename
+  // or delete sent before the first resolved would drop the first's update.
+  const rename = useRenameConversation({
+    mutation: {
+      onSuccess: (updated) =>
+        queryClient.setQueryData<ConversationResponse[]>(listKey, (rows) =>
+          rows?.map((r) =>
+            r.conversation_id === updated.conversation_id ? updated : r,
+          ),
+        ),
+    },
+  })
+  const remove = useDeleteConversation({
+    mutation: {
+      onSuccess: (_, { conversationId }) => {
+        queryClient.setQueryData<ConversationResponse[]>(listKey, (rows) =>
+          rows?.filter((r) => r.conversation_id !== conversationId),
+        )
+        if (conversationId === activeIdRef.current) router.push("/chat")
+      },
+    },
+  })
 
   return (
     <nav
@@ -67,32 +89,13 @@ export function ConversationList({
             active={conversation.conversation_id === activeId}
             onNavigate={onNavigate}
             onRename={(name) =>
-              rename.mutate(
-                {
-                  conversationId: conversation.conversation_id,
-                  data: { name },
-                },
-                { onSuccess: replaceRow },
-              )
+              rename.mutate({
+                conversationId: conversation.conversation_id,
+                data: { name },
+              })
             }
             onDelete={() =>
-              remove.mutate(
-                { conversationId: conversation.conversation_id },
-                {
-                  onSuccess: () => {
-                    queryClient.setQueryData<ConversationResponse[]>(
-                      listKey,
-                      (rows) =>
-                        rows?.filter(
-                          (r) =>
-                            r.conversation_id !== conversation.conversation_id,
-                        ),
-                    )
-                    if (conversation.conversation_id === activeId)
-                      router.push("/chat")
-                  },
-                },
-              )
+              remove.mutate({ conversationId: conversation.conversation_id })
             }
           />
         ))}
