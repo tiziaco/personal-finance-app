@@ -16,12 +16,14 @@ import {
   type OnChangeFn,
   type PaginationState,
   type Row,
+  type RowSelectionState,
   type SortingState,
   type VisibilityState,
 } from "@tanstack/react-table"
 import { rankItem } from "@tanstack/match-sorter-utils"
 import { ChevronDown, ChevronRight } from "lucide-react"
 import { Button } from "@app/ui/button"
+import { Checkbox } from "@app/ui/checkbox"
 import { Skeleton } from "@app/ui/skeleton"
 import {
   TableBody,
@@ -34,8 +36,10 @@ import {
 import { cn } from "@app/core/lib/utils"
 import { labels } from "../labels"
 import "./column-meta"
+import { DataTableBulkBar } from "./data-table-bulk-bar"
 import { DataTableColumnToggle } from "./data-table-column-toggle"
 import { DataTablePager } from "./data-table-pager"
+import { pruneSelection } from "./row-selection"
 import { TableSearchInput } from "./table-search-input"
 import type { ServerTableControls } from "./table-state"
 
@@ -116,6 +120,13 @@ export interface DataTableBaseProps<TData, TValue> {
   renderSubComponent?: (row: Row<TData>) => React.ReactNode
   /** nested rows, expandable in place (use row.depth / row.getCanExpand in cells) */
   getSubRows?: (originalRow: TData, index: number) => TData[] | undefined
+  /** a leading checkbox column; selection holds only rows on screen */
+  enableRowSelection?: boolean
+  /** the bulk bar's actions, shown while rows are selected */
+  renderBulkActions?: (
+    selected: TData[],
+    clearSelection: () => void,
+  ) => React.ReactNode
   showFooter?: boolean
   showColumnToggle?: boolean
   /** uncontrolled initial visibility, e.g. { internal_notes: false } */
@@ -176,6 +187,8 @@ export function DataTableCore<TData, TValue>({
   belowToolbar,
   renderSubComponent,
   getSubRows,
+  enableRowSelection = false,
+  renderBulkActions,
   showFooter = false,
   showColumnToggle = false,
   defaultColumnVisibility,
@@ -203,6 +216,18 @@ export function DataTableCore<TData, TValue>({
     pageSize: mode.kind === "client" ? mode.pageSize : 10,
   })
   const [expanded, setExpanded] = React.useState<ExpandedState>({})
+  const [rowSelection, setRowSelection] = React.useState<RowSelectionState>({})
+  const rowIdOf = getRowId ?? defaultGetRowId
+  const selection = enableRowSelection
+    ? pruneSelection(
+        rowSelection,
+        data.map((row, i) => rowIdOf(row, i)),
+      )
+    : {}
+  const handleSelectionChange: OnChangeFn<RowSelectionState> = (updater) =>
+    setRowSelection(
+      typeof updater === "function" ? updater(selection) : updater,
+    )
   const [localVisibility, setLocalVisibility] = React.useState<VisibilityState>(
     columnVisibility ?? defaultColumnVisibility ?? {},
   )
@@ -214,43 +239,66 @@ export function DataTableCore<TData, TValue>({
     onColumnVisibilityChange?.(next)
   }
 
-  const cols = React.useMemo<ColumnDef<TData, TValue>[]>(
-    () =>
-      renderSubComponent
-        ? [
-            {
-              id: "expander",
-              header: "",
-              enableSorting: false,
-              enableHiding: false,
-              meta: { width: "3rem" },
-              cell: ({ row }) => (
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={
-                    row.getIsExpanded() ? labels.collapseRow : labels.expandRow
-                  }
-                  aria-expanded={row.getIsExpanded()}
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    row.toggleExpanded()
-                  }}
-                >
-                  <ChevronRight
-                    className={cn(
-                      "size-4 transition",
-                      row.getIsExpanded() && "rotate-90",
-                    )}
-                  />
-                </Button>
-              ),
-            },
-            ...columns,
-          ]
-        : columns,
-    [columns, renderSubComponent],
-  )
+  const cols = React.useMemo<ColumnDef<TData, TValue>[]>(() => {
+    const selectColumn: ColumnDef<TData, TValue> = {
+      id: "select",
+      enableSorting: false,
+      enableHiding: false,
+      meta: { width: "2.5rem" },
+      header: ({ table }) => (
+        <Checkbox
+          aria-label={labels.selectAllOnPage}
+          checked={table.getIsAllPageRowsSelected()}
+          indeterminate={table.getIsSomePageRowsSelected()}
+          onCheckedChange={(checked) =>
+            table.toggleAllPageRowsSelected(checked)
+          }
+        />
+      ),
+      cell: ({ row }) => (
+        <Checkbox
+          aria-label={labels.selectRow}
+          checked={row.getIsSelected()}
+          onCheckedChange={(checked) => row.toggleSelected(checked)}
+          onClick={(event) => event.stopPropagation()}
+        />
+      ),
+    }
+    const base = renderSubComponent
+      ? [
+          {
+            id: "expander",
+            header: "",
+            enableSorting: false,
+            enableHiding: false,
+            meta: { width: "3rem" },
+            cell: ({ row }) => (
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={
+                  row.getIsExpanded() ? labels.collapseRow : labels.expandRow
+                }
+                aria-expanded={row.getIsExpanded()}
+                onClick={(event) => {
+                  event.stopPropagation()
+                  row.toggleExpanded()
+                }}
+              >
+                <ChevronRight
+                  className={cn(
+                    "size-4 transition",
+                    row.getIsExpanded() && "rotate-90",
+                  )}
+                />
+              </Button>
+            ),
+          },
+          ...columns,
+        ]
+      : columns
+    return enableRowSelection ? [selectColumn, ...base] : base
+  }, [columns, renderSubComponent, enableRowSelection])
 
   const globalFilter =
     mode.kind === "client" ? (mode.search?.value ?? "") : undefined
@@ -266,6 +314,8 @@ export function DataTableCore<TData, TValue>({
     enableMultiSort: false,
     sortDescFirst: false,
     getRowCanExpand: renderSubComponent ? () => true : undefined,
+    enableRowSelection,
+    onRowSelectionChange: handleSelectionChange,
     onExpandedChange: setExpanded,
     onColumnVisibilityChange: handleVisibilityChange,
     ...(mode.kind === "server"
@@ -292,6 +342,7 @@ export function DataTableCore<TData, TValue>({
       globalFilter,
       columnVisibility: visibility,
       expanded,
+      rowSelection: selection,
     },
   })
 
@@ -363,6 +414,18 @@ export function DataTableCore<TData, TValue>({
             </div>
           )}
         </div>
+      )}
+
+      {enableRowSelection && Object.keys(selection).length > 0 && (
+        <DataTableBulkBar
+          count={Object.keys(selection).length}
+          onClear={() => setRowSelection({})}
+        >
+          {renderBulkActions?.(
+            table.getSelectedRowModel().rows.map((r) => r.original),
+            () => setRowSelection({}),
+          )}
+        </DataTableBulkBar>
       )}
 
       <div
