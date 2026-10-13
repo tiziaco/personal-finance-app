@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import {
+  getListTransactionsQueryKey,
   useBatchDeleteTransactions,
   useDeleteTransaction,
 } from "@app/api-client/endpoints/transactions"
@@ -18,15 +19,15 @@ vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
 const one = vi.fn()
 const many = vi.fn()
 
+let queryClient = new QueryClient()
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <QueryClientProvider client={new QueryClient()}>
-    {children}
-  </QueryClientProvider>
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 )
 
 describe("DeleteTransactionsDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    queryClient = new QueryClient()
     vi.mocked(useDeleteTransaction).mockReturnValue({
       mutate: one,
       isPending: false,
@@ -69,5 +70,39 @@ describe("DeleteTransactionsDialog", () => {
 
     expect(many.mock.calls[0][0]).toEqual({ data: { ids: ["a", "b"] } })
     expect(one).not.toHaveBeenCalled()
+  })
+
+  it("refreshes the list from the hooks, so a dialog closed mid-delete still refreshes", async () => {
+    render(
+      <DeleteTransactionsDialog ids={["a"]} open onOpenChange={vi.fn()} />,
+      {
+        wrapper,
+      },
+    )
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    for (const hook of [useDeleteTransaction, useBatchDeleteTransactions]) {
+      const onSuccess = vi.mocked(hook).mock.calls[0][0]?.mutation
+        ?.onSuccess as () => Promise<void>
+      await onSuccess()
+    }
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: getListTransactionsQueryKey(),
+    })
+  })
+
+  it("keeps Delete disabled once the delete succeeded, until the dialog closes", () => {
+    vi.mocked(useDeleteTransaction).mockReturnValue({
+      mutate: one,
+      isPending: false,
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useDeleteTransaction>)
+    render(
+      <DeleteTransactionsDialog ids={["a"]} open onOpenChange={vi.fn()} />,
+      {
+        wrapper,
+      },
+    )
+    expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled()
   })
 })

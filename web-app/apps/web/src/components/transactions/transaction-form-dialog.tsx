@@ -30,7 +30,8 @@ import { Textarea } from "@app/ui/textarea"
 import { parseAmount } from "./amount-input"
 import { formatAmount, formatDate } from "./format"
 import { useCategories } from "./use-categories"
-import { useInvalidateTransactions } from "./use-invalidate-transactions"
+import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
+import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 
 type Target =
   { mode: "add" } | { mode: "edit"; transaction: TransactionResponse }
@@ -127,27 +128,24 @@ function TransactionForm({
   onClose: () => void
 }) {
   const { categories } = useCategories()
-  const invalidate = useInvalidateTransactions()
+  // The refresh rides on the hooks, so it runs even if the dialog is gone by then.
+  const refresh = useRefreshTransactionsOnSuccess()
   // The add dialog explains a duplicate inline, so QueryProvider must not toast it.
   const create = useCreateTransaction({
-    mutation: { meta: { silentStatuses: [409] } },
+    mutation: { ...refresh.mutation, meta: { silentStatuses: [409] } },
   })
-  const update = useUpdateTransaction()
+  const update = useUpdateTransaction(refresh)
   const [form, setForm] = useState<FormState>(() => initialState(target))
   const [amountError, setAmountError] = useState(false)
   const [missing, setMissing] = useState(false)
   const [duplicate, setDuplicate] = useState(false)
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
 
   const set = <K extends keyof FormState>(key: K, value: FormState[K]) => {
     setForm((f) => ({ ...f, [key]: value }))
     setDuplicate(false)
     setMissing(false)
     if (key === "amount") setAmountError(false)
-  }
-
-  const done = async () => {
-    await invalidate()
-    onClose()
   }
 
   const submit = (allowDuplicate: boolean) => {
@@ -167,7 +165,7 @@ function TransactionForm({
       create.mutate(
         { data: { ...values, allow_duplicate: allowDuplicate } },
         {
-          onSuccess: done,
+          onSuccess: onClose,
           onError: (error) => {
             if (error instanceof ApiError && error.status === 409)
               setDuplicate(true)
@@ -180,7 +178,7 @@ function TransactionForm({
     if (Object.keys(data).length === 0) return onClose()
     update.mutate(
       { transactionId: target.transaction.id, data },
-      { onSuccess: done },
+      { onSuccess: onClose },
     )
   }
 
@@ -189,7 +187,9 @@ function TransactionForm({
     submit(false)
   }
 
-  const pending = create.isPending || update.isPending
+  // A saved form stays disabled through the closing animation.
+  const pending =
+    create.isPending || update.isPending || create.isSuccess || update.isSuccess
   const adding = target.mode === "add"
   // A duplicate's notice is worded from the dialog's own input, never the error body.
   const duplicateText = `You already have a transaction on ${formatDate(form.date)} at ${form.merchant.trim()} for ${formatAmount(parseAmount(form.amount) ?? "0")}.`
@@ -291,6 +291,17 @@ function TransactionForm({
           </p>
         )}
         <DialogFooter>
+          {target.mode === "edit" && (
+            <Button
+              type="button"
+              variant="destructive"
+              className="sm:mr-auto"
+              disabled={pending}
+              onClick={() => setConfirmingDelete(true)}
+            >
+              Delete
+            </Button>
+          )}
           <DialogClose render={<Button type="button" variant="outline" />}>
             Cancel
           </DialogClose>
@@ -309,6 +320,14 @@ function TransactionForm({
           )}
         </DialogFooter>
       </form>
+      {target.mode === "edit" && confirmingDelete && (
+        <DeleteTransactionsDialog
+          ids={[target.transaction.id]}
+          open
+          onOpenChange={(open) => !open && setConfirmingDelete(false)}
+          onDeleted={onClose}
+        />
+      )}
     </>
   )
 }

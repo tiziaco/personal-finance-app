@@ -1,12 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen, waitFor } from "@testing-library/react"
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { withNuqsTestingAdapter } from "@app/data-table/url-state/testing"
 import {
+  getListTransactionsQueryKey,
   useListTransactions,
   useListTransactionCategories,
+  useUpdateTransaction,
 } from "@app/api-client/endpoints/transactions"
 import { TransactionsTable } from "./transactions-table"
 
@@ -17,7 +19,10 @@ const mutationMocks = vi.hoisted(() => {
   const mutation = () => ({ mutate: () => {}, isPending: false })
   return {
     useCreateTransaction: mutation,
-    useUpdateTransaction: () => ({ mutate: updateMutate, isPending: false }),
+    useUpdateTransaction: vi.fn(() => ({
+      mutate: updateMutate,
+      isPending: false,
+    })),
     useDeleteTransaction: mutation,
     useBatchDeleteTransactions: () => ({
       mutate: batchDeleteMutate,
@@ -53,10 +58,12 @@ const result = (items: unknown[], total = items.length) =>
     isError: false,
   } as unknown as ReturnType<typeof useListTransactions>)
 
+let queryClient = new QueryClient()
+
 const renderAt = (qs = "", onUrlUpdate?: OnUrlUpdate) => {
   const Nuqs = withNuqsTestingAdapter({ searchParams: qs, onUrlUpdate })
   const Wrapper = ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={queryClient}>
       <Nuqs>{children}</Nuqs>
     </QueryClientProvider>
   )
@@ -70,11 +77,20 @@ const row = {
   amount: "-4.50",
   category: "salary",
   confidence: 0.5,
+  description: null,
+  is_recurring: false,
+}
+
+// useIsMobile reads window.innerWidth inside an effect: below 768px the
+// table renders cards.
+function setWidth(px: number) {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: px })
 }
 
 describe("TransactionsTable", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    queryClient = new QueryClient()
     cats.mockReturnValue({
       data: [
         { value: "salary", label: "Salary" },
@@ -164,6 +180,67 @@ describe("TransactionsTable", () => {
       transactionId: "1",
       data: { category: "food_groceries" },
     })
+  })
+
+  it("refreshes the list from the recategorise hook, so a closed menu still refreshes", async () => {
+    result([row])
+    renderAt()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    const onSuccess = vi.mocked(useUpdateTransaction).mock.calls[0][0]?.mutation
+      ?.onSuccess as () => Promise<void>
+    await onSuccess()
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: getListTransactionsQueryKey(),
+    })
+  })
+
+  describe("on a phone", () => {
+    beforeEach(() => setWidth(400))
+    afterEach(() => setWidth(1024))
+
+    it("opens the edit dialog with the tapped card's transaction", async () => {
+      result([row, { ...row, id: "2", merchant: "Rewe" }])
+      renderAt()
+      await userEvent.click(
+        await screen.findByRole("button", { name: "Edit Rewe" }),
+      )
+      expect(
+        await screen.findByRole("heading", { name: "Edit transaction" }),
+      ).toBeInTheDocument()
+      expect(screen.getByLabelText("Merchant")).toHaveValue("Rewe")
+    })
+
+    it("sorts from a select: writes ordering and resets the page", async () => {
+      result([row], 60)
+      const events: UrlUpdateEvent[] = []
+      renderAt("?page=3", (e) => events.push(e))
+      const sort = await screen.findByRole("combobox", { name: "Sort" })
+      expect(sort).toHaveValue("-date")
+      expect(
+        within(sort)
+          .getAllByRole("option")
+          .map((o) => [(o as HTMLOptionElement).value, o.textContent]),
+      ).toEqual([
+        ["-date", "Newest first"],
+        ["date", "Oldest first"],
+        ["-amount", "Amount high→low"],
+        ["amount", "Amount low→high"],
+        ["merchant", "Merchant A–Z"],
+        ["-merchant", "Merchant Z–A"],
+      ])
+
+      await userEvent.selectOptions(sort, "-amount")
+      await waitFor(() =>
+        expect(events.at(-1)?.searchParams.get("ordering")).toBe("-amount"),
+      )
+      expect(events.at(-1)?.searchParams.get("page")).toBeNull()
+    })
+  })
+
+  it("has no sort select on a wide screen: the headers sort", () => {
+    result([row])
+    renderAt()
+    expect(screen.queryByRole("combobox", { name: "Sort" })).toBeNull()
   })
 
   it("moves a page past the end back to the last page, with no empty state", async () => {

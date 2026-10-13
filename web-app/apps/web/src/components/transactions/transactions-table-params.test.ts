@@ -27,6 +27,16 @@ describe("transactions table params", () => {
     })
   })
 
+  it("trims the search and caps it at 100 characters", () => {
+    expect(toTransactionsQuery(load("search=rewe%20")).search).toBe("rewe")
+    expect(toTransactionsQuery(load("search=%20%20"))).not.toHaveProperty(
+      "search",
+    )
+    expect(
+      toTransactionsQuery(load(`search=${"x".repeat(150)}`)).search,
+    ).toHaveLength(100)
+  })
+
   it("drops an unknown category and an unknown ordering", () => {
     const v = load("category=salary,retired_slug&ordering=-fingerprint")
     expect(v.ordering).toBeNull()

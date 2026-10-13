@@ -100,7 +100,8 @@ export function toTransactionsQuery(
   return compactQuery({
     ...toOffsetLimit(v.page, TRANSACTIONS_PAGE_SIZE),
     ordering: v.ordering,
-    search: v.search,
+    // The route caps search at 100; trimmed, so "rewe " matches like "rewe".
+    search: v.search.trim().slice(0, 100),
     category: v.category.length > 0 ? v.category : undefined,
     amount_min: v.amount_min,
     amount_max: v.amount_max,

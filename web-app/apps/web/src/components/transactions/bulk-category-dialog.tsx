@@ -16,7 +16,7 @@ import {
 } from "@app/ui/dialog"
 import { Label } from "@app/ui/label"
 import { useCategories } from "./use-categories"
-import { useInvalidateTransactions } from "./use-invalidate-transactions"
+import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 
 /** Moves several transactions to one category (all or nothing). */
 export function BulkCategoryDialog({
@@ -32,15 +32,16 @@ export function BulkCategoryDialog({
 }) {
   const { categories } = useCategories()
   const [category, setCategory] = useState<Category | "">("")
-  const { mutate, isPending } = useBatchUpdateTransactionCategory()
-  const invalidate = useInvalidateTransactions()
+  // The refresh rides on the hook, so it runs even if the dialog is gone by then.
+  const { mutate, isPending, isSuccess } = useBatchUpdateTransactionCategory(
+    useRefreshTransactionsOnSuccess(),
+  )
   const apply = () => {
     if (!category) return
     mutate(
       { data: { ids, category } },
       {
-        onSuccess: async () => {
-          await invalidate()
+        onSuccess: () => {
           onDone()
           onOpenChange(false)
         },
@@ -77,7 +78,10 @@ export function BulkCategoryDialog({
           <DialogClose render={<Button variant="outline" />}>
             Cancel
           </DialogClose>
-          <Button disabled={!category || isPending} onClick={apply}>
+          <Button
+            disabled={!category || isPending || isSuccess}
+            onClick={apply}
+          >
             Apply
           </Button>
         </DialogFooter>

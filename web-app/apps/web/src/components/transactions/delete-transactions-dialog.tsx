@@ -14,7 +14,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@app/ui/alert-dialog"
-import { useInvalidateTransactions } from "./use-invalidate-transactions"
+import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 
 /** Confirms, then deletes one transaction or a batch (all or nothing). */
 export function DeleteTransactionsDialog({
@@ -28,11 +28,11 @@ export function DeleteTransactionsDialog({
   onOpenChange: (open: boolean) => void
   onDeleted?: () => void
 }) {
-  const one = useDeleteTransaction()
-  const many = useBatchDeleteTransactions()
-  const invalidate = useInvalidateTransactions()
-  const done = async () => {
-    await invalidate()
+  // The refresh rides on the hooks, so it runs even if the dialog is gone by then.
+  const refresh = useRefreshTransactionsOnSuccess()
+  const one = useDeleteTransaction(refresh)
+  const many = useBatchDeleteTransactions(refresh)
+  const done = () => {
     onDeleted?.()
     onOpenChange(false)
   }
@@ -57,7 +57,10 @@ export function DeleteTransactionsDialog({
           <AlertDialogCancel>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={one.isPending || many.isPending}
+            // Stays disabled after success, through the closing animation.
+            disabled={
+              one.isPending || many.isPending || one.isSuccess || many.isSuccess
+            }
             onClick={confirm}
           >
             Delete

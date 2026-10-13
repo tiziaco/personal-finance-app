@@ -10,14 +10,19 @@ import {
 import type { Category, TransactionResponse } from "@app/api-client/types"
 import { ServerDataTable } from "@app/data-table/server-data-table"
 import { TableSearchInput } from "@app/data-table/table-search-input"
-import { toServerTableControls } from "@app/data-table/table-state"
+import {
+  orderingToSorting,
+  toServerTableControls,
+} from "@app/data-table/table-state"
 import { Button } from "@app/ui/button"
+import { useIsMobile } from "@app/ui/hooks/use-mobile"
 import { messages } from "@app/core/constants/messages"
 import {
   TransactionsFilterChips,
   TransactionsFilterPanel,
 } from "./transaction-filters"
 import { TransactionCard } from "./transaction-card"
+import { TransactionsSortSelect } from "./transactions-sort-select"
 import { BulkCategoryDialog } from "./bulk-category-dialog"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 import { TransactionFormDialog } from "./transaction-form-dialog"
@@ -28,7 +33,7 @@ import {
   toTransactionsQuery,
 } from "./transactions-table-params"
 import { useCategories } from "./use-categories"
-import { useInvalidateTransactions } from "./use-invalidate-transactions"
+import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 import { useTransactionColumns } from "./use-transaction-columns"
 import { useTransactionsTableState } from "./use-transactions-table-state"
 
@@ -46,15 +51,17 @@ export function TransactionsTable() {
     ids: string[]
     clear: () => void
   } | null>(null)
-  const invalidate = useInvalidateTransactions()
-  const { mutate: updateTransaction } = useUpdateTransaction()
+  // Below 768px the table is cards (the same breakpoint @app/data-table uses):
+  // no headers to click, so a select sorts.
+  const isMobile = useIsMobile()
+  // The refresh rides on the hook, so it runs even if the chip's menu is gone.
+  const { mutate: updateTransaction } = useUpdateTransaction(
+    useRefreshTransactionsOnSuccess(),
+  )
   const onRecategorise = useCallback(
     (t: TransactionResponse, category: Category) =>
-      updateTransaction(
-        { transactionId: t.id, data: { category } },
-        { onSuccess: () => invalidate() },
-      ),
-    [updateTransaction, invalidate],
+      updateTransaction({ transactionId: t.id, data: { category } }),
+    [updateTransaction],
   )
   const onDelete = useCallback(
     (t: TransactionResponse) => setDeleting([t.id]),
@@ -169,6 +176,7 @@ export function TransactionsTable() {
           <TransactionCard
             transaction={row.original}
             categoryLabel={label(row.original.category)}
+            onEdit={() => setEditing(row.original)}
           />
         )}
         toolbar={
@@ -178,6 +186,14 @@ export function TransactionsTable() {
               onChange={state.setSearch}
               placeholder="Search merchants"
             />
+            {isMobile && (
+              <TransactionsSortSelect
+                ordering={state.query.ordering}
+                onChange={(ordering) =>
+                  state.setSort(orderingToSorting(ordering))
+                }
+              />
+            )}
             <TransactionsFilterPanel
               filters={state.filters}
               setFilters={state.setFilters}

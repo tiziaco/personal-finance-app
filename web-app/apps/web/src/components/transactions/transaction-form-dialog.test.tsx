@@ -1,11 +1,14 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest"
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { ApiError } from "@app/api-client"
 import {
+  getListTransactionsQueryKey,
+  useBatchDeleteTransactions,
   useCreateTransaction,
+  useDeleteTransaction,
   useListTransactionCategories,
   useUpdateTransaction,
 } from "@app/api-client/endpoints/transactions"
@@ -17,6 +20,8 @@ vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/transactions")>()),
   useCreateTransaction: vi.fn(),
   useUpdateTransaction: vi.fn(),
+  useDeleteTransaction: vi.fn(),
+  useBatchDeleteTransactions: vi.fn(),
   useListTransactionCategories: vi.fn(),
 }))
 
@@ -25,11 +30,11 @@ const update = vi.mocked(useUpdateTransaction)
 const cats = vi.mocked(useListTransactionCategories)
 const createMutate = vi.fn()
 const updateMutate = vi.fn()
+const deleteMutate = vi.fn()
 
+let queryClient = new QueryClient()
 const wrapper = ({ children }: { children: ReactNode }) => (
-  <QueryClientProvider client={new QueryClient()}>
-    {children}
-  </QueryClientProvider>
+  <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 )
 
 const existing: TransactionResponse = {
@@ -62,6 +67,15 @@ async function fillAdd(amount: string) {
 describe("TransactionFormDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    queryClient = new QueryClient()
+    vi.mocked(useDeleteTransaction).mockReturnValue({
+      mutate: deleteMutate,
+      isPending: false,
+    } as unknown as ReturnType<typeof useDeleteTransaction>)
+    vi.mocked(useBatchDeleteTransactions).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useBatchDeleteTransactions>)
     // Only Date is faked, so user-event's timers still run.
     vi.useFakeTimers({ toFake: ["Date"] })
     vi.setSystemTime(new Date(2026, 2, 3, 12))
@@ -195,6 +209,79 @@ describe("TransactionFormDialog", () => {
     await user.click(screen.getByRole("button", { name: "Save" }))
 
     expect(updateMutate).not.toHaveBeenCalled()
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  const renderEdit = (onOpenChange = vi.fn()) =>
+    render(
+      <TransactionFormDialog
+        mode="edit"
+        transaction={existing}
+        open
+        onOpenChange={onOpenChange}
+      />,
+      { wrapper },
+    )
+
+  it("refreshes the list from the hooks, so a dialog closed mid-save still refreshes", async () => {
+    renderAdd()
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries")
+    for (const hook of [create, update]) {
+      const onSuccess = hook.mock.calls[0][0]?.mutation
+        ?.onSuccess as () => Promise<void>
+      await onSuccess()
+    }
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: getListTransactionsQueryKey(),
+    })
+  })
+
+  it("closes on success, and keeps Save disabled until it has", async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    const { rerender } = renderEdit(onOpenChange)
+    await user.clear(screen.getByLabelText("Merchant"))
+    await user.type(screen.getByLabelText("Merchant"), "Rewe")
+    await user.click(screen.getByRole("button", { name: "Save" }))
+    act(() => updateMutate.mock.calls[0][1].onSuccess())
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+
+    update.mockReturnValue({
+      mutate: updateMutate,
+      isPending: false,
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useUpdateTransaction>)
+    rerender(
+      <TransactionFormDialog
+        mode="edit"
+        transaction={existing}
+        open
+        onOpenChange={onOpenChange}
+      />,
+    )
+    expect(screen.getByRole("button", { name: "Save" })).toBeDisabled()
+  })
+
+  it("has no Delete action when adding", () => {
+    renderAdd()
+    expect(screen.queryByRole("button", { name: "Delete" })).toBeNull()
+  })
+
+  it("deletes from the edit dialog through the delete confirm, then closes", async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+    renderEdit(onOpenChange)
+    await user.click(screen.getByRole("button", { name: "Delete" }))
+
+    const confirm = await screen.findByRole("alertdialog")
+    expect(
+      within(confirm).getByText("Delete this transaction?"),
+    ).toBeInTheDocument()
+    await user.click(within(confirm).getByRole("button", { name: "Delete" }))
+    expect(deleteMutate.mock.calls[0][0]).toEqual({ transactionId: "t1" })
+
+    act(() => deleteMutate.mock.calls[0][1].onSuccess())
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
 })

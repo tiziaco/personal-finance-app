@@ -17,14 +17,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@app/ui/alert-dialog"
-import { useInvalidateTransactions } from "@/components/transactions/use-invalidate-transactions"
+import { useRefreshTransactionsOnSuccess } from "@/components/transactions/use-invalidate-transactions"
 
 export function DataSettings() {
   const [open, setOpen] = useState(false)
-  const total = useListTransactions({ limit: 1 }).data?.total ?? 0
-  const deleteAll = useDeleteAllTransactions()
-  const invalidate = useInvalidateTransactions()
-  const description = `Permanently deletes all ${total} transactions. This cannot be undone.`
+  // Active rows only: deleted ones are removed too, so the button is never disabled at 0.
+  const total = useListTransactions({ limit: 1 }).data?.total
+  // The refresh rides on the hook, so it runs even if Settings closed by then.
+  const deleteAll = useDeleteAllTransactions(useRefreshTransactionsOnSuccess())
+  const description = total
+    ? `Permanently deletes all ${total} transactions. This cannot be undone.`
+    : "Permanently deletes all your transactions, including deleted ones. This cannot be undone."
 
   return (
     <div className="space-y-6">
@@ -36,8 +39,10 @@ export function DataSettings() {
           <Button
             variant="destructive"
             size="sm"
-            disabled={total === 0}
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              deleteAll.reset()
+              setOpen(true)
+            }}
           >
             Delete all transactions
           </Button>
@@ -53,13 +58,11 @@ export function DataSettings() {
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               variant="destructive"
-              disabled={deleteAll.isPending}
+              // Stays disabled after success, through the closing animation.
+              disabled={deleteAll.isPending || deleteAll.isSuccess}
               onClick={() =>
                 deleteAll.mutate(undefined, {
-                  onSuccess: async () => {
-                    await invalidate()
-                    setOpen(false)
-                  },
+                  onSuccess: () => setOpen(false),
                 })
               }
             >
