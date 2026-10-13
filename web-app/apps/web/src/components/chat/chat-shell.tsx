@@ -1,13 +1,13 @@
 "use client"
 
-import { ApiError } from "@app/api-client"
+import { ApiError, toastForError } from "@app/api-client"
 import { useListChatMessages } from "@app/api-client/endpoints/chatbot"
 import { useIsMobile } from "@app/ui/hooks/use-mobile"
 import { Button } from "@app/ui/button"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
 import { Skeleton } from "@app/ui/skeleton"
 import { PanelLeftIcon } from "lucide-react"
-import { useState, type ReactNode } from "react"
+import { useEffect, useState, type ReactNode } from "react"
 
 import {
   ChatRuntimeProvider,
@@ -79,10 +79,17 @@ export function ConversationPage() {
   const history = useListChatMessages(activeId ?? "", {
     query: { enabled: activeId !== null, meta: { silentError: true } },
   })
+  const notFound =
+    history.error instanceof ApiError && history.error.status === 404
 
-  if (history.error instanceof ApiError && history.error.status === 404) {
-    return <ConversationNotFound />
-  }
+  // silentError (on this query's every observer) keeps QueryProvider from
+  // toasting, and a query's meta can't depend on the status. So the toast it
+  // would have shown is raised here, for every error but the 404 rendered below.
+  useEffect(() => {
+    if (history.error && !notFound) toastForError(history.error)
+  }, [history.error, notFound])
+
+  if (notFound) return <ConversationNotFound />
   if (history.isPending) return <ChatThreadSkeleton />
   return <Thread />
 }

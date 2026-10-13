@@ -71,4 +71,35 @@ describe("ConversationPage", () => {
     await new Promise((resolve) => setTimeout(resolve, 100))
     expect(screen.queryByText(messages.toasts.notFound)).toBeNull()
   })
+
+  it("any other history error toasts its status copy and keeps the thread", async () => {
+    // A fresh Response per call: QueryProvider retries a 5xx once.
+    vi.mocked(globalThis.fetch).mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ detail: "boom" }), {
+          status: 500,
+          headers: { "content-type": "application/json" },
+        }),
+    )
+    render(
+      <QueryProvider>
+        <Toaster />
+        <ChatRuntimeProvider>
+          <ConversationPage />
+        </ChatRuntimeProvider>
+      </QueryProvider>,
+    )
+    // The one retry waits about a second before the query settles as an error.
+    expect(
+      await screen.findByText(
+        messages.toasts.genericError,
+        {},
+        { timeout: 4000 },
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(CHAT_COPY.notFoundTitle)).toBeNull()
+    expect(
+      screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+    ).toBeInTheDocument()
+  })
 })
