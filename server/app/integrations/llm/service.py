@@ -78,6 +78,8 @@ class LLMRegistry:
         """Construct a chat model against OpenRouter. The one site that reads the credential."""
         return ChatOpenAI(
             model=model_name,
+            # The OpenRouter id carries a provider prefix; langchain-openai counts tokens by the bare OpenAI name.
+            tiktoken_model_name=model_name.rsplit("/", 1)[-1],
             api_key=settings.llm.OPENROUTER_API_KEY.get_secret_value(),
             base_url=settings.llm.LLM_BASE_URL,
             **params,

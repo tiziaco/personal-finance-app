@@ -2,6 +2,7 @@
 
 import pytest
 from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import HumanMessage
 
 from app.integrations.llm.service import LLMRegistry
 
@@ -88,3 +89,10 @@ class TestLLMRegistryProvider:
 
     def test_every_registry_name_is_an_openrouter_model_id(self):
         assert all(name.startswith("openai/") for name in LLMRegistry.get_all_names())
+
+    @pytest.mark.parametrize("name", LLMRegistry.get_all_names())
+    def test_every_registry_model_can_count_tokens(self, name):
+        """OpenRouter ids carry a provider prefix that langchain-openai's counter rejects."""
+        count = LLMRegistry.get(name).get_num_tokens_from_messages([HumanMessage(content="hello")])
+        assert isinstance(count, int)
+        assert count > 0
