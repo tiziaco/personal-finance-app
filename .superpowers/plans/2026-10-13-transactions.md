@@ -1323,7 +1323,7 @@ Spec §3.2.1. Review Focus 2 and 4.
   - `transaction_service.list(...)` same signature
   - route `GET /api/v1/transactions`, `operation_id="listTransactions"`; generated web names `useListTransactions`, `ListTransactionsParams`, `ListTransactionsOrdering`
 
-- [ ] **Step 1: Failing repository tests**
+- [x] **Step 1: Failing repository tests**
 
 `tests/integration/modules/transaction/test_repository.py`:
 
@@ -1449,7 +1449,7 @@ async def test_soft_deleted_and_other_users_rows_never_appear(db_session, test_u
 
 Run → FAIL (`TransactionFilters` / `list_active_for_user` missing).
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 `schemas.py` (add `Literal`, `List` imports):
 
@@ -1561,7 +1561,7 @@ and in the class:
 
 Run the repository tests → PASS.
 
-- [ ] **Step 3: The route — failing route tests first**
+- [x] **Step 3: The route — failing route tests first**
 
 Append to `router/test_transactions.py`:
 
@@ -1645,7 +1645,7 @@ async def list_transactions(
 
 (imports: `datetime as dt`, `Decimal`, `Optional`, `List`, `Query`, the new schemas.) Export `TransactionFilters`, `TransactionListResponse` from the root.
 
-- [ ] **Step 4: Run, gate, regenerate, check the generated URL builder, commit**
+- [x] **Step 4: Run, gate, regenerate, check the generated URL builder, commit**
 
 Run: `APP_ENV=test uv run pytest tests/integration/modules/transaction tests/unit/api -v` → PASS.
 Run (repo root): `make check-server && make gen-contract`.
