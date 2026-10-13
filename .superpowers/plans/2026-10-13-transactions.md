@@ -2518,7 +2518,7 @@ Spec §4.3.
   - `renderBulkActions?: (selected: TData[], clearSelection: () => void) => React.ReactNode` — shown in a bar above the table while any row is selected
   - `pruneSelection(selection: RowSelectionState, ids: Iterable<string>): RowSelectionState`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `row-selection.test.ts`:
 
@@ -2603,7 +2603,7 @@ describe("row selection", () => {
 
 (If `@testing-library/user-event` is not a dependency of the packages project, use `fireEvent.click` instead.) Run (from `web-app/`): `pnpm test packages/data-table` → FAIL.
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 `row-selection.ts`:
 
@@ -2724,7 +2724,7 @@ const selectColumn: ColumnDef<TData, TValue> = {
 
 Run → PASS.
 
-- [ ] **Step 3: Gate and commit**
+- [x] **Step 3: Gate and commit**
 
 Run (repo root): `make check-web && make test-web`.
 
