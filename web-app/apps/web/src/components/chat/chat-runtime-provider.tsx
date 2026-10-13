@@ -73,8 +73,11 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const { getToken } = useAppAuth()
   const createConversation = useCreateConversation()
   const generateTitle = useGenerateConversationTitle()
+  // silentError on both observers of this query: a query's meta is whichever
+  // observer set its options last, and ConversationPage renders the 404 as a
+  // not-found screen, which a "Not found." toast would only repeat.
   const history = useListChatMessages(activeId ?? "", {
-    query: { enabled: activeId !== null },
+    query: { enabled: activeId !== null, meta: { silentError: true } },
   })
 
   const [exchange, setExchange] = useState<Exchange | null>(null)
