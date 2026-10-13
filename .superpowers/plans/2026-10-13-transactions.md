@@ -237,7 +237,7 @@ Spec §2, §2.2, §3.1, `GET /categories` from §3.2. Load `server-patterns` →
   - Route `GET /api/v1/transactions/categories`, `operation_id="listTransactionCategories"`.
   - Test fixtures in `tests/integration/modules/transaction/conftest.py`: `other_user`, `make_transaction` (Task 3 fills its body).
 
-- [ ] **Step 1: Write the failing schema test**
+- [x] **Step 1: Write the failing schema test**
 
 `tests/unit/modules/transaction/test_schemas.py`:
 
@@ -277,11 +277,11 @@ def test_an_unknown_slug_labels_as_itself():
 
 Create empty `tests/unit/modules/transaction/__init__.py`.
 
-- [ ] **Step 2: Run it — expect an import failure**
+- [x] **Step 2: Run it — expect an import failure**
 
 Run: `APP_ENV=test uv run pytest tests/unit/modules/transaction -v` → FAIL (`ModuleNotFoundError`).
 
-- [ ] **Step 3: Write `schemas.py` (categories part), `models.py`, `exceptions.py`**
+- [x] **Step 3: Write `schemas.py` (categories part), `models.py`, `exceptions.py`**
 
 `app/modules/transaction/schemas.py`:
 
@@ -401,7 +401,7 @@ class DuplicateTransactionError(ConflictError):
     error_code = "DUPLICATE_TRANSACTION"
 ```
 
-- [ ] **Step 4: The categories route, an empty repository and service, the root**
+- [x] **Step 4: The categories route, an empty repository and service, the root**
 
 `app/modules/transaction/repository.py`:
 
@@ -502,12 +502,12 @@ __all__ = [
     TRANSACTIONS: List[str] = Field(default_factory=lambda: ["120 per minute"])
 ```
 
-- [ ] **Step 5: Run the schema test — expect pass; then the module-contract tests — expect fail**
+- [x] **Step 5: Run the schema test — expect pass; then the module-contract tests — expect fail**
 
 Run: `APP_ENV=test uv run pytest tests/unit/modules/transaction -v` → PASS.
 Run: `APP_ENV=test uv run pytest tests/unit/test_module_contracts.py tests/unit/models/test_owned_tables.py -v` → FAIL naming `transaction` (no R1 contract, not in R6, not imported by main/alembic).
 
-- [ ] **Step 6: Wire it (four edits)**
+- [x] **Step 6: Wire it (four edits)**
 
 `app/api/v1/api.py`:
 
@@ -555,7 +555,7 @@ forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*"]
 allow_indirect_imports = true
 ```
 
-- [ ] **Step 7: Route test and fixtures**
+- [x] **Step 7: Route test and fixtures**
 
 `tests/integration/modules/transaction/conftest.py`:
 
@@ -615,17 +615,17 @@ class TestListCategories:
         assert response.json() == [{"value": slug, "label": label} for slug, label in CATEGORIES]
 ```
 
-- [ ] **Step 8: Migration**
+- [x] **Step 8: Migration**
 
 Run (from `server/`): `make migrate-create ENV=development MSG="add transaction"`. Read the file: `down_revision` is Task 1's revision; `upgrade()` creates `transaction` with the columns of spec §2 (`date` DATE, `amount` NUMERIC(12,2), `fingerprint` CHAR(64), `confidence` FLOAT, `user_id` FK `user.id`), indexes `ix_transaction_user_id_date`, `ix_transaction_user_id_fingerprint`, `ix_transaction_user_id`, `ix_transaction_created_at`, `ix_transaction_deleted_at`; nothing else. Then `make migrate ENV=development`.
 
-- [ ] **Step 9: Run everything that gates a module**
+- [x] **Step 9: Run everything that gates a module**
 
 Run: `APP_ENV=test uv run pytest tests/unit tests/integration/modules/transaction tests/integration/database/test_migrations.py -v` → PASS.
 Run (repo root): `make check-server` → PASS (ruff + lint-imports).
 Run (repo root): `make gen-contract` — `listTransactionCategories` appears in `server/openapi.json`; `web-app/packages/api-client/src/generated/endpoints/transactions/` and `types/category.ts`, `types/categoryResponse.ts` are created.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add server web-app/packages/api-client/src/generated
