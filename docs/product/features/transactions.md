@@ -2,10 +2,10 @@
 
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
 **Scope:** the user's transactions — browsing, searching, filtering, adding, correcting and
-deleting them. Legacy v1.0 shipped this; the port rebuilds it (backend in sub-project 2,
-pages in sub-project 3). Getting transactions in from a bank file is
+deleting them. Legacy v1.0 shipped this; the port rebuilds it in roadmap step 2,
+Transactions. Getting transactions in from a bank file is
 [`csv-import.md`](./csv-import.md).
-**Data model:** pending — written with the backend module (sub-project 2).
+**Data model:** pending — written with step 2.
 **Related:** [`categorisation.md`](./categorisation.md) · [`analytics.md`](./analytics.md) ·
 PRD [§3](../prd-mvp.md#3-transactions).
 

@@ -10,7 +10,7 @@ What the product does and why, for the people deciding scope. The *how* lives in
 ### Features
 
 How one feature behaves, in more depth than a milestone PRD can hold. One file per feature.
-`shipped` means the legacy v1.0 app did it; the port rebuilds it in sub-projects 2 and 3.
+`shipped` means the legacy v1.0 app did it; the port rebuilds it in roadmap steps 2–7.
 
 | Doc | Scope | Status | Last updated |
 |---|---|---|---|

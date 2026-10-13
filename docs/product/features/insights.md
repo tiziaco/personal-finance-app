@@ -2,9 +2,9 @@
 
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
 **Scope:** AI-written observations about the user's spending — what they are, when they are
-produced, how they are shown. Legacy v1.0 shipped this; the port rebuilds it (the insights
-agent and endpoint in sub-project 2, the page and dashboard callout in sub-project 3).
-**Data model:** pending — written with the backend module (sub-project 2).
+produced, how they are shown. Legacy v1.0 shipped this; the port rebuilds it in roadmap step 6
+(the agent, the endpoint, the page and the dashboard callout).
+**Data model:** pending — written with step 6.
 **Related:** [`analytics.md`](./analytics.md) · [`csv-import.md`](./csv-import.md) ·
 PRD [§7](../prd-mvp.md#7-insights).
 

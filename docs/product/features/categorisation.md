@@ -2,9 +2,9 @@
 
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
 **Scope:** how each transaction gets a category, and how the user overrules it. Legacy v1.0
-shipped this; the port rebuilds it (the labelling agent in sub-project 2, the edit
-dialogs in sub-project 3).
-**Data model:** pending — written with the backend module (sub-project 2).
+shipped this; the port rebuilds it (correcting a category in roadmap step 2,
+Transactions; the labelling agent in step 4, CSV import).
+**Data model:** pending — written with steps 2 and 4.
 **Related:** [`csv-import.md`](./csv-import.md) · [`transactions.md`](./transactions.md) ·
 PRD [§5](../prd-mvp.md#5-categorisation).
 

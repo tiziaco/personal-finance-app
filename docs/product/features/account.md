@@ -51,7 +51,7 @@ pointed at it still points somewhere.
 
 **Finance data joins the cascade with each backend module.** Transactions, CSV mapping
 profiles and insights are the user's, and erasing the account must erase them; each module
-adds its tables to the cascade when it is built (sub-project 2).
+adds its tables to the cascade when it is built (roadmap steps 2, 4 and 6).
 
 **Open:** the target state is not decided. What erasure leaves today is pseudonymised
 rather than anonymous, and the tracing service still holds conversations

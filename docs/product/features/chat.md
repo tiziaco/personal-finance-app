@@ -4,9 +4,9 @@
 **Scope:** the assistant the user can talk to — conversations, messages, memory. Legacy
 v1.0 shipped the **backend** only: it had no chat screen. The port rebuilds the backend
 (already present in this repo as the `conversation` module and its agent) and gives the
-assistant a screen and finance tools in sub-projects 2 and 3.
+assistant a screen (roadmap step 3; decided 13 Oct 2026) and finance tools (step 7).
 **Data model:** [`../../data-model/conversation.md`](../../data-model/conversation.md)
-(conversations only; the finance part is pending, sub-project 2).
+(conversations only; the finance part is pending, step 7).
 **Related:** [`account.md`](./account.md) (erasure) · [`insights.md`](./insights.md) ·
 PRD [§8](../prd-mvp.md#8-chat).
 
@@ -59,10 +59,7 @@ sharing a conversation.
 ## 6. Open questions
 
 - **Wire the finance tools?** Giving the assistant the analytics tools is what makes it
-  useful. It is the main product decision here, and it belongs to sub-project 2's agent
-  work.
-- **Is the assistant in the first release's UI**, or does it stay an API until the
-  finance pages are done?
+  useful. It is the main product decision here, and it belongs to step 7.
 - **Scope of memory.** What may the assistant remember about someone's money, and where does
   the user see or delete it short of deleting the account?
 - **Web search.** Should an assistant with access to financial data also search the web?
