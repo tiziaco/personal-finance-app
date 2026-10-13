@@ -65,7 +65,7 @@ class TestGetById:
 
 
 class TestListActiveForUser:
-    async def test_oldest_first(self, db_session, owner):
+    async def test_newest_first(self, db_session, owner):
         # Inserted out of created_at order, so heap order cannot pass for the ORDER BY.
         base = datetime(2026, 1, 1, tzinfo=UTC)
         rows = {k: Conversation(user_id=owner.id, created_at=base + timedelta(minutes=k)) for k in (2, 0, 1)}
@@ -73,7 +73,7 @@ class TestListActiveForUser:
         await db_session.flush()
 
         result = await ConversationRepository.list_active_for_user(db_session, owner.id)
-        assert [c.id for c in result] == [rows[k].id for k in (0, 1, 2)]
+        assert [c.id for c in result] == [rows[k].id for k in (2, 1, 0)]
 
     async def test_excludes_soft_deleted(self, db_session, owner):
         kept = await _create(db_session, owner.id)

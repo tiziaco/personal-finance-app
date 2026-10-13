@@ -28,7 +28,7 @@ class ConversationService:
 
     @staticmethod
     async def get_user_conversations(session: AsyncSession, user_id: uuid.UUID) -> List[Conversation]:
-        """Get a user's active conversations, oldest first."""
+        """Get a user's active conversations, newest first."""
         return await conversation_repository.list_active_for_user(session, user_id)
 
     @staticmethod

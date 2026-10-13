@@ -38,11 +38,11 @@ class ConversationRepository:
 
     @staticmethod
     async def list_active_for_user(session: AsyncSession, user_id: uuid.UUID) -> List[Conversation]:
-        """A user's non-soft-deleted conversations, oldest first — the order `GET /conversations` publishes."""
+        """A user's non-soft-deleted conversations, newest first — the order `GET /conversations` publishes."""
         statement = (
             select(Conversation)
             .where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
-            .order_by(Conversation.created_at)
+            .order_by(Conversation.created_at.desc())
         )
         result = await session.execute(statement)
         return list(result.scalars().all())
