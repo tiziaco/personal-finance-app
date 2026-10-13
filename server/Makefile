@@ -100,6 +100,10 @@ export-openapi:
 	@echo "Exporting OpenAPI spec to server/openapi.json"
 	@APP_ENV=$${APP_ENV:-development} PYTHONPATH=. uv run python scripts/export_openapi.py
 
+seed-transactions:
+	@test -n "$(CLERK_ID)" || (echo "usage: make seed-transactions CLERK_ID=user_..." && exit 1)
+	@bash -c "source scripts/set_env.sh development && PYTHONPATH=. uv run python scripts/seed_transactions.py --clerk-id $(CLERK_ID)"
+
 clean:
 	rm -rf .venv
 	rm -rf __pycache__

@@ -1,4 +1,4 @@
-.PHONY: help dev-preflight dev-web dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth
+.PHONY: help dev-preflight dev-web dev-kill dev-tunnel worktree-new worktree-init worktree-clean guard-main check check-server check-web test-web gen-contract check-contract deploy-check docker-build docker-build-web docker-build-api docker-run docker-run-core docker-run-db docker-migrate docker-migrate-status docker-stop docker-logs docker-logs-core clean rebuild rebuild-core clerk-setup clerk-bootstrap-env clerk-apply-config clerk-pull-config clerk-check-config clerk-seed-users clerk-bootstrap-oauth seed-transactions
 
 DOCKER_COMPOSE ?= docker-compose
 COMPOSE_FILE ?= docker-compose.dev.yml
@@ -71,6 +71,7 @@ help:
 	@echo "  make clerk-check-config    - Fail if the instance has drifted from config.json"
 	@echo "  make clerk-pull-config     - Refresh config.json from the instance"
 	@echo "  make clerk-bootstrap-oauth - Register Swagger's Authorize button (optional)"
+	@echo "  make seed-transactions CLERK_ID=… - Replace a dev user's transactions with the seed"
 	@echo ""
 	@echo "Build Commands:"
 	@echo "  make docker-build       - Build all services (web-app, server)"
@@ -244,6 +245,9 @@ clerk-seed-users:
 
 clerk-bootstrap-oauth:
 	@./scripts/clerk/bootstrap-oauth.sh
+
+seed-transactions:
+	@$(MAKE) -C server seed-transactions CLERK_ID=$(CLERK_ID)
 
 # Build commands
 # `migrate` is intentionally absent from these service lists: it shares
