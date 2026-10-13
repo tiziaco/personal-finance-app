@@ -2057,7 +2057,7 @@ Spec §5.2.
 - Consumes: `transaction_service.import_many`, `transaction_service.delete_all_for_user`, `TransactionImport`, `Category` (module root); `user_service.resolve_user` (account root); `create_session_factory`, `initialize_database_engine`, `close_database_engine` (`app.database`); `settings.ENVIRONMENT`, `Environment` (`app.core.config`).
 - Produces: `shift_months(d, months) -> date`, `months_to_current(newest, today) -> int`, `load_rows(path, today) -> tuple[list[TransactionImport], Counter[str]]`, `seed(session, clerk_id, today) -> int`, CLI `--clerk-id`.
 
-- [ ] **Step 1: Failing unit tests**
+- [x] **Step 1: Failing unit tests**
 
 `tests/unit/scripts/test_seed_transactions.py`:
 
@@ -2128,7 +2128,7 @@ def test_an_unknown_slug_becomes_miscellaneous_and_is_counted(tmp_path):
 
 Run: `APP_ENV=test uv run pytest tests/unit/scripts/test_seed_transactions.py -v` → FAIL (ImportError).
 
-- [ ] **Step 2: Implement `scripts/seed_transactions.py`**
+- [x] **Step 2: Implement `scripts/seed_transactions.py`**
 
 ```python
 """Fill a dev user's transactions from server/data/transactions-seed.csv.
@@ -2245,7 +2245,7 @@ if __name__ == "__main__":
 
 Run the unit tests → PASS.
 
-- [ ] **Step 3: Integration test**
+- [x] **Step 3: Integration test**
 
 `tests/integration/scripts/test_seed_transactions.py` (and an empty `__init__.py`):
 
@@ -2288,7 +2288,7 @@ async def test_seeds_the_file_within_the_shifted_range_and_reseeding_resets(db_s
 
 Run: `APP_ENV=test uv run pytest tests/integration/scripts -v` → PASS.
 
-- [ ] **Step 4: Make targets**
+- [x] **Step 4: Make targets**
 
 `server/Makefile`, after `export-openapi` (and in its `.PHONY` and `help` if it has them):
 
@@ -2307,7 +2307,7 @@ seed-transactions:
 
 Run by hand once: `make seed-transactions CLERK_ID=<a dev user's id from server/data/clerk-dev-seed.json or the Clerk dashboard>` → `seeded N transactions`.
 
-- [ ] **Step 5: Gate and commit**
+- [x] **Step 5: Gate and commit**
 
 Run (repo root): `make check-server`.
 
