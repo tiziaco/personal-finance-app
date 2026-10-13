@@ -11,11 +11,12 @@ import {
   type SettingsTab,
 } from "@app/components/settings/settings-dialog"
 import { GeneralSettings } from "@/components/settings/general-settings"
+import { DataSettings } from "@/components/settings/data-settings"
 import { ServerHealthIndicator } from "@/components/settings/server-status"
 import { ClerkUserPanel } from "@/components/layout/clerk-user-panel"
 import { QueryProvider } from "@app/api-client/query-provider"
 import { UrlStateAdapter } from "@app/data-table/url-state/url-state-adapter"
-import { Settings, Cog } from "lucide-react"
+import { Settings, Cog, Database } from "lucide-react"
 
 const SETTINGS_TABS: SettingsTab[] = [
   {
@@ -23,6 +24,12 @@ const SETTINGS_TABS: SettingsTab[] = [
     label: "General",
     icon: <Settings className="w-5 h-5" />,
     content: <GeneralSettings />,
+  },
+  {
+    id: "data",
+    label: "Data",
+    icon: <Database className="w-5 h-5" />,
+    content: <DataSettings />,
   },
 ]
 
