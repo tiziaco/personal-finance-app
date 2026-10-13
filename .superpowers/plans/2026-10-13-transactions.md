@@ -80,7 +80,7 @@ Fixes `BUGS.md` "A re-registered or changed email locks the new account out with
 - Consumes: nothing new.
 - Produces: `User.email` non-unique; `UserRepository.get_by_email` removed (nothing on the server looks a user up by email). Alembic head becomes this revision; Task 2's revision chains off it.
 
-- [ ] **Step 1: Invert the two tests that pin the bug, add JIT and webhook tests**
+- [x] **Step 1: Invert the two tests that pin the bug, add JIT and webhook tests**
 
 In `tests/integration/modules/account/test_repository.py` replace `test_create_duplicate_email_raises` and `test_genuine_conflict_raises_user_already_exists` with:
 
@@ -147,12 +147,12 @@ async def test_user_created_with_an_email_a_stale_row_holds_persists(client, db_
     assert user.email == "ada@e2e.test"
 ```
 
-- [ ] **Step 2: Run them — expect failures**
+- [x] **Step 2: Run them — expect failures**
 
 Run (from `server/`): `APP_ENV=test uv run pytest tests/integration/modules/account -v`
 Expected: the four new tests FAIL (IntegrityError / UserAlreadyExistsError / non-204).
 
-- [ ] **Step 3: Drop the constraint in the model and the email lookup**
+- [x] **Step 3: Drop the constraint in the model and the email lookup**
 
 `app/modules/account/models.py`:
 
@@ -179,12 +179,12 @@ Expected: the four new tests FAIL (IntegrityError / UserAlreadyExistsError / non
 
 `app/modules/account/service.py` `resolve_user` docstring, the `UserAlreadyExistsError` line becomes: `UserAlreadyExistsError: an IntegrityError that was not the clerk_id race — see UserRepository.create_or_get.`
 
-- [ ] **Step 4: Run the account tests — expect pass**
+- [x] **Step 4: Run the account tests — expect pass**
 
 Run: `APP_ENV=test uv run pytest tests/integration/modules/account tests/unit/modules/account -v`
 Expected: PASS.
 
-- [ ] **Step 5: Generate the migration and read it**
+- [x] **Step 5: Generate the migration and read it**
 
 Run (from `server/`): `make migrate-create ENV=development MSG="user email not unique"`
 Open the new file under `alembic/versions/`. `down_revision` must be `'0c7838405158'`. `upgrade()` must be exactly a drop of `ix_user_email` and a create of `ix_user_email` on `["email"]` with `unique=False`; `downgrade()` the reverse with `unique=True`. Remove anything else autogenerate added. Then:
@@ -192,7 +192,7 @@ Open the new file under `alembic/versions/`. `down_revision` must be `'0c7838405
 Run: `make migrate ENV=development && APP_ENV=test uv run pytest tests/integration/database/test_migrations.py -v`
 Expected: PASS (migrated schema equals the models).
 
-- [ ] **Step 6: Close the bug and the TODO, record the decision**
+- [x] **Step 6: Close the bug and the TODO, record the decision**
 
 - `docs/BUGS.md`: delete the whole "A re-registered or changed email locks the new account out with a 401" entry.
 - `docs/TODO.md`: delete the "Server — email uniqueness, before the first finance table" section.
@@ -209,7 +209,7 @@ Expected: PASS (migrated schema equals the models).
 
 Update the doc's status block: `Last updated: 13 Oct 2026`; the source-of-truth line names both revisions.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add server/app/modules/account server/tests/integration/modules/account server/alembic/versions docs/BUGS.md docs/TODO.md docs/data-model/account.md
