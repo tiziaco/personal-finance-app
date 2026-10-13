@@ -276,7 +276,7 @@ export function DataTableCore<TData, TValue>({
         />
       ),
     }
-    const base = renderSubComponent
+    const base: ColumnDef<TData, TValue>[] = renderSubComponent
       ? [
           {
             id: "expander",
