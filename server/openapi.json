@@ -435,6 +435,251 @@
         "title": "RootResponse",
         "type": "object"
       },
+      "TransactionCreate": {
+        "description": "A transaction added by hand. Confidence is 1; no original category.",
+        "properties": {
+          "allow_duplicate": {
+            "default": false,
+            "description": "Add even when an active transaction has the same date, merchant, amount and description",
+            "title": "Allow Duplicate",
+            "type": "boolean"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "description": "Money out is negative, money in positive; a decimal string",
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "date": {
+            "description": "The day the transaction happened",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; blank is stored as null",
+            "title": "Description"
+          },
+          "is_recurring": {
+            "default": false,
+            "description": "Whether it recurs",
+            "title": "Is Recurring",
+            "type": "boolean"
+          },
+          "merchant": {
+            "description": "Who was paid, or who paid",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Merchant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "merchant",
+          "amount",
+          "category"
+        ],
+        "title": "TransactionCreate",
+        "type": "object"
+      },
+      "TransactionResponse": {
+        "description": "A transaction as the API returns it.",
+        "properties": {
+          "amount": {
+            "description": "Money out negative, money in positive; a decimal string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "confidence": {
+            "description": "How sure the categoriser was, 0 to 1; 1 for a manual entry or edit",
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "description": "When the row was created",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "description": "The day it happened",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text",
+            "title": "Description"
+          },
+          "id": {
+            "description": "The transaction id",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_recurring": {
+            "description": "Whether it recurs",
+            "title": "Is Recurring",
+            "type": "boolean"
+          },
+          "merchant": {
+            "description": "Who was paid, or who paid",
+            "title": "Merchant",
+            "type": "string"
+          },
+          "original_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The bank's category, as imported",
+            "title": "Original Category"
+          },
+          "updated_at": {
+            "description": "When the row was last changed",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "merchant",
+          "amount",
+          "category",
+          "confidence",
+          "is_recurring",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TransactionResponse",
+        "type": "object"
+      },
+      "TransactionUpdate": {
+        "description": "A partial edit. An omitted field is untouched; `description: null` clears it.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A decimal string",
+            "title": "Amount"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category slug"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the transaction happened",
+            "title": "Date"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; null or blank clears it",
+            "title": "Description"
+          },
+          "is_recurring": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it recurs",
+            "title": "Is Recurring"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who was paid, or who paid",
+            "title": "Merchant"
+          }
+        },
+        "title": "TransactionUpdate",
+        "type": "object"
+      },
       "UserResponse": {
         "description": "Response model for user profile.\n\nAttributes:\n    id: Internal user ID (UUID v7)\n    clerk_id: External Clerk user ID\n    email: User's email address\n    first_name: User's first name\n    last_name: User's last name\n    avatar_url: User's avatar URL\n    created_at: When the user was created",
         "properties": {
@@ -1005,6 +1250,53 @@
         ]
       }
     },
+    "/api/v1/transactions": {
+      "post": {
+        "description": "Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.",
+        "operationId": "createTransaction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Add a transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
     "/api/v1/transactions/categories": {
       "get": {
         "description": "Every category a transaction can carry, in display order.",
@@ -1031,6 +1323,105 @@
           }
         ],
         "summary": "List the categories",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transaction_id}": {
+      "delete": {
+        "description": "Hide a transaction from every list and analytic. The row is kept.",
+        "operationId": "deleteTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete a transaction",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "description": "Change some fields of a transaction. Omitted fields are untouched; description: null clears it.",
+        "operationId": "updateTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Edit a transaction",
         "tags": [
           "transactions"
         ]

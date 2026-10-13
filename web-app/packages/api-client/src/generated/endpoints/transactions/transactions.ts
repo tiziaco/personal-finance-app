@@ -5,20 +5,29 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery } from "@tanstack/react-query"
 import type {
   DataTag,
   DefinedInitialDataOptions,
   DefinedUseQueryResult,
+  MutationFunction,
   QueryClient,
   QueryFunction,
   QueryKey,
   UndefinedInitialDataOptions,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query"
 
-import type { CategoryResponse } from "../../types"
+import type {
+  CategoryResponse,
+  HTTPValidationError,
+  TransactionCreate,
+  TransactionResponse,
+  TransactionUpdate,
+} from "../../types"
 
 import { useApiFetch } from "../../../use-api-fetch"
 import type { ErrorType } from "../../../use-api-fetch"
@@ -43,6 +52,119 @@ const withQueryKey = <T extends object, K>(
   return result
 }
 
+export const getCreateTransactionUrl = () => {
+  return `/api/v1/transactions`
+}
+
+/**
+ * Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.
+ * @summary Add a transaction
+ */
+export const useCreateTransactionHook = (): ((
+  transactionCreate: TransactionCreate,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<TransactionResponse>) => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {}
+    if (h instanceof Headers) return Object.fromEntries(h.entries())
+    if (Array.isArray(h)) return Object.fromEntries(h)
+    return h
+  }
+
+  const customFetcher = useApiFetch()
+  return (
+    transactionCreate: TransactionCreate,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getCreateTransactionUrl(), {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(transactionCreate),
+    })
+  }
+}
+
+export const getCreateTransactionMutationKey = () =>
+  ["createTransaction"] as const
+
+export const useCreateTransactionMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>,
+    TError,
+    CreateTransactionMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>,
+  TError,
+  CreateTransactionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getCreateTransactionMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const createTransaction = useCreateTransactionHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>,
+    CreateTransactionMutationVariables
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return createTransaction(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type CreateTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>
+>
+export type CreateTransactionMutationBody = TransactionCreate
+export type CreateTransactionMutationError = ErrorType<HTTPValidationError>
+export type CreateTransactionMutationVariables = { data: TransactionCreate }
+
+/**
+ * @summary Add a transaction
+ */
+export const useCreateTransaction = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>,
+      TError,
+      CreateTransactionMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useCreateTransactionHook>>>,
+  TError,
+  CreateTransactionMutationVariables,
+  TContext
+> => {
+  return useMutation(useCreateTransactionMutationOptions(options), queryClient)
+}
 export const getListTransactionCategoriesUrl = () => {
   return `/api/v1/transactions/categories`
 }
@@ -229,4 +351,222 @@ export function useListTransactionCategories<
   > & { queryKey: DataTag<QueryKey, TData, TError> }
 
   return withQueryKey(query, queryOptions.queryKey)
+}
+
+export const getDeleteTransactionUrl = (transactionId: string) => {
+  return `/api/v1/transactions/${transactionId}`
+}
+
+/**
+ * Hide a transaction from every list and analytic. The row is kept.
+ * @summary Delete a transaction
+ */
+export const useDeleteTransactionHook = (): ((
+  transactionId: string,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<void>) => {
+  const customFetcher = useApiFetch()
+  return (
+    transactionId: string,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getDeleteTransactionUrl(transactionId), {
+      ...options,
+      method: "DELETE",
+    })
+  }
+}
+
+export const getDeleteTransactionMutationKey = () =>
+  ["deleteTransaction"] as const
+
+export const useDeleteTransactionMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>,
+    TError,
+    DeleteTransactionMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>,
+  TError,
+  DeleteTransactionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getDeleteTransactionMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const deleteTransaction = useDeleteTransactionHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>,
+    DeleteTransactionMutationVariables
+  > = (props) => {
+    const { transactionId } = props ?? {}
+
+    return deleteTransaction(transactionId, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type DeleteTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>
+>
+
+export type DeleteTransactionMutationError = ErrorType<HTTPValidationError>
+export type DeleteTransactionMutationVariables = { transactionId: string }
+
+/**
+ * @summary Delete a transaction
+ */
+export const useDeleteTransaction = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>,
+      TError,
+      DeleteTransactionMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useDeleteTransactionHook>>>,
+  TError,
+  DeleteTransactionMutationVariables,
+  TContext
+> => {
+  return useMutation(useDeleteTransactionMutationOptions(options), queryClient)
+}
+export const getUpdateTransactionUrl = (transactionId: string) => {
+  return `/api/v1/transactions/${transactionId}`
+}
+
+/**
+ * Change some fields of a transaction. Omitted fields are untouched; description: null clears it.
+ * @summary Edit a transaction
+ */
+export const useUpdateTransactionHook = (): ((
+  transactionId: string,
+  transactionUpdate: TransactionUpdate,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<TransactionResponse>) => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {}
+    if (h instanceof Headers) return Object.fromEntries(h.entries())
+    if (Array.isArray(h)) return Object.fromEntries(h)
+    return h
+  }
+
+  const customFetcher = useApiFetch()
+  return (
+    transactionId: string,
+    transactionUpdate: TransactionUpdate,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getUpdateTransactionUrl(transactionId), {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(transactionUpdate),
+    })
+  }
+}
+
+export const getUpdateTransactionMutationKey = () =>
+  ["updateTransaction"] as const
+
+export const useUpdateTransactionMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>,
+    TError,
+    UpdateTransactionMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>,
+  TError,
+  UpdateTransactionMutationVariables,
+  TContext
+> => {
+  const mutationKey = getUpdateTransactionMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const updateTransaction = useUpdateTransactionHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>,
+    UpdateTransactionMutationVariables
+  > = (props) => {
+    const { transactionId, data } = props ?? {}
+
+    return updateTransaction(transactionId, data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type UpdateTransactionMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>
+>
+export type UpdateTransactionMutationBody = TransactionUpdate
+export type UpdateTransactionMutationError = ErrorType<HTTPValidationError>
+export type UpdateTransactionMutationVariables = {
+  transactionId: string
+  data: TransactionUpdate
+}
+
+/**
+ * @summary Edit a transaction
+ */
+export const useUpdateTransaction = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>,
+      TError,
+      UpdateTransactionMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useUpdateTransactionHook>>>,
+  TError,
+  UpdateTransactionMutationVariables,
+  TContext
+> => {
+  return useMutation(useUpdateTransactionMutationOptions(options), queryClient)
 }

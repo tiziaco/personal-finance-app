@@ -8,6 +8,139 @@
 import * as zod from "zod"
 
 /**
+ * Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.
+ * @summary Add a transaction
+ */
+export const createTransactionBodyAllowDuplicateDefault = false
+export const createTransactionBodyAmountTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+)
+export const createTransactionBodyDescriptionOneMax = 1000
+
+export const createTransactionBodyIsRecurringDefault = false
+export const createTransactionBodyMerchantMax = 255
+
+export const CreateTransactionBody = zod
+  .object({
+    allow_duplicate: zod
+      .boolean()
+      .default(createTransactionBodyAllowDuplicateDefault)
+      .describe(
+        "Add even when an active transaction has the same date, merchant, amount and description",
+      ),
+    amount: zod
+      .union([
+        zod.number(),
+        zod.string().regex(createTransactionBodyAmountTwoRegExp),
+      ])
+      .describe("Money out is negative, money in positive; a decimal string"),
+    category: zod
+      .enum([
+        "income",
+        "salary",
+        "transportation",
+        "household_utilities",
+        "tax_fines",
+        "food_groceries",
+        "food_delivery",
+        "bars_restaurants",
+        "atm",
+        "insurances",
+        "shopping",
+        "education",
+        "family_friends",
+        "donations_charity",
+        "healthcare_drug_stores",
+        "leisure_entertainment",
+        "media_electronics",
+        "savings_investments",
+        "travel_holidays",
+        "miscellaneous",
+      ])
+      .describe("The category slug"),
+    date: zod.iso.date().describe("The day the transaction happened"),
+    description: zod
+      .union([
+        zod.string().max(createTransactionBodyDescriptionOneMax),
+        zod.null(),
+      ])
+      .optional()
+      .describe("Free text; blank is stored as null"),
+    is_recurring: zod
+      .boolean()
+      .default(createTransactionBodyIsRecurringDefault)
+      .describe("Whether it recurs"),
+    merchant: zod
+      .string()
+      .min(1)
+      .max(createTransactionBodyMerchantMax)
+      .describe("Who was paid, or who paid"),
+  })
+  .describe(
+    "A transaction added by hand. Confidence is 1; no original category.",
+  )
+
+export const createTransactionResponseAmountRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+
+export const CreateTransactionResponse = zod
+  .object({
+    amount: zod
+      .string()
+      .regex(createTransactionResponseAmountRegExp)
+      .describe("Money out negative, money in positive; a decimal string"),
+    category: zod
+      .enum([
+        "income",
+        "salary",
+        "transportation",
+        "household_utilities",
+        "tax_fines",
+        "food_groceries",
+        "food_delivery",
+        "bars_restaurants",
+        "atm",
+        "insurances",
+        "shopping",
+        "education",
+        "family_friends",
+        "donations_charity",
+        "healthcare_drug_stores",
+        "leisure_entertainment",
+        "media_electronics",
+        "savings_investments",
+        "travel_holidays",
+        "miscellaneous",
+      ])
+      .describe("The category slug"),
+    confidence: zod
+      .number()
+      .describe(
+        "How sure the categoriser was, 0 to 1; 1 for a manual entry or edit",
+      ),
+    created_at: zod.iso
+      .datetime({ offset: true })
+      .describe("When the row was created"),
+    date: zod.iso.date().describe("The day it happened"),
+    description: zod
+      .union([zod.string(), zod.null()])
+      .optional()
+      .describe("Free text"),
+    id: zod.uuid().describe("The transaction id"),
+    is_recurring: zod.boolean().describe("Whether it recurs"),
+    merchant: zod.string().describe("Who was paid, or who paid"),
+    original_category: zod
+      .union([zod.string(), zod.null()])
+      .optional()
+      .describe("The bank's category, as imported"),
+    updated_at: zod.iso
+      .datetime({ offset: true })
+      .describe("When the row was last changed"),
+  })
+  .describe("A transaction as the API returns it.")
+
+/**
  * Every category a transaction can carry, in display order.
  * @summary List the categories
  */
@@ -43,3 +176,153 @@ export const ListTransactionCategoriesResponseItem = zod
 export const ListTransactionCategoriesResponse = zod.array(
   ListTransactionCategoriesResponseItem,
 )
+
+/**
+ * Hide a transaction from every list and analytic. The row is kept.
+ * @summary Delete a transaction
+ */
+export const DeleteTransactionParams = zod.object({
+  transaction_id: zod.uuid(),
+})
+
+export const DeleteTransactionResponse = zod.void()
+
+/**
+ * Change some fields of a transaction. Omitted fields are untouched; description: null clears it.
+ * @summary Edit a transaction
+ */
+export const UpdateTransactionParams = zod.object({
+  transaction_id: zod.uuid(),
+})
+
+export const updateTransactionBodyAmountTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+)
+export const updateTransactionBodyDescriptionOneMax = 1000
+
+export const updateTransactionBodyMerchantOneMax = 255
+
+export const UpdateTransactionBody = zod
+  .object({
+    amount: zod
+      .union([
+        zod.number(),
+        zod.string().regex(updateTransactionBodyAmountTwoRegExp),
+        zod.null(),
+      ])
+      .optional()
+      .describe("A decimal string"),
+    category: zod
+      .union([
+        zod.enum([
+          "income",
+          "salary",
+          "transportation",
+          "household_utilities",
+          "tax_fines",
+          "food_groceries",
+          "food_delivery",
+          "bars_restaurants",
+          "atm",
+          "insurances",
+          "shopping",
+          "education",
+          "family_friends",
+          "donations_charity",
+          "healthcare_drug_stores",
+          "leisure_entertainment",
+          "media_electronics",
+          "savings_investments",
+          "travel_holidays",
+          "miscellaneous",
+        ]),
+        zod.null(),
+      ])
+      .optional()
+      .describe("The category slug"),
+    date: zod
+      .union([zod.iso.date(), zod.null()])
+      .optional()
+      .describe("The day the transaction happened"),
+    description: zod
+      .union([
+        zod.string().max(updateTransactionBodyDescriptionOneMax),
+        zod.null(),
+      ])
+      .optional()
+      .describe("Free text; null or blank clears it"),
+    is_recurring: zod
+      .union([zod.boolean(), zod.null()])
+      .optional()
+      .describe("Whether it recurs"),
+    merchant: zod
+      .union([
+        zod.string().min(1).max(updateTransactionBodyMerchantOneMax),
+        zod.null(),
+      ])
+      .optional()
+      .describe("Who was paid, or who paid"),
+  })
+  .describe(
+    "A partial edit. An omitted field is untouched; `description: null` clears it.",
+  )
+
+export const updateTransactionResponseAmountRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+
+export const UpdateTransactionResponse = zod
+  .object({
+    amount: zod
+      .string()
+      .regex(updateTransactionResponseAmountRegExp)
+      .describe("Money out negative, money in positive; a decimal string"),
+    category: zod
+      .enum([
+        "income",
+        "salary",
+        "transportation",
+        "household_utilities",
+        "tax_fines",
+        "food_groceries",
+        "food_delivery",
+        "bars_restaurants",
+        "atm",
+        "insurances",
+        "shopping",
+        "education",
+        "family_friends",
+        "donations_charity",
+        "healthcare_drug_stores",
+        "leisure_entertainment",
+        "media_electronics",
+        "savings_investments",
+        "travel_holidays",
+        "miscellaneous",
+      ])
+      .describe("The category slug"),
+    confidence: zod
+      .number()
+      .describe(
+        "How sure the categoriser was, 0 to 1; 1 for a manual entry or edit",
+      ),
+    created_at: zod.iso
+      .datetime({ offset: true })
+      .describe("When the row was created"),
+    date: zod.iso.date().describe("The day it happened"),
+    description: zod
+      .union([zod.string(), zod.null()])
+      .optional()
+      .describe("Free text"),
+    id: zod.uuid().describe("The transaction id"),
+    is_recurring: zod.boolean().describe("Whether it recurs"),
+    merchant: zod.string().describe("Who was paid, or who paid"),
+    original_category: zod
+      .union([zod.string(), zod.null()])
+      .optional()
+      .describe("The bank's category, as imported"),
+    updated_at: zod.iso
+      .datetime({ offset: true })
+      .describe("When the row was last changed"),
+  })
+  .describe("A transaction as the API returns it.")
