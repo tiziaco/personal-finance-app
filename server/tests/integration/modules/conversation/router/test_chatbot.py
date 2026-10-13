@@ -260,7 +260,9 @@ class TestStreamClientDisconnect:
         path = f"/api/v1/chatbot/chat/{test_conversation.id}/stream"
         scope = {
             "type": "http",
-            "asgi": {"version": "3.0"},
+            # At spec 2.4 Starlette's StreamingResponse stops listening for disconnects;
+            # the generator must still be cancelled.
+            "asgi": {"version": "3.0", "spec_version": "2.4"},
             "http_version": "1.1",
             "method": "POST",
             "scheme": "http",
