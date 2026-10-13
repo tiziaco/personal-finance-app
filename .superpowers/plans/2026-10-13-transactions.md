@@ -3675,8 +3675,8 @@ Spec §4.5.
 - Consumes: `useDeleteAllTransactions`, `useListTransactions` (generated), `useInvalidateTransactions` (Task 12), `AlertDialog*`, `SettingSection`.
 - Produces: `DataSettings`.
 
-- [ ] **Step 1: Failing test** `data-settings.test.tsx` — mock `useListTransactions` → `{ data: { total: 12, items: [] } }` and `useDeleteAllTransactions` → `{ mutate }`. Assert: the button **Delete all transactions** opens a dialog reading "Permanently deletes all 12 transactions. This cannot be undone."; confirming calls `mutate()`; with `total: 0` the button is disabled.
-- [ ] **Step 2: Implement**
+- [x] **Step 1: Failing test** `data-settings.test.tsx` — mock `useListTransactions` → `{ data: { total: 12, items: [] } }` and `useDeleteAllTransactions` → `{ mutate }`. Assert: the button **Delete all transactions** opens a dialog reading "Permanently deletes all 12 transactions. This cannot be undone."; confirming calls `mutate()`; with `total: 0` the button is disabled.
+- [x] **Step 2: Implement**
 
 ```tsx
 "use client"
@@ -3742,7 +3742,7 @@ export function DataSettings() {
   },
 ```
 
-- [ ] **Step 3: Run, by hand, commit**
+- [x] **Step 3: Run, by hand, commit**
 
 Run (repo root): `make check-web && make test-web` → PASS. By hand: Settings → Data → delete all → the list is empty and shows "No transactions yet.".
 
