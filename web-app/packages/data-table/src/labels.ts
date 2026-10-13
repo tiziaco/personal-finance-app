@@ -24,5 +24,11 @@ export const labels = {
   onOrBefore: "On or before",
   between: "Between",
   dateFrom: (label: string) => `${label} from`,
+  datePresets: {
+    today: "Today",
+    this_week: "This week",
+    this_month: "This month",
+    last_month: "Last month",
+  },
   dateTo: (label: string) => `${label} to`,
 }

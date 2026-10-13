@@ -16,11 +16,13 @@
     "./url-state/params": "./src/url-state/params.ts",
     "./url-state/prefix-keys": "./src/url-state/prefix-keys.ts",
     "./url-state/date-filter": "./src/url-state/date-filter.ts",
+    "./url-state/date-presets": "./src/url-state/date-presets.ts",
     "./url-state/url-state-adapter": "./src/url-state/url-state-adapter.ts",
     "./url-state/testing": "./src/url-state/testing.ts",
     "./filters/filter-panel": "./src/filters/filter-panel.tsx",
     "./filters/filter-chip": "./src/filters/filter-chip.tsx",
-    "./filters/date-filter-control": "./src/filters/date-filter-control.tsx"
+    "./filters/date-filter-control": "./src/filters/date-filter-control.tsx",
+    "./filters/filter-checkbox-group": "./src/filters/filter-checkbox-group.tsx"
   },
   "dependencies": {
     "@app/core": "workspace:*",

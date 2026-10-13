@@ -1,6 +1,7 @@
 "use client"
 
 import { useId } from "react"
+import { Button } from "@app/ui/button"
 import { Input } from "@app/ui/input"
 import {
   EMPTY_DATE_FILTER,
@@ -9,6 +10,7 @@ import {
   type DateFilterMode,
   type DateFilterValue,
 } from "../url-state/date-filter"
+import { DATE_PRESETS, datePresetValue } from "../url-state/date-presets"
 import { labels } from "../labels"
 import { FilterField, FilterSelect } from "./filter-panel"
 
@@ -20,14 +22,32 @@ export function DateFilterControl({
   label,
   value,
   onChange,
+  presets = false,
 }: {
   label: string
   value: DateFilterValue
   onChange: (value: DateFilterValue) => void
+  /** quick ranges (today, this week, …) above the mode select */
+  presets?: boolean
 }) {
   const id = useId()
   return (
     <FilterField label={label} htmlFor={`${id}-mode`}>
+      {presets && (
+        <div className="flex flex-wrap gap-1">
+          {DATE_PRESETS.map((preset) => (
+            <Button
+              key={preset}
+              type="button"
+              variant="outline"
+              size="xs"
+              onClick={() => onChange(datePresetValue(preset, new Date()))}
+            >
+              {labels.datePresets[preset]}
+            </Button>
+          ))}
+        </div>
+      )}
       <FilterSelect
         id={`${id}-mode`}
         value={value.mode ?? ""}

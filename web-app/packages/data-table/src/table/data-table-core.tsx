@@ -33,6 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from "@app/ui/table"
+import { useIsMobile } from "@app/ui/hooks/use-mobile"
 import { cn } from "@app/core/lib/utils"
 import { labels } from "../labels"
 import "./column-meta"
@@ -127,6 +128,8 @@ export interface DataTableBaseProps<TData, TValue> {
     selected: TData[],
     clearSelection: () => void,
   ) => React.ReactNode
+  /** below 768px the body is a list of these cards; toolbar, chips and pager stay */
+  renderCard?: (row: Row<TData>) => React.ReactNode
   showFooter?: boolean
   showColumnToggle?: boolean
   /** uncontrolled initial visibility, e.g. { internal_notes: false } */
@@ -189,6 +192,7 @@ export function DataTableCore<TData, TValue>({
   getSubRows,
   enableRowSelection = false,
   renderBulkActions,
+  renderCard,
   showFooter = false,
   showColumnToggle = false,
   defaultColumnVisibility,
@@ -210,6 +214,8 @@ export function DataTableCore<TData, TValue>({
 }: DataTableCoreProps<TData, TValue>) {
   "use no memo" // reads the mutable TanStack table instance
   const isServer = mode.kind === "server"
+  const isMobile = useIsMobile()
+  const asCards = Boolean(renderCard) && isMobile
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [pagination, setPagination] = React.useState<PaginationState>({
     pageIndex: 0,
@@ -422,7 +428,7 @@ export function DataTableCore<TData, TValue>({
         </div>
       )}
 
-      {enableRowSelection && selectedCount > 0 && (
+      {!asCards && enableRowSelection && selectedCount > 0 && (
         <DataTableBulkBar
           count={selectedCount}
           onClear={() => setRowSelection({})}
@@ -434,210 +440,244 @@ export function DataTableCore<TData, TValue>({
         </DataTableBulkBar>
       )}
 
-      <div
-        data-slot="table-container"
-        className={cn(
-          "relative w-full overflow-x-auto",
-          hasFrozen && "overflow-y-clip",
-          maxScrollHeight && "overflow-y-auto",
-        )}
-        style={maxScrollHeight ? { maxHeight: maxScrollHeight } : undefined}
-      >
-        <table
-          ref={tableRef}
-          data-slot="table"
-          aria-busy={isPending || undefined}
+      {asCards ? (
+        <ul
           className={cn(
-            "w-full caption-bottom text-xs",
-            hasFrozen && "border-separate border-spacing-0",
+            "space-y-2",
+            isPending && "opacity-60 transition-opacity",
           )}
+          aria-busy={isPending || undefined}
         >
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                {headerGroup.headers.map((header, index) => {
-                  const def = header.column.columnDef
-                  const meta = def.meta
-                  const freeze = freezeInfo[index] ?? NOT_FROZEN
-                  const canSort =
-                    header.column.getCanSort() && Boolean(def.header)
-                  const sorted = header.column.getIsSorted()
-                  const text =
-                    typeof def.header === "string" ? def.header.trim() : ""
-                  const wraps = allowHeaderWrapping && /\s/.test(text)
-                  return (
-                    <TableHead
-                      key={header.id}
-                      colSpan={header.colSpan}
-                      data-column-id={header.column.id}
-                      aria-sort={
-                        canSort
-                          ? sorted === "asc"
-                            ? "ascending"
-                            : sorted === "desc"
-                              ? "descending"
-                              : "none"
-                          : undefined
-                      }
-                      style={{ ...widthStyle(meta), ...freezeStyle(freeze) }}
-                      className={cn(
-                        density === "compact" && "h-8 px-2 text-xs",
-                        wraps && "whitespace-normal",
-                        meta?.align === "right" && "text-right",
-                        hasFrozen && "border-b",
-                        maxScrollHeight && "sticky top-0 z-10 bg-background",
-                        freeze.frozen && "z-20 bg-background",
-                      )}
-                    >
-                      {header.isPlaceholder ? null : canSort ? (
-                        <button
-                          type="button"
-                          onClick={header.column.getToggleSortingHandler()}
-                          className={cn(
-                            "group inline-flex items-center gap-1",
-                            meta?.align === "right" && "flex-row-reverse",
-                          )}
-                        >
-                          {flexRender(def.header, header.getContext())}
-                          <ChevronDown
-                            aria-hidden
-                            className={cn(
-                              "size-4 shrink-0 transition",
-                              sorted
-                                ? "text-foreground"
-                                : "invisible text-muted-foreground group-hover:visible group-focus-visible:visible",
-                              sorted === "asc" && "rotate-180",
-                            )}
-                          />
-                        </button>
-                      ) : (
-                        flexRender(def.header, header.getContext())
-                      )}
-                    </TableHead>
-                  )
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-
-          <TableBody
-            className={cn(isPending && "opacity-60 transition-opacity")}
+          {errorMessage != null ? (
+            <li role="alert" className="py-6 text-center text-destructive">
+              {errorMessage}
+            </li>
+          ) : isLoading ? (
+            Array.from({ length: SKELETON_ROWS }, (_, i) => (
+              <li key={i}>
+                <Skeleton className="h-16 w-full" />
+              </li>
+            ))
+          ) : rows.length === 0 ? (
+            <li className="py-6 text-center text-muted-foreground">
+              {noDataMessage}
+            </li>
+          ) : (
+            rows.map((row) => <li key={row.id}>{renderCard!(row)}</li>)
+          )}
+        </ul>
+      ) : (
+        <div
+          data-slot="table-container"
+          className={cn(
+            "relative w-full overflow-x-auto",
+            hasFrozen && "overflow-y-clip",
+            maxScrollHeight && "overflow-y-auto",
+          )}
+          style={maxScrollHeight ? { maxHeight: maxScrollHeight } : undefined}
+        >
+          <table
+            ref={tableRef}
+            data-slot="table"
+            aria-busy={isPending || undefined}
+            className={cn(
+              "w-full caption-bottom text-xs",
+              hasFrozen && "border-separate border-spacing-0",
+            )}
           >
-            {errorMessage != null ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={colSpan}
-                  role="alert"
-                  className="py-6 text-center text-destructive"
-                >
-                  {errorMessage}
-                </TableCell>
-              </TableRow>
-            ) : isLoading ? (
-              Array.from({ length: SKELETON_ROWS }, (_, i) => (
-                <TableRow key={i} className="hover:bg-transparent">
-                  <TableCell colSpan={colSpan}>
-                    <Skeleton className="h-5 w-full" />
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                  {headerGroup.headers.map((header, index) => {
+                    const def = header.column.columnDef
+                    const meta = def.meta
+                    const freeze = freezeInfo[index] ?? NOT_FROZEN
+                    const canSort =
+                      header.column.getCanSort() && Boolean(def.header)
+                    const sorted = header.column.getIsSorted()
+                    const text =
+                      typeof def.header === "string" ? def.header.trim() : ""
+                    const wraps = allowHeaderWrapping && /\s/.test(text)
+                    return (
+                      <TableHead
+                        key={header.id}
+                        colSpan={header.colSpan}
+                        data-column-id={header.column.id}
+                        aria-sort={
+                          canSort
+                            ? sorted === "asc"
+                              ? "ascending"
+                              : sorted === "desc"
+                                ? "descending"
+                                : "none"
+                            : undefined
+                        }
+                        style={{ ...widthStyle(meta), ...freezeStyle(freeze) }}
+                        className={cn(
+                          density === "compact" && "h-8 px-2 text-xs",
+                          wraps && "whitespace-normal",
+                          meta?.align === "right" && "text-right",
+                          hasFrozen && "border-b",
+                          maxScrollHeight && "sticky top-0 z-10 bg-background",
+                          freeze.frozen && "z-20 bg-background",
+                        )}
+                      >
+                        {header.isPlaceholder ? null : canSort ? (
+                          <button
+                            type="button"
+                            onClick={header.column.getToggleSortingHandler()}
+                            className={cn(
+                              "group inline-flex items-center gap-1",
+                              meta?.align === "right" && "flex-row-reverse",
+                            )}
+                          >
+                            {flexRender(def.header, header.getContext())}
+                            <ChevronDown
+                              aria-hidden
+                              className={cn(
+                                "size-4 shrink-0 transition",
+                                sorted
+                                  ? "text-foreground"
+                                  : "invisible text-muted-foreground group-hover:visible group-focus-visible:visible",
+                                sorted === "asc" && "rotate-180",
+                              )}
+                            />
+                          </button>
+                        ) : (
+                          flexRender(def.header, header.getContext())
+                        )}
+                      </TableHead>
+                    )
+                  })}
+                </TableRow>
+              ))}
+            </TableHeader>
+
+            <TableBody
+              className={cn(isPending && "opacity-60 transition-opacity")}
+            >
+              {errorMessage != null ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={colSpan}
+                    role="alert"
+                    className="py-6 text-center text-destructive"
+                  >
+                    {errorMessage}
                   </TableCell>
                 </TableRow>
-              ))
-            ) : rows.length === 0 ? (
-              <TableRow className="hover:bg-transparent">
-                <TableCell
-                  colSpan={colSpan}
-                  className="py-6 text-center text-muted-foreground"
-                >
-                  {noDataMessage}
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <React.Fragment key={row.id}>
-                  <TableRow
-                    className={cn(
-                      "group/row",
-                      onRowClick && "cursor-pointer",
-                      getRowClassName?.(row),
-                    )}
-                    onClick={
-                      onRowClick ? (event) => onRowClick(row, event) : undefined
-                    }
+              ) : isLoading ? (
+                Array.from({ length: SKELETON_ROWS }, (_, i) => (
+                  <TableRow key={i} className="hover:bg-transparent">
+                    <TableCell colSpan={colSpan}>
+                      <Skeleton className="h-5 w-full" />
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : rows.length === 0 ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={colSpan}
+                    className="py-6 text-center text-muted-foreground"
                   >
-                    {row.getVisibleCells().map((cell, index) => {
-                      const meta = cell.column.columnDef.meta
+                    {noDataMessage}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                rows.map((row) => (
+                  <React.Fragment key={row.id}>
+                    <TableRow
+                      className={cn(
+                        "group/row",
+                        onRowClick && "cursor-pointer",
+                        getRowClassName?.(row),
+                      )}
+                      onClick={
+                        onRowClick
+                          ? (event) => onRowClick(row, event)
+                          : undefined
+                      }
+                    >
+                      {row.getVisibleCells().map((cell, index) => {
+                        const meta = cell.column.columnDef.meta
+                        const freeze = freezeInfo[index] ?? NOT_FROZEN
+                        return (
+                          <TableCell
+                            key={cell.id}
+                            style={{
+                              ...widthStyle(meta),
+                              ...freezeStyle(freeze),
+                            }}
+                            className={cn(
+                              density === "compact" && "px-2 py-1 text-xs",
+                              meta?.align === "right" &&
+                                "text-right tabular-nums",
+                              hasFrozen && "border-b",
+                              freeze.frozen &&
+                                "z-10 bg-background group-hover/row:bg-muted",
+                            )}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        )
+                      })}
+                    </TableRow>
+                    {renderSubComponent && row.getIsExpanded() && (
+                      <TableRow className="hover:bg-transparent">
+                        <TableCell
+                          colSpan={colSpan}
+                          className="whitespace-normal"
+                        >
+                          {renderSubComponent(row)}
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
+            </TableBody>
+
+            {showFooter && (
+              <TableFooter
+                className={cn(maxScrollHeight && "sticky bottom-0 z-10")}
+              >
+                {table.getFooterGroups().map((footerGroup) => (
+                  <TableRow key={footerGroup.id}>
+                    {footerGroup.headers.map((header, index) => {
+                      const meta = header.column.columnDef.meta
                       const freeze = freezeInfo[index] ?? NOT_FROZEN
                       return (
                         <TableCell
-                          key={cell.id}
+                          key={header.id}
                           style={{
                             ...widthStyle(meta),
                             ...freezeStyle(freeze),
                           }}
                           className={cn(
-                            density === "compact" && "px-2 py-1 text-xs",
                             meta?.align === "right" &&
                               "text-right tabular-nums",
-                            hasFrozen && "border-b",
-                            freeze.frozen &&
-                              "z-10 bg-background group-hover/row:bg-muted",
+                            freeze.frozen && "z-10 bg-muted",
                           )}
                         >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(
+                                header.column.columnDef.footer,
+                                header.getContext(),
+                              )}
                         </TableCell>
                       )
                     })}
                   </TableRow>
-                  {renderSubComponent && row.getIsExpanded() && (
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell
-                        colSpan={colSpan}
-                        className="whitespace-normal"
-                      >
-                        {renderSubComponent(row)}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </React.Fragment>
-              ))
+                ))}
+              </TableFooter>
             )}
-          </TableBody>
-
-          {showFooter && (
-            <TableFooter
-              className={cn(maxScrollHeight && "sticky bottom-0 z-10")}
-            >
-              {table.getFooterGroups().map((footerGroup) => (
-                <TableRow key={footerGroup.id}>
-                  {footerGroup.headers.map((header, index) => {
-                    const meta = header.column.columnDef.meta
-                    const freeze = freezeInfo[index] ?? NOT_FROZEN
-                    return (
-                      <TableCell
-                        key={header.id}
-                        style={{ ...widthStyle(meta), ...freezeStyle(freeze) }}
-                        className={cn(
-                          meta?.align === "right" && "text-right tabular-nums",
-                          freeze.frozen && "z-10 bg-muted",
-                        )}
-                      >
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.footer,
-                              header.getContext(),
-                            )}
-                      </TableCell>
-                    )
-                  })}
-                </TableRow>
-              ))}
-            </TableFooter>
-          )}
-        </table>
-      </div>
+          </table>
+        </div>
+      )}
 
       <DataTablePager
         table={table}
