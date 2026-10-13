@@ -54,6 +54,37 @@ describe("Thread", () => {
     expect(document.querySelector("img")).toBeNull()
   })
 
+  // An image would be fetched with no click: a channel for a prompt-injected
+  // reply to send data to any host. It renders as a link instead.
+  it("renders a Markdown image in a reply as a link, never an img", () => {
+    render(
+      <TestRuntime
+        messages={[assistant("a1", "![chart](https://example.com/x.png)")]}
+      >
+        <Thread />
+      </TestRuntime>,
+    )
+    expect(document.querySelector("img")).toBeNull()
+    const link = screen.getByRole("link", { name: "chart" })
+    expect(link).toHaveAttribute("href", "https://example.com/x.png")
+    expect(link).toHaveAttribute("target", "_blank")
+    expect(link).toHaveAttribute("rel", "noopener noreferrer")
+  })
+
+  it("labels an image link with its URL when it has no alt text", () => {
+    render(
+      <TestRuntime
+        messages={[assistant("a1", "![](https://example.com/x.png)")]}
+      >
+        <Thread />
+      </TestRuntime>,
+    )
+    expect(document.querySelector("img")).toBeNull()
+    expect(
+      screen.getByRole("link", { name: "https://example.com/x.png" }),
+    ).toHaveAttribute("href", "https://example.com/x.png")
+  })
+
   it("marks a stopped reply and a failed reply with our own copy", () => {
     render(
       <TestRuntime

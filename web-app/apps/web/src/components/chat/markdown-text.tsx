@@ -64,6 +64,23 @@ const components = memoizeMarkdownComponents({
       {...p}
     />
   ),
+  // Never an <img>: the browser would fetch it unasked, so a prompt-injected
+  // reply could carry data out in the URL. The image is a link to click.
+  img: ({ src, alt, className }) => {
+    const href = typeof src === "string" ? src : undefined
+    const label = alt || href
+    if (!href) return label ? <span className={className}>{label}</span> : null
+    return (
+      <a
+        href={href}
+        className={cn("text-primary underline underline-offset-2", className)}
+        target="_blank"
+        rel="noopener noreferrer"
+      >
+        {label}
+      </a>
+    )
+  },
   blockquote: ({ className, ...p }) => (
     <blockquote
       className={cn("my-2 border-l-2 pl-3 text-muted-foreground", className)}
