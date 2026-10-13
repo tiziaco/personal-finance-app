@@ -1,14 +1,35 @@
 "use client"
 
 import { useMemo } from "react"
+import { MoreHorizontalIcon, PencilIcon, Trash2Icon } from "lucide-react"
 import type { ColumnDef } from "@app/data-table/columns"
-import type { TransactionResponse } from "@app/api-client/types"
+import type {
+  Category,
+  CategoryResponse,
+  TransactionResponse,
+} from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
+import { Button } from "@app/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@app/ui/dropdown-menu"
+import { CategoryPicker } from "./category-picker"
 import { formatAmount, formatDate, isExpense, isLowConfidence } from "./format"
+
+export type TransactionRowActions = {
+  categories: CategoryResponse[]
+  onEdit: (transaction: TransactionResponse) => void
+  onDelete: (transaction: TransactionResponse) => void
+  onRecategorise: (transaction: TransactionResponse, category: Category) => void
+}
 
 // Sortable ids are ListTransactionsOrdering fields (date, amount, merchant).
 export function useTransactionColumns(
   label: (slug: string) => string,
+  { categories, onEdit, onDelete, onRecategorise }: TransactionRowActions,
 ): ColumnDef<TransactionResponse>[] {
   return useMemo<ColumnDef<TransactionResponse>[]>(
     () => [
@@ -41,7 +62,14 @@ export function useTransactionColumns(
         id: "category",
         header: "Category",
         enableSorting: false,
-        cell: ({ row }) => label(row.original.category),
+        cell: ({ row }) => (
+          <CategoryPicker
+            value={row.original.category}
+            categories={categories}
+            label={label}
+            onChange={(category) => onRecategorise(row.original, category)}
+          />
+        ),
       },
       {
         id: "confidence",
@@ -63,7 +91,42 @@ export function useTransactionColumns(
           )
         },
       },
+      {
+        id: "actions",
+        header: "",
+        enableSorting: false,
+        enableHiding: false,
+        meta: { width: "3rem" },
+        cell: ({ row }) => (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Row actions"
+                />
+              }
+            >
+              <MoreHorizontalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-auto">
+              <DropdownMenuItem onClick={() => onEdit(row.original)}>
+                <PencilIcon />
+                Edit
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                variant="destructive"
+                onClick={() => onDelete(row.original)}
+              >
+                <Trash2Icon />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ),
+      },
     ],
-    [label],
+    [label, categories, onEdit, onDelete, onRecategorise],
   )
 }
