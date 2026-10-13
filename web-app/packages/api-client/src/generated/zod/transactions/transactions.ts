@@ -26,10 +26,10 @@ export const DeleteAllTransactionsResponse = zod
  * @summary List transactions
  */
 export const listTransactionsQueryAmountMinTwoRegExp = new RegExp(
-  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
 )
 export const listTransactionsQueryAmountMaxTwoRegExp = new RegExp(
-  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
 )
 export const listTransactionsQuerySearchOneMax = 100
 

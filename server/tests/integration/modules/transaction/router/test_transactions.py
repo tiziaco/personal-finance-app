@@ -78,6 +78,19 @@ class TestUpdate:
         assert response.json()["merchant"] == "Späti"
         assert response.json()["confidence"] == 1.0
 
+    async def test_an_empty_patch_leaves_the_row_unchanged(
+        self, authenticated_client, test_user, make_transaction, db_session
+    ):
+        txn = await make_transaction(test_user, description="Old", confidence=0.4)
+        updated_at = txn.updated_at
+        response = await authenticated_client.patch(f"{BASE}/{txn.id}", json={})
+        assert response.status_code == 200
+        assert response.json()["confidence"] == 0.4
+        await db_session.refresh(txn)  # a fresh read of the row, not the object the route held
+        assert txn.confidence == 0.4
+        assert txn.updated_at == updated_at
+        assert txn.description == "Old"
+
     async def test_null_on_a_required_field_is_422(self, authenticated_client, test_user, make_transaction):
         txn = await make_transaction(test_user)
         assert (await authenticated_client.patch(f"{BASE}/{txn.id}", json={"merchant": None})).status_code == 422
@@ -153,6 +166,12 @@ class TestList:
             {"ordering": "fingerprint"},
             {"category": "no_such_slug"},
             {"search": "x" * 101},
+            {"amount_min": "1e999999"},
+            {"amount_max": "1e999999"},
+            {"amount_min": "NaN"},
+            {"amount_max": "Infinity"},
+            {"amount_min": "1234567890123"},
+            {"amount_max": "1.005"},
         ],
     )
     async def test_bounds_are_422(self, authenticated_client, params):

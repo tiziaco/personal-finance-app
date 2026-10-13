@@ -110,6 +110,8 @@ class TransactionImport(BaseModel):
     is_recurring: bool = False
     original_category: Optional[Annotated[str, StringConstraints(max_length=255)]] = None
 
+    _description = field_validator("description")(_blank_to_none)
+
 
 class TransactionResponse(BaseModel):
     """A transaction as the API returns it."""

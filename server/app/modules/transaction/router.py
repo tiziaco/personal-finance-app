@@ -60,8 +60,12 @@ async def list_transactions(
     date_from: Optional[dt.date] = Query(None, description="On or after this day"),
     date_to: Optional[dt.date] = Query(None, description="On or before this day"),
     category: Optional[List[Category]] = Query(None, description="Any of these categories; repeat the parameter"),
-    amount_min: Optional[Decimal] = Query(None, description="Signed amount at least this"),
-    amount_max: Optional[Decimal] = Query(None, description="Signed amount at most this"),
+    amount_min: Optional[Decimal] = Query(
+        None, max_digits=12, decimal_places=2, allow_inf_nan=False, description="Signed amount at least this"
+    ),
+    amount_max: Optional[Decimal] = Query(
+        None, max_digits=12, decimal_places=2, allow_inf_nan=False, description="Signed amount at most this"
+    ),
     is_recurring: Optional[bool] = Query(None, description="Only recurring, or only not"),
     search: Optional[str] = Query(None, max_length=100, description="Merchant contains, case-insensitive"),
     ordering: TransactionOrdering = Query("-date", description="Sort field; '-' for descending"),
