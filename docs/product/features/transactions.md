@@ -1,11 +1,11 @@
 # Transactions
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
 **Scope:** the user's transactions — browsing, searching, filtering, adding, correcting and
 deleting them. Legacy v1.0 shipped this; the port rebuilds it in roadmap step 2,
 Transactions. Getting transactions in from a bank file is
 [`csv-import.md`](./csv-import.md).
-**Data model:** pending — written with step 2.
+**Data model:** [`transaction.md`](../../data-model/transaction.md).
 **Related:** [`categorisation.md`](./categorisation.md) · [`analytics.md`](./analytics.md) ·
 PRD [§3](../prd-mvp.md#3-transactions).
 
@@ -23,7 +23,7 @@ user must be able to review and correct them, and to remove junk or duplicates.
   scroll), newest first. On a phone the table becomes a list of cards.
 - **Search** by merchant (substring, case-insensitive).
 - **Filter** by date range (shortcuts: today, this week, this month, last month, or a
-  custom range), by category, by amount range and by recurring or not.
+  custom range), by category (one or several), by amount range and by recurring or not.
 - **Sort** by date, amount or merchant, ascending or descending.
 - **Add** a transaction by hand.
 - **Edit** a transaction — date, merchant, amount, description, category, recurring.
@@ -31,15 +31,15 @@ user must be able to review and correct them, and to remove junk or duplicates.
 - **Act on many at once** (desktop): select rows and change their category, or delete
   them, up to 100 at a time. A bulk action is all or nothing: if one selected
   transaction is missing, none changes.
-- **Delete all** of their transactions from Settings, after confirming.
-- **Start from an empty state.** A user with no transactions sees a prompt to upload a
-  CSV; a filter with no match offers to clear the filters.
+- **Delete all** of their transactions from Settings, permanently, after confirming.
+- **Start from an empty state.** A user with no transactions sees a prompt to add a
+  transaction (to upload a CSV once CSV import ships); a filter with no match offers to clear the filters.
 
 ## 3. The fields
 
 A transaction has:
 
-- a **date** and time;
+- a **date**;
 - a **merchant** (required, 255 characters at most);
 - an **amount** — a decimal with two places, up to twelve digits. Money out is negative
   and money in is positive; the analytics read the sign;
@@ -64,7 +64,8 @@ times; the user never sees them.
   analytic, but its row stays.
 - **Duplicates are recognised, not forbidden.** Each transaction gets a fingerprint from
   its user, date, merchant, amount and description. The import skips a row whose
-  fingerprint already exists; creating one by hand does not check.
+  fingerprint already exists; adding one by hand that matches an existing transaction asks
+  before it is saved.
 - **Someone else's transaction is a missing one.** Asking for another user's transaction
   answers "not found".
 - **Page size** is 20 by default and 100 at most.
@@ -79,7 +80,5 @@ transactions; a bank connection.
 
 - **Currency.** Is a display-only currency symbol worth keeping, or should the setting go
   until multi-currency is a real decision?
-- **Manual duplicates.** Should adding a transaction by hand warn when its fingerprint
-  already exists?
 - **Undo.** Deletes are soft in the database, but nothing in the product restores one.
   Is "recently deleted" wanted?

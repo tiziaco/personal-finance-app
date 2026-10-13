@@ -132,6 +132,25 @@ export function useOrderColumns({ canEdit, onEdit }: { canEdit: boolean; onEdit:
 the same controlled shape and save, debounced, in the setter; the table never resets a controlled
 value from props.
 
+## Selection, bulk actions and phone cards
+
+- **Selection:** `enableRowSelection` adds a checkbox column. `renderBulkActions(selected, clearSelection)`
+  fills the bulk bar ("N selected", Clear, your actions). Selection holds only rows on screen and is
+  committed to state, so a row that leaves the page and returns stays deselected, and a bulk action
+  never touches a row the user cannot see. The bar is desktop only: it is hidden in card mode.
+- **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).
+  Toolbar, chips and pager stay.
+- **Date presets:** `DateFilterControl` takes `presets` — today, this week (Monday first), this month,
+  last month — from `@app/data-table/url-state/date-presets`.
+- **Several values from a fixed list:** `FilterCheckboxGroup`, from
+  `@app/data-table/filters/filter-checkbox-group`.
+- **Moving a page without trapping Back:** the url-state page setter takes `{ history: "replace" }`
+  (the transactions page uses it to bring a past-the-end page back to the last one).
+- **A mutation that handles a status itself** sets `meta.silentStatuses: number[]` so `QueryProvider`
+  does not toast it (the add dialog's 409).
+
+Worked example: `apps/web/src/components/transactions/`.
+
 ## Rules
 
 - Feature code imports `ClientDataTable` or `ServerDataTable` — the export map doesn't offer the core.

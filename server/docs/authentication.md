@@ -78,7 +78,7 @@ Called via `asyncio.to_thread()` since the SDK is synchronous.
 ### 6. User Repository — `app/modules/account/repository.py`
 
 `UserRepository` handles all user DB operations via SQLModel/SQLAlchemy:
-- `get_by_id()`, `get_by_clerk_id()`, `get_by_email()`
+- `get_by_id()`, `get_by_clerk_id()`
 - `create()` and `create_or_get()` — create a user from Clerk data
 - `update_from_clerk()` — syncs profile changes
 - `delete()`

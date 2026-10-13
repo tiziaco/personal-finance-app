@@ -90,6 +90,13 @@ finance table.
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
+## Web — the transactions empty state, with CSV import (roadmap step 4)
+
+With no transactions the page offers **Add a transaction**. When CSV upload ships, the
+prompt becomes **Upload a CSV** (`transactions.md` §2).
+
+**Unblocks:** nothing; it lands with step 4.
+
 ## Port — carry into backend modules
 
 Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
