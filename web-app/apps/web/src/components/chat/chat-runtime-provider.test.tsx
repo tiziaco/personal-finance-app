@@ -1,8 +1,9 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
-import { render, screen, waitFor } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { getListChatMessagesQueryKey } from "@app/api-client/endpoints/chatbot"
 import { getListConversationsQueryKey } from "@app/api-client/endpoints/conversation"
 
 import { ChatRuntimeProvider } from "./chat-runtime-provider"
@@ -73,7 +74,7 @@ beforeEach(() => {
     calls.push(key)
     const handler = routes[key]
     if (!handler) return json({ detail: "not found" }, 404)
-    return json(handler(init))
+    return json(await handler(init))
   })
 })
 
@@ -211,5 +212,101 @@ describe("ChatRuntimeProvider", () => {
     renderChat()
     await send("hi")
     expect(await screen.findByText(CHAT_COPY.failed)).toBeInTheDocument()
+  })
+
+  it("opens the exchange before the conversation exists, so a second send is refused", async () => {
+    let release: () => void = () => {}
+    routes["POST /api/v1/conversation/conversation"] = () =>
+      new Promise((resolve) => {
+        release = () =>
+          resolve({
+            conversation_id: "c1",
+            name: "",
+            created_at: "2026-10-13T10:00:00Z",
+          })
+      })
+    mocks.stream.mockImplementation(() => chunks("Hello"))
+    renderChat()
+    await send("hi")
+
+    expect(await screen.findByText("hi")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: CHAT_COPY.stop }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: CHAT_COPY.send }),
+    ).not.toBeInTheDocument()
+
+    await send("again")
+    expect(
+      calls.filter((c) => c === "POST /api/v1/conversation/conversation"),
+    ).toHaveLength(1)
+
+    release()
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/chat/c1"))
+    // The send runs to its end (the title request) as the only one.
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+    expect(mocks.stream).toHaveBeenCalledTimes(1)
+    expect(mocks.replace).toHaveBeenCalledTimes(1)
+  })
+
+  it("Stop before the stream starts ends the send as stopped without streaming", async () => {
+    let release: () => void = () => {}
+    routes["POST /api/v1/conversation/conversation"] = () =>
+      new Promise((resolve) => {
+        release = () =>
+          resolve({
+            conversation_id: "c1",
+            name: "",
+            created_at: "2026-10-13T10:00:00Z",
+          })
+      })
+    renderChat()
+    await send("hi")
+    await userEvent.click(
+      await screen.findByRole("button", { name: CHAT_COPY.stop }),
+    )
+    release()
+
+    expect(await screen.findByText(CHAT_COPY.stopped)).toBeInTheDocument()
+    expect(screen.getByText("hi")).toBeInTheDocument()
+    expect(mocks.stream).not.toHaveBeenCalled()
+  })
+
+  it("keeps the user's message once when history refetches mid-stream", async () => {
+    mocks.params = { conversationId: "c1" }
+    let resume: () => void = () => {}
+    mocks.stream.mockImplementation(async function* () {
+      yield "Hel"
+      await new Promise<void>((resolve) => {
+        resume = resolve
+      })
+      yield "lo"
+    })
+    const { client } = renderChat()
+    await send("hi")
+    await screen.findByText("Hel")
+
+    // The graph has started: the server's history now holds the user's message.
+    routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
+      messages: [{ role: "user", content: "hi" }],
+    })
+    // TanStack notifies observers on a setTimeout(0) batch: let it render.
+    await act(async () => {
+      await client.refetchQueries({
+        queryKey: getListChatMessagesQueryKey("c1"),
+      })
+      await new Promise((r) => setTimeout(r, 0))
+    })
+    expect(client.getQueryData(getListChatMessagesQueryKey("c1"))).toEqual({
+      messages: [{ role: "user", content: "hi" }],
+    })
+
+    expect(screen.getAllByText("hi")).toHaveLength(1)
+    resume()
   })
 })
