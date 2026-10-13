@@ -1,12 +1,13 @@
 """Chatbot API endpoints for handling chat interactions."""
 
+import asyncio
 import json
 
 from fastapi import (
     APIRouter,
     Request,
 )
-from fastapi.responses import StreamingResponse
+from sse_starlette import EventSourceResponse
 
 from app.agents.messages import Message
 from app.agents.shared.checkpointing import delete_conversation_checkpoints
@@ -79,7 +80,12 @@ async def chat_stream(
     )
 
     async def event_generator():
-        """Yield the response as server-sent events, one JSON payload per chunk."""
+        """Yield the response as server-sent events, one JSON payload per chunk.
+
+        Run by EventSourceResponse, which cancels this generator when the client
+        disconnects. The CancelledError travels down into the agent and the HTTP
+        call to the model, which is what stops a call nobody is waiting for.
+        """
         try:
             full_response = ""
             user_message = Message(role="user", content=chat_request.message)
@@ -87,10 +93,14 @@ async def chat_stream(
                 async for chunk in agent.get_stream_response([user_message], conversation.id, user_id=user.id):
                     full_response += chunk
                     response = StreamResponse(content=chunk, done=False)
-                    yield f"data: {json.dumps(response.model_dump())}\n\n"
+                    yield {"data": json.dumps(response.model_dump())}
 
             final_response = StreamResponse(content="", done=True)
-            yield f"data: {json.dumps(final_response.model_dump())}\n\n"
+            yield {"data": json.dumps(final_response.model_dump())}
+
+        except asyncio.CancelledError:
+            logger.info("stream_chat_client_disconnected", conversation_id=conversation.id)
+            raise
 
         except Exception as e:
             logger.error(
@@ -100,9 +110,10 @@ async def chat_stream(
                 exc_info=True,
             )
             error_response = StreamResponse(content="An error occurred. Please try again.", done=True)
-            yield f"data: {json.dumps(error_response.model_dump())}\n\n"
+            yield {"data": json.dumps(error_response.model_dump())}
 
-    return StreamingResponse(event_generator(), media_type="text/event-stream")
+    # sep="\n" keeps the frames byte-identical to the StreamingResponse this replaced.
+    return EventSourceResponse(event_generator(), sep="\n")
 
 
 @router.get(
