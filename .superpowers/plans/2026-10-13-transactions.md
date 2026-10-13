@@ -3465,7 +3465,7 @@ Spec §4.2 (dialog, row menu, chip), §4.4. Review Focus 3.
   - `CategoryPicker({ value, onChange, categories })` — a dropdown menu of categories
   - `useTransactionColumns(label, actions: { onEdit: (t) => void; onDelete: (t) => void; onRecategorise: (t, category: Category) => void; categories: CategoryResponse[] })`
 
-- [ ] **Step 1: Amount parsing, test first**
+- [x] **Step 1: Amount parsing, test first**
 
 `amount-input.test.ts`:
 
@@ -3509,7 +3509,7 @@ export function parseAmount(input: string): string | null {
 
 Run → PASS.
 
-- [ ] **Step 2: The dialog, test first**
+- [x] **Step 2: The dialog, test first**
 
 `transaction-form-dialog.test.tsx` — mock `useCreateTransaction`/`useUpdateTransaction` (capture the options passed and expose a `mutate` spy), mock `useListTransactionCategories`, wrap in a `QueryClientProvider`. Cases:
 1. Add: with the dialog's date preset to `2026-03-03` (pass a `today` prop, or mock the clock with `vi.setSystemTime`), fill merchant `Späti`, amount `-4,50`, pick a category, submit → `mutate` called with `{ data: { date: "2026-03-03", merchant: "Späti", amount: "-4.50", category: "food_groceries", description: null, is_recurring: false, allow_duplicate: false } }`; the create hook received `mutation.meta.silentStatuses: [409]`.
@@ -3561,7 +3561,7 @@ export function useInvalidateTransactions() {
 
 (Check the generated `getListTransactionsQueryKey()` with no argument returns `["/api/v1/transactions"]`; if it returns `[url, undefined]`, use `{ queryKey: [getListTransactionsQueryKey()[0]] }`.)
 
-- [ ] **Step 3: Delete confirm, category picker, row menu, wiring**
+- [x] **Step 3: Delete confirm, category picker, row menu, wiring**
 
 `delete-transactions-dialog.tsx`:
 
@@ -3615,7 +3615,7 @@ export function DeleteTransactionsDialog({
 
 Extend `transactions-table.test.tsx`: clicking **Add transaction** opens the dialog (its title "Add a transaction" shows); choosing **Delete** in a row's menu opens the confirm with "Delete this transaction?".
 
-- [ ] **Step 4: Run, check by hand, commit**
+- [x] **Step 4: Run, check by hand, commit**
 
 Run (repo root): `make check-web && make test-web` → PASS.
 By hand: add a transaction; add the same one again → the duplicate notice, then **Add anyway**; edit it; recategorise from the chip; delete it.
