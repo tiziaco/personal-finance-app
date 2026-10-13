@@ -3639,8 +3639,8 @@ Spec §4.2 (bulk), §3.4.
 - Consumes: `useBatchUpdateTransactionCategory` (generated), Task 9's `enableRowSelection` / `renderBulkActions`, Task 12's `DeleteTransactionsDialog`, `useInvalidateTransactions`, `useCategories`.
 - Produces: `BulkCategoryDialog({ ids, open, onOpenChange, onDone })`.
 
-- [ ] **Step 1: Failing test** — in `transactions-table.test.tsx`, with two rows: select both checkboxes → "2 selected" and buttons **Recategorise** and **Delete** show; **Delete** opens "Delete 2 transactions?"; confirming calls the batch-delete `mutate` with `{ data: { ids: [id1, id2] } }`. **Recategorise** opens the dialog; choosing `shopping` and confirming calls the batch-update `mutate` with `{ data: { ids: [id1, id2], category: "shopping" } }`.
-- [ ] **Step 2: Implement** `bulk-category-dialog.tsx` — a `Dialog` titled `Recategorise ${ids.length} transactions` with a native category select (options from `useCategories`) and **Apply** → `mutate({ data: { ids, category } }, { onSuccess: async () => { await invalidate(); onDone(); onOpenChange(false) } })`. In `transactions-table.tsx`: `enableRowSelection` and
+- [x] **Step 1: Failing test** — in `transactions-table.test.tsx`, with two rows: select both checkboxes → "2 selected" and buttons **Recategorise** and **Delete** show; **Delete** opens "Delete 2 transactions?"; confirming calls the batch-delete `mutate` with `{ data: { ids: [id1, id2] } }`. **Recategorise** opens the dialog; choosing `shopping` and confirming calls the batch-update `mutate` with `{ data: { ids: [id1, id2], category: "shopping" } }`.
+- [x] **Step 2: Implement** `bulk-category-dialog.tsx` — a `Dialog` titled `Recategorise ${ids.length} transactions` with a native category select (options from `useCategories`) and **Apply** → `mutate({ data: { ids, category } }, { onSuccess: async () => { await invalidate(); onDone(); onOpenChange(false) } })`. In `transactions-table.tsx`: `enableRowSelection` and
 
 ```tsx
 renderBulkActions={(selected, clear) => (
@@ -3652,7 +3652,7 @@ renderBulkActions={(selected, clear) => (
 ```
 
 with `bulk` dialog state rendering `BulkCategoryDialog` / `DeleteTransactionsDialog` and calling `clear` on success.
-- [ ] **Step 3: Run, by hand, commit**
+- [x] **Step 3: Run, by hand, commit**
 
 Run (repo root): `make check-web && make test-web` → PASS. By hand: select three rows, recategorise; select two, delete; change page with a selection — it clears.
 
