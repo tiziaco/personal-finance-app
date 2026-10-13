@@ -2750,7 +2750,7 @@ Spec §4.2 (filters), §4.3 (phone layout).
   - `DateFilterControl` prop `presets?: boolean` — preset buttons above the mode select
   - `@app/data-table/filters/filter-checkbox-group`: `FilterCheckboxGroup<T extends string>({ label, options: {value: T; label: string}[], value: T[], onChange: (value: T[]) => void })`
 
-- [ ] **Step 1: Failing tests**
+- [x] **Step 1: Failing tests**
 
 `date-presets.test.ts`:
 
@@ -2835,7 +2835,7 @@ describe("renderCard", () => {
 
 Run (from `web-app/`): `pnpm test packages/data-table` → FAIL.
 
-- [ ] **Step 2: Implement**
+- [x] **Step 2: Implement**
 
 `date-presets.ts`:
 
@@ -2965,7 +2965,7 @@ The bulk bar (Task 9) is not rendered in card mode (selection is desktop-only pe
 
 Run → PASS.
 
-- [ ] **Step 3: Gate and commit**
+- [x] **Step 3: Gate and commit**
 
 Run (repo root): `make check-web && make test-web`.
 
