@@ -85,9 +85,11 @@ export function ConversationPage() {
   // silentError (on this query's every observer) keeps QueryProvider from
   // toasting, and a query's meta can't depend on the status. So the toast it
   // would have shown is raised here, for every error but the 404 rendered below.
+  const hasData = history.data !== undefined
   useEffect(() => {
-    if (history.error && !notFound) toastForError(history.error)
-  }, [history.error, notFound])
+    // Mirrors QueryProvider's rule: a failed refetch behind shown data stays silent.
+    if (history.error && !notFound && !hasData) toastForError(history.error)
+  }, [history.error, notFound, hasData])
 
   if (notFound) return <ConversationNotFound />
   if (history.isPending) return <ChatThreadSkeleton />
