@@ -80,6 +80,13 @@ class TestChatEndpoint:
         )
         assert response.status_code == 404
 
+    async def test_chat_script_tag_returns_422(self, authenticated_client_with_agent, test_conversation):
+        response = await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}",
+            json={"message": "<script>alert(1)</script>"},
+        )
+        assert response.status_code == 422
+
 
 class TestStreamChatEndpoint:
     """Tests for POST /api/v1/chatbot/chat/{conversation_id}/stream"""
@@ -142,6 +149,19 @@ class TestGetChatHistory:
         for msg in messages:
             assert "role" in msg
             assert "content" in msg
+
+    async def test_long_reply_in_history_returns_200(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
+        from app.agents.messages import Message
+
+        mock_agent.get_chat_history.return_value = [
+            Message(role="user", content="Explain budgeting"),
+            Message(role="assistant", content="x" * 5000),
+        ]
+        response = await authenticated_client_with_agent.get(f"/api/v1/chatbot/chat/{test_conversation.id}/messages")
+        assert response.status_code == 200
+        assert len(response.json()["messages"][1]["content"]) == 5000
 
 
 class TestClearChatHistory:

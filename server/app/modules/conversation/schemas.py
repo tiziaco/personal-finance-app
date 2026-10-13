@@ -1,5 +1,6 @@
 """Conversation and chat request/response schemas."""
 
+import re
 import uuid
 from datetime import datetime
 from typing import List
@@ -7,6 +8,7 @@ from typing import List
 from pydantic import (
     BaseModel,
     Field,
+    field_validator,
 )
 
 from app.agents.messages import Message
@@ -39,6 +41,16 @@ class ChatRequest(BaseModel):
         min_length=1,
         max_length=3000,
     )
+
+    @field_validator("message")
+    @classmethod
+    def validate_message(cls, v: str) -> str:
+        """Reject script tags and null bytes in what the user sends."""
+        if re.search(r"<script.*?>.*?</script>", v, re.IGNORECASE | re.DOTALL):
+            raise ValueError("Content contains potentially harmful script tags")
+        if "\0" in v:
+            raise ValueError("Content contains null bytes")
+        return v
 
 
 class ChatResponse(BaseModel):
