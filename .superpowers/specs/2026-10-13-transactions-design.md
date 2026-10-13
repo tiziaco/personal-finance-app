@@ -273,7 +273,7 @@ rolls back, and nothing changed — all or nothing, one query, the count real.
 | `transaction-columns.tsx` | selection, date, merchant, amount (negative red, positive green, EUR), category chip → category picker, confidence % (warning colour below 70%), row menu (Edit, Delete) |
 | `transaction-filters.tsx` | `FilterPanel` fields: `DateFilterControl` presets (today, this week, this month, last month, custom), category multi-select, amount min/max, recurring switch; `FilterChip`s for active filters |
 | `transaction-card.tsx` | the phone card: date, merchant, amount, category; no selection, no confidence |
-| `transaction-form-dialog.tsx` | add and edit: date, merchant, amount, category, description, recurring; edit sends only changed fields; add mode handles the 409 (§4.4) |
+| `transaction-form-dialog.tsx` | add and edit: date (`DatePicker`), merchant, amount, category, description, recurring; edit sends only changed fields; add mode handles the 409 (§4.4) |
 | `bulk-category-dialog.tsx` | pick a category for the selection |
 | `delete-transaction-dialog.tsx` | `AlertDialog` confirm, single or bulk |
 | `use-categories.ts` | `useListTransactionCategories` with `staleTime: Infinity`; returns the ordered list and `label(slug)`, falling back to the slug while loading |
@@ -318,8 +318,10 @@ invalidate. Step 3 also edits `layout.tsx`; the second to merge takes a union.
 
 ### 4.6 `@app/ui` primitives
 
-`alert-dialog`, `checkbox`, `switch`, `textarea`. No `calendar`: dates are native
-`<input type="date">`, as `DateFilterControl` already uses. Condition 6 asks for the shadcn CLI;
+`alert-dialog`, `calendar` (the shadcn Base UI calendar), `checkbox`, `switch`, `textarea`. The
+add/edit dialog's date is a `DatePicker` in `@app/components/forms/` — the shadcn Date Picker
+pattern, `Popover` + `Calendar`, its value a local ISO date (decided with the user, 13 Oct 2026).
+The filter's date bounds stay `DateFilterControl`'s native inputs. Condition 6 asks for the shadcn CLI;
 `components.md` says the CLI cannot resolve this repo's alias and primitives are installed by
 hand. The CLI is tried first; if it fails, they are installed by hand from the Base UI docs, and
 the orchestrator is told so step 3 does the same. If step 3 merges one first, take

@@ -48,7 +48,8 @@
 - `server/app/main.py`, `server/app/api/v1/api.py`, `server/alembic/env.py`, `server/pyproject.toml` (`[tool.importlinter]` only), `server/app/core/config.py` (one line), `server/Makefile`, root `Makefile`
 
 **Web — create**
-- `web-app/packages/ui/src/primitives/{alert-dialog,checkbox,switch,textarea}.tsx`
+- `web-app/packages/ui/src/primitives/{alert-dialog,calendar,checkbox,popover?,switch,textarea}.tsx` (`popover` exists already — reuse it)
+- `web-app/packages/components/src/forms/{date-picker.tsx,date-picker.test.tsx}`
 - `web-app/packages/api-client/src/query-provider.test.tsx`
 - `web-app/packages/data-table/src/table/{row-selection.ts,row-selection.test.ts,data-table-bulk-bar.tsx,data-table-selection.test.tsx,data-table-cards.test.tsx}`, `web-app/packages/data-table/src/url-state/date-presets.{ts,test.ts}`, `web-app/packages/data-table/src/filters/filter-checkbox-group.{tsx,test.tsx}`
 - `web-app/apps/web/src/app/(dashboard)/transactions/{page,loading}.tsx`
@@ -2317,18 +2318,113 @@ git commit -m "feat(seed): make seed-transactions fills a dev user's transaction
 
 ---
 
-## Task 8: UI primitives and the mutation opt-out
+## Task 8: UI primitives, the date picker and the mutation opt-out
 
 Spec §4.6, §4.4. Load `web-app-patterns` → `references/components.md`.
 
 **Files:**
-- Create: `web-app/packages/ui/src/primitives/{alert-dialog,checkbox,switch,textarea}.tsx`, `web-app/packages/api-client/src/query-provider.test.tsx`
-- Modify: `web-app/packages/ui/src/index.ts`, `web-app/packages/ui/package.json` (only if needed), `web-app/packages/api-client/src/query-provider.tsx`
+- Create: `web-app/packages/ui/src/primitives/{alert-dialog,calendar,checkbox,switch,textarea}.tsx`, `web-app/packages/components/src/forms/date-picker.tsx`, `web-app/packages/components/src/forms/date-picker.test.tsx`, `web-app/packages/api-client/src/query-provider.test.tsx`
+- Modify: `web-app/packages/ui/src/index.ts`, `web-app/packages/ui/package.json` (`react-day-picker` and whatever else the calendar's docs list), `web-app/packages/api-client/src/query-provider.tsx`
 
 **Interfaces:**
-- Produces: `@app/ui/alert-dialog` (`AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel`), `@app/ui/checkbox` (`Checkbox`: Base UI, `checked`, `indeterminate`, `onCheckedChange(checked: boolean)`), `@app/ui/switch` (`Switch`: `checked`, `onCheckedChange`), `@app/ui/textarea` (`Textarea`). Mutation `meta: { silentStatuses: number[] }` suppresses `QueryProvider`'s toast for those statuses.
+- Produces: `@app/ui/calendar` (`Calendar`, the shadcn Base UI calendar on `react-day-picker`); `@app/components/forms/date-picker` (`DatePicker({ value: string; onChange: (iso: string) => void; id?: string; placeholder?: string })` — `value`/`onChange` are local ISO `YYYY-MM-DD`, "" when empty); `@app/ui/alert-dialog` (`AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel`), `@app/ui/checkbox` (`Checkbox`: Base UI, `checked`, `indeterminate`, `onCheckedChange(checked: boolean)`), `@app/ui/switch` (`Switch`: `checked`, `onCheckedChange`), `@app/ui/textarea` (`Textarea`). Mutation `meta: { silentStatuses: number[] }` suppresses `QueryProvider`'s toast for those statuses.
 
-- [ ] **Step 1: Add the four primitives.** Condition 6 of the brief says "with the shadcn CLI, no hand edits"; `components.md` says the CLI cannot resolve this repo's alias. Try the CLI first, from `web-app/packages/ui`: `pnpm dlx shadcn@latest add alert-dialog checkbox switch textarea`. If it writes `src/primitives/<name>.tsx` with working imports, keep its output untouched (then `pnpm exec prettier --write` them). If it fails, install each by hand from `ui.shadcn.com/docs/components/base/<name>` (Manual tab, Base UI variant), `cn` from `@app/core/lib/utils`, prettier — and **report to the controller which path was taken**, so it can tell the orchestrator (step 3 must take the same path). Add each primitive's exports to `src/index.ts`.
+- [ ] **Step 1: Add the five primitives** (`alert-dialog`, `calendar` — https://ui.shadcn.com/docs/components/base/calendar —, `checkbox`, `switch`, `textarea`). Condition 6 of the brief says "with the shadcn CLI, no hand edits"; `components.md` says the CLI cannot resolve this repo's alias. Try the CLI first, from `web-app/packages/ui`: `pnpm dlx shadcn@latest add alert-dialog calendar checkbox switch textarea`. If it writes `src/primitives/<name>.tsx` with working imports, keep its output untouched (then `pnpm exec prettier --write` them). If it fails, install each by hand from `ui.shadcn.com/docs/components/base/<name>` (Manual tab, Base UI variant), `cn` from `@app/core/lib/utils`, prettier — and **report to the controller which path was taken**, so it can tell the orchestrator (step 3 must take the same path). Add each primitive's exports to `src/index.ts`.
+- [ ] **Step 1b: The date picker (the shadcn Date Picker pattern: `Popover` + `Calendar`), test first**
+
+`packages/components/src/forms/date-picker.test.tsx`:
+
+```tsx
+import { describe, it, expect, vi } from "vitest"
+import { render, screen, fireEvent } from "@testing-library/react"
+import { DatePicker } from "./date-picker"
+
+describe("DatePicker", () => {
+  it("shows the placeholder when empty", () => {
+    render(<DatePicker value="" onChange={() => {}} placeholder="Pick a date" />)
+    expect(screen.getByRole("button", { name: /Pick a date/ })).toBeInTheDocument()
+  })
+
+  it("shows the chosen day as a local date", () => {
+    render(<DatePicker value="2026-03-03" onChange={() => {}} />)
+    expect(screen.getByRole("button", { name: /2026|Mar|3/ })).toHaveTextContent(/3/)
+  })
+
+  it("reports a picked day as local ISO, never shifted by the timezone", () => {
+    const onChange = vi.fn()
+    render(<DatePicker value="2026-03-03" onChange={onChange} />)
+    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: /March 14/ }))
+    expect(onChange).toHaveBeenCalledWith("2026-03-14")
+  })
+})
+```
+
+(react-day-picker names its day buttons with the full date, e.g. "Saturday, March 14th, 2026"; adjust the matcher to what it renders.)
+
+`packages/components/src/forms/date-picker.tsx`:
+
+```tsx
+"use client"
+
+import { useState } from "react"
+import { CalendarIcon } from "lucide-react"
+import { Button } from "@app/ui/button"
+import { Calendar } from "@app/ui/calendar"
+import { Popover, PopoverContent, PopoverTrigger } from "@app/ui/popover"
+import { cn } from "@app/core/lib/utils"
+
+const pad = (n: number) => String(n).padStart(2, "0")
+/** Local calendar date ↔ ISO YYYY-MM-DD. Never toISOString, which is UTC and shifts the day. */
+const toIso = (d: Date) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+const fromIso = (iso: string) => {
+  const [y, m, d] = iso.split("-").map(Number)
+  return new Date(y, m - 1, d)
+}
+const display = new Intl.DateTimeFormat(undefined, { day: "numeric", month: "short", year: "numeric" })
+
+/** One day, picked from a calendar in a popover. The value is a local ISO date, "" when empty. */
+export function DatePicker({
+  value,
+  onChange,
+  id,
+  placeholder = "Pick a date",
+}: {
+  value: string
+  onChange: (iso: string) => void
+  id?: string
+  placeholder?: string
+}) {
+  const [open, setOpen] = useState(false)
+  const selected = value ? fromIso(value) : undefined
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <Button id={id} variant="outline" className={cn("w-full justify-start font-normal", !selected && "text-muted-foreground")} />
+        }
+      >
+        <CalendarIcon />
+        {selected ? display.format(selected) : placeholder}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="start">
+        <Calendar
+          mode="single"
+          selected={selected}
+          defaultMonth={selected}
+          onSelect={(day) => {
+            if (day) onChange(toIso(day))
+            setOpen(false)
+          }}
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+```
+
+Run (from `web-app/`): `pnpm test packages/components` → PASS.
+
 - [ ] **Step 2: Failing test for the opt-out**
 
 `web-app/packages/api-client/src/query-provider.test.tsx`:
@@ -2399,8 +2495,8 @@ Run → PASS.
 Run (repo root): `make check-web && make test-web`.
 
 ```bash
-git add web-app/packages/ui web-app/packages/api-client/src/query-provider.tsx web-app/packages/api-client/src/query-provider.test.tsx web-app/pnpm-lock.yaml
-git commit -m "feat(ui): alert-dialog, checkbox, switch, textarea; a mutation can silence a status it handles"
+git add web-app/packages/ui web-app/packages/components/src/forms web-app/packages/api-client/src/query-provider.tsx web-app/packages/api-client/src/query-provider.test.tsx web-app/pnpm-lock.yaml
+git commit -m "feat(ui): alert-dialog, calendar, checkbox, switch, textarea, a date picker; a mutation can silence a status it handles"
 ```
 
 ---
@@ -3358,7 +3454,7 @@ Spec §4.2 (dialog, row menu, chip), §4.4. Review Focus 3.
 - Modify: `use-transaction-columns.tsx`, `transactions-table.tsx`, `transactions-table.test.tsx`
 
 **Interfaces:**
-- Consumes: `useCreateTransaction`, `useUpdateTransaction`, `useDeleteTransaction`, `getListTransactionsQueryKey` (generated); `TransactionCreate`, `TransactionUpdate` types; `AlertDialog*`, `Switch`, `Textarea`, `Dialog*`, `DropdownMenu*` from `@app/ui`; `ApiError` from `@app/api-client` (check its export path in `src/index.ts`).
+- Consumes: `useCreateTransaction`, `useUpdateTransaction`, `useDeleteTransaction`, `getListTransactionsQueryKey` (generated); `TransactionCreate`, `TransactionUpdate` types; `AlertDialog*`, `Switch`, `Textarea`, `Dialog*`, `DropdownMenu*` from `@app/ui`; `DatePicker` from `@app/components/forms/date-picker`; `ApiError` from `@app/api-client` (check its export path in `src/index.ts`).
 - Produces:
   - `parseAmount(input: string): string | null` — `"-4,50"` → `"-4.50"`, `"12"` → `"12.00"`, `null` for invalid
   - `useInvalidateTransactions(): () => Promise<void>`
@@ -3414,12 +3510,12 @@ Run → PASS.
 - [ ] **Step 2: The dialog, test first**
 
 `transaction-form-dialog.test.tsx` — mock `useCreateTransaction`/`useUpdateTransaction` (capture the options passed and expose a `mutate` spy), mock `useListTransactionCategories`, wrap in a `QueryClientProvider`. Cases:
-1. Add: fill date `2026-03-03`, merchant `Späti`, amount `-4,50`, pick a category, submit → `mutate` called with `{ data: { date: "2026-03-03", merchant: "Späti", amount: "-4.50", category: "food_groceries", description: null, is_recurring: false, allow_duplicate: false } }`; the create hook received `mutation.meta.silentStatuses: [409]`.
+1. Add: with the dialog's date preset to `2026-03-03` (pass a `today` prop, or mock the clock with `vi.setSystemTime`), fill merchant `Späti`, amount `-4,50`, pick a category, submit → `mutate` called with `{ data: { date: "2026-03-03", merchant: "Späti", amount: "-4.50", category: "food_groceries", description: null, is_recurring: false, allow_duplicate: false } }`; the create hook received `mutation.meta.silentStatuses: [409]`.
 2. Amount `4,505` → inline error "Enter an amount like -4.50", `mutate` not called (Review Focus 3).
 3. Add, `mutate`'s `onError` invoked with `new ApiError(409, …)` → the notice "You already have a transaction on 3 Mar 2026 at Späti for −€4.50." and buttons **Add anyway** / **Cancel** show; **Add anyway** calls `mutate` again with `allow_duplicate: true`; editing the merchant field hides the notice.
 4. Edit an existing `{ merchant: "Späti", amount: "-4.50", description: "Old", … }`: change only the description to empty and submit → `mutate({ transactionId, data: { description: null } })`; submit with no change → `mutate({ transactionId, data: {} })` is **not** called and the dialog closes.
 
-`transaction-form-dialog.tsx` — a `Dialog` with a `<form>`; local form state with `useState` (form state, not list state). Fields: `Input type="date"` (required; default today in add mode, computed with the local-date `iso` helper — copy it from `date-presets.ts` rather than importing a private), `Input` merchant (required, `maxLength={255}`), `Input` amount (`inputMode="decimal"`, placeholder `-9.99`, hint "Negative for money out"), category `Select` (or `FilterSelect`-style native select, options from `useCategories`), `Textarea` description (`maxLength={1000}`), `Switch` recurring. On submit:
+`transaction-form-dialog.tsx` — a `Dialog` with a `<form>`; local form state with `useState` (form state, not list state). Fields: `DatePicker` from `@app/components/forms/date-picker` (required; default today in add mode, as a local ISO date — build it like `date-presets.ts`'s `iso`, never `toISOString()`), `Input` merchant (required, `maxLength={255}`), `Input` amount (`inputMode="decimal"`, placeholder `-9.99`, hint "Negative for money out"), category `Select` (or `FilterSelect`-style native select, options from `useCategories`), `Textarea` description (`maxLength={1000}`), `Switch` recurring. On submit:
 
 ```tsx
 const amount = parseAmount(form.amount)
