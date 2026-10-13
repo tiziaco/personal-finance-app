@@ -90,8 +90,8 @@ class TestIntegrityDiagnostics:
         on `orig` itself.
         """
         duplicate = User(
-            clerk_id="user_duplicate_email",
-            email=test_user.email,
+            clerk_id=test_user.clerk_id,
+            email="duplicate_clerk_id@example.com",
         )
         db_session.add(duplicate)
 
@@ -102,10 +102,10 @@ class TestIntegrityDiagnostics:
 
         constraint, sqlstate = _integrity_diagnostics(caught.value)
 
-        # Loose on the name so renaming the index (ix_user_email today) fails
+        # Loose on the name so renaming the index (ix_user_clerk_id today) fails
         # the migration review rather than this test.
         assert constraint is not None
-        assert "email" in constraint
+        assert "clerk_id" in constraint
         assert sqlstate == "23505"  # unique_violation
 
     def test_reads_the_constraint_from_the_psycopg_shape(self):
