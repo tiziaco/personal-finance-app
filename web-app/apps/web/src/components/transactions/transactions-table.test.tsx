@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
@@ -28,19 +28,24 @@ vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
   ...mutationMocks,
 }))
 
+type OnUrlUpdate = NonNullable<
+  NonNullable<Parameters<typeof withNuqsTestingAdapter>[0]>["onUrlUpdate"]
+>
+type UrlUpdateEvent = Parameters<OnUrlUpdate>[0]
+
 const list = vi.mocked(useListTransactions)
 const cats = vi.mocked(useListTransactionCategories)
 
-const result = (items: unknown[]) =>
+const result = (items: unknown[], total = items.length) =>
   list.mockReturnValue({
-    data: { items, total: items.length },
+    data: { items, total },
     isPending: false,
     isPlaceholderData: false,
     isError: false,
   } as unknown as ReturnType<typeof useListTransactions>)
 
-const renderAt = (qs = "") => {
-  const Nuqs = withNuqsTestingAdapter({ searchParams: qs })
+const renderAt = (qs = "", onUrlUpdate?: OnUrlUpdate) => {
+  const Nuqs = withNuqsTestingAdapter({ searchParams: qs, onUrlUpdate })
   const Wrapper = ({ children }: { children: ReactNode }) => (
     <QueryClientProvider client={new QueryClient()}>
       <Nuqs>{children}</Nuqs>
@@ -150,5 +155,40 @@ describe("TransactionsTable", () => {
       transactionId: "1",
       data: { category: "food_groceries" },
     })
+  })
+
+  it("moves a page past the end back to the last page, with no empty state", async () => {
+    // 25 rows, and page 3 (offset 40) is empty: e.g. its only row was deleted.
+    list.mockImplementation(
+      (params) =>
+        ({
+          data: { items: params?.offset === 40 ? [] : [row], total: 25 },
+          isPending: false,
+          isPlaceholderData: false,
+          isError: false,
+        }) as unknown as ReturnType<typeof useListTransactions>,
+    )
+    const events: UrlUpdateEvent[] = []
+    renderAt("?page=3", (e) => events.push(e))
+
+    await waitFor(() =>
+      expect(events.at(-1)?.searchParams.get("page")).toBe("2"),
+    )
+    // Back must not land on the empty page again.
+    expect(events.at(-1)?.options.history).toBe("replace")
+    expect(screen.queryByText("No transactions yet.")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("No transactions match your filters."),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows neither empty state for an empty page while rows exist", () => {
+    // page 2 is the last by total, so it does not move; the rows are elsewhere
+    result([], 25)
+    renderAt("?page=2")
+    expect(screen.queryByText("No transactions yet.")).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("No transactions match your filters."),
+    ).not.toBeInTheDocument()
   })
 })

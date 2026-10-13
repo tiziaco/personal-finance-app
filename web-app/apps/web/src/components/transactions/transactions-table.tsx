@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { PlusIcon } from "lucide-react"
 import { keepPreviousData } from "@tanstack/react-query"
 import {
@@ -67,6 +67,20 @@ export function TransactionsTable() {
   )
   const narrowed = hasActiveTransactionsFilters(state.query)
 
+  // A page past the end — its last row deleted, or a hand-edited ?page= —
+  // comes back empty with the real total. Neither empty state is true then:
+  // show the skeleton and move to the last page that has rows, without a
+  // Back entry. Only a page beyond that one moves, so this cannot loop.
+  const total = data?.total ?? 0
+  const lastPageIndex = Math.ceil(total / TRANSACTIONS_PAGE_SIZE) - 1
+  const emptyPageOfMany =
+    !isPlaceholderData && data?.items.length === 0 && total > 0
+  const pastTheEnd = emptyPageOfMany && state.pageIndex > lastPageIndex
+  const { setPage } = state
+  useEffect(() => {
+    if (pastTheEnd) setPage(lastPageIndex, { history: "replace" })
+  }, [pastTheEnd, lastPageIndex, setPage])
+
   const empty = narrowed ? (
     <div className="space-y-2">
       <p>No transactions match your filters.</p>
@@ -99,7 +113,7 @@ export function TransactionsTable() {
           pageSize: TRANSACTIONS_PAGE_SIZE,
           totalCount: data?.total ?? 0,
         })}
-        isLoading={isPending}
+        isLoading={isPending || emptyPageOfMany}
         isPending={isPlaceholderData}
         errorMessage={
           isError && !data ? messages.toasts.genericError : undefined
