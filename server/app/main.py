@@ -43,6 +43,7 @@ from app.exceptions.base import ServiceError
 # tests/unit/test_module_contracts.py checks this list against app/modules/.
 from app.modules import account as _account
 from app.modules import conversation as _conversation
+from app.modules import transaction as _transaction
 
 # Load environment variables
 load_dotenv()

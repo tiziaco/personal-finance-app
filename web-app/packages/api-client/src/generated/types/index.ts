@@ -1,5 +1,7 @@
 export * from "./agentStatus"
 export * from "./bodyRenameConversation"
+export * from "./category"
+export * from "./categoryResponse"
 export * from "./chatRequest"
 export * from "./chatResponse"
 export * from "./componentsStatus"

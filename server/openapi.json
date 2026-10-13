@@ -36,6 +36,52 @@
         "title": "Body_renameConversation",
         "type": "object"
       },
+      "Category": {
+        "enum": [
+          "income",
+          "salary",
+          "transportation",
+          "household_utilities",
+          "tax_fines",
+          "food_groceries",
+          "food_delivery",
+          "bars_restaurants",
+          "atm",
+          "insurances",
+          "shopping",
+          "education",
+          "family_friends",
+          "donations_charity",
+          "healthcare_drug_stores",
+          "leisure_entertainment",
+          "media_electronics",
+          "savings_investments",
+          "travel_holidays",
+          "miscellaneous"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
+      "CategoryResponse": {
+        "description": "One category, as the web lists it.",
+        "properties": {
+          "label": {
+            "description": "The category's display name",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category's slug, as stored and sent"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "CategoryResponse",
+        "type": "object"
+      },
       "ChatRequest": {
         "description": "Request model for chat endpoint.\n\nAttributes:\n    message: The user's message to send.",
         "properties": {
@@ -956,6 +1002,37 @@
         "summary": "List all user chat conversations",
         "tags": [
           "conversation"
+        ]
+      }
+    },
+    "/api/v1/transactions/categories": {
+      "get": {
+        "description": "Every category a transaction can carry, in display order.",
+        "operationId": "listTransactionCategories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  },
+                  "title": "Response Listtransactioncategories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "List the categories",
+        "tags": [
+          "transactions"
         ]
       }
     },
