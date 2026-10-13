@@ -19,6 +19,7 @@ from langgraph.types import RunnableConfig
 from app.agents.base import BaseAgent
 from app.agents.chatbot.prompts import load_system_prompt
 from app.agents.chatbot.state import GraphState
+from app.agents.chatbot.title import generate_title
 from app.agents.chatbot.tools import tools
 from app.agents.graph import (
     dump_messages,
@@ -110,6 +111,10 @@ class ChatbotAgent(BaseAgent):
                 environment=settings.ENVIRONMENT.value,
             )
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
+
+    async def generate_title(self, user_text: str, reply_text: str) -> str:
+        """A short title for a conversation from its first exchange, on the current model."""
+        return await generate_title(user_text, reply_text, self.llm_service.current_model_name())
 
     async def _invoke_tool(self, tool_call: dict) -> ToolMessage:
         """Run one tool call, recording what happened.

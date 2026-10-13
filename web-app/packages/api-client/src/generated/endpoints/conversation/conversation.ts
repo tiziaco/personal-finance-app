@@ -362,6 +362,111 @@ export const useRenameConversation = <
 > => {
   return useMutation(useRenameConversationMutationOptions(options), queryClient)
 }
+export const getGenerateConversationTitleUrl = (conversationId: string) => {
+  return `/api/v1/conversation/conversation/${conversationId}/title`
+}
+
+/**
+ * Name an untitled conversation from its first exchange. A conversation that already has a name, or has no reply yet, is returned unchanged.
+ * @summary Generate a conversation title
+ */
+export const useGenerateConversationTitleHook = (): ((
+  conversationId: string,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<ConversationResponse>) => {
+  const customFetcher = useApiFetch()
+  return (
+    conversationId: string,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getGenerateConversationTitleUrl(conversationId), {
+      ...options,
+      method: "POST",
+    })
+  }
+}
+
+export const getGenerateConversationTitleMutationKey = () =>
+  ["generateConversationTitle"] as const
+
+export const useGenerateConversationTitleMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>,
+    TError,
+    GenerateConversationTitleMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>,
+  TError,
+  GenerateConversationTitleMutationVariables,
+  TContext
+> => {
+  const mutationKey = getGenerateConversationTitleMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const generateConversationTitle = useGenerateConversationTitleHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>,
+    GenerateConversationTitleMutationVariables
+  > = (props) => {
+    const { conversationId } = props ?? {}
+
+    return generateConversationTitle(conversationId, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type GenerateConversationTitleMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>
+>
+
+export type GenerateConversationTitleMutationError =
+  ErrorType<HTTPValidationError>
+export type GenerateConversationTitleMutationVariables = {
+  conversationId: string
+}
+
+/**
+ * @summary Generate a conversation title
+ */
+export const useGenerateConversationTitle = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>,
+      TError,
+      GenerateConversationTitleMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useGenerateConversationTitleHook>>>,
+  TError,
+  GenerateConversationTitleMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    useGenerateConversationTitleMutationOptions(options),
+    queryClient,
+  )
+}
 export const getListConversationsUrl = () => {
   return `/api/v1/conversation/conversations`
 }

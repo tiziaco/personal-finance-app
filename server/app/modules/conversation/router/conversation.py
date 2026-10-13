@@ -14,7 +14,7 @@ from app.core.limiter import limiter
 from app.core.logging import logger
 from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
-from app.modules.conversation.dependencies import UserConversation
+from app.modules.conversation.dependencies import ChatbotAgentDep, UserConversation
 from app.modules.conversation.schemas import ConversationResponse
 from app.modules.conversation.service import conversation_service
 
@@ -111,3 +111,30 @@ async def get_user_conversations(request: Request, db_session: DbSession, user: 
         )
         for conversation in conversations
     ]
+
+
+@router.post(
+    "/conversation/{conversation_id}/title",
+    operation_id="generateConversationTitle",
+    response_model=ConversationResponse,
+    summary="Generate a conversation title",
+    description=(
+        "Name an untitled conversation from its first exchange. A conversation that already "
+        "has a name, or has no reply yet, is returned unchanged."
+    ),
+)
+@limiter.limit(settings.rate_limits.endpoints.CHAT[0])
+async def generate_conversation_title(
+    request: Request,
+    conversation: UserConversation,
+    db_session: DbSession,
+    agent: ChatbotAgentDep,
+):
+    """Generate and save a title for an untitled conversation."""
+    conversation = await conversation_service.generate_title(db_session, conversation, agent)
+
+    return ConversationResponse(
+        conversation_id=conversation.id,
+        name=conversation.name,
+        created_at=conversation.created_at,
+    )

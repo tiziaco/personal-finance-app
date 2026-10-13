@@ -927,6 +927,55 @@
         ]
       }
     },
+    "/api/v1/conversation/conversation/{conversation_id}/title": {
+      "post": {
+        "description": "Name an untitled conversation from its first exchange. A conversation that already has a name, or has no reply yet, is returned unchanged.",
+        "operationId": "generateConversationTitle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Generate a conversation title",
+        "tags": [
+          "conversation"
+        ]
+      }
+    },
     "/api/v1/conversation/conversations": {
       "get": {
         "description": "Retrieve all chat conversations created by the authenticated user.",

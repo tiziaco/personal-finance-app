@@ -2,15 +2,20 @@
 
 import uuid
 from typing import (
+    TYPE_CHECKING,
     List,
     Optional,
 )
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.logging import logger
 from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.repository import conversation_repository
+
+if TYPE_CHECKING:
+    from app.agents.chatbot.graph import ChatbotAgent
 
 
 class ConversationService:
@@ -68,6 +73,31 @@ class ConversationService:
         number of rows touched.
         """
         return await conversation_repository.blank_names_for_user(session, user_id)
+
+    @staticmethod
+    async def generate_title(session: AsyncSession, conversation: Conversation, agent: "ChatbotAgent") -> Conversation:
+        """Name an untitled conversation from its first exchange.
+
+        A no-op for a named conversation or one with no reply yet. A model
+        failure is logged and the conversation returned unchanged: a title is
+        cosmetic, and the client asks again after the next completed reply.
+        """
+        if conversation.name:
+            return conversation
+
+        history = await agent.get_chat_history(conversation.id)
+        user_text = next((m.content for m in history if m.role == "user"), None)
+        reply_text = next((m.content for m in history if m.role == "assistant"), None)
+        if not user_text or not reply_text:
+            return conversation
+
+        try:
+            title = await agent.generate_title(user_text, reply_text)
+        except Exception as e:
+            logger.warning("conversation_title_generation_failed", conversation_id=conversation.id, error=str(e))
+            return conversation
+
+        return await conversation_repository.update_name(session, conversation, title)
 
 
 conversation_service = ConversationService()

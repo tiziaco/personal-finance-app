@@ -1,10 +1,12 @@
 """Integration tests for conversation CRUD API endpoints."""
 
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
 from uuid_utils.compat import uuid7
 
+from app.agents.messages import Message
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
@@ -206,4 +208,72 @@ class TestDeleteConversation:
         await db_session.flush()
 
         response = await authenticated_client_with_agent.delete(f"/api/v1/conversation/conversation/{other_conv.id}")
+        assert response.status_code == 404
+
+
+@pytest.fixture
+async def untitled_conversation(db_session, test_user):
+    conv = Conversation(user_id=test_user.id, name="")
+    db_session.add(conv)
+    await db_session.flush()
+    await db_session.refresh(conv)
+    return conv
+
+
+class TestGenerateConversationTitle:
+    """Tests for POST /api/v1/conversation/conversation/{id}/title"""
+
+    def _url(self, conversation_id):
+        return f"/api/v1/conversation/conversation/{conversation_id}/title"
+
+    async def test_unauthenticated_returns_401(self, client, untitled_conversation):
+        response = await client.post(self._url(untitled_conversation.id))
+        assert response.status_code == 401
+
+    async def test_untitled_conversation_gets_a_title(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+    ):
+        mock_agent.generate_title = AsyncMock(return_value="Grocery budget")
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == "Grocery budget"
+        mock_agent.generate_title.assert_awaited_once_with("Hello", "Hi there!")
+
+    async def test_named_conversation_is_unchanged(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+    ):
+        untitled_conversation.name = "My name"
+        await db_session.flush()
+        mock_agent.generate_title = AsyncMock(return_value="Other")
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.json()["name"] == "My name"
+        mock_agent.generate_title.assert_not_awaited()
+
+    async def test_no_reply_yet_is_unchanged(self, authenticated_client_with_agent, untitled_conversation, mock_agent):
+        mock_agent.get_chat_history.return_value = [Message(role="user", content="Hello")]
+        mock_agent.generate_title = AsyncMock(return_value="Other")
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == ""
+        mock_agent.generate_title.assert_not_awaited()
+
+    async def test_model_failure_returns_200_unchanged(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+    ):
+        mock_agent.generate_title = AsyncMock(side_effect=RuntimeError("provider down"))
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == ""
+
+    async def test_other_users_conversation_returns_404(self, db_session, authenticated_client_with_agent):
+        from app.modules.account.models import User
+
+        other = User(clerk_id="clerk_title_other", email="title_other@example.com")
+        db_session.add(other)
+        await db_session.flush()
+        conv = Conversation(user_id=other.id, name="")
+        db_session.add(conv)
+        await db_session.flush()
+
+        response = await authenticated_client_with_agent.post(self._url(conv.id))
         assert response.status_code == 404
