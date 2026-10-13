@@ -21,7 +21,7 @@ import { ApiError } from "./errors"
  */
 export type ErrorType<_Body = unknown> = ApiError
 
-function resolveBaseUrl(): string {
+export function resolveBaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_API_URL
   if (!url) {
     throw new Error("@app/api-client: NEXT_PUBLIC_API_URL is not set")
