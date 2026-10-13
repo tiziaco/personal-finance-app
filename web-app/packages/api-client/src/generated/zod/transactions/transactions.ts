@@ -8,6 +8,20 @@
 import * as zod from "zod"
 
 /**
+ * Permanently remove every transaction the caller owns, earlier deleted ones included.
+ * @summary Delete all transactions
+ */
+export const DeleteAllTransactionsResponse = zod
+  .object({
+    deleted: zod
+      .int()
+      .describe(
+        "Transactions permanently removed, earlier deleted ones included",
+      ),
+  })
+  .describe("How many transactions delete-all removed.")
+
+/**
  * One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.
  * @summary List transactions
  */
@@ -311,6 +325,74 @@ export const CreateTransactionResponse = zod
       .describe("When the row was last changed"),
   })
   .describe("A transaction as the API returns it.")
+
+/**
+ * Hide up to 100 transactions. All or nothing: one missing id deletes none (404).
+ * @summary Delete transactions
+ */
+export const batchDeleteTransactionsBodyIdsMax = 100
+
+export const BatchDeleteTransactionsBody = zod
+  .object({
+    ids: zod
+      .array(zod.uuid())
+      .min(1)
+      .max(batchDeleteTransactionsBodyIdsMax)
+      .describe("Transaction ids, distinct"),
+  })
+  .describe("1–100 distinct transaction ids.")
+
+export const BatchDeleteTransactionsResponse = zod
+  .object({
+    deleted: zod.int().describe("Transactions deleted"),
+  })
+  .describe("How many transactions a batch deleted.")
+
+/**
+ * Give up to 100 transactions one category. All or nothing: one missing id changes none (404).
+ * @summary Recategorise transactions
+ */
+export const batchUpdateTransactionCategoryBodyIdsMax = 100
+
+export const BatchUpdateTransactionCategoryBody = zod
+  .object({
+    category: zod
+      .enum([
+        "income",
+        "salary",
+        "transportation",
+        "household_utilities",
+        "tax_fines",
+        "food_groceries",
+        "food_delivery",
+        "bars_restaurants",
+        "atm",
+        "insurances",
+        "shopping",
+        "education",
+        "family_friends",
+        "donations_charity",
+        "healthcare_drug_stores",
+        "leisure_entertainment",
+        "media_electronics",
+        "savings_investments",
+        "travel_holidays",
+        "miscellaneous",
+      ])
+      .describe("The category slug"),
+    ids: zod
+      .array(zod.uuid())
+      .min(1)
+      .max(batchUpdateTransactionCategoryBodyIdsMax)
+      .describe("Transaction ids, distinct"),
+  })
+  .describe("Give every listed transaction one category.")
+
+export const BatchUpdateTransactionCategoryResponse = zod
+  .object({
+    updated: zod.int().describe("Transactions changed"),
+  })
+  .describe("How many transactions a batch changed.")
 
 /**
  * Every category a transaction can carry, in display order.

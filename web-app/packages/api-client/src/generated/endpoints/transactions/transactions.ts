@@ -22,7 +22,12 @@ import type {
 } from "@tanstack/react-query"
 
 import type {
+  BatchCategoryUpdate,
+  BatchDeleteResponse,
+  BatchIds,
+  BatchUpdateResponse,
   CategoryResponse,
+  DeleteAllResponse,
   HTTPValidationError,
   ListTransactionsParams,
   TransactionCreate,
@@ -54,6 +59,101 @@ const withQueryKey = <T extends object, K>(
   return result
 }
 
+export const getDeleteAllTransactionsUrl = () => {
+  return `/api/v1/transactions`
+}
+
+/**
+ * Permanently remove every transaction the caller owns, earlier deleted ones included.
+ * @summary Delete all transactions
+ */
+export const useDeleteAllTransactionsHook = (): ((
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<DeleteAllResponse>) => {
+  const customFetcher = useApiFetch()
+  return (options?: Parameters<ReturnType<typeof useApiFetch>>[1]) => {
+    return customFetcher(getDeleteAllTransactionsUrl(), {
+      ...options,
+      method: "DELETE",
+    })
+  }
+}
+
+export const getDeleteAllTransactionsMutationKey = () =>
+  ["deleteAllTransactions"] as const
+
+export const useDeleteAllTransactionsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>,
+    TError,
+    void,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>,
+  TError,
+  void,
+  TContext
+> => {
+  const mutationKey = getDeleteAllTransactionsMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const deleteAllTransactions = useDeleteAllTransactionsHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>,
+    void
+  > = () => {
+    return deleteAllTransactions(requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type DeleteAllTransactionsMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>
+>
+
+export type DeleteAllTransactionsMutationError = ErrorType<unknown>
+
+/**
+ * @summary Delete all transactions
+ */
+export const useDeleteAllTransactions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>,
+      TError,
+      void,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useDeleteAllTransactionsHook>>>,
+  TError,
+  void,
+  TContext
+> => {
+  return useMutation(
+    useDeleteAllTransactionsMutationOptions(options),
+    queryClient,
+  )
+}
 export const getListTransactionsUrl = (params?: ListTransactionsParams) => {
   const normalizedParams = new URLSearchParams()
 
@@ -361,6 +461,248 @@ export const useCreateTransaction = <
   TContext
 > => {
   return useMutation(useCreateTransactionMutationOptions(options), queryClient)
+}
+export const getBatchDeleteTransactionsUrl = () => {
+  return `/api/v1/transactions/batch`
+}
+
+/**
+ * Hide up to 100 transactions. All or nothing: one missing id deletes none (404).
+ * @summary Delete transactions
+ */
+export const useBatchDeleteTransactionsHook = (): ((
+  batchIds: BatchIds,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<BatchDeleteResponse>) => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {}
+    if (h instanceof Headers) return Object.fromEntries(h.entries())
+    if (Array.isArray(h)) return Object.fromEntries(h)
+    return h
+  }
+
+  const customFetcher = useApiFetch()
+  return (
+    batchIds: BatchIds,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getBatchDeleteTransactionsUrl(), {
+      ...options,
+      method: "DELETE",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(batchIds),
+    })
+  }
+}
+
+export const getBatchDeleteTransactionsMutationKey = () =>
+  ["batchDeleteTransactions"] as const
+
+export const useBatchDeleteTransactionsMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>,
+    TError,
+    BatchDeleteTransactionsMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>,
+  TError,
+  BatchDeleteTransactionsMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBatchDeleteTransactionsMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const batchDeleteTransactions = useBatchDeleteTransactionsHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>,
+    BatchDeleteTransactionsMutationVariables
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return batchDeleteTransactions(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BatchDeleteTransactionsMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>
+>
+export type BatchDeleteTransactionsMutationBody = BatchIds
+export type BatchDeleteTransactionsMutationError =
+  ErrorType<HTTPValidationError>
+export type BatchDeleteTransactionsMutationVariables = { data: BatchIds }
+
+/**
+ * @summary Delete transactions
+ */
+export const useBatchDeleteTransactions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>,
+      TError,
+      BatchDeleteTransactionsMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useBatchDeleteTransactionsHook>>>,
+  TError,
+  BatchDeleteTransactionsMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    useBatchDeleteTransactionsMutationOptions(options),
+    queryClient,
+  )
+}
+export const getBatchUpdateTransactionCategoryUrl = () => {
+  return `/api/v1/transactions/batch`
+}
+
+/**
+ * Give up to 100 transactions one category. All or nothing: one missing id changes none (404).
+ * @summary Recategorise transactions
+ */
+export const useBatchUpdateTransactionCategoryHook = (): ((
+  batchCategoryUpdate: BatchCategoryUpdate,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<BatchUpdateResponse>) => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {}
+    if (h instanceof Headers) return Object.fromEntries(h.entries())
+    if (Array.isArray(h)) return Object.fromEntries(h)
+    return h
+  }
+
+  const customFetcher = useApiFetch()
+  return (
+    batchCategoryUpdate: BatchCategoryUpdate,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getBatchUpdateTransactionCategoryUrl(), {
+      ...options,
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(batchCategoryUpdate),
+    })
+  }
+}
+
+export const getBatchUpdateTransactionCategoryMutationKey = () =>
+  ["batchUpdateTransactionCategory"] as const
+
+export const useBatchUpdateTransactionCategoryMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<
+      ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>
+    >,
+    TError,
+    BatchUpdateTransactionCategoryMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>>,
+  TError,
+  BatchUpdateTransactionCategoryMutationVariables,
+  TContext
+> => {
+  const mutationKey = getBatchUpdateTransactionCategoryMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const batchUpdateTransactionCategory = useBatchUpdateTransactionCategoryHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<
+      ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>
+    >,
+    BatchUpdateTransactionCategoryMutationVariables
+  > = (props) => {
+    const { data } = props ?? {}
+
+    return batchUpdateTransactionCategory(data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type BatchUpdateTransactionCategoryMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>>
+>
+export type BatchUpdateTransactionCategoryMutationBody = BatchCategoryUpdate
+export type BatchUpdateTransactionCategoryMutationError =
+  ErrorType<HTTPValidationError>
+export type BatchUpdateTransactionCategoryMutationVariables = {
+  data: BatchCategoryUpdate
+}
+
+/**
+ * @summary Recategorise transactions
+ */
+export const useBatchUpdateTransactionCategory = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<
+        ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>
+      >,
+      TError,
+      BatchUpdateTransactionCategoryMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useBatchUpdateTransactionCategoryHook>>>,
+  TError,
+  BatchUpdateTransactionCategoryMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    useBatchUpdateTransactionCategoryMutationOptions(options),
+    queryClient,
+  )
 }
 export const getListTransactionCategoriesUrl = () => {
   return `/api/v1/transactions/categories`

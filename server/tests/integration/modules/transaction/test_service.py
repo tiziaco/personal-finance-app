@@ -5,7 +5,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.modules.transaction import DuplicateTransactionError
+from app.modules.transaction import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.schemas import TransactionCreate, TransactionImport, TransactionUpdate
 from app.modules.transaction.service import fingerprint, transaction_service
 
@@ -108,3 +108,33 @@ class TestImportMany:
             ),
         ]
         assert await transaction_service.import_many(db_session, test_user.id, rows) == 2
+
+
+class TestBatches:
+    async def test_recategorise_sets_confidence_one(self, db_session, test_user, make_transaction):
+        a = await make_transaction(test_user, confidence=0.3)
+        b = await make_transaction(test_user, merchant="REWE", confidence=0.5)
+        assert await transaction_service.batch_update_category(db_session, test_user.id, [a.id, b.id], "shopping") == 2
+        await db_session.refresh(a)
+        assert (a.category, a.confidence) == ("shopping", 1.0)
+
+    async def test_one_foreign_id_raises(self, db_session, test_user, other_user, make_transaction):
+        """The raise is what makes the session dependency roll the batch back (the route test proves it)."""
+        mine = await make_transaction(test_user)
+        theirs = await make_transaction(other_user)
+        with pytest.raises(TransactionNotFoundError):
+            await transaction_service.batch_update_category(db_session, test_user.id, [mine.id, theirs.id], "shopping")
+
+    async def test_a_soft_deleted_id_counts_as_missing(self, db_session, test_user, make_transaction):
+        a = await make_transaction(test_user)
+        a.soft_delete()
+        await db_session.flush()
+        with pytest.raises(TransactionNotFoundError):
+            await transaction_service.batch_soft_delete(db_session, test_user.id, [a.id])
+
+    async def test_delete_all_removes_soft_deleted_rows_too(self, db_session, test_user, other_user, make_transaction):
+        await make_transaction(test_user)
+        hidden = await make_transaction(test_user, merchant="Hidden")
+        hidden.soft_delete()
+        await make_transaction(other_user)
+        assert await transaction_service.delete_all_for_user(db_session, test_user.id) == 2

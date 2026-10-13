@@ -22,6 +22,83 @@
         "title": "AgentStatus",
         "type": "object"
       },
+      "BatchCategoryUpdate": {
+        "description": "Give every listed transaction one category.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "ids": {
+            "description": "Transaction ids, distinct",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "category"
+        ],
+        "title": "BatchCategoryUpdate",
+        "type": "object"
+      },
+      "BatchDeleteResponse": {
+        "description": "How many transactions a batch deleted.",
+        "properties": {
+          "deleted": {
+            "description": "Transactions deleted",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "BatchDeleteResponse",
+        "type": "object"
+      },
+      "BatchIds": {
+        "description": "1\u2013100 distinct transaction ids.",
+        "properties": {
+          "ids": {
+            "description": "Transaction ids, distinct",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "BatchIds",
+        "type": "object"
+      },
+      "BatchUpdateResponse": {
+        "description": "How many transactions a batch changed.",
+        "properties": {
+          "updated": {
+            "description": "Transactions changed",
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "title": "BatchUpdateResponse",
+        "type": "object"
+      },
       "Body_renameConversation": {
         "properties": {
           "name": {
@@ -268,6 +345,21 @@
           "connection_pool"
         ],
         "title": "DatabaseStatus",
+        "type": "object"
+      },
+      "DeleteAllResponse": {
+        "description": "How many transactions delete-all removed.",
+        "properties": {
+          "deleted": {
+            "description": "Transactions permanently removed, earlier deleted ones included",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "DeleteAllResponse",
         "type": "object"
       },
       "Environment": {
@@ -1287,6 +1379,31 @@
       }
     },
     "/api/v1/transactions": {
+      "delete": {
+        "description": "Permanently remove every transaction the caller owns, earlier deleted ones included.",
+        "operationId": "deleteAllTransactions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAllResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete all transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
       "get": {
         "description": "One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.",
         "operationId": "listTransactions",
@@ -1548,6 +1665,98 @@
           }
         ],
         "summary": "Add a transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/batch": {
+      "delete": {
+        "description": "Hide up to 100 transactions. All or nothing: one missing id deletes none (404).",
+        "operationId": "batchDeleteTransactions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchIds"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "description": "Give up to 100 transactions one category. All or nothing: one missing id changes none (404).",
+        "operationId": "batchUpdateTransactionCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCategoryUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Recategorise transactions",
         "tags": [
           "transactions"
         ]

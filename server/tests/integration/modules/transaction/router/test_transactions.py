@@ -157,3 +157,56 @@ class TestList:
     )
     async def test_bounds_are_422(self, authenticated_client, params):
         assert (await authenticated_client.get(BASE, params=params)).status_code == 422
+
+
+class TestBatchRoutes:
+    async def test_recategorise(self, authenticated_client, test_user, make_transaction):
+        a = await make_transaction(test_user)
+        response = await authenticated_client.patch(f"{BASE}/batch", json={"ids": [str(a.id)], "category": "shopping"})
+        assert response.status_code == 200
+        assert response.json() == {"updated": 1}
+
+    async def test_a_foreign_id_is_404_and_nothing_changes(
+        self, authenticated_client, test_user, other_user, make_transaction, db_session
+    ):
+        mine = await make_transaction(test_user)
+        theirs = await make_transaction(other_user)
+        await db_session.commit()  # the 404 rolls the request back; committed rows survive it
+        response = await authenticated_client.patch(
+            f"{BASE}/batch", json={"ids": [str(mine.id), str(theirs.id)], "category": "shopping"}
+        )
+        assert response.status_code == 404
+        # The test client's session override has no teardown, so do what the real get_db_session
+        # does when the route raises: roll back instead of committing.
+        await db_session.rollback()
+        await db_session.refresh(mine)
+        assert mine.category == "food_groceries"
+
+    async def test_batch_delete(self, authenticated_client, test_user, make_transaction):
+        a = await make_transaction(test_user)
+        b = await make_transaction(test_user, merchant="REWE")
+        response = await authenticated_client.request("DELETE", f"{BASE}/batch", json={"ids": [str(a.id), str(b.id)]})
+        assert response.status_code == 200
+        assert response.json() == {"deleted": 2}
+        assert (await authenticated_client.get(BASE)).json()["total"] == 0
+
+    async def test_no_ids_is_422(self, authenticated_client):
+        response = await authenticated_client.request("DELETE", f"{BASE}/batch", json={"ids": []})
+        assert response.status_code == 422
+
+    async def test_101_ids_is_422(self, authenticated_client):
+        ids = [str(uuid7()) for _ in range(101)]
+        response = await authenticated_client.request("DELETE", f"{BASE}/batch", json={"ids": ids})
+        assert response.status_code == 422
+
+    async def test_duplicate_ids_are_422(self, authenticated_client):
+        some = str(uuid7())
+        response = await authenticated_client.patch(f"{BASE}/batch", json={"ids": [some, some], "category": "atm"})
+        assert response.status_code == 422
+
+    async def test_delete_all(self, authenticated_client, test_user, other_user, make_transaction):
+        await make_transaction(test_user)
+        await make_transaction(other_user)
+        response = await authenticated_client.delete(BASE)
+        assert response.status_code == 200
+        assert response.json() == {"deleted": 1}

@@ -150,3 +150,40 @@ class TransactionListResponse(BaseModel):
     total: int = Field(..., description="Active transactions matching the filters, across all pages")
     offset: int = Field(..., description="Rows skipped")
     limit: int = Field(..., description="Page size")
+
+
+class BatchIds(BaseModel):
+    """1–100 distinct transaction ids."""
+
+    ids: List[uuid.UUID] = Field(..., min_length=1, max_length=100, description="Transaction ids, distinct")
+
+    @field_validator("ids")
+    @classmethod
+    def _distinct(cls, ids: List[uuid.UUID]) -> List[uuid.UUID]:
+        if len(set(ids)) != len(ids):
+            raise ValueError("ids must be distinct")
+        return ids
+
+
+class BatchCategoryUpdate(BatchIds):
+    """Give every listed transaction one category."""
+
+    category: Category = Field(..., description="The category slug")
+
+
+class BatchUpdateResponse(BaseModel):
+    """How many transactions a batch changed."""
+
+    updated: int = Field(..., description="Transactions changed")
+
+
+class BatchDeleteResponse(BaseModel):
+    """How many transactions a batch deleted."""
+
+    deleted: int = Field(..., description="Transactions deleted")
+
+
+class DeleteAllResponse(BaseModel):
+    """How many transactions delete-all removed."""
+
+    deleted: int = Field(..., description="Transactions permanently removed, earlier deleted ones included")

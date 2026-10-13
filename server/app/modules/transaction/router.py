@@ -12,8 +12,13 @@ from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
 from app.modules.transaction.dependencies import UserTransaction
 from app.modules.transaction.schemas import (
+    BatchCategoryUpdate,
+    BatchDeleteResponse,
+    BatchIds,
+    BatchUpdateResponse,
     Category,
     CategoryResponse,
+    DeleteAllResponse,
     TransactionCreate,
     TransactionFilters,
     TransactionListResponse,
@@ -94,6 +99,51 @@ async def create_transaction(
     """Add a transaction by hand."""
     transaction = await transaction_service.create(db_session, user.id, body)
     return TransactionResponse.model_validate(transaction)
+
+
+@router.patch(
+    "/batch",
+    operation_id="batchUpdateTransactionCategory",
+    response_model=BatchUpdateResponse,
+    summary="Recategorise transactions",
+    description="Give up to 100 transactions one category. All or nothing: one missing id changes none (404).",
+)
+@limiter.limit(settings.rate_limits.endpoints.TRANSACTIONS[0])
+async def batch_update_category(
+    request: Request, body: BatchCategoryUpdate, db_session: DbSession, user: CurrentUser
+) -> BatchUpdateResponse:
+    """Recategorise many transactions."""
+    return BatchUpdateResponse(
+        updated=await transaction_service.batch_update_category(db_session, user.id, body.ids, body.category)
+    )
+
+
+@router.delete(
+    "/batch",
+    operation_id="batchDeleteTransactions",
+    response_model=BatchDeleteResponse,
+    summary="Delete transactions",
+    description="Hide up to 100 transactions. All or nothing: one missing id deletes none (404).",
+)
+@limiter.limit(settings.rate_limits.endpoints.TRANSACTIONS[0])
+async def batch_delete(
+    request: Request, body: BatchIds, db_session: DbSession, user: CurrentUser
+) -> BatchDeleteResponse:
+    """Soft-delete many transactions."""
+    return BatchDeleteResponse(deleted=await transaction_service.batch_soft_delete(db_session, user.id, body.ids))
+
+
+@router.delete(
+    "",
+    operation_id="deleteAllTransactions",
+    response_model=DeleteAllResponse,
+    summary="Delete all transactions",
+    description="Permanently remove every transaction the caller owns, earlier deleted ones included.",
+)
+@limiter.limit(settings.rate_limits.endpoints.TRANSACTIONS[0])
+async def delete_all(request: Request, db_session: DbSession, user: CurrentUser) -> DeleteAllResponse:
+    """Permanently delete all of the caller's transactions."""
+    return DeleteAllResponse(deleted=await transaction_service.delete_all_for_user(db_session, user.id))
 
 
 @router.patch(

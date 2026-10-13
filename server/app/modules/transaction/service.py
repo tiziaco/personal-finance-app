@@ -9,7 +9,7 @@ from typing import Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.logging import logger
-from app.modules.transaction.exceptions import DuplicateTransactionError
+from app.modules.transaction.exceptions import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.repository import transaction_repository
 from app.modules.transaction.schemas import (
@@ -117,6 +117,34 @@ class TransactionService:
         count = await transaction_repository.add_many(session, transactions)
         logger.info("transactions_imported", user_id=user_id, count=count)
         return count
+
+    @staticmethod
+    def _require_all(ids: list[uuid.UUID], changed: list[uuid.UUID]) -> None:
+        """All or nothing: raising makes the session dependency roll the batch back."""
+        if len(changed) != len(ids):
+            missing = sorted(str(i) for i in set(ids) - set(changed))
+            raise TransactionNotFoundError("One or more transactions not found", missing_ids=missing)
+
+    @staticmethod
+    async def batch_update_category(
+        session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], category: str
+    ) -> int:
+        """Recategorise up to 100 transactions, all or none."""
+        changed = await transaction_repository.set_category_for_ids(session, user_id, ids, category)
+        TransactionService._require_all(ids, changed)
+        return len(changed)
+
+    @staticmethod
+    async def batch_soft_delete(session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> int:
+        """Soft-delete up to 100 transactions, all or none."""
+        changed = await transaction_repository.soft_delete_ids(session, user_id, ids)
+        TransactionService._require_all(ids, changed)
+        return len(changed)
+
+    @staticmethod
+    async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:
+        """Permanently remove every transaction a user owns: Settings' delete-all and erasure."""
+        return await transaction_repository.delete_all_for_user(session, user_id)
 
     @staticmethod
     async def list(

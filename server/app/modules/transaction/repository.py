@@ -1,9 +1,10 @@
 """Transaction repository: every query, each one scoped by user_id."""
 
 import uuid
+from datetime import UTC, datetime
 from typing import Optional
 
-from sqlalchemy import func
+from sqlalchemy import delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -122,6 +123,38 @@ class TransactionRepository:
         )
         items = list((await session.execute(statement)).scalars().all())
         return items, total
+
+    @staticmethod
+    async def set_category_for_ids(
+        session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], category: str
+    ) -> list[uuid.UUID]:
+        """Recategorise this user's active rows among `ids` in one UPDATE; return the ids changed."""
+        statement = (
+            update(Transaction)
+            .where(Transaction.id.in_(ids), Transaction.user_id == user_id, Transaction.deleted_at.is_(None))
+            .values(category=category, confidence=1.0, updated_at=datetime.now(UTC))
+            .returning(Transaction.id)
+        )
+        return list((await session.execute(statement)).scalars().all())
+
+    @staticmethod
+    async def soft_delete_ids(session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> list[uuid.UUID]:
+        """Stamp deleted_at on this user's active rows among `ids` in one UPDATE; return the ids changed."""
+        now = datetime.now(UTC)
+        statement = (
+            update(Transaction)
+            .where(Transaction.id.in_(ids), Transaction.user_id == user_id, Transaction.deleted_at.is_(None))
+            .values(deleted_at=now, updated_at=now)
+            .returning(Transaction.id)
+        )
+        return list((await session.execute(statement)).scalars().all())
+
+    @staticmethod
+    async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:
+        """Permanently remove every row this user owns, soft-deleted included; return the count."""
+        result = await session.execute(delete(Transaction).where(Transaction.user_id == user_id))
+        logger.info("all_user_transactions_deleted", user_id=user_id, count=result.rowcount)
+        return result.rowcount
 
 
 transaction_repository = TransactionRepository()
