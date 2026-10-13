@@ -3,8 +3,8 @@
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
 **Scope:** getting transactions into the app from a bank's CSV export, in two steps — upload and
 review the column mapping, then confirm and import. Legacy v1.0 shipped this; the port
-rebuilds it (backend in sub-project 2, upload dialog in sub-project 3).
-**Data model:** pending — written with the backend module (sub-project 2).
+rebuilds it in roadmap step 4, together with the AI categorisation.
+**Data model:** pending — written with step 4.
 **Related:** [`transactions.md`](./transactions.md) · [`categorisation.md`](./categorisation.md) ·
 [`insights.md`](./insights.md) · PRD [§4](../prd-mvp.md#4-csv-import).
 

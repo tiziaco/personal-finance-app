@@ -46,7 +46,7 @@ no test provisions a second `clerk_id` onto an existing email.
 no longer has (anonymise through `User.anonymize_user`, or delete it if nothing references
 it). The next request provisions the new account.
 
-**Fixing it** is planned for the backend modules (sub-project 2), before the first finance
+**Fixing it** is planned for roadmap step 2, Transactions, before the first finance
 table references `user`: see [`TODO.md`](./TODO.md), **Server: email uniqueness**.
 Either drop `unique=True` on `User.email` (Clerk owns email uniqueness; `clerk_id` is the
 identity), or reclaim the stale row on collision when `exists_in_clerk(holder.clerk_id)` is

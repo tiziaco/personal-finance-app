@@ -35,8 +35,8 @@ Two findings do not wait on that decision and are small on their own:
 
 `user.email` is unique, so a stale row holding an email locks out whoever signs up with it
 next ([`BUGS.md`](./BUGS.md), **A re-registered or changed email locks the new account
-out**). **Decide before** the first finance table references `user` (sub-project 2, backend
-modules), because the choice changes the migration. Either:
+out**). **Decide before** the first finance table references `user` (roadmap step 2,
+Transactions), because the choice changes the migration. Either:
 
 - drop `unique=True` on `User.email`: Clerk owns email uniqueness and `clerk_id` is the
   identity; or
@@ -79,7 +79,7 @@ running to completion. The fix is decided: add `sse-starlette` and return
 `EventSourceResponse(event_generator())` in place of the `StreamingResponse`, adapting the
 `data: {json}\n\n` framing to its event convention. Rewriting the `BaseHTTPMiddleware`
 stack as pure ASGI is not the fix — the gap is in the generator, whatever the middleware.
-**Unblocks:** the assistant in production. **Done when** a mid-stream disconnect stops the
+**Owned by** roadmap step 3, Chat screen. **Unblocks:** the assistant in production. **Done when** a mid-stream disconnect stops the
 LLM call promptly, and the event shape and the middleware behaviour on the route are
 unchanged.
 
@@ -107,20 +107,21 @@ Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 ## Port — carry into backend modules
 
 Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
-when it rebuilds each module (sub-project 2). One line each, pointing at the legacy file.
+when it rebuilds each module. One line each, pointing at the legacy file, and the roadmap
+step that owns it.
 
-- **N+1 in batch update** — one `SELECT` per item before updating; fetch with one
+- **N+1 in batch update** (step 2) — one `SELECT` per item before updating; fetch with one
   `WHERE id IN (...)`. `server/app/services/transaction/service.py` (`batch_update`).
-- **N+1 in batch delete** — the same, before the soft delete.
+- **N+1 in batch delete** (step 2) — the same, before the soft delete.
   `server/app/services/transaction/service.py` (`batch_delete`).
-- **Services returning `None` on a miss** — `CSVMappingService.get_session` returns
+- **Services returning `None` on a miss** (step 4) — `CSVMappingService.get_session` returns
   `None` and the route checks; raise a not-found error in the service instead.
   `server/app/services/csv_mapping/service.py`.
-- **Direct `ChatOpenAI` use** — the CSV column-mapping proposal builds its own client,
+- **Direct `ChatOpenAI` use** (step 4) — the CSV column-mapping proposal builds its own client,
   bypassing the LLM service's retries, model fallback and error translation. Go through
   the LLM service. `server/app/api/v1/transactions.py` (`_propose_column_mapping`).
 
-## Cutover (sub-project 4)
+## Cutover (roadmap step 8)
 
 Facts that exist only because the app was ported from a legacy codebase:
 

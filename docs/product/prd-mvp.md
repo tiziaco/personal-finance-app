@@ -19,8 +19,8 @@ The core promise: understand where your money goes — at a glance on the dashbo
 depth through analytics and insights — with no data entry beyond uploading a CSV.
 
 **Legacy and port.** The legacy v1.0 app (March 2026) shipped everything below except
-budgets. This repo rebuilds it: the backend modules in sub-project 2, the finance pages
-in sub-project 3. Each feature doc says what v1.0 did, which is what the port rebuilds.
+budgets. This repo rebuilds it one feature at a time, each step shipping its backend and
+its pages together ([`ROADMAP.md`](../ROADMAP.md), steps 2–7). Each feature doc says what v1.0 did, which is what the port rebuilds.
 
 **Not in this release:** connecting to a bank, more than one currency, households or
 shared accounts, splitting a transaction across categories, email or push alerts,

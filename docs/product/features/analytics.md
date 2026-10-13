@@ -3,8 +3,8 @@
 **Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
-calculations in sub-project 2, the pages in sub-project 3).
-**Data model:** pending — written with the backend module (sub-project 2). Analytics
+calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
+**Data model:** pending — written with step 5a. Analytics
 stores nothing of its own: it reads [`transactions.md`](./transactions.md).
 **Related:** [`insights.md`](./insights.md) · PRD [§6](../prd-mvp.md#6-analytics).
 
