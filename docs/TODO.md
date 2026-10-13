@@ -71,18 +71,6 @@ unacceptable. The shape, decided so a fork does not re-decide it:
 
 Reasoning: `docs/architecture/server.md` §8.
 
-## Server — the chat stream ignores a client disconnect
-
-`event_generator()` in `app/modules/conversation/router/chatbot.py` never checks whether
-the client is still connected, so a client that leaves mid-stream keeps the LLM call
-running to completion. The fix is decided: add `sse-starlette` and return
-`EventSourceResponse(event_generator())` in place of the `StreamingResponse`, adapting the
-`data: {json}\n\n` framing to its event convention. Rewriting the `BaseHTTPMiddleware`
-stack as pure ASGI is not the fix — the gap is in the generator, whatever the middleware.
-**Owned by** roadmap step 3, Chat screen. **Unblocks:** the assistant in production. **Done when** a mid-stream disconnect stops the
-LLM call promptly, and the event shape and the middleware behaviour on the route are
-unchanged.
-
 ## Server — row-level security
 
 Ownership is enforced in the query layer: every user-owned repository method filters by

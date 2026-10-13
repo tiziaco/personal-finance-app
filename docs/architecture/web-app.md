@@ -132,7 +132,7 @@ component
 
 - **The client is generated** from the committed `server/openapi.json` by orval — hooks
   per tag, types, Zod schemas. Nothing under `generated/` is edited by hand, and a
-  hand-written payload type is a bug. The pipeline and its traps are in
+  hand-written payload type is a bug (the chat stream below is the one exception). The pipeline and its traps are in
   [`api-client-codegen.md`](../guides/api-client-codegen.md).
 - **`useApiFetch` is a hook, not a module-level client.** It reads the token on every
   call, so no request can carry another session's token, and it needs no provider. The
@@ -149,6 +149,21 @@ component
   the example: `/ready` answers 503 with a valid payload when degraded, which arrives as
   `ApiError.body`. The hook parses it with `GetReadinessResponse` and prefers it over
   the stale `data` the cache still holds.
+
+### The chat screen
+
+- **assistant-ui's `ExternalStoreRuntime`.** TanStack Query (the generated hooks) holds
+  conversations and history; the runtime only renders them plus the in-flight exchange. It
+  opens that exchange before its first await, so a send cannot be doubled while the
+  conversation is created.
+- **The stream is the one hand-written `fetch`** (`apps/web/src/lib/chat/stream-chat.ts`),
+  because orval excludes `streaming` routes. It reuses `resolveBaseUrl` and `toastForError`
+  from `@app/api-client`.
+- **The route sizes itself to the viewport** inside the shared dashboard container.
+  Nothing outside `/chat` changes.
+- **Errors.** Both observers of the history query carry `meta: { silentError: true }`. The
+  conversation page renders a 404 as "This conversation doesn't exist" and toasts other
+  errors itself, by `QueryProvider`'s rule: only when nothing is shown.
 
 ## 6. Configuration and build
 
