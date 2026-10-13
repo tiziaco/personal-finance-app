@@ -18,14 +18,14 @@ them, are yours. The State and Branch columns belong to the work: the
 
 | Kind | Example from the ordering notes | Who decides |
 |---|---|---|
-| **Technical** — a step needs what another builds, or both change the same thing | "Moderation needs posts, replies, groups and profiles to exist" | Established by the `roadmap-deps` agent; you state it |
-| **Product** — what members get first, what is worth shipping when | "Notifications come first … a private group's admins must hear about join requests (PRD P13)" | The user |
+| **Technical** — a step needs what another builds, or both change the same thing | "Insights waits for the analytics library: its graph calls every library function" | Established by the `roadmap-deps` agent; you state it |
+| **Product** — what users get first, what is worth shipping when | "CSV import includes AI categorisation: an import arrives categorised" | The user |
 
 When the technical dependencies leave more than one valid order, or a split
-changes what members get and when, the choice is the user's. Ask with
+changes what users get and when, the choice is the user's. Ask with
 `AskUserQuestion` **before** editing: one option per order, each saying what
-members get first and what it costs technically. A recorded decision in a doc
-(the PRD, a data-model decision such as "CM18") changes only on the user's word,
+users get first and what it costs technically. A recorded decision in a doc
+(the PRD's decisions table, a data-model decision) changes only on the user's word,
 in that doc.
 
 ## The flow
@@ -46,9 +46,8 @@ in that doc.
   demoable on its own — not a backend step followed by a frontend step.
 - **New rows** start `not started`, branch `—`, and their last column links the
   behaviour and the schema and says "No spec yet", as the existing rows do.
-- **Sub-steps** take a letter (`5a`, `5b`), as 2.2 did, so nothing else
-  renumbers. Before renumbering anyway, grep the repo for references to the old
-  numbers.
+- **Sub-steps** take a letter (`5a`, `5b`), so nothing else renumbers. Before
+  renumbering anyway, grep the repo for references to the old numbers.
 - **Each ordering decision gets one bullet** in the ordering notes, saying which
   kind of reason it is and, for a technical one, what breaks if the order flips.
   When `roadmap-deps` finds steps that can run in parallel, say so there too —
