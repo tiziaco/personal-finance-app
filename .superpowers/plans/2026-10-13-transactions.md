@@ -2331,8 +2331,8 @@ Spec §4.6, §4.4. Load `web-app-patterns` → `references/components.md`.
 
 > **Orchestrator, 13 Oct 2026:** follow `components.md` (install by hand if the CLI can't resolve the alias); condition 6's merge rule still holds; step 3 adds no `packages/ui` primitives, but report which path was taken anyway. `feat/chat-screen` moves `toastForError` verbatim into a new `packages/api-client/src/toast-for-error.ts` and imports it in `query-provider.tsx`: change **only** the `MutationCache` `onError` line (Step 3 below), never the body of `toastForError`, so the merge is a union. A status check inside `toastForError` itself needs the orchestrator's OK first.
 
-- [ ] **Step 1: Add the five primitives** (`alert-dialog`, `calendar` — https://ui.shadcn.com/docs/components/base/calendar —, `checkbox`, `switch`, `textarea`). Condition 6 of the brief says "with the shadcn CLI, no hand edits"; `components.md` says the CLI cannot resolve this repo's alias. Try the CLI first, from `web-app/packages/ui`: `pnpm dlx shadcn@latest add alert-dialog calendar checkbox switch textarea`. If it writes `src/primitives/<name>.tsx` with working imports, keep its output untouched (then `pnpm exec prettier --write` them). If it fails, install each by hand from `ui.shadcn.com/docs/components/base/<name>` (Manual tab, Base UI variant), `cn` from `@app/core/lib/utils`, prettier — and **report to the controller which path was taken**, so it can tell the orchestrator (step 3 must take the same path). Add each primitive's exports to `src/index.ts`.
-- [ ] **Step 1b: The date picker (the shadcn Date Picker pattern: `Popover` + `Calendar`), test first**
+- [x] **Step 1: Add the five primitives** (`alert-dialog`, `calendar` — https://ui.shadcn.com/docs/components/base/calendar —, `checkbox`, `switch`, `textarea`). Condition 6 of the brief says "with the shadcn CLI, no hand edits"; `components.md` says the CLI cannot resolve this repo's alias. Try the CLI first, from `web-app/packages/ui`: `pnpm dlx shadcn@latest add alert-dialog calendar checkbox switch textarea`. If it writes `src/primitives/<name>.tsx` with working imports, keep its output untouched (then `pnpm exec prettier --write` them). If it fails, install each by hand from `ui.shadcn.com/docs/components/base/<name>` (Manual tab, Base UI variant), `cn` from `@app/core/lib/utils`, prettier — and **report to the controller which path was taken**, so it can tell the orchestrator (step 3 must take the same path). Add each primitive's exports to `src/index.ts`.
+- [x] **Step 1b: The date picker (the shadcn Date Picker pattern: `Popover` + `Calendar`), test first**
 
 `packages/components/src/forms/date-picker.test.tsx`:
 
@@ -2427,7 +2427,7 @@ export function DatePicker({
 
 Run (from `web-app/`): `pnpm test packages/components` → PASS.
 
-- [ ] **Step 2: Failing test for the opt-out**
+- [x] **Step 2: Failing test for the opt-out**
 
 `web-app/packages/api-client/src/query-provider.test.tsx`:
 
@@ -2475,7 +2475,7 @@ describe("QueryProvider mutation toasts", () => {
 
 (Check `ApiError`'s constructor in `src/errors.ts` and match its argument order.) Run (from `web-app/`): `pnpm test packages/api-client` → the silent test FAILS.
 
-- [ ] **Step 3: Implement** in `query-provider.tsx`:
+- [x] **Step 3: Implement** in `query-provider.tsx`:
 
 ```tsx
         // Mutations toast: the user just acted and is waiting for a result. A
@@ -2492,7 +2492,7 @@ describe("QueryProvider mutation toasts", () => {
 
 Run → PASS.
 
-- [ ] **Step 4: Gate and commit**
+- [x] **Step 4: Gate and commit**
 
 Run (repo root): `make check-web && make test-web`.
 
