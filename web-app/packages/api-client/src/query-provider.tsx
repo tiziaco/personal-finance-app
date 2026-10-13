@@ -61,8 +61,21 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             toastForError(error)
           },
         }),
-        // Mutations always toast: the user just acted and is waiting for a result.
-        mutationCache: new MutationCache({ onError: toastForError }),
+        // Mutations toast: the user just acted and is waiting for a result. A
+        // mutation that answers some statuses itself — the add dialog explains
+        // a 409 inline — lists them in meta.silentStatuses.
+        mutationCache: new MutationCache({
+          onError: (error, _variables, _context, mutation) => {
+            const silent = mutation.meta?.silentStatuses
+            if (
+              error instanceof ApiError &&
+              Array.isArray(silent) &&
+              silent.includes(error.status)
+            )
+              return
+            toastForError(error)
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
