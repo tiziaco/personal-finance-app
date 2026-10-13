@@ -1,0 +1,215 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import { render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
+
+import { getListConversationsQueryKey } from "@app/api-client/endpoints/conversation"
+
+import { ChatRuntimeProvider } from "./chat-runtime-provider"
+import { CHAT_COPY } from "./copy"
+import { Thread } from "./thread"
+
+const mocks = vi.hoisted(() => ({
+  params: {} as { conversationId?: string },
+  replace: vi.fn(),
+  push: vi.fn(),
+  stream: vi.fn(),
+  toast: vi.fn(),
+}))
+
+vi.mock("next/navigation", () => ({
+  useParams: () => mocks.params,
+  useRouter: () => ({ replace: mocks.replace, push: mocks.push }),
+}))
+vi.mock("@app/auth", () => ({
+  useAppAuth: () => ({ getToken: async () => "tok" }),
+}))
+vi.mock("@/lib/chat/stream-chat", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  streamChat: (...args: unknown[]) => mocks.stream(...args),
+}))
+vi.mock("@app/api-client", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  toastForError: (e: unknown) => mocks.toast(e),
+}))
+
+type Routes = Record<string, (init?: RequestInit) => unknown>
+let routes: Routes
+const calls: string[] = []
+
+function json(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  })
+}
+
+beforeAll(() => {
+  Element.prototype.scrollTo ??= () => {}
+  Element.prototype.scrollIntoView ??= () => {}
+})
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  calls.length = 0
+  mocks.params = {}
+  routes = {
+    "GET /api/v1/conversation/conversations": () => [],
+    "POST /api/v1/conversation/conversation": () => ({
+      conversation_id: "c1",
+      name: "",
+      created_at: "2026-10-13T10:00:00Z",
+    }),
+    "GET /api/v1/chatbot/chat/c1/messages": () => ({ messages: [] }),
+    "POST /api/v1/conversation/conversation/c1/title": () => ({
+      conversation_id: "c1",
+      name: "Groceries",
+      created_at: "2026-10-13T10:00:00Z",
+    }),
+  }
+  vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+    const path = new URL(String(input)).pathname
+    const key = `${init?.method ?? "GET"} ${path}`
+    calls.push(key)
+    const handler = routes[key]
+    if (!handler) return json({ detail: "not found" }, 404)
+    return json(handler(init))
+  })
+})
+
+function renderChat() {
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  })
+  const utils = render(
+    <QueryClientProvider client={client}>
+      <ChatRuntimeProvider>
+        <Thread />
+      </ChatRuntimeProvider>
+    </QueryClientProvider>,
+  )
+  return { client, ...utils }
+}
+
+async function send(text: string) {
+  await userEvent.type(
+    screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+    `${text}{Enter}`,
+  )
+}
+
+async function* chunks(...parts: string[]) {
+  for (const part of parts) yield part
+}
+
+describe("ChatRuntimeProvider", () => {
+  it("creates a conversation on the first send, replaces the URL and streams the reply", async () => {
+    mocks.stream.mockImplementation(() => chunks("Hel", "lo"))
+    renderChat()
+    await send("hi")
+
+    await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/chat/c1"))
+    expect(mocks.stream).toHaveBeenCalledWith(
+      expect.objectContaining({
+        conversationId: "c1",
+        message: "hi",
+        token: "tok",
+      }),
+    )
+    expect(calls).toContain("POST /api/v1/conversation/conversation")
+  })
+
+  it("swaps the in-flight exchange for the saved history, then asks for a title", async () => {
+    mocks.params = { conversationId: "c1" }
+    routes["GET /api/v1/conversation/conversations"] = () => [
+      { conversation_id: "c1", name: "", created_at: "2026-10-13T10:00:00Z" },
+    ]
+    // The server has saved the exchange once the stream has finished, not before.
+    let saved = false
+    mocks.stream.mockImplementation(async function* () {
+      yield "Hello"
+      saved = true
+    })
+    routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
+      messages: saved
+        ? [
+            { role: "user", content: "hi" },
+            { role: "assistant", content: "Hello" },
+          ]
+        : [],
+    })
+    renderChat()
+    await send("hi")
+
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+    expect(screen.getAllByText("hi")).toHaveLength(1)
+    expect(screen.getAllByText("Hello")).toHaveLength(1)
+  })
+
+  it("does not ask for a title when the conversation already has a name", async () => {
+    mocks.params = { conversationId: "c1" }
+    mocks.stream.mockImplementation(() => chunks("Hello"))
+    routes["GET /api/v1/conversation/conversations"] = () => [
+      {
+        conversation_id: "c1",
+        name: "Named",
+        created_at: "2026-10-13T10:00:00Z",
+      },
+    ]
+    const { client } = renderChat()
+    // The title check reads the list cache; the list is loaded by the
+    // conversation column in the app, so load it here the same way.
+    await client.fetchQuery({
+      queryKey: getListConversationsQueryKey(),
+      queryFn: async () =>
+        (
+          await fetch("http://localhost:8100/api/v1/conversation/conversations")
+        ).json(),
+    })
+    await send("hi")
+    await waitFor(() => expect(mocks.stream).toHaveBeenCalled())
+    await new Promise((r) => setTimeout(r, 50))
+    expect(calls).not.toContain(
+      "POST /api/v1/conversation/conversation/c1/title",
+    )
+  })
+
+  it("Stop aborts the stream and marks the partial reply as stopped", async () => {
+    mocks.params = { conversationId: "c1" }
+    let signal: AbortSignal | undefined
+    mocks.stream.mockImplementation(async function* (opts: {
+      signal: AbortSignal
+    }) {
+      signal = opts.signal
+      yield "partial"
+      await new Promise((_, reject) =>
+        opts.signal.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        ),
+      )
+    })
+    renderChat()
+    await send("hi")
+    await screen.findByText("partial")
+    await userEvent.click(screen.getByRole("button", { name: CHAT_COPY.stop }))
+
+    expect(signal?.aborted).toBe(true)
+    expect(await screen.findByText(CHAT_COPY.stopped)).toBeInTheDocument()
+  })
+
+  it("a failure event shows our copy, not the server's", async () => {
+    mocks.params = { conversationId: "c1" }
+    const { StreamFailedError } = await import("@/lib/chat/stream-chat")
+    mocks.stream.mockImplementation(async function* () {
+      yield "par"
+      throw new StreamFailedError()
+    })
+    renderChat()
+    await send("hi")
+    expect(await screen.findByText(CHAT_COPY.failed)).toBeInTheDocument()
+  })
+})
