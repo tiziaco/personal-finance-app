@@ -26,7 +26,7 @@ cp .env.example .env.development
 
 `.env.example` lists every variable with a comment. The ones that must be real: the
 Postgres credentials, `CLERK_SECRET_KEY` (and the rest of the Clerk block —
-[`docs/setup/clerk.md`](../docs/setup/clerk.md)) and the Langfuse keys. `OPENAI_API_KEY`
+[`docs/setup/clerk.md`](../docs/setup/clerk.md)) and the Langfuse keys. `OPENROUTER_API_KEY`
 is optional; only an LLM call needs it.
 
 ## Development Commands

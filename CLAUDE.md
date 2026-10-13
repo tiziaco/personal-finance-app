@@ -70,8 +70,8 @@ proves less than it looks like it does.
 
 Each service has its own env file; `/run-stack` has the copy commands for a fresh clone.
 
-Required secrets: Clerk API keys, database credentials, Langfuse key. The OpenAI key is
-optional — the server starts without it; only an LLM call needs it.
+Required secrets: Clerk API keys, database credentials, Langfuse key. The OpenRouter key (`OPENROUTER_API_KEY`) is
+optional — every LLM call goes through OpenRouter; the server starts without it, only an LLM call needs it.
 
 The `server/.env.<ENV>` file is selected by the `APP_ENV` variable (default when unset: `development`). A value that is set but unrecognised — a typo, a trailing space — fails at startup rather than running as development.
 

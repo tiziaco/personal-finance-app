@@ -143,7 +143,7 @@ class _ProbeLLM(LLMBase):
         raise NotImplementedError
 
 
-@pytest.mark.parametrize("model", ["gpt-5-nano", "gpt-5-mini", "gpt-5"])
+@pytest.mark.parametrize("model", ["gpt-5-nano", "gpt-5-mini", "gpt-5", "openai/gpt-5-nano"])
 def test_gpt5_extraction_sends_no_temperature(model: str):
     """The 400 that silently lost every memory write, pinned at the source.
 
@@ -158,7 +158,10 @@ def test_gpt5_extraction_sends_no_temperature(model: str):
 
     assert config["is_reasoning_model"] is True
 
-    params = _ProbeLLM(config)._get_supported_params(messages=[{"role": "user", "content": "hi"}])
+    # The probe is a bare LLMBase, whose config has no provider-specific keys
+    # (api_key, base URLs); only the sampling-relevant ones matter here.
+    probe_config = {k: config[k] for k in ("model", "is_reasoning_model")}
+    params = _ProbeLLM(probe_config)._get_supported_params(messages=[{"role": "user", "content": "hi"}])
     assert "temperature" not in params
     assert "top_p" not in params
 
@@ -199,3 +202,21 @@ async def test_update_memory_strips_identity_keys_from_metadata():
     kwargs = instance.add.await_args.kwargs
     assert kwargs["user_id"] == str(USER_ID)
     assert kwargs["metadata"] == {"conversation_id": "c-1", "environment": "test"}
+
+
+async def test_llm_and_embedder_both_go_through_openrouter(monkeypatch):
+    """mem0 gets the OpenRouter key and base URL explicitly, not the environment."""
+    monkeypatch.setattr(factory, "_memory_instance", None)
+    from_config = MagicMock(return_value=MagicMock())
+    monkeypatch.setattr(factory.AsyncMemory, "from_config", from_config)
+
+    await factory.create_memory()
+
+    config = from_config.call_args.kwargs["config_dict"]
+    key = settings.llm.OPENROUTER_API_KEY.get_secret_value()
+    assert config["llm"]["config"]["api_key"] == key
+    assert config["llm"]["config"]["openai_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["llm"]["config"]["openrouter_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["embedder"]["config"]["api_key"] == key
+    assert config["embedder"]["config"]["openai_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["embedder"]["config"]["model"] == "openai/text-embedding-3-small"

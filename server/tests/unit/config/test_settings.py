@@ -65,3 +65,11 @@ class TestEnvironmentEnum:
     def test_enum_is_string(self):
         assert isinstance(Environment.PRODUCTION, str)
         assert Environment.PRODUCTION == "production"
+
+
+def test_evaluation_key_falls_back_to_the_openrouter_key(monkeypatch):
+    from app.core.config import EvaluationSettings
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
+    monkeypatch.delenv("EVALUATION_API_KEY", raising=False)
+    assert EvaluationSettings().API_KEY.get_secret_value() == "or-key"

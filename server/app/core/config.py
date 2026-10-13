@@ -100,8 +100,11 @@ class LLMSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="")
 
-    OPENAI_API_KEY: SecretStr = Field(default=SecretStr(""))
-    DEFAULT_LLM_MODEL: str = "gpt-5-mini"
+    OPENROUTER_API_KEY: SecretStr = Field(default=SecretStr(""))
+    # Every LLM call (agent, titles, mem0, evals) goes through OpenRouter's
+    # OpenAI-compatible API; model names are OpenRouter ids such as "openai/gpt-5-mini".
+    LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
+    DEFAULT_LLM_MODEL: str = "openai/gpt-5-mini"
     DEFAULT_LLM_TEMPERATURE: float = 0.2
     MAX_TOKENS: int = 2000
     MAX_LLM_CALL_RETRIES: int = 3
@@ -113,8 +116,8 @@ class MemorySettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LONG_TERM_MEMORY_")
 
-    MODEL: str = "gpt-5-nano"
-    EMBEDDER_MODEL: str = "text-embedding-3-small"
+    MODEL: str = "openai/gpt-5-nano"
+    EMBEDDER_MODEL: str = "openai/text-embedding-3-small"
     COLLECTION_NAME: str = "longterm_memory"
 
     # Retrieval breadth for `get_relevant_memory`. Every hit is rendered into
@@ -215,17 +218,17 @@ class EvaluationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="EVALUATION_")
 
-    LLM: str = "gpt-5"
-    BASE_URL: str = "https://api.openai.com/v1"
+    LLM: str = "openai/gpt-5"
+    BASE_URL: str = "https://openrouter.ai/api/v1"
     API_KEY: SecretStr = Field(default=SecretStr(""))
     SLEEP_TIME: int = 10
 
     @field_validator("API_KEY", mode="before")
     @classmethod
-    def default_to_openai_key(cls, v):
-        """Default to OPENAI_API_KEY if EVALUATION_API_KEY not set."""
+    def default_to_openrouter_key(cls, v):
+        """Default to OPENROUTER_API_KEY if EVALUATION_API_KEY not set."""
         if not v or v == "":
-            return os.getenv("OPENAI_API_KEY", "")
+            return os.getenv("OPENROUTER_API_KEY", "")
         return v
 
 

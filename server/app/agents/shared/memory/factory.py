@@ -16,6 +16,20 @@ _memory_instance: Optional[AsyncMemory] = None
 MEM0_IDENTITY_KEYS = frozenset({"user_id", "agent_id", "run_id", "actor_id"})
 
 
+def _openrouter_credentials() -> Dict[str, Any]:
+    """The key and base URL every mem0 client uses.
+
+    Passed explicitly rather than left to mem0's environment lookup. Its OpenAI
+    LLM switches to OpenRouter only when OPENROUTER_API_KEY is in os.environ,
+    and pydantic-settings does not put .env.<ENV> values there. Setting both
+    base URLs makes either branch land on OpenRouter.
+    """
+    return {
+        "api_key": settings.llm.OPENROUTER_API_KEY.get_secret_value(),
+        "openai_base_url": settings.llm.LLM_BASE_URL,
+    }
+
+
 def _memory_llm_config() -> Dict[str, Any]:
     """Config for the model mem0 uses to extract and consolidate facts.
 
@@ -26,7 +40,11 @@ def _memory_llm_config() -> Dict[str, Any]:
     precedence; set it only where mem0 gets it wrong, since its detection is
     already right for o1/o3 and the gpt-4 family.
     """
-    config: Dict[str, Any] = {"model": settings.memory.MODEL}
+    config: Dict[str, Any] = {
+        "model": settings.memory.MODEL,
+        **_openrouter_credentials(),
+        "openrouter_base_url": settings.llm.LLM_BASE_URL,
+    }
     if settings.memory.MODEL.lower().rsplit("/", 1)[-1].startswith("gpt-5"):
         config["is_reasoning_model"] = True
     return config
@@ -61,7 +79,7 @@ async def create_memory() -> AsyncMemory:
                 },
                 "embedder": {
                     "provider": "openai",
-                    "config": {"model": settings.memory.EMBEDDER_MODEL},
+                    "config": {"model": settings.memory.EMBEDDER_MODEL, **_openrouter_credentials()},
                 },
                 # To steer extraction, mem0 2.0 takes a single top-level
                 # "custom_instructions"; the 1.x "custom_fact_extraction_prompt"

@@ -47,11 +47,11 @@ class LLMRegistry:
     # importing this module — and so app.main, and so `make check-contract` —
     # require a real secret, which CI deliberately runs without.
     LLMS: List[Dict[str, Any]] = [
-        {"name": "gpt-5-mini", "params": {"reasoning": {"effort": "low"}}},
-        {"name": "gpt-5", "params": {"reasoning": {"effort": "medium"}}},
-        {"name": "gpt-5-nano", "params": {"reasoning": {"effort": "minimal"}}},
+        {"name": "openai/gpt-5-mini", "params": {"reasoning": {"effort": "low"}}},
+        {"name": "openai/gpt-5", "params": {"reasoning": {"effort": "medium"}}},
+        {"name": "openai/gpt-5-nano", "params": {"reasoning": {"effort": "minimal"}}},
         {
-            "name": "gpt-4o",
+            "name": "openai/gpt-4o",
             "params": {
                 "temperature": settings.llm.DEFAULT_LLM_TEMPERATURE,
                 "top_p": 0.95 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
@@ -60,7 +60,7 @@ class LLMRegistry:
             },
         },
         {
-            "name": "gpt-4o-mini",
+            "name": "openai/gpt-4o-mini",
             "params": {
                 "temperature": settings.llm.DEFAULT_LLM_TEMPERATURE,
                 "top_p": 0.9 if settings.ENVIRONMENT == Environment.PRODUCTION else 0.8,
@@ -75,10 +75,11 @@ class LLMRegistry:
 
     @classmethod
     def _build(cls, model_name: str, **params) -> BaseChatModel:
-        """Construct a chat model. The one site that reads the credential."""
+        """Construct a chat model against OpenRouter. The one site that reads the credential."""
         return ChatOpenAI(
             model=model_name,
-            api_key=settings.llm.OPENAI_API_KEY.get_secret_value(),
+            api_key=settings.llm.OPENROUTER_API_KEY.get_secret_value(),
+            base_url=settings.llm.LLM_BASE_URL,
             **params,
         )
 
