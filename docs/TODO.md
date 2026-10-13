@@ -103,10 +103,6 @@ Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not
 when it rebuilds each module. One line each, pointing at the legacy file, and the roadmap
 step that owns it.
 
-- **N+1 in batch update** (step 2) — one `SELECT` per item before updating; fetch with one
-  `WHERE id IN (...)`. `server/app/services/transaction/service.py` (`batch_update`).
-- **N+1 in batch delete** (step 2) — the same, before the soft delete.
-  `server/app/services/transaction/service.py` (`batch_delete`).
 - **Services returning `None` on a miss** (step 4) — `CSVMappingService.get_session` returns
   `None` and the route checks; raise a not-found error in the service instead.
   `server/app/services/csv_mapping/service.py`.

@@ -20,18 +20,23 @@ user must be able to review and correct them, and to remove junk or duplicates.
 ## 2. What the user can do
 
 - **Browse** their transactions in a paginated table (numbered pages, not infinite
-  scroll), newest first. On a phone the table becomes a list of cards.
+  scroll), newest first. On a phone the table becomes a list of cards; tapping a card
+  opens it for editing.
 - **Search** by merchant (substring, case-insensitive).
 - **Filter** by date range (shortcuts: today, this week, this month, last month, or a
   custom range), by category (one or several), by amount range and by recurring or not.
-- **Sort** by date, amount or merchant, ascending or descending.
+- **Sort** by date, amount or merchant, ascending or descending. On a phone, where cards
+  have no column headers, a sort menu offers the same orders.
 - **Add** a transaction by hand.
-- **Edit** a transaction — date, merchant, amount, description, category, recurring.
-- **Delete** a transaction, after confirming.
+- **Edit** a transaction — date, merchant, amount, description, category, recurring. On a
+  phone, recategorising happens here, in the edit dialog's category field.
+- **Delete** a transaction, after confirming — from its row menu, or from the edit dialog.
 - **Act on many at once** (desktop): select rows and change their category, or delete
   them, up to 100 at a time. A bulk action is all or nothing: if one selected
   transaction is missing, none changes.
-- **Delete all** of their transactions from Settings, permanently, after confirming.
+- **Delete all** of their transactions from Settings, permanently, after confirming. The
+  button is always enabled: it also removes deleted transactions, so it has work to do
+  even when the list is empty.
 - **Start from an empty state.** A user with no transactions sees a prompt to add a
   transaction (to upload a CSV once CSV import ships); a filter with no match offers to clear the filters.
 

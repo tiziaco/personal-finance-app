@@ -40,7 +40,7 @@ CREATE TABLE transaction (
     original_category  VARCHAR(255),                -- the bank's, as imported
     category           VARCHAR(64)      NOT NULL,   -- a Category slug; validated by the app only
     confidence         DOUBLE PRECISION NOT NULL,   -- 0..1; 1 for anything entered or edited by hand
-    is_recurring       BOOLEAN          NOT NULL DEFAULT false,
+    is_recurring       BOOLEAN          NOT NULL,   -- the app defaults it to false; no DB default
     fingerprint        CHAR(64)         NOT NULL,   -- sha256 hex, D3
     created_at         TIMESTAMPTZ      NOT NULL,
     updated_at         TIMESTAMPTZ      NOT NULL,

@@ -101,7 +101,7 @@ class TestCreateOrGetUser:
         assert user.email == saved_user.email  # untouched, not overwritten
 
     async def test_held_email_with_new_clerk_id_creates_a_second_user(self, db_session, saved_user):
-        """The lockout in BUGS.md: a stale row holding the email no longer blocks a new account."""
+        """Email is not unique (docs/data-model/account.md D3): a stale row holding it does not block a new account."""
         user = await UserRepository.create_or_get(
             db_session,
             clerk_id="clerk_cog_new_account",

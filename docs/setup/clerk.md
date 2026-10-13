@@ -179,9 +179,9 @@ access tokens carry no `azp` and are authorised by `client_id` instead — which
 User events — creation, profile edits, deletion — reach the server at
 `POST /api/v1/webhooks/clerk`. Sign-in does not need them to *start*: JIT provisioning
 creates the user on first request. But the webhook is what keeps the app's rows in step with
-Clerk. Without it, a deleted or re-registered email can lock a user out with a 401, because
-the stale row still holds the email ([`BUGS.md`](../BUGS.md), **A re-registered or changed
-email locks the new account out**). **This is the one step with no script** — no
+Clerk. Without it, a deleted or changed account leaves a stale row behind. That row does not
+lock anyone out: email is not unique, because Clerk owns it and `clerk_id` is the identity
+([`data-model/account.md`](../data-model/account.md), D3). **This is the one step with no script** — no
 Clerk API creates an endpoint or returns its signing secret.
 
 ### ngrok (development, once per developer)
