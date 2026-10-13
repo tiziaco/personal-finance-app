@@ -8,6 +8,178 @@
 import * as zod from "zod"
 
 /**
+ * One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.
+ * @summary List transactions
+ */
+export const listTransactionsQueryAmountMinTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const listTransactionsQueryAmountMaxTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const listTransactionsQuerySearchOneMax = 100
+
+export const listTransactionsQueryOrderingDefault = `-date`
+export const listTransactionsQueryOffsetDefault = 0
+export const listTransactionsQueryOffsetMin = 0
+
+export const listTransactionsQueryLimitDefault = 20
+export const listTransactionsQueryLimitMax = 100
+
+export const ListTransactionsQueryParams = zod.object({
+  date_from: zod
+    .union([zod.iso.date(), zod.null()])
+    .optional()
+    .describe("On or after this day"),
+  date_to: zod
+    .union([zod.iso.date(), zod.null()])
+    .optional()
+    .describe("On or before this day"),
+  category: zod
+    .union([
+      zod.array(
+        zod.enum([
+          "income",
+          "salary",
+          "transportation",
+          "household_utilities",
+          "tax_fines",
+          "food_groceries",
+          "food_delivery",
+          "bars_restaurants",
+          "atm",
+          "insurances",
+          "shopping",
+          "education",
+          "family_friends",
+          "donations_charity",
+          "healthcare_drug_stores",
+          "leisure_entertainment",
+          "media_electronics",
+          "savings_investments",
+          "travel_holidays",
+          "miscellaneous",
+        ]),
+      ),
+      zod.null(),
+    ])
+    .optional()
+    .describe("Any of these categories; repeat the parameter"),
+  amount_min: zod
+    .union([
+      zod.number(),
+      zod.string().regex(listTransactionsQueryAmountMinTwoRegExp),
+      zod.null(),
+    ])
+    .optional()
+    .describe("Signed amount at least this"),
+  amount_max: zod
+    .union([
+      zod.number(),
+      zod.string().regex(listTransactionsQueryAmountMaxTwoRegExp),
+      zod.null(),
+    ])
+    .optional()
+    .describe("Signed amount at most this"),
+  is_recurring: zod
+    .union([zod.boolean(), zod.null()])
+    .optional()
+    .describe("Only recurring, or only not"),
+  search: zod
+    .union([zod.string().max(listTransactionsQuerySearchOneMax), zod.null()])
+    .optional()
+    .describe("Merchant contains, case-insensitive"),
+  ordering: zod
+    .enum(["date", "-date", "amount", "-amount", "merchant", "-merchant"])
+    .default(listTransactionsQueryOrderingDefault)
+    .describe("Sort field; '-' for descending"),
+  offset: zod
+    .int()
+    .min(listTransactionsQueryOffsetMin)
+    .default(listTransactionsQueryOffsetDefault),
+  limit: zod
+    .int()
+    .min(1)
+    .max(listTransactionsQueryLimitMax)
+    .default(listTransactionsQueryLimitDefault),
+})
+
+export const listTransactionsResponseItemsItemAmountRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+
+export const ListTransactionsResponse = zod
+  .object({
+    items: zod
+      .array(
+        zod
+          .object({
+            amount: zod
+              .string()
+              .regex(listTransactionsResponseItemsItemAmountRegExp)
+              .describe(
+                "Money out negative, money in positive; a decimal string",
+              ),
+            category: zod
+              .enum([
+                "income",
+                "salary",
+                "transportation",
+                "household_utilities",
+                "tax_fines",
+                "food_groceries",
+                "food_delivery",
+                "bars_restaurants",
+                "atm",
+                "insurances",
+                "shopping",
+                "education",
+                "family_friends",
+                "donations_charity",
+                "healthcare_drug_stores",
+                "leisure_entertainment",
+                "media_electronics",
+                "savings_investments",
+                "travel_holidays",
+                "miscellaneous",
+              ])
+              .describe("The category slug"),
+            confidence: zod
+              .number()
+              .describe(
+                "How sure the categoriser was, 0 to 1; 1 for a manual entry or edit",
+              ),
+            created_at: zod.iso
+              .datetime({ offset: true })
+              .describe("When the row was created"),
+            date: zod.iso.date().describe("The day it happened"),
+            description: zod
+              .union([zod.string(), zod.null()])
+              .optional()
+              .describe("Free text"),
+            id: zod.uuid().describe("The transaction id"),
+            is_recurring: zod.boolean().describe("Whether it recurs"),
+            merchant: zod.string().describe("Who was paid, or who paid"),
+            original_category: zod
+              .union([zod.string(), zod.null()])
+              .optional()
+              .describe("The bank's category, as imported"),
+            updated_at: zod.iso
+              .datetime({ offset: true })
+              .describe("When the row was last changed"),
+          })
+          .describe("A transaction as the API returns it."),
+      )
+      .describe("The transactions on this page"),
+    limit: zod.int().describe("Page size"),
+    offset: zod.int().describe("Rows skipped"),
+    total: zod
+      .int()
+      .describe("Active transactions matching the filters, across all pages"),
+  })
+  .describe("One page of transactions.")
+
+/**
  * Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.
  * @summary Add a transaction
  */

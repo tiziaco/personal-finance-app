@@ -5,7 +5,7 @@ import uuid
 from datetime import datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Optional
+from typing import Annotated, List, Literal, Optional
 
 from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
 
@@ -127,3 +127,26 @@ class TransactionResponse(BaseModel):
     updated_at: datetime = Field(..., description="When the row was last changed")
 
     model_config = {"from_attributes": True}
+
+
+TransactionOrdering = Literal["date", "-date", "amount", "-amount", "merchant", "-merchant"]
+
+
+class TransactionFilters(BaseModel):
+    """The list's filters. Every bound is inclusive; amounts are signed."""
+
+    date_from: Optional[dt.date] = None
+    date_to: Optional[dt.date] = None
+    category: Optional[List[Category]] = None
+    amount_min: Optional[Decimal] = None
+    amount_max: Optional[Decimal] = None
+    is_recurring: Optional[bool] = None
+
+
+class TransactionListResponse(BaseModel):
+    """One page of transactions."""
+
+    items: List[TransactionResponse] = Field(..., description="The transactions on this page")
+    total: int = Field(..., description="Active transactions matching the filters, across all pages")
+    offset: int = Field(..., description="Rows skipped")
+    limit: int = Field(..., description="Page size")

@@ -16,6 +16,7 @@ from app.modules.transaction.schemas import (
     CATEGORIES,
     CategoryResponse,
     TransactionCreate,
+    TransactionFilters,
     TransactionImport,
     TransactionUpdate,
 )
@@ -116,6 +117,21 @@ class TransactionService:
         count = await transaction_repository.add_many(session, transactions)
         logger.info("transactions_imported", user_id=user_id, count=count)
         return count
+
+    @staticmethod
+    async def list(
+        session: AsyncSession,
+        user_id: uuid.UUID,
+        filters: TransactionFilters,
+        ordering: str,
+        search: Optional[str],
+        offset: int,
+        limit: int,
+    ) -> tuple[list[Transaction], int]:
+        """One page of a user's active transactions and the filtered total."""
+        return await transaction_repository.list_active_for_user(
+            session, user_id, filters, ordering, search, offset, limit
+        )
 
 
 transaction_service = TransactionService()

@@ -1,6 +1,7 @@
 """Transaction routes against a real database."""
 
 import uuid
+from decimal import Decimal
 
 import pytest
 from uuid_utils.compat import uuid7
@@ -102,3 +103,57 @@ class TestDelete:
     async def test_another_users_transaction_is_404(self, authenticated_client, other_user, make_transaction):
         txn = await make_transaction(other_user)
         assert (await authenticated_client.delete(f"{BASE}/{txn.id}")).status_code == 404
+
+
+class TestList:
+    async def test_unauthenticated_returns_401(self, client):
+        assert (await client.get(BASE)).status_code == 401
+
+    async def test_envelope_and_string_amounts(self, authenticated_client, test_user, make_transaction):
+        await make_transaction(test_user)
+        response = await authenticated_client.get(BASE)
+        assert response.status_code == 200
+        body = response.json()
+        assert body["total"] == 1 and body["offset"] == 0 and body["limit"] == 20
+        assert body["items"][0]["amount"] == "-4.50"
+
+    async def test_repeated_category_and_every_param(self, authenticated_client, test_user, make_transaction):
+        await make_transaction(test_user, category="salary", merchant="Payroll", amount=Decimal("100"))
+        await make_transaction(test_user, category="atm", merchant="ATM", amount=Decimal("-50"))
+        response = await authenticated_client.get(
+            BASE,
+            params=[
+                ("category", "salary"),
+                ("category", "atm"),
+                ("date_from", "2026-01-01"),
+                ("date_to", "2026-12-31"),
+                ("amount_min", "-100"),
+                ("amount_max", "100"),
+                ("is_recurring", "false"),
+                ("search", "a"),
+                ("ordering", "amount"),
+                ("offset", "0"),
+                ("limit", "5"),
+            ],
+        )
+        assert response.status_code == 200
+        assert [t["category"] for t in response.json()["items"]] == ["atm", "salary"]
+
+    async def test_inverted_bounds_answer_200_empty(self, authenticated_client):
+        response = await authenticated_client.get(BASE, params={"date_from": "2026-03-01", "date_to": "2026-01-01"})
+        assert response.status_code == 200
+        assert response.json()["items"] == []
+
+    @pytest.mark.parametrize(
+        "params",
+        [
+            {"limit": 101},
+            {"limit": 0},
+            {"offset": -1},
+            {"ordering": "fingerprint"},
+            {"category": "no_such_slug"},
+            {"search": "x" * 101},
+        ],
+    )
+    async def test_bounds_are_422(self, authenticated_client, params):
+        assert (await authenticated_client.get(BASE, params=params)).status_code == 422

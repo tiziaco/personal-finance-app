@@ -1,15 +1,26 @@
 """Transaction routes under /transactions. Named paths are declared before /{transaction_id}."""
 
-from typing import List
+import datetime as dt
+from decimal import Decimal
+from typing import List, Optional
 
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Query, Request
 
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
 from app.modules.transaction.dependencies import UserTransaction
-from app.modules.transaction.schemas import CategoryResponse, TransactionCreate, TransactionResponse, TransactionUpdate
+from app.modules.transaction.schemas import (
+    Category,
+    CategoryResponse,
+    TransactionCreate,
+    TransactionFilters,
+    TransactionListResponse,
+    TransactionOrdering,
+    TransactionResponse,
+    TransactionUpdate,
+)
 from app.modules.transaction.service import transaction_service
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
@@ -26,6 +37,45 @@ router = APIRouter(prefix="/transactions", tags=["transactions"])
 async def list_categories(request: Request, user: CurrentUser) -> List[CategoryResponse]:
     """The category list; the web's only source of category labels."""
     return transaction_service.list_categories()
+
+
+@router.get(
+    "",
+    operation_id="listTransactions",
+    response_model=TransactionListResponse,
+    summary="List transactions",
+    description="One page of the caller's transactions, newest first by default. Bounds are inclusive; "
+    "category repeats; search matches the merchant.",
+)
+@limiter.limit(settings.rate_limits.endpoints.TRANSACTIONS[0])
+async def list_transactions(
+    request: Request,
+    db_session: DbSession,
+    user: CurrentUser,
+    date_from: Optional[dt.date] = Query(None, description="On or after this day"),
+    date_to: Optional[dt.date] = Query(None, description="On or before this day"),
+    category: Optional[List[Category]] = Query(None, description="Any of these categories; repeat the parameter"),
+    amount_min: Optional[Decimal] = Query(None, description="Signed amount at least this"),
+    amount_max: Optional[Decimal] = Query(None, description="Signed amount at most this"),
+    is_recurring: Optional[bool] = Query(None, description="Only recurring, or only not"),
+    search: Optional[str] = Query(None, max_length=100, description="Merchant contains, case-insensitive"),
+    ordering: TransactionOrdering = Query("-date", description="Sort field; '-' for descending"),
+    offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+) -> TransactionListResponse:
+    """List the caller's active transactions."""
+    filters = TransactionFilters(
+        date_from=date_from,
+        date_to=date_to,
+        category=category,
+        amount_min=amount_min,
+        amount_max=amount_max,
+        is_recurring=is_recurring,
+    )
+    items, total = await transaction_service.list(db_session, user.id, filters, ordering, search, offset, limit)
+    return TransactionListResponse(
+        items=[TransactionResponse.model_validate(t) for t in items], total=total, offset=offset, limit=limit
+    )
 
 
 @router.post(

@@ -503,6 +503,42 @@
         "title": "TransactionCreate",
         "type": "object"
       },
+      "TransactionListResponse": {
+        "description": "One page of transactions.",
+        "properties": {
+          "items": {
+            "description": "The transactions on this page",
+            "items": {
+              "$ref": "#/components/schemas/TransactionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Rows skipped",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Active transactions matching the filters, across all pages",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "TransactionListResponse",
+        "type": "object"
+      },
       "TransactionResponse": {
         "description": "A transaction as the API returns it.",
         "properties": {
@@ -1251,6 +1287,226 @@
       }
     },
     "/api/v1/transactions": {
+      "get": {
+        "description": "One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.",
+        "operationId": "listTransactions",
+        "parameters": [
+          {
+            "description": "On or after this day",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "On or after this day",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "On or before this day",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "On or before this day",
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Any of these categories; repeat the parameter",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any of these categories; repeat the parameter",
+              "title": "Category"
+            }
+          },
+          {
+            "description": "Signed amount at least this",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Signed amount at least this",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Signed amount at most this",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Signed amount at most this",
+              "title": "Amount Max"
+            }
+          },
+          {
+            "description": "Only recurring, or only not",
+            "in": "query",
+            "name": "is_recurring",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only recurring, or only not",
+              "title": "Is Recurring"
+            }
+          },
+          {
+            "description": "Merchant contains, case-insensitive",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Merchant contains, case-insensitive",
+              "title": "Search"
+            }
+          },
+          {
+            "description": "Sort field; '-' for descending",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "default": "-date",
+              "description": "Sort field; '-' for descending",
+              "enum": [
+                "date",
+                "-date",
+                "amount",
+                "-amount",
+                "merchant",
+                "-merchant"
+              ],
+              "title": "Ordering",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "List transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
       "post": {
         "description": "Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.",
         "operationId": "createTransaction",

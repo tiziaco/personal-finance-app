@@ -24,7 +24,9 @@ import type {
 import type {
   CategoryResponse,
   HTTPValidationError,
+  ListTransactionsParams,
   TransactionCreate,
+  TransactionListResponse,
   TransactionResponse,
   TransactionUpdate,
 } from "../../types"
@@ -50,6 +52,201 @@ const withQueryKey = <T extends object, K>(
     })
   }
   return result
+}
+
+export const getListTransactionsUrl = (params?: ListTransactionsParams) => {
+  const normalizedParams = new URLSearchParams()
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    const explodeParameters = ["category"]
+
+    if (Array.isArray(value) && explodeParameters.includes(key)) {
+      value.forEach((v) => {
+        normalizedParams.append(key, v === null ? "null" : String(v))
+      })
+      return
+    }
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value))
+    }
+  })
+
+  const stringifiedParams = normalizedParams.toString()
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/transactions?${stringifiedParams}`
+    : `/api/v1/transactions`
+}
+
+/**
+ * One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.
+ * @summary List transactions
+ */
+export const useListTransactionsHook = (): ((
+  params?: ListTransactionsParams,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<TransactionListResponse>) => {
+  const customFetcher = useApiFetch()
+  return (
+    params?: ListTransactionsParams,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getListTransactionsUrl(params), {
+      ...options,
+      method: "GET",
+    })
+  }
+}
+
+export const getListTransactionsQueryKey = (
+  params?: ListTransactionsParams,
+) => {
+  return [`/api/v1/transactions`, ...(params ? [params] : [])] as const
+}
+
+export const useListTransactionsQueryOptions = <
+  TData = Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+        TError,
+        TData
+      >
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {}
+
+  const queryKey = queryOptions?.queryKey ?? getListTransactionsQueryKey(params)
+
+  const listTransactions = useListTransactionsHook()
+
+  const queryFn: QueryFunction<
+    Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>
+  > = ({ signal }) => listTransactions(params, { signal, ...requestOptions })
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+    TError,
+    TData
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListTransactionsQueryResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>
+>
+export type ListTransactionsQueryError = ErrorType<HTTPValidationError>
+
+export function useListTransactions<
+  TData = Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  params: undefined | ListTransactionsParams,
+  options: {
+    query: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+          TError,
+          Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>
+        >,
+        "initialData"
+      >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): DefinedUseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useListTransactions<
+  TData = Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+        TError,
+        TData
+      >
+    > &
+      Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+          TError,
+          Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>
+        >,
+        "initialData"
+      >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+export function useListTransactions<
+  TData = Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+        TError,
+        TData
+      >
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+}
+/**
+ * @summary List transactions
+ */
+
+export function useListTransactions<
+  TData = Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+  TError = ErrorType<HTTPValidationError>,
+>(
+  params?: ListTransactionsParams,
+  options?: {
+    query?: Partial<
+      UseQueryOptions<
+        Awaited<ReturnType<ReturnType<typeof useListTransactionsHook>>>,
+        TError,
+        TData
+      >
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseQueryResult<TData, TError> & {
+  queryKey: DataTag<QueryKey, TData, TError>
+} {
+  const queryOptions = useListTransactionsQueryOptions(params, options)
+
+  const query = useQuery(queryOptions, queryClient) as UseQueryResult<
+    TData,
+    TError
+  > & { queryKey: DataTag<QueryKey, TData, TError> }
+
+  return withQueryKey(query, queryOptions.queryKey)
 }
 
 export const getCreateTransactionUrl = () => {
