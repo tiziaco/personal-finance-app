@@ -88,7 +88,10 @@ export function ConversationRow({
               variant="ghost"
               size="icon-sm"
               aria-label={`Options for ${label}`}
-              className="opacity-0 group-hover:opacity-100 focus-visible:opacity-100 data-[popup-open]:opacity-100"
+              // Shown by default: a touch screen has no hover to reveal it
+              // (Tailwind's hover variants apply only under hover: hover).
+              // Only a hover-capable pointer hides it until hover, focus or open.
+              className="focus-visible:opacity-100 data-[popup-open]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
             />
           }
         >
