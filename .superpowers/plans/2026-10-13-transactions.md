@@ -2994,7 +2994,7 @@ Spec §4.1, §4.2. Copy the shape of `.claude/skills/web-app-patterns/examples/o
   - `useTransactionColumns(label: (slug: string) => string)` — read-only columns here; Task 12 adds the category picker, the row menu and an `actions` argument
   - `TransactionsTable` (the client view)
 
-- [ ] **Step 1: Params file + failing tests**
+- [x] **Step 1: Params file + failing tests**
 
 `transactions-table-params.ts`:
 
@@ -3186,7 +3186,7 @@ export const useTransactionsTableState = createUrlTableStateHook({
 
 Run (from `web-app/`): `pnpm test apps/web/src/components/transactions` → PASS for params and hook once written (they pin existing generated code; the URL test fails if Task 4's check was skipped).
 
-- [ ] **Step 2: Categories hook and formatters, test first**
+- [x] **Step 2: Categories hook and formatters, test first**
 
 `format.test.ts`:
 
@@ -3260,7 +3260,7 @@ export function useCategories() {
 
 Run → PASS.
 
-- [ ] **Step 3: Columns, card, filters, table, page, nav**
+- [x] **Step 3: Columns, card, filters, table, page, nav**
 
 `use-transaction-columns.tsx` (Task 12 extends it with the menu and picker):
 
@@ -3435,7 +3435,7 @@ export const HUB_NAV: NavItem[] = [
 ]
 ```
 
-- [ ] **Step 4: Run, check by hand, commit**
+- [x] **Step 4: Run, check by hand, commit**
 
 Run (repo root): `make check-web && make test-web` → PASS.
 By hand (`make seed-transactions CLERK_ID=…` first, then the stack per `/run-stack`, web on 3010): open `/transactions`; apply a category filter, sort by amount, page 2, press Back — chips, rows, pager move together; narrow the window below 768px — cards replace the table.
