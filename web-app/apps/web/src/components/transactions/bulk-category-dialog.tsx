@@ -1,0 +1,87 @@
+"use client"
+
+import { useState } from "react"
+import { useBatchUpdateTransactionCategory } from "@app/api-client/endpoints/transactions"
+import type { Category } from "@app/api-client/types"
+import { FilterSelect } from "@app/data-table/filters/filter-panel"
+import { Button } from "@app/ui/button"
+import {
+  Dialog,
+  DialogClose,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@app/ui/dialog"
+import { Label } from "@app/ui/label"
+import { useCategories } from "./use-categories"
+import { useInvalidateTransactions } from "./use-invalidate-transactions"
+
+/** Moves several transactions to one category (all or nothing). */
+export function BulkCategoryDialog({
+  ids,
+  open,
+  onOpenChange,
+  onDone,
+}: {
+  ids: string[]
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onDone: () => void
+}) {
+  const { categories } = useCategories()
+  const [category, setCategory] = useState<Category | "">("")
+  const { mutate, isPending } = useBatchUpdateTransactionCategory()
+  const invalidate = useInvalidateTransactions()
+  const apply = () => {
+    if (!category) return
+    mutate(
+      { data: { ids, category } },
+      {
+        onSuccess: async () => {
+          await invalidate()
+          onDone()
+          onOpenChange(false)
+        },
+      },
+    )
+  }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{`Recategorise ${ids.length} transactions`}</DialogTitle>
+          <DialogDescription>
+            They all move to the category you pick.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="grid gap-2">
+          <Label htmlFor="bulk-category">Category</Label>
+          <FilterSelect
+            id="bulk-category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as Category)}
+          >
+            <option value="" disabled>
+              Pick a category
+            </option>
+            {categories.map((c) => (
+              <option key={c.value} value={c.value}>
+                {c.label}
+              </option>
+            ))}
+          </FilterSelect>
+        </div>
+        <DialogFooter>
+          <DialogClose render={<Button variant="outline" />}>
+            Cancel
+          </DialogClose>
+          <Button disabled={!category || isPending} onClick={apply}>
+            Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}

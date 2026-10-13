@@ -11,13 +11,22 @@ import {
 import { TransactionsTable } from "./transactions-table"
 
 const updateMutate = vi.hoisted(() => vi.fn())
+const batchDeleteMutate = vi.hoisted(() => vi.fn())
+const batchCategoryMutate = vi.hoisted(() => vi.fn())
 const mutationMocks = vi.hoisted(() => {
   const mutation = () => ({ mutate: () => {}, isPending: false })
   return {
     useCreateTransaction: mutation,
     useUpdateTransaction: () => ({ mutate: updateMutate, isPending: false }),
     useDeleteTransaction: mutation,
-    useBatchDeleteTransactions: mutation,
+    useBatchDeleteTransactions: () => ({
+      mutate: batchDeleteMutate,
+      isPending: false,
+    }),
+    useBatchUpdateTransactionCategory: () => ({
+      mutate: batchCategoryMutate,
+      isPending: false,
+    }),
   }
 })
 
@@ -211,5 +220,50 @@ describe("TransactionsTable", () => {
     expect(
       container.querySelectorAll('[data-slot="skeleton"]').length,
     ).toBeGreaterThan(0)
+  })
+
+  describe("bulk actions", () => {
+    const rows = [row, { ...row, id: "2", merchant: "Rewe" }]
+    const selectBoth = async () => {
+      result(rows)
+      renderAt()
+      for (const box of screen.getAllByRole("checkbox", {
+        name: "Select row",
+      }))
+        await userEvent.click(box)
+      expect(screen.getByText("2 selected")).toBeInTheDocument()
+    }
+
+    it("deletes the selected rows in one batch", async () => {
+      await selectBoth()
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }))
+      expect(
+        await screen.findByText("Delete 2 transactions?"),
+      ).toBeInTheDocument()
+      await userEvent.click(screen.getByRole("button", { name: "Delete" }))
+      expect(batchDeleteMutate.mock.calls[0][0]).toEqual({
+        data: { ids: ["1", "2"] },
+      })
+    })
+
+    it("recategorises the selected rows in one batch", async () => {
+      await selectBoth()
+      await userEvent.click(
+        screen.getByRole("button", { name: "Recategorise" }),
+      )
+      expect(
+        await screen.findByRole("heading", {
+          name: "Recategorise 2 transactions",
+        }),
+      ).toBeInTheDocument()
+      await userEvent.selectOptions(
+        screen.getByLabelText("Category"),
+        "food_groceries",
+      )
+      await userEvent.click(screen.getByRole("button", { name: "Apply" }))
+      expect(batchCategoryMutate.mock.calls[0][0]).toEqual({
+        data: { ids: ["1", "2"], category: "food_groceries" },
+      })
+    })
   })
 })

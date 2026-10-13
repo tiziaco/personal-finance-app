@@ -18,6 +18,7 @@ import {
   TransactionsFilterPanel,
 } from "./transaction-filters"
 import { TransactionCard } from "./transaction-card"
+import { BulkCategoryDialog } from "./bulk-category-dialog"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 import { TransactionFormDialog } from "./transaction-form-dialog"
 import {
@@ -39,6 +40,12 @@ export function TransactionsTable() {
     null,
   )
   const [deleting, setDeleting] = useState<string[] | null>(null)
+  // A bulk action in flight; `clear` empties the table's selection on success.
+  const [bulk, setBulk] = useState<{
+    kind: "category" | "delete"
+    ids: string[]
+    clear: () => void
+  } | null>(null)
   const invalidate = useInvalidateTransactions()
   const { mutate: updateTransaction } = useUpdateTransaction()
   const onRecategorise = useCallback(
@@ -121,6 +128,37 @@ export function TransactionsTable() {
           isError && !data ? messages.toasts.genericError : undefined
         }
         noDataMessage={empty}
+        enableRowSelection
+        renderBulkActions={(selected, clear) => (
+          <>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setBulk({
+                  kind: "category",
+                  ids: selected.map((t) => t.id),
+                  clear,
+                })
+              }
+            >
+              Recategorise
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                setBulk({
+                  kind: "delete",
+                  ids: selected.map((t) => t.id),
+                  clear,
+                })
+              }
+            >
+              Delete
+            </Button>
+          </>
+        )}
         headerActions={
           <Button size="sm" onClick={() => setEditing("new")}>
             <PlusIcon />
@@ -175,6 +213,22 @@ export function TransactionsTable() {
           ids={deleting}
           open
           onOpenChange={(open) => !open && setDeleting(null)}
+        />
+      )}
+      {bulk?.kind === "category" && (
+        <BulkCategoryDialog
+          ids={bulk.ids}
+          open
+          onOpenChange={(open) => !open && setBulk(null)}
+          onDone={bulk.clear}
+        />
+      )}
+      {bulk?.kind === "delete" && (
+        <DeleteTransactionsDialog
+          ids={bulk.ids}
+          open
+          onOpenChange={(open) => !open && setBulk(null)}
+          onDeleted={bulk.clear}
         />
       )}
     </>
