@@ -48,7 +48,7 @@
 - `server/app/main.py`, `server/app/api/v1/api.py`, `server/alembic/env.py`, `server/pyproject.toml` (`[tool.importlinter]` only), `server/app/core/config.py` (one line), `server/Makefile`, root `Makefile`
 
 **Web — create**
-- `web-app/packages/ui/src/primitives/{alert-dialog,calendar,checkbox,popover?,switch,textarea}.tsx` (`popover` exists already — reuse it)
+- `web-app/packages/ui/src/primitives/{alert-dialog,calendar,checkbox,switch,textarea}.tsx` (`popover` already exists)
 - `web-app/packages/components/src/forms/{date-picker.tsx,date-picker.test.tsx}`
 - `web-app/packages/api-client/src/query-provider.test.tsx`
 - `web-app/packages/data-table/src/table/{row-selection.ts,row-selection.test.ts,data-table-bulk-bar.tsx,data-table-selection.test.tsx,data-table-cards.test.tsx}`, `web-app/packages/data-table/src/url-state/date-presets.{ts,test.ts}`, `web-app/packages/data-table/src/filters/filter-checkbox-group.{tsx,test.tsx}`
