@@ -37,6 +37,11 @@ describe("transactions table params", () => {
     ).toHaveLength(100)
   })
 
+  it("does not count a whitespace-only search as a filter", () => {
+    expect(hasActiveTransactionsFilters(load("search=%20%20%20"))).toBe(false)
+    expect(hasActiveTransactionsFilters(load("search=%20a"))).toBe(true)
+  })
+
   it("drops an unknown category and an unknown ordering", () => {
     const v = load("category=salary,retired_slug&ordering=-fingerprint")
     expect(v.ordering).toBeNull()

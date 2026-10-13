@@ -278,6 +278,12 @@ describe("TransactionFormDialog", () => {
     expect(
       within(confirm).getByText("Delete this transaction?"),
     ).toBeInTheDocument()
+    // The edit dialog dims under the confirm, so the two read as separate layers.
+    const edit = document.querySelector('[data-slot="dialog-content"]')
+    expect(edit).toHaveAttribute("data-nested-dialog-open")
+    expect(edit?.className).toContain(
+      "data-nested-dialog-open:after:bg-black/80",
+    )
     await user.click(within(confirm).getByRole("button", { name: "Delete" }))
     expect(deleteMutate.mock.calls[0][0]).toEqual({ transactionId: "t1" })
 

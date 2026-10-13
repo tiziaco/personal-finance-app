@@ -40,7 +40,8 @@ export function CategoryPicker({
           }}
         >
           {categories.map((c) => (
-            <DropdownMenuRadioItem key={c.value} value={c.value}>
+            // A radio item keeps the menu open by default; a pick closes it.
+            <DropdownMenuRadioItem key={c.value} value={c.value} closeOnClick>
               {c.label}
             </DropdownMenuRadioItem>
           ))}

@@ -115,7 +115,7 @@ export function toTransactionsQuery(
 export function hasActiveTransactionsFilters(v: TransactionsValues): boolean {
   const f = toTransactionsFilters(v)
   return (
-    v.search !== "" ||
+    v.search.trim() !== "" ||
     f.categories.length > 0 ||
     f.amountMin != null ||
     f.amountMax != null ||

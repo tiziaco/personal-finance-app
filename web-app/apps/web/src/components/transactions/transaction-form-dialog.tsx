@@ -112,7 +112,9 @@ export function TransactionFormDialog(
       : { mode: "edit", transaction: props.transaction }
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      {/* A nested dialog (the delete confirm) gets no backdrop of its own from
+          Base UI, so dim this popup under it: the two read as separate layers. */}
+      <DialogContent className="data-nested-dialog-open:after:absolute data-nested-dialog-open:after:inset-0 data-nested-dialog-open:after:rounded-[inherit] data-nested-dialog-open:after:bg-black/80">
         {/* The form mounts with the popup, so each opening starts from fresh state. */}
         <TransactionForm target={target} onClose={() => onOpenChange(false)} />
       </DialogContent>

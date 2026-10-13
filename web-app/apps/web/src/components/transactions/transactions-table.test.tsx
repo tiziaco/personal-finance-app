@@ -180,6 +180,9 @@ describe("TransactionsTable", () => {
       transactionId: "1",
       data: { category: "food_groceries" },
     })
+    // Radio items keep a menu open by default; a pick must close it.
+    await waitFor(() => expect(screen.queryByRole("menu")).toBeNull())
+    expect(updateMutate).toHaveBeenCalledTimes(1)
   })
 
   it("refreshes the list from the recategorise hook, so a closed menu still refreshes", async () => {
