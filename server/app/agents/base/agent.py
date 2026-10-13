@@ -12,6 +12,7 @@ from typing import (
 )
 
 from langchain_core.messages import (
+    AIMessage,
     BaseMessage,
     convert_to_openai_messages,
 )
@@ -28,6 +29,19 @@ from app.agents.shared.memory import (
 )
 from app.agents.shared.observability import create_graph_config
 from app.core.logging import logger
+
+
+def _chunk_text(content: str | list) -> str:
+    """The text of a streamed message's content, which GPT-5 models send as a list of blocks."""
+    if isinstance(content, str):
+        return content
+    parts = []
+    for block in content:
+        if isinstance(block, str):
+            parts.append(block)
+        elif isinstance(block, dict) and block.get("type") == "text":
+            parts.append(block.get("text", ""))
+    return "".join(parts)
 
 
 class BaseAgent(ABC):
@@ -103,11 +117,13 @@ class BaseAgent(ABC):
                 config=config,
                 stream_mode="messages",
             ):
-                try:
-                    yield token.content
-                except Exception as token_error:
-                    logger.exception("error_processing_token", error=str(token_error), conversation_id=conversation_id)
-                    continue  # one bad token must not end the stream
+                # stream_mode="messages" emits every message a node produces,
+                # tool results included. Only the model's own text is the reply.
+                if not isinstance(token, AIMessage):
+                    continue
+                text = _chunk_text(token.content)
+                if text:
+                    yield text
 
             state: StateSnapshot = await self._graph.aget_state(config=config)
             if state.values and "messages" in state.values:
