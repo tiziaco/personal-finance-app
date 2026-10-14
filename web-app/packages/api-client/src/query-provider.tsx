@@ -10,6 +10,7 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { useState } from "react"
 import { ApiError } from "./errors"
 import { isDevelopment } from "@app/core/lib/env"
+import { isSilenced } from "./query-meta"
 import { toastForError } from "./toast-for-error"
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
@@ -21,8 +22,8 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             // onError fires for background refetches too. A polling query that
             // fails every 30s would otherwise toast every 30s, behind data the
             // user can already see. Only a query that has never resolved
-            // toasts, and a query can opt out entirely.
-            if (query.meta?.silentError === true) return
+            // toasts, unless its meta silences the error.
+            if (isSilenced(query.meta, error)) return
             if (query.state.data !== undefined) return
             toastForError(error)
           },
@@ -31,7 +32,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         // One the app fires on its own (a generated title) opts out.
         mutationCache: new MutationCache({
           onError: (error, _variables, _context, mutation) => {
-            if (mutation.meta?.silentError === true) return
+            if (isSilenced(mutation.meta, error)) return
             toastForError(error)
           },
         }),

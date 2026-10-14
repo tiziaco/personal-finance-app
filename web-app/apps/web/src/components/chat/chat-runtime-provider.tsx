@@ -71,14 +71,27 @@ export function useActiveConversationId(): string | null {
 }
 
 /**
+ * A malformed id is answered 422 by the path's UUID validation: to the user it
+ * is a conversation that doesn't exist, the same as a 404.
+ */
+export function isConversationNotFound(error: unknown): boolean {
+  return (
+    error instanceof ApiError && (error.status === 404 || error.status === 422)
+  )
+}
+
+/**
  * A conversation's saved messages. Every observer of this query goes through
- * here, because a query's meta is whichever observer set its options last:
- * silentError has to be on all of them. ConversationPage renders the 404 as a
- * not-found screen, which a "Not found." toast would only repeat.
+ * here, because a query's meta is whichever observer set its options last.
+ * Not-found is silenced: ConversationPage renders it as a screen, which a
+ * toast would only repeat. Every other error toasts by QueryProvider's rule.
  */
 export function useChatHistory(conversationId: string | null) {
   return useListChatMessages(conversationId ?? "", {
-    query: { enabled: conversationId !== null, meta: { silentError: true } },
+    query: {
+      enabled: conversationId !== null,
+      meta: { silentError: isConversationNotFound },
+    },
   })
 }
 

@@ -141,8 +141,10 @@ component
 - **Every failure is an `ApiError`** — `status`, `body`, `requestId`. The message never
   carries server text.
 - **`QueryProvider` owns the error policy.** A query toasts only if it has never
-  resolved, so a failing background refetch behind visible data stays quiet, and
-  `meta: { silentError: true }` opts a query out. A mutation always toasts. The toast
+  resolved, so a failing background refetch behind visible data stays quiet. A
+  mutation toasts: the user just acted. `meta.silentError` opts either out — `true`
+  for every error, or a predicate for the errors the caller shows another way;
+  `query-meta.ts` types it for every hook through TanStack's `Register`. The toast
   maps `status` to copy in `@app/core`'s `constants/messages.ts`; server text never
   reaches the UI. A 4xx is not retried.
 - **Reading an error body goes through the generated Zod schema.** `useServerStatus` is
@@ -161,9 +163,9 @@ component
   from `@app/api-client`.
 - **The route sizes itself to the viewport** inside the shared dashboard container.
   Nothing outside `/chat` changes.
-- **Errors.** Both observers of the history query carry `meta: { silentError: true }`. The
-  conversation page renders a 404 as "This conversation doesn't exist" and toasts other
-  errors itself, by `QueryProvider`'s rule: only when nothing is shown.
+- **Errors.** The history query's `meta.silentError` is `isConversationNotFound`: the
+  conversation page renders a 404 (or the 422 of a malformed id) as "This conversation
+  doesn't exist", and every other error toasts by `QueryProvider`'s rule.
 
 ## 6. Configuration and build
 
@@ -183,8 +185,7 @@ In native dev the root `Makefile` exports `apps/web/.env.local`, so
 One Vitest config, two projects: `packages` and `web`, the latter aliasing `@/` to
 `apps/web/src/`. Tests sit beside their subject as `*.test.ts(x)`;
 `*.spec.ts` and the `e2e/**` exclude are reserved for Playwright, which does not exist
-yet: nothing drives a browser. `QueryProvider`'s error policy is untested too — the
-mutator and the status-recovery hook are covered, the provider is not
+yet: nothing drives a browser. `QueryProvider`'s retry rule is untested too
 ([`../TODO.md`](../TODO.md), **Web — tests the suite does not have yet**). `make test-web`
 runs the suite and the pre-push hook runs it when `web-app/` changed. The traps are in the
 `web-app-testing` skill.

@@ -94,9 +94,8 @@ must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent
 
 ## Web — tests the suite does not have yet
 
-- **`QueryProvider`'s error policy.** Which queries toast (never-resolved only, unless
-  `silentError`), that mutations always do, and that a 4xx is not retried. The mutator and
-  the status-recovery hook are covered; the provider that applies their errors is not.
+- **`QueryProvider`'s retry rule.** That a 4xx is not retried and a 5xx is retried once.
+  Which errors toast is covered (`query-provider.test.tsx`); the retry predicate is not.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
