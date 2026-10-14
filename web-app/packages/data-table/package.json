@@ -8,6 +8,7 @@
     "./server-data-table": "./src/table/server-data-table.tsx",
     "./table-search-input": "./src/table/table-search-input.tsx",
     "./table-state": "./src/table/table-state.ts",
+    "./use-clamp-page": "./src/table/use-clamp-page.ts",
     "./list-query": "./src/table/list-query.ts",
     "./columns": "./src/table/columns.ts",
     "./use-local-table-state": "./src/table/use-local-table-state.ts",
