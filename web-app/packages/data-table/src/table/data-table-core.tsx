@@ -428,18 +428,6 @@ export function DataTableCore<TData, TValue>({
         </div>
       )}
 
-      {!asCards && enableRowSelection && selectedCount > 0 && (
-        <DataTableBulkBar
-          count={selectedCount}
-          onClear={() => setRowSelection({})}
-        >
-          {renderBulkActions?.(
-            table.getSelectedRowModel().rows.map((r) => r.original),
-            () => setRowSelection({}),
-          )}
-        </DataTableBulkBar>
-      )}
-
       {asCards ? (
         <ul
           className={cn(
@@ -470,7 +458,7 @@ export function DataTableCore<TData, TValue>({
         <div
           data-slot="table-container"
           className={cn(
-            "relative w-full overflow-x-auto",
+            "relative w-full overflow-x-auto rounded-xl border bg-card shadow-sm",
             hasFrozen && "overflow-y-clip",
             maxScrollHeight && "overflow-y-auto",
           )}
@@ -481,13 +469,16 @@ export function DataTableCore<TData, TValue>({
             data-slot="table"
             aria-busy={isPending || undefined}
             className={cn(
-              "w-full caption-bottom text-xs",
+              "w-full caption-bottom text-sm",
               hasFrozen && "border-separate border-spacing-0",
             )}
           >
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                <TableRow
+                  key={headerGroup.id}
+                  className="bg-muted/50 hover:bg-muted/50"
+                >
                   {headerGroup.headers.map((header, index) => {
                     const def = header.column.columnDef
                     const meta = def.meta
@@ -514,12 +505,13 @@ export function DataTableCore<TData, TValue>({
                         }
                         style={{ ...widthStyle(meta), ...freezeStyle(freeze) }}
                         className={cn(
-                          density === "compact" && "h-8 px-2 text-xs",
+                          "text-xs font-medium tracking-wider text-muted-foreground uppercase",
+                          density === "compact" ? "h-8 px-2" : "h-9 px-4",
                           wraps && "whitespace-normal",
                           meta?.align === "right" && "text-right",
                           hasFrozen && "border-b",
-                          maxScrollHeight && "sticky top-0 z-10 bg-background",
-                          freeze.frozen && "z-20 bg-background",
+                          maxScrollHeight && "sticky top-0 z-10 bg-muted",
+                          freeze.frozen && "z-20 bg-muted",
                         )}
                       >
                         {header.isPlaceholder ? null : canSort ? (
@@ -609,12 +601,14 @@ export function DataTableCore<TData, TValue>({
                               ...freezeStyle(freeze),
                             }}
                             className={cn(
-                              density === "compact" && "px-2 py-1 text-xs",
+                              density === "compact"
+                                ? "px-2 py-1 text-xs"
+                                : "px-4 py-2.5",
                               meta?.align === "right" &&
                                 "text-right tabular-nums",
                               hasFrozen && "border-b",
                               freeze.frozen &&
-                                "z-10 bg-background group-hover/row:bg-muted",
+                                "z-10 bg-card group-hover/row:bg-muted",
                             )}
                           >
                             {flexRender(
@@ -677,6 +671,18 @@ export function DataTableCore<TData, TValue>({
             )}
           </table>
         </div>
+      )}
+
+      {!asCards && enableRowSelection && selectedCount > 0 && (
+        <DataTableBulkBar
+          count={selectedCount}
+          onClear={() => setRowSelection({})}
+        >
+          {renderBulkActions?.(
+            table.getSelectedRowModel().rows.map((r) => r.original),
+            () => setRowSelection({}),
+          )}
+        </DataTableBulkBar>
       )}
 
       <DataTablePager

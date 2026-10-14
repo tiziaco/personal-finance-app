@@ -8,6 +8,7 @@ export const labels = {
   selectRow: "Select row",
   selectAllOnPage: "Select all on this page",
   selectedCount: (n: number) => `${n} selected`,
+  selected: "selected",
   clearSelection: "Clear selection",
   bulkActions: "Bulk actions",
   pagination: "Pagination",

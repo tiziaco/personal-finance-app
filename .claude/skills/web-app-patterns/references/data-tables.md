@@ -137,7 +137,11 @@ value from props.
 - **Selection:** `enableRowSelection` adds a checkbox column. `renderBulkActions(selected, clearSelection)`
   fills the bulk bar ("N selected", Clear, your actions). Selection holds only rows on screen and is
   committed to state, so a row that leaves the page and returns stays deselected, and a bulk action
-  never touches a row the user cannot see. The bar is desktop only: it is hidden in card mode.
+  never touches a row the user cannot see. The bar is a pill floating under the table, sticky to
+  the bottom of the scroll container so it stays in view over a long page. It is desktop only:
+  hidden in card mode.
+- **The frame:** every table sits in a card (`rounded-xl border bg-card shadow-sm`) with uppercase
+  muted header labels on a `bg-muted/50` strip. Sticky and frozen header cells use opaque `bg-muted`.
 - **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).
   Toolbar, chips and pager stay; column headers, row menus and the bulk bar do not. So a card that
   acts is a `<button>` (the transactions card opens the edit dialog), and a list that sorts adds its
