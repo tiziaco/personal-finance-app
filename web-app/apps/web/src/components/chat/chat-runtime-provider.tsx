@@ -70,6 +70,18 @@ export function useActiveConversationId(): string | null {
   return params.conversationId ?? null
 }
 
+/**
+ * A conversation's saved messages. Every observer of this query goes through
+ * here, because a query's meta is whichever observer set its options last:
+ * silentError has to be on all of them. ConversationPage renders the 404 as a
+ * not-found screen, which a "Not found." toast would only repeat.
+ */
+export function useChatHistory(conversationId: string | null) {
+  return useListChatMessages(conversationId ?? "", {
+    query: { enabled: conversationId !== null, meta: { silentError: true } },
+  })
+}
+
 export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const activeId = useActiveConversationId()
   const router = useRouter()
@@ -100,12 +112,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   // and the history refetch at the end of the send has an observer to run.
   const [createdId, setCreatedId] = useState<string | null>(null)
   const historyId = activeId ?? createdId
-  // silentError on both observers of this query: a query's meta is whichever
-  // observer set its options last, and ConversationPage renders the 404 as a
-  // not-found screen, which a "Not found." toast would only repeat.
-  const history = useListChatMessages(historyId ?? "", {
-    query: { enabled: historyId !== null, meta: { silentError: true } },
-  })
+  const history = useChatHistory(historyId)
 
   const [exchange, setExchange] = useState<Exchange | null>(null)
   const controllerRef = useRef<AbortController | null>(null)

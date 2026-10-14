@@ -1,7 +1,6 @@
 "use client"
 
 import { ApiError, toastForError } from "@app/api-client"
-import { useListChatMessages } from "@app/api-client/endpoints/chatbot"
 import { Button } from "@app/ui/button"
 import { Card } from "@app/ui/card"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
@@ -12,6 +11,7 @@ import { useEffect, useState, type ReactNode } from "react"
 import {
   ChatRuntimeProvider,
   useActiveConversationId,
+  useChatHistory,
 } from "./chat-runtime-provider"
 import { ConversationList } from "./conversation-list"
 import { ConversationNotFound } from "./conversation-not-found"
@@ -82,18 +82,16 @@ export function NewChatPage() {
 /** /chat/[conversationId] — one conversation, or not-found for an unknown, foreign or malformed id. */
 export function ConversationPage() {
   const activeId = useActiveConversationId()
-  const history = useListChatMessages(activeId ?? "", {
-    query: { enabled: activeId !== null, meta: { silentError: true } },
-  })
+  const history = useChatHistory(activeId)
   // A malformed id is answered 422 by the path's UUID validation: to the user
   // it is a conversation that doesn't exist, the same as a 404.
   const notFound =
     history.error instanceof ApiError &&
     (history.error.status === 404 || history.error.status === 422)
 
-  // silentError (on this query's every observer) keeps QueryProvider from
-  // toasting, and a query's meta can't depend on the status. So the toast it
-  // would have shown is raised here, for every error but the not-found below.
+  // useChatHistory's silentError keeps QueryProvider from toasting, and a
+  // query's meta can't depend on the status. So the toast it would have shown
+  // is raised here, for every error but the not-found below.
   const hasData = history.data !== undefined
   useEffect(() => {
     // Mirrors QueryProvider's rule: a failed refetch behind shown data stays silent.
