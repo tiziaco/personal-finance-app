@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.modules.transaction import CATEGORIES, Category, category_label
+from app.modules.transaction import CATEGORIES, Category
 from app.modules.transaction.schemas import TransactionImport
 
 pytestmark = pytest.mark.unit
@@ -40,12 +40,9 @@ def test_enum_is_built_from_the_list():
 
 
 def test_labels_are_the_product_names():
-    assert category_label("food_groceries") == "Food & Groceries"
-    assert category_label("atm") == "ATM"
-
-
-def test_an_unknown_slug_labels_as_itself():
-    assert category_label("no_such_slug") == "no_such_slug"
+    labels = dict(CATEGORIES)
+    assert labels["food_groceries"] == "Food & Groceries"
+    assert labels["atm"] == "ATM"
 
 
 @pytest.mark.parametrize("description", ["", "   "])

@@ -18,7 +18,6 @@ from app.modules.transaction.schemas import (
     TransactionImport,
     TransactionListResponse,
     TransactionResponse,
-    category_label,
 )
 from app.modules.transaction.service import transaction_service
 
@@ -33,7 +32,6 @@ __all__ = [
     "TransactionNotFoundError",
     "TransactionResponse",
     "UserTransaction",
-    "category_label",
     "get_user_transaction",
     "router",
     "transaction_service",

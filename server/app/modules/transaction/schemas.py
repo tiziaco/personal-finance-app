@@ -38,13 +38,6 @@ CATEGORIES: list[tuple[str, str]] = [
 
 Category = StrEnum("Category", [(slug, slug) for slug, _ in CATEGORIES])
 
-_LABELS = dict(CATEGORIES)
-
-
-def category_label(category: str) -> str:
-    """The display label for a slug; an unknown slug labels as itself."""
-    return _LABELS.get(category, category)
-
 
 class CategoryResponse(BaseModel):
     """One category, as the web lists it."""
