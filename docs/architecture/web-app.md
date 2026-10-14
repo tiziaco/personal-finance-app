@@ -158,9 +158,10 @@ component
   conversations and history; the runtime only renders them plus the in-flight exchange. It
   opens that exchange before its first await, so a send cannot be doubled while the
   conversation is created.
-- **The stream is the one hand-written `fetch`** (`apps/web/src/lib/chat/stream-chat.ts`),
-  because orval excludes `streaming` routes. It reuses `resolveBaseUrl` and `toastForError`
-  from `@app/api-client`.
+- **The stream is the one hand-written call** (`apps/web/src/lib/chat/stream-chat.ts`),
+  because orval excludes `streaming` routes. It goes through `useApiRequest`, the
+  transport under `useApiFetch`, so its URL, token and `ApiError` are the generated
+  hooks' own; it reads the body itself.
 - **The route sizes itself to the viewport** inside the shared dashboard container.
   Nothing outside `/chat` changes.
 - **Errors.** The history query's `meta.silentError` is `isConversationNotFound`: the

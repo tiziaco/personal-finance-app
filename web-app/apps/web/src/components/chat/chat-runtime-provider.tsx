@@ -6,7 +6,7 @@ import {
   type AppendMessage,
   type ThreadMessageLike,
 } from "@assistant-ui/react"
-import { ApiError, toastForError } from "@app/api-client"
+import { ApiError, toastForError, useApiRequest } from "@app/api-client"
 import {
   getListChatMessagesQueryKey,
   useListChatMessages,
@@ -21,7 +21,6 @@ import type {
   ConversationResponse,
   Message,
 } from "@app/api-client/types"
-import { useAppAuth } from "@app/auth"
 import { useQueryClient } from "@tanstack/react-query"
 import { useParams, useRouter } from "next/navigation"
 import {
@@ -99,7 +98,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const activeId = useActiveConversationId()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const { getToken } = useAppAuth()
+  const request = useApiRequest()
   const createConversation = useCreateConversation()
   // The cache update is in the hook's options, not the mutate call: a call's
   // own callbacks run only for the latest call, so a title for one
@@ -283,11 +282,10 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
 
       const historyKey = getListChatMessagesQueryKey(conversationId)
       try {
-        const token = await getToken()
         for await (const chunk of streamChat({
           conversationId,
           message: text,
-          token,
+          request,
           signal: controller.signal,
         })) {
           update((e) => ({ ...e, replyText: e.replyText + chunk }))
@@ -316,9 +314,9 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
     [
       activeId,
       createConversation,
-      getToken,
       markHistoryStale,
       queryClient,
+      request,
       requestTitle,
       router,
     ],

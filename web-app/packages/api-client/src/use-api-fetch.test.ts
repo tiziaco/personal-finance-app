@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { renderHook } from "@testing-library/react"
 import { ApiError } from "./errors"
-import { useApiFetch } from "./use-api-fetch"
+import { useApiFetch, useApiRequest } from "./use-api-fetch"
 
 // useApiFetch is a hook so it can read a fresh Clerk token per call. Only the
 // token source is mocked; everything else here is the real mutator.
@@ -219,5 +219,42 @@ describe("errors", () => {
 
     expect(error.body).toBeNull()
     expect(error.requestId).toBeNull()
+  })
+})
+
+describe("useApiRequest", () => {
+  function request() {
+    return renderHook(() => useApiRequest()).result.current
+  }
+
+  it("returns the response unread, with the bearer token sent", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("data: x\n\n", { status: 200 })),
+    )
+    const response = await request()("/api/v1/stream", {
+      method: "POST",
+      body: "{}",
+    })
+    expect(response.bodyUsed).toBe(false)
+    expect(await response.text()).toBe("data: x\n\n")
+    expect(lastCall().url).toBe("http://localhost:8100/api/v1/stream")
+    expect(lastCall().headers.get("Authorization")).toBe("Bearer tok-123")
+    expect(lastCall().headers.get("Content-Type")).toBe("application/json")
+  })
+
+  // Review Focus 4: a refused stream's body reads as the hooks' does.
+  it("throws ApiError with the JSON error body parsed", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          jsonResponse({ detail: "slow down" }, { status: 429 }),
+        ),
+    )
+    const error = await rejection(request()("/api/v1/stream"))
+    expect(error.status).toBe(429)
+    expect(error.body).toEqual({ detail: "slow down" })
   })
 })

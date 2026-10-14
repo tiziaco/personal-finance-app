@@ -1,4 +1,4 @@
-import { ApiError, resolveBaseUrl } from "@app/api-client"
+import type { ApiRequest } from "@app/api-client"
 import { z } from "zod"
 
 /**
@@ -23,7 +23,8 @@ export class StreamFailedError extends Error {
 export type StreamChatOptions = {
   conversationId: string
   message: string
-  token: string | null
+  /** useApiRequest's: it adds the session's token, and throws ApiError for a refused stream before anything is read. */
+  request: ApiRequest
   signal: AbortSignal
 }
 
@@ -38,28 +39,18 @@ export type StreamChatOptions = {
 export async function* streamChat({
   conversationId,
   message,
-  token,
+  request,
   signal,
 }: StreamChatOptions): AsyncGenerator<string> {
-  const headers = new Headers({
-    "Content-Type": "application/json",
-    Accept: "text/event-stream",
-  })
-  if (token) headers.set("Authorization", `Bearer ${token}`)
-
-  const response = await fetch(
-    `${resolveBaseUrl()}/api/v1/chatbot/chat/${conversationId}/stream`,
-    { method: "POST", headers, body: JSON.stringify({ message }), signal },
+  const response = await request(
+    `/api/v1/chatbot/chat/${conversationId}/stream`,
+    {
+      method: "POST",
+      headers: { Accept: "text/event-stream" },
+      body: JSON.stringify({ message }),
+      signal,
+    },
   )
-
-  if (!response.ok) {
-    throw new ApiError(
-      `HTTP ${response.status}`,
-      response.status,
-      await response.text().catch(() => null),
-      response.headers.get("x-request-id"),
-    )
-  }
   if (!response.body) throw new StreamFailedError("The response has no body")
 
   for await (const event of readEvents(response.body)) {

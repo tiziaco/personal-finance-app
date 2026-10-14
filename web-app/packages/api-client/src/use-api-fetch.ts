@@ -21,7 +21,7 @@ import { ApiError } from "./errors"
  */
 export type ErrorType<_Body = unknown> = ApiError
 
-export function resolveBaseUrl(): string {
+function resolveBaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_API_URL
   if (!url) {
     throw new Error("@app/api-client: NEXT_PUBLIC_API_URL is not set")
@@ -41,6 +41,67 @@ async function parseErrorBody(response: Response): Promise<unknown> {
   }
 }
 
+/** A request through the API's transport, with the session's token bound. */
+export type ApiRequest = (url: string, init?: RequestInit) => Promise<Response>
+
+/**
+ * One request to the API: the base URL, the bearer token, a JSON content type
+ * for a plain body, and an ApiError for any non-2xx. The response comes back
+ * unread, so a streamed body can be consumed as it arrives.
+ */
+async function apiRequest(
+  url: string,
+  init: RequestInit | undefined,
+  token: string | null,
+): Promise<Response> {
+  const fullUrl = /^https?:\/\//i.test(url) ? url : `${resolveBaseUrl()}${url}`
+  const headers = new Headers(init?.headers)
+
+  if (token && !headers.has("authorization")) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
+
+  // Only set a JSON content type for plain bodies. Never for FormData — the
+  // browser must set its own multipart boundary — nor for Blob or ArrayBuffer.
+  const body = init?.body
+  if (
+    body != null &&
+    !headers.has("content-type") &&
+    !(body instanceof FormData) &&
+    !(body instanceof Blob) &&
+    !(body instanceof ArrayBuffer)
+  ) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const response = await fetch(fullUrl, { ...init, headers })
+  if (!response.ok) {
+    // Deliberately not response.statusText: the reason phrase is server-supplied
+    // text, and server error text must never reach the UI. status, body and
+    // requestId still carry everything needed to debug.
+    throw new ApiError(
+      `HTTP ${response.status}`,
+      response.status,
+      await parseErrorBody(response),
+      response.headers.get("x-request-id"),
+    )
+  }
+  return response
+}
+
+/**
+ * The API's transport with the current session's token, read on every call.
+ * For a caller that reads the body itself: the chat stream. Everything else
+ * uses a generated hook, which goes through useApiFetch.
+ */
+export function useApiRequest(): ApiRequest {
+  const { getToken } = useAppAuth()
+  return useCallback(
+    async (url, init) => apiRequest(url, init, await getToken()),
+    [getToken],
+  )
+}
+
 /**
  * The mutator every generated endpoint routes through.
  *
@@ -54,47 +115,11 @@ async function parseErrorBody(response: Response): Promise<unknown> {
  * orval recognises the `use` prefix and calls this inside each generated hook.
  */
 export function useApiFetch() {
-  const { getToken } = useAppAuth()
+  const request = useApiRequest()
 
   return useCallback(
     async <T>(url: string, init?: RequestInit): Promise<T> => {
-      const fullUrl = /^https?:\/\//i.test(url)
-        ? url
-        : `${resolveBaseUrl()}${url}`
-      const headers = new Headers(init?.headers)
-
-      const token = await getToken()
-      if (token && !headers.has("authorization")) {
-        headers.set("Authorization", `Bearer ${token}`)
-      }
-
-      // Only set a JSON content type for plain bodies. Never for FormData — the
-      // browser must set its own multipart boundary — nor for Blob or ArrayBuffer.
-      const body = init?.body
-      if (
-        body != null &&
-        !headers.has("content-type") &&
-        !(body instanceof FormData) &&
-        !(body instanceof Blob) &&
-        !(body instanceof ArrayBuffer)
-      ) {
-        headers.set("Content-Type", "application/json")
-      }
-
-      const response = await fetch(fullUrl, { ...init, headers })
-      const requestId = response.headers.get("x-request-id")
-
-      if (!response.ok) {
-        // Deliberately not response.statusText: the reason phrase is server-supplied
-        // text, and server error text must never reach the UI. status, body and
-        // requestId still carry everything needed to debug.
-        throw new ApiError(
-          `HTTP ${response.status}`,
-          response.status,
-          await parseErrorBody(response),
-          requestId,
-        )
-      }
+      const response = await request(url, init)
 
       if (response.status === 204) return undefined as T
       if (response.headers.get("content-length") === "0") return undefined as T
@@ -105,6 +130,6 @@ export function useApiFetch() {
 
       return (await response.text()) as unknown as T
     },
-    [getToken],
+    [request],
   )
 }

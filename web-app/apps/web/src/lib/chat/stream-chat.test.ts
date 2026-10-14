@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
-import { ApiError } from "@app/api-client"
+import { ApiError, type ApiRequest } from "@app/api-client"
 
 import { readEvents, streamChat, StreamFailedError } from "./stream-chat"
 
@@ -22,13 +22,13 @@ async function collect<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   return out
 }
 
-function mockFetch(response: Response) {
-  return vi.spyOn(globalThis, "fetch").mockResolvedValue(response)
+function respondWith(response: Response) {
+  return vi.fn<ApiRequest>(async () => response)
 }
 
-function run(signal = new AbortController().signal) {
+function run(request: ApiRequest, signal = new AbortController().signal) {
   return collect(
-    streamChat({ conversationId: "c1", message: "hi", token: "tok", signal }),
+    streamChat({ conversationId: "c1", message: "hi", request, signal }),
   )
 }
 
@@ -57,50 +57,50 @@ describe("readEvents", () => {
 })
 
 describe("streamChat", () => {
-  it("posts the message with the bearer token and yields the chunks", async () => {
-    const spy = mockFetch(
+  it("posts the message to the conversation's stream and yields the chunks", async () => {
+    const request = respondWith(
       new Response(bodyOf(frame("Hel") + frame("lo") + frame("", true))),
     )
-    await expect(run()).resolves.toEqual(["Hel", "lo"])
-
-    const [url, init] = spy.mock.calls[0]
-    expect(String(url)).toMatch(/\/api\/v1\/chatbot\/chat\/c1\/stream$/)
-    expect(new Headers(init?.headers).get("Authorization")).toBe("Bearer tok")
-    expect(init?.body).toBe(JSON.stringify({ message: "hi" }))
+    await expect(run(request)).resolves.toEqual(["Hel", "lo"])
+    expect(request).toHaveBeenCalledWith(
+      "/api/v1/chatbot/chat/c1/stream",
+      expect.objectContaining({
+        method: "POST",
+        body: JSON.stringify({ message: "hi" }),
+      }),
+    )
   })
 
-  it("throws ApiError with the status on a non-2xx response", async () => {
-    mockFetch(new Response("slow down", { status: 429 }))
-    await expect(run()).rejects.toMatchObject({
-      name: "ApiError",
-      status: 429,
+  it("lets a refused stream's ApiError through", async () => {
+    const request = vi.fn<ApiRequest>(async () => {
+      throw new ApiError("HTTP 429", 429, null, null)
     })
-    await expect(run()).rejects.toBeInstanceOf(ApiError)
+    await expect(run(request)).rejects.toMatchObject({ status: 429 })
   })
 
   it("treats a final event carrying content as a failure", async () => {
-    mockFetch(
+    const request = respondWith(
       new Response(
         bodyOf(frame("partial") + frame("An error occurred.", true)),
       ),
     )
-    await expect(run()).rejects.toBeInstanceOf(StreamFailedError)
+    await expect(run(request)).rejects.toBeInstanceOf(StreamFailedError)
   })
 
   // Review Focus 2: a dropped connection must not leave the UI "running".
   it("treats a stream that ends without done as a failure", async () => {
-    mockFetch(new Response(bodyOf(frame("partial"))))
-    await expect(run()).rejects.toBeInstanceOf(StreamFailedError)
+    const request = respondWith(new Response(bodyOf(frame("partial"))))
+    await expect(run(request)).rejects.toBeInstanceOf(StreamFailedError)
   })
 
   it("treats a malformed event as a failure", async () => {
-    mockFetch(new Response(bodyOf('data: {"nope": 1}\n\n')))
-    await expect(run()).rejects.toBeInstanceOf(StreamFailedError)
+    const request = respondWith(new Response(bodyOf('data: {"nope": 1}\n\n')))
+    await expect(run(request)).rejects.toBeInstanceOf(StreamFailedError)
   })
 
   it("stops reading when aborted", async () => {
     const controller = new AbortController()
-    vi.spyOn(globalThis, "fetch").mockImplementation(
+    const request = vi.fn<ApiRequest>(
       (_url, init) =>
         new Promise((_resolve, reject) => {
           init?.signal?.addEventListener("abort", () =>
@@ -108,7 +108,7 @@ describe("streamChat", () => {
           )
         }),
     )
-    const pending = run(controller.signal)
+    const pending = run(request, controller.signal)
     controller.abort()
     await expect(pending).rejects.toMatchObject({ name: "AbortError" })
   })

@@ -173,7 +173,7 @@ describe("ChatRuntimeProvider", () => {
       expect.objectContaining({
         conversationId: "c1",
         message: "hi",
-        token: "tok",
+        request: expect.any(Function),
       }),
     )
     expect(calls).toContain("POST /api/v1/conversation/conversation")
