@@ -519,7 +519,8 @@ export function DataTableCore<TData, TValue>({
                             type="button"
                             onClick={header.column.getToggleSortingHandler()}
                             className={cn(
-                              "group inline-flex items-center gap-1",
+                              // Preflight resets a button's text-transform.
+                              "group inline-flex items-center gap-1 uppercase",
                               meta?.align === "right" && "flex-row-reverse",
                             )}
                           >
@@ -673,6 +674,16 @@ export function DataTableCore<TData, TValue>({
         </div>
       )}
 
+      <DataTablePager
+        table={table}
+        totalCount={
+          isServer
+            ? mode.controls.totalCount
+            : table.getFilteredRowModel().rows.length
+        }
+        disabled={isPending || isLoading}
+      />
+
       {!asCards && enableRowSelection && selectedCount > 0 && (
         <DataTableBulkBar
           count={selectedCount}
@@ -684,16 +695,6 @@ export function DataTableCore<TData, TValue>({
           )}
         </DataTableBulkBar>
       )}
-
-      <DataTablePager
-        table={table}
-        totalCount={
-          isServer
-            ? mode.controls.totalCount
-            : table.getFilteredRowModel().rows.length
-        }
-        disabled={isPending || isLoading}
-      />
     </div>
   )
 }

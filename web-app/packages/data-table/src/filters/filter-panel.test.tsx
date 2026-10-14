@@ -37,6 +37,27 @@ describe("FilterPanel", () => {
     ).toBeNull()
   })
 
+  it("puts each child in a ruled section of its own, skipping empty ones", async () => {
+    render(
+      <FilterPanel activeCount={0} onClearAll={() => {}}>
+        <fieldset aria-label="one" />
+        {false}
+        <fieldset aria-label="two" />
+      </FilterPanel>,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const sheet = await screen.findByRole("dialog", { name: "Filters" })
+    const one = within(sheet).getByRole("group", { name: "one" })
+    const two = within(sheet).getByRole("group", { name: "two" })
+    // A fieldset's legend sits above its padding, so the section, not the
+    // fieldset, carries the spacing.
+    expect(one.parentElement).not.toBe(two.parentElement)
+    expect(one.parentElement!.parentElement).toBe(
+      two.parentElement!.parentElement,
+    )
+    expect(one.parentElement!.parentElement!.children).toHaveLength(2)
+  })
+
   it("closes from its close button", async () => {
     render(
       <FilterPanel activeCount={0} onClearAll={() => {}}>
