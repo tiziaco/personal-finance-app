@@ -97,6 +97,17 @@ prompt becomes **Upload a CSV** (`transactions.md` §2).
 
 **Unblocks:** nothing; it lands with step 4.
 
+## Web — legacy's theme
+
+Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
+floating bulk bar, the sort control — but not its theme: the teal accent, the grey-green page
+background, pill-shaped controls and the font. The theme changes every page, so it is a
+decision of its own, made once for the whole app, not per screen. Legacy's calendar
+date-range picker is out with it. Reference screenshots of both apps were taken with the same
+data on 14 Oct 2026.
+
+**Unblocks:** nothing; the app is usable with the template's theme.
+
 ## Port — carry into backend modules
 
 Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
