@@ -78,6 +78,22 @@ Every primitive goes in `packages/ui`, even one only a single screen uses.
    primitive is just silently missing from `@app/ui`. This has been missed twice (`AvatarBadge`,
    `SidebarFooterMenu`).
 4. `pnpm exec prettier --write` the new file — the docs' code is not in the repo's style.
+5. **Bring its corners to the radius scale below.** shadcn's styles disagree — `base-maia` pills
+   (`rounded-4xl`) next to `base-mira`'s `rounded-lg` — and the primitives came from both.
+
+### Corner radius
+
+Three levels, by what the element is. `--radius` is 10px (`lg`); the tokens are in `globals.css`.
+
+| Element | Radius |
+|---|---|
+| A control — button (every size), input, textarea, select trigger, sidebar menu button | `rounded-lg` |
+| A floating list — popover, select and dropdown content, hover card | `rounded-lg`, its items `rounded-md` |
+| A surface — dialog, alert dialog, card, the table frame, the bulk-action pill | `rounded-xl` |
+| A badge or a filter chip | `rounded-md` |
+| Round by nature — avatar, switch, status dot, a count bubble | `rounded-full` |
+
+An item inside a list is one step smaller than the list, so the two corners nest.
 
 ## Adding a workspace package
 
