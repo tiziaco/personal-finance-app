@@ -7,6 +7,7 @@ import {
   parseAsArrayOf,
   parseAsBoolean,
   parseAsInteger,
+  parseAsIsoDay,
   parseAsString,
   parseAsStringLiteral,
   toOffsetLimit,
@@ -38,8 +39,8 @@ export const transactionsParsers = {
   amount_max: parseAsString,
   is_recurring: parseAsBoolean,
   date_mode: parseAsStringLiteral(DATE_FILTER_MODES), // UI-only
-  date_from: parseAsString,
-  date_to: parseAsString,
+  date_from: parseAsIsoDay,
+  date_to: parseAsIsoDay,
 }
 
 export const loadTransactionsTableParams = createLoader(transactionsParsers)

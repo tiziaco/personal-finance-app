@@ -6,20 +6,7 @@ import { Button } from "@app/ui/button"
 import { Calendar } from "@app/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@app/ui/popover"
 import { cn } from "@app/core/lib/utils"
-
-const pad = (n: number) => String(n).padStart(2, "0")
-/** Local calendar date ↔ ISO YYYY-MM-DD. Never toISOString, which is UTC and shifts the day. */
-const toIso = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
-const fromIso = (iso: string) => {
-  const [y, m, d] = iso.split("-").map(Number)
-  return new Date(y, m - 1, d)
-}
-const display = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-})
+import { formatDay, parseIsoDay, toIsoDay } from "@app/core/lib/dates"
 
 /**
  * One day, picked from a calendar in a popover. The value is a local ISO date, "" when empty.
@@ -39,8 +26,9 @@ export function DatePicker({
   "aria-label"?: string
 }) {
   const [open, setOpen] = useState(false)
-  const selected = value ? fromIso(value) : undefined
-  const shown = selected ? display.format(selected) : placeholder
+  // A malformed value (a hand-edited URL) shows as empty rather than throwing.
+  const selected = parseIsoDay(value)
+  const shown = selected ? formatDay(selected) : placeholder
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -67,7 +55,7 @@ export function DatePicker({
           selected={selected}
           defaultMonth={selected}
           onSelect={(day) => {
-            if (day) onChange(toIso(day))
+            if (day) onChange(toIsoDay(day))
             setOpen(false)
           }}
         />

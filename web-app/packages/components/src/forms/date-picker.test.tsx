@@ -12,6 +12,13 @@ describe("DatePicker", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a malformed value as empty instead of throwing", () => {
+    render(<DatePicker value="2026-0" onChange={() => {}} />)
+    expect(
+      screen.getByRole("button", { name: /Pick a date/ }),
+    ).toBeInTheDocument()
+  })
+
   it("shows the chosen day as a local date", () => {
     render(<DatePicker value="2026-03-03" onChange={() => {}} />)
     expect(

@@ -1,11 +1,8 @@
+import { formatDay, parseIsoDay } from "@app/core/lib/dates"
+
 const eur = new Intl.NumberFormat(undefined, {
   style: "currency",
   currency: "EUR",
-})
-const day = new Intl.DateTimeFormat(undefined, {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
 })
 
 /**
@@ -18,10 +15,10 @@ export const formatAmount = (amount: string) =>
 export const isExpense = (amount: string) =>
   amount.trim().startsWith("-") && /[1-9]/.test(amount)
 
-/** ISO YYYY-MM-DD → "3 Mar 2026", read as a local calendar date. */
+/** ISO YYYY-MM-DD → "3 Mar 2026", read as a local calendar date; "" if not a day. */
 export function formatDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number)
-  return day.format(new Date(y, m - 1, d))
+  const day = parseIsoDay(iso)
+  return day ? formatDay(day) : ""
 }
 
 export const LOW_CONFIDENCE = 0.7

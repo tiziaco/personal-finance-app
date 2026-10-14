@@ -10,7 +10,11 @@ export {
   parseAsStringLiteral,
   type Values,
 } from "nuqs"
-export { DATE_FILTER_MODES, type DateFilterValue } from "./date-filter"
+export {
+  DATE_FILTER_MODES,
+  parseAsIsoDay,
+  type DateFilterValue,
+} from "./date-filter"
 export {
   compactQuery,
   dateMode,

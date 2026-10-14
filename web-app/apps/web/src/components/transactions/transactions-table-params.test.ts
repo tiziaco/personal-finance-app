@@ -27,6 +27,11 @@ describe("transactions table params", () => {
     })
   })
 
+  it("reads a malformed date in the URL as absent", () => {
+    const query = toTransactionsQuery(load("date_mode=gte&date_from=2026-0"))
+    expect(query).not.toHaveProperty("date_from")
+  })
+
   it("trims the search and caps it at 100 characters", () => {
     expect(toTransactionsQuery(load("search=rewe%20")).search).toBe("rewe")
     expect(toTransactionsQuery(load("search=%20%20"))).not.toHaveProperty(

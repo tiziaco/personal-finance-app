@@ -1,3 +1,4 @@
+import { toIsoDay } from "@app/core/lib/dates"
 import type { DateFilterValue } from "./date-filter"
 
 export const DATE_PRESETS = [
@@ -8,14 +9,10 @@ export const DATE_PRESETS = [
 ] as const
 export type DatePreset = (typeof DATE_PRESETS)[number]
 
-const pad = (n: number) => String(n).padStart(2, "0")
-/** Local calendar date as ISO YYYY-MM-DD — never toISOString, which is UTC. */
-const iso = (d: Date) =>
-  `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const range = (from: Date, to: Date): DateFilterValue => ({
   mode: "range",
-  date1: iso(from),
-  date2: iso(to),
+  date1: toIsoDay(from),
+  date2: toIsoDay(to),
 })
 
 /** A preset as a closed range around `today`. Weeks start on Monday. */
