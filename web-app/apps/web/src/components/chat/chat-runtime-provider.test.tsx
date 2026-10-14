@@ -334,6 +334,67 @@ describe("ChatRuntimeProvider", () => {
     expect(await screen.findByText(CHAT_COPY.stopped)).toBeInTheDocument()
   })
 
+  // A completed send ends with a history refetch, so the next one already
+  // counts from fresh data: fetching it again would only delay the stream.
+  it("a send after a completed reply streams without refetching the history first", async () => {
+    mocks.params = { conversationId: "c1" }
+    const historyGet = "GET /api/v1/chatbot/chat/c1/messages"
+    const getsAtStream: number[] = []
+    mocks.stream.mockImplementation(() => {
+      getsAtStream.push(calls.filter((c) => c === historyGet).length)
+      return chunks("Hello")
+    })
+    renderChat()
+    await send("hi")
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+    const getsAfterFirst = calls.filter((c) => c === historyGet).length
+    await send("again")
+
+    await waitFor(() => expect(getsAtStream).toHaveLength(2))
+    expect(getsAtStream[1]).toBe(getsAfterFirst)
+  })
+
+  // A stopped turn's user message is saved by the server, after the Stop:
+  // the next send must count from history fetched once it is there.
+  it("a send after a Stop refetches the history before it streams", async () => {
+    mocks.params = { conversationId: "c1" }
+    const historyGet = "GET /api/v1/chatbot/chat/c1/messages"
+    const getsAtStream: number[] = []
+    mocks.stream.mockImplementationOnce(async function* (opts: {
+      signal: AbortSignal
+    }) {
+      getsAtStream.push(calls.filter((c) => c === historyGet).length)
+      yield "partial"
+      await new Promise((_, reject) =>
+        opts.signal.addEventListener("abort", () =>
+          reject(new DOMException("aborted", "AbortError")),
+        ),
+      )
+    })
+    renderChat()
+    await send("hi")
+    await screen.findByText("partial")
+    await userEvent.click(screen.getByRole("button", { name: CHAT_COPY.stop }))
+    await screen.findByText(CHAT_COPY.stopped)
+
+    routes[historyGet] = () => ({
+      messages: [{ role: "user", content: "hi" }],
+    })
+    const getsAfterStop = calls.filter((c) => c === historyGet).length
+    mocks.stream.mockImplementationOnce(() => {
+      getsAtStream.push(calls.filter((c) => c === historyGet).length)
+      return chunks("Hello")
+    })
+    await send("again")
+
+    await waitFor(() => expect(getsAtStream).toHaveLength(2))
+    expect(getsAtStream[1]).toBe(getsAfterStop + 1)
+  })
+
   it("a failure event shows our copy, not the server's", async () => {
     mocks.params = { conversationId: "c1" }
     const { StreamFailedError } = await import("@/lib/chat/stream-chat")

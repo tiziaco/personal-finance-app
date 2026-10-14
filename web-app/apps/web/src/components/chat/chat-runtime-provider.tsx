@@ -158,6 +158,17 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
     [generateTitle, queryClient],
   )
 
+  // Not refetched now: the server may still be saving the stopped turn. The
+  // next send (or the conversation's next mount) fetches it.
+  const markHistoryStale = useCallback(
+    (historyKey: ReturnType<typeof getListChatMessagesQueryKey>) =>
+      void queryClient.invalidateQueries({
+        queryKey: historyKey,
+        refetchType: "none",
+      }),
+    [queryClient],
+  )
+
   const onNew = useCallback(
     async (message: AppendMessage) => {
       const part = message.content[0]
@@ -236,15 +247,18 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         router.replace(`/chat/${conversationId}`)
       } else {
         conversationId = activeId
-        // After a stop or failure the saved history may have moved on (it
-        // holds the stopped turn's user message), so count from fresh data.
-        // Until then the slice at the cached length keeps the thread steady.
+        // A stop or failure marks the history stale: the saved history may
+        // have moved on (it holds the stopped turn's user message), so count
+        // from fresh data. Until then the slice at the cached length keeps the
+        // thread steady. A completed send already ended with a refetch.
         const historyKey = getListChatMessagesQueryKey(conversationId)
-        await queryClient.refetchQueries({ queryKey: historyKey })
-        const saved =
-          queryClient.getQueryData<ConversationHistory>(historyKey)?.messages ??
-          EMPTY
-        update((e) => ({ ...e, baseCount: saved.length }))
+        if (queryClient.getQueryState(historyKey)?.isInvalidated) {
+          await queryClient.refetchQueries({ queryKey: historyKey })
+          const saved =
+            queryClient.getQueryData<ConversationHistory>(historyKey)
+              ?.messages ?? EMPTY
+          update((e) => ({ ...e, baseCount: saved.length }))
+        }
       }
 
       // Stopped before the stream started: nothing was sent, nothing to stream.
@@ -271,6 +285,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (controller.signal.aborted) {
           update((e) => ({ ...e, status: "stopped" }))
+          markHistoryStale(historyKey)
         } else if (error instanceof ApiError) {
           // Refused before anything streamed: nothing to show but the toast,
           // and the user's text goes back in the composer.
@@ -279,12 +294,21 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
           restoreTextRef.current(text)
         } else {
           update((e) => ({ ...e, status: "error" }))
+          markHistoryStale(historyKey)
         }
       } finally {
         release()
       }
     },
-    [activeId, createConversation, getToken, queryClient, requestTitle, router],
+    [
+      activeId,
+      createConversation,
+      getToken,
+      markHistoryStale,
+      queryClient,
+      requestTitle,
+      router,
+    ],
   )
 
   const onCancel = useCallback(async () => {
