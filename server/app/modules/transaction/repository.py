@@ -2,7 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -10,7 +10,7 @@ from sqlmodel import select
 
 from app.core.logging import logger
 from app.modules.transaction.models import Transaction
-from app.modules.transaction.schemas import TransactionFilters
+from app.modules.transaction.schemas import TransactionFilters, TransactionOrdering
 
 _ORDER_COLUMNS = {
     "date": Transaction.date,
@@ -66,26 +66,38 @@ class TransactionRepository:
         return transaction
 
     @staticmethod
-    async def add_many(session: AsyncSession, transactions: list[Transaction]) -> int:
+    async def add_many(session: AsyncSession, user_id: uuid.UUID, transactions: list[Transaction]) -> int:
         """Insert many transactions with one flush (batched into multi-row INSERTs by the driver)."""
         session.add_all(transactions)
         await session.flush()
+        logger.info("transactions_imported", user_id=user_id, count=len(transactions))
         return len(transactions)
 
     @staticmethod
-    async def save(session: AsyncSession, transaction: Transaction) -> Transaction:
-        """Flush changes made to a loaded transaction."""
+    async def update(session: AsyncSession, transaction: Transaction, values: dict[str, Any]) -> Transaction:
+        """Write `values` onto a loaded transaction and flush."""
+        for name, value in values.items():
+            setattr(transaction, name, value)
         session.add(transaction)
         await session.flush()
         await session.refresh(transaction)
+        logger.info("transaction_updated", transaction_id=transaction.id, fields=sorted(values))
         return transaction
+
+    @staticmethod
+    async def soft_delete(session: AsyncSession, transaction: Transaction) -> None:
+        """Stamp deleted_at on a loaded transaction and flush."""
+        transaction.soft_delete()
+        session.add(transaction)
+        await session.flush()
+        logger.info("transaction_soft_deleted", transaction_id=transaction.id)
 
     @staticmethod
     async def list_active_for_user(
         session: AsyncSession,
         user_id: uuid.UUID,
         filters: TransactionFilters,
-        ordering: str,
+        ordering: TransactionOrdering,
         search: Optional[str],
         offset: int,
         limit: int,
@@ -126,16 +138,18 @@ class TransactionRepository:
 
     @staticmethod
     async def set_category_for_ids(
-        session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], category: str
+        session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], category: str, confidence: float
     ) -> list[uuid.UUID]:
         """Recategorise this user's active rows among `ids` in one UPDATE; return the ids changed."""
         statement = (
             update(Transaction)
             .where(Transaction.id.in_(ids), Transaction.user_id == user_id, Transaction.deleted_at.is_(None))
-            .values(category=category, confidence=1.0, updated_at=datetime.now(UTC))
+            .values(category=category, confidence=confidence, updated_at=datetime.now(UTC))
             .returning(Transaction.id)
         )
-        return list((await session.execute(statement)).scalars().all())
+        changed = list((await session.execute(statement)).scalars().all())
+        logger.info("transactions_recategorised", user_id=user_id, count=len(changed))
+        return changed
 
     @staticmethod
     async def soft_delete_ids(session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> list[uuid.UUID]:
@@ -147,7 +161,9 @@ class TransactionRepository:
             .values(deleted_at=now, updated_at=now)
             .returning(Transaction.id)
         )
-        return list((await session.execute(statement)).scalars().all())
+        changed = list((await session.execute(statement)).scalars().all())
+        logger.info("transactions_soft_deleted", user_id=user_id, count=len(changed))
+        return changed
 
     @staticmethod
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:

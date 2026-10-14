@@ -8,7 +8,6 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.logging import logger
 from app.modules.transaction.exceptions import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.repository import transaction_repository
@@ -18,10 +17,14 @@ from app.modules.transaction.schemas import (
     TransactionCreate,
     TransactionFilters,
     TransactionImport,
+    TransactionOrdering,
     TransactionUpdate,
 )
 
 _CENT = Decimal("0.01")
+
+# A category the user picked or confirmed by hand is certain (docs/data-model/transaction.md).
+MANUAL_CONFIDENCE = 1.0
 
 
 def fingerprint(user_id: uuid.UUID, date: dt.date, merchant: str, amount: Decimal, description: Optional[str]) -> str:
@@ -75,7 +78,7 @@ class TransactionService:
             amount=body.amount,
             description=body.description,
             category=body.category,
-            confidence=1.0,
+            confidence=MANUAL_CONFIDENCE,
             is_recurring=body.is_recurring,
             fingerprint=key,
         )
@@ -84,24 +87,22 @@ class TransactionService:
     @staticmethod
     async def update(session: AsyncSession, transaction: Transaction, body: TransactionUpdate) -> Transaction:
         """Apply a partial edit. An empty edit changes nothing; any edit sets confidence to 1."""
-        changes = {name: getattr(body, name) for name in body.model_fields_set}
+        changes = body.model_dump(exclude_unset=True)
         if not changes:
             return transaction
-        for name, value in changes.items():
-            setattr(transaction, name, value)
-        transaction.confidence = 1.0
-        transaction.fingerprint = fingerprint(
-            transaction.user_id, transaction.date, transaction.merchant, transaction.amount, transaction.description
+        merged = {
+            name: changes.get(name, getattr(transaction, name))
+            for name in ("date", "merchant", "amount", "description")
+        }
+        key = fingerprint(transaction.user_id, **merged)
+        return await transaction_repository.update(
+            session, transaction, {**changes, "confidence": MANUAL_CONFIDENCE, "fingerprint": key}
         )
-        logger.info("transaction_updated", transaction_id=transaction.id, fields=sorted(changes))
-        return await transaction_repository.save(session, transaction)
 
     @staticmethod
     async def soft_delete(session: AsyncSession, transaction: Transaction) -> None:
         """Hide one transaction from every list; the row stays."""
-        transaction.soft_delete()
-        await transaction_repository.save(session, transaction)
-        logger.info("transaction_soft_deleted", transaction_id=transaction.id)
+        await transaction_repository.soft_delete(session, transaction)
 
     @staticmethod
     async def import_many(session: AsyncSession, user_id: uuid.UUID, rows: list[TransactionImport]) -> int:
@@ -114,9 +115,7 @@ class TransactionService:
             )
             for row in rows
         ]
-        count = await transaction_repository.add_many(session, transactions)
-        logger.info("transactions_imported", user_id=user_id, count=count)
-        return count
+        return await transaction_repository.add_many(session, user_id, transactions)
 
     @staticmethod
     def _require_all(ids: list[uuid.UUID], changed: list[uuid.UUID]) -> None:
@@ -130,7 +129,7 @@ class TransactionService:
         session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], category: str
     ) -> int:
         """Recategorise up to 100 transactions, all or none."""
-        changed = await transaction_repository.set_category_for_ids(session, user_id, ids, category)
+        changed = await transaction_repository.set_category_for_ids(session, user_id, ids, category, MANUAL_CONFIDENCE)
         TransactionService._require_all(ids, changed)
         return len(changed)
 
@@ -151,7 +150,7 @@ class TransactionService:
         session: AsyncSession,
         user_id: uuid.UUID,
         filters: TransactionFilters,
-        ordering: str,
+        ordering: TransactionOrdering,
         search: Optional[str],
         offset: int,
         limit: int,
