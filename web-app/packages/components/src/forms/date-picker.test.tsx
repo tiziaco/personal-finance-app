@@ -39,4 +39,12 @@ describe("DatePicker", () => {
       screen.getByRole("button", { name: /^Created from, .*2026/ }),
     ).toBeInTheDocument()
   })
+
+  it("starts the week on Monday, as the date presets do", async () => {
+    render(<DatePicker value="2026-03-03" onChange={() => {}} />)
+    fireEvent.click(screen.getByRole("button"))
+    expect(
+      (await screen.findAllByRole("columnheader", { hidden: true }))[0],
+    ).toHaveAccessibleName("Monday")
+  })
 })

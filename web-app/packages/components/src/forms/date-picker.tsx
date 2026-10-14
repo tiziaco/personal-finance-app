@@ -62,6 +62,8 @@ export function DatePicker({
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
           mode="single"
+          // Monday first, like the date filter's "this week" preset.
+          weekStartsOn={1}
           selected={selected}
           defaultMonth={selected}
           onSelect={(day) => {
