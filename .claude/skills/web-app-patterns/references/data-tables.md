@@ -144,9 +144,10 @@ value from props.
   muted header labels on a `bg-muted/50` strip. Sticky and frozen header cells use opaque `bg-muted`.
 - **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).
   Toolbar, chips and pager stay; column headers, row menus and the bulk bar do not. So a card that
-  acts is a `<button>` (the transactions card opens the edit dialog), and a list that sorts adds its
-  own select to `toolbar` when `useIsMobile()` is true, writing through the state hook's
-  `setSort(orderingToSorting(value))` so the page resets as a header click would.
+  acts is a `<button>` (the transactions card opens the edit dialog), and a list that sorts needs a
+  control of its own — transactions puts one in `headerActions` on every screen size — writing
+  through the state hook's `setSort(orderingToSorting(value))` so the page resets as a header click
+  would.
 - **Date presets:** `DateFilterControl` takes `presets` — today, this week (Monday first), this month,
   last month — from `@app/data-table/url-state/date-presets`.
 - **Several values from a fixed list:** `FilterCheckboxGroup`, from

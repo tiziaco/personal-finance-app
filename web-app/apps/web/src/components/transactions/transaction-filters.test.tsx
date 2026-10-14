@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { EMPTY_DATE_FILTER } from "@app/data-table/url-state/date-filter"
 import {
@@ -81,5 +81,75 @@ describe("TransactionsFilterPanel", () => {
       />,
     )
     expect(screen.queryByText("0")).toBeNull()
+  })
+
+  it("turns 'Recurring only' on", async () => {
+    const setFilters = vi.fn()
+    render(
+      <TransactionsFilterPanel
+        filters={EMPTY_TRANSACTIONS_FILTERS}
+        setFilters={setFilters}
+        categories={[]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const toggle = await screen.findByRole("switch", { name: "Recurring only" })
+    expect(toggle).not.toBeChecked()
+    await userEvent.click(toggle)
+    const update = setFilters.mock.calls[0][0] as (
+      f: TransactionsFilters,
+    ) => TransactionsFilters
+    expect(update(EMPTY_TRANSACTIONS_FILTERS).recurring).toBe(true)
+  })
+
+  it("turns 'Recurring only' off to no filter", async () => {
+    const setFilters = vi.fn()
+    const on = { ...EMPTY_TRANSACTIONS_FILTERS, recurring: true }
+    render(
+      <TransactionsFilterPanel
+        filters={on}
+        setFilters={setFilters}
+        categories={[]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const toggle = await screen.findByRole("switch", { name: "Recurring only" })
+    expect(toggle).toBeChecked()
+    await userEvent.click(toggle)
+    const update = setFilters.mock.calls[0][0] as (
+      f: TransactionsFilters,
+    ) => TransactionsFilters
+    expect(update(on).recurring).toBeNull()
+  })
+
+  it("shows the switch off for an old recurring=false link, still counted", async () => {
+    render(
+      <TransactionsFilterPanel
+        filters={{ ...EMPTY_TRANSACTIONS_FILTERS, recurring: false }}
+        setFilters={vi.fn()}
+        categories={[]}
+      />,
+    )
+    expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent(
+      "1",
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    expect(
+      await screen.findByRole("switch", { name: "Recurring only" }),
+    ).not.toBeChecked()
+  })
+
+  it("groups min and max under Amount range", async () => {
+    render(
+      <TransactionsFilterPanel
+        filters={EMPTY_TRANSACTIONS_FILTERS}
+        setFilters={vi.fn()}
+        categories={[]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const group = await screen.findByRole("group", { name: "Amount range" })
+    expect(within(group).getByLabelText("Min")).toBeInTheDocument()
+    expect(within(group).getByLabelText("Max")).toBeInTheDocument()
   })
 })

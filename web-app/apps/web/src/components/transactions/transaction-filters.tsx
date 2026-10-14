@@ -2,9 +2,8 @@
 
 import type { Dispatch, SetStateAction } from "react"
 import {
-  FilterField,
   FilterPanel,
-  FilterSelect,
+  FilterSection,
 } from "@app/data-table/filters/filter-panel"
 import { FilterChip } from "@app/data-table/filters/filter-chip"
 import { FilterCheckboxGroup } from "@app/data-table/filters/filter-checkbox-group"
@@ -16,6 +15,8 @@ import {
 } from "@app/data-table/url-state/date-filter"
 import type { CategoryResponse } from "@app/api-client/types"
 import { Input } from "@app/ui/input"
+import { Label } from "@app/ui/label"
+import { Switch } from "@app/ui/switch"
 import {
   EMPTY_TRANSACTIONS_FILTERS,
   type TransactionsFilters,
@@ -59,47 +60,61 @@ export function TransactionsFilterPanel({
         value={filters.categories}
         onChange={(next) => setFilters((f) => ({ ...f, categories: next }))}
       />
-      <FilterField label="Min amount" htmlFor="transactions-amount-min">
-        <Input
-          id="transactions-amount-min"
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          value={filters.amountMin ?? ""}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, amountMin: e.target.value || null }))
-          }
-        />
-      </FilterField>
-      <FilterField label="Max amount" htmlFor="transactions-amount-max">
-        <Input
-          id="transactions-amount-max"
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          value={filters.amountMax ?? ""}
-          onChange={(e) =>
-            setFilters((f) => ({ ...f, amountMax: e.target.value || null }))
-          }
-        />
-      </FilterField>
-      <FilterField label="Recurring" htmlFor="transactions-recurring">
-        <FilterSelect
+      <FilterSection title="Amount range">
+        <div className="grid grid-cols-2 gap-2">
+          <div className="space-y-1">
+            <Label
+              htmlFor="transactions-amount-min"
+              className="text-xs font-normal text-muted-foreground"
+            >
+              Min
+            </Label>
+            <Input
+              id="transactions-amount-min"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              value={filters.amountMin ?? ""}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, amountMin: e.target.value || null }))
+              }
+            />
+          </div>
+          <div className="space-y-1">
+            <Label
+              htmlFor="transactions-amount-max"
+              className="text-xs font-normal text-muted-foreground"
+            >
+              Max
+            </Label>
+            <Input
+              id="transactions-amount-max"
+              type="number"
+              step="0.01"
+              inputMode="decimal"
+              value={filters.amountMax ?? ""}
+              onChange={(e) =>
+                setFilters((f) => ({ ...f, amountMax: e.target.value || null }))
+              }
+            />
+          </div>
+        </div>
+      </FilterSection>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <Label htmlFor="transactions-recurring">Recurring only</Label>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            Show only recurring transactions
+          </p>
+        </div>
+        <Switch
           id="transactions-recurring"
-          value={filters.recurring == null ? "" : String(filters.recurring)}
-          onChange={(e) => {
-            const v = e.target.value
-            setFilters((f) => ({
-              ...f,
-              recurring: v === "" ? null : v === "true",
-            }))
-          }}
-        >
-          <option value="">Any</option>
-          <option value="true">Recurring</option>
-          <option value="false">Not recurring</option>
-        </FilterSelect>
-      </FilterField>
+          checked={filters.recurring === true}
+          onCheckedChange={(on) =>
+            setFilters((f) => ({ ...f, recurring: on ? true : null }))
+          }
+        />
+      </div>
     </FilterPanel>
   )
 }

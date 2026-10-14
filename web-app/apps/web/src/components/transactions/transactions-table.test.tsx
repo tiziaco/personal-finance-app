@@ -213,37 +213,69 @@ describe("TransactionsTable", () => {
       expect(screen.getByLabelText("Merchant")).toHaveValue("Rewe")
     })
 
-    it("sorts from a select: writes ordering and resets the page", async () => {
-      result([row], 60)
-      const events: UrlUpdateEvent[] = []
-      renderAt("?page=3", (e) => events.push(e))
-      const sort = await screen.findByRole("combobox", { name: "Sort" })
-      expect(sort).toHaveValue("-date")
+    it("keeps the sort control on a phone", async () => {
+      result([row])
+      renderAt()
       expect(
-        within(sort)
-          .getAllByRole("option")
-          .map((o) => [(o as HTMLOptionElement).value, o.textContent]),
-      ).toEqual([
-        ["-date", "Newest first"],
-        ["date", "Oldest first"],
-        ["-amount", "Amount high→low"],
-        ["amount", "Amount low→high"],
-        ["merchant", "Merchant A–Z"],
-        ["-merchant", "Merchant Z–A"],
-      ])
-
-      await userEvent.selectOptions(sort, "-amount")
-      await waitFor(() =>
-        expect(events.at(-1)?.searchParams.get("ordering")).toBe("-amount"),
-      )
-      expect(events.at(-1)?.searchParams.get("page")).toBeNull()
+        await screen.findByRole("combobox", { name: "Sort by" }),
+      ).toBeInTheDocument()
     })
   })
 
-  it("has no sort select on a wide screen: the headers sort", () => {
+  it("sorts by field from the toolbar, keeping the direction and resetting the page", async () => {
+    result([row], 60)
+    const events: UrlUpdateEvent[] = []
+    renderAt("?page=3", (e) => events.push(e))
+    const field = await screen.findByRole("combobox", { name: "Sort by" })
+    expect(field).toHaveValue("date")
+    expect(
+      within(field)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Date", "Amount", "Merchant"])
+    expect(
+      screen.getByRole("button", { name: "Sort descending" }),
+    ).toBeInTheDocument()
+
+    await userEvent.selectOptions(field, "amount")
+    await waitFor(() =>
+      expect(events.at(-1)?.searchParams.get("ordering")).toBe("-amount"),
+    )
+    expect(events.at(-1)?.searchParams.get("page")).toBeNull()
+  })
+
+  it("flips the direction from the arrow button", async () => {
+    result([row])
+    const events: UrlUpdateEvent[] = []
+    renderAt("?ordering=-amount", (e) => events.push(e))
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Sort descending" }),
+    )
+    await waitFor(() =>
+      expect(events.at(-1)?.searchParams.get("ordering")).toBe("amount"),
+    )
+  })
+
+  it("shows what a header click chose", async () => {
+    result([row])
+    renderAt("?ordering=amount")
+    expect(
+      await screen.findByRole("combobox", { name: "Sort by" }),
+    ).toHaveValue("amount")
+    expect(
+      screen.getByRole("button", { name: "Sort ascending" }),
+    ).toBeInTheDocument()
+  })
+
+  it("puts the title and Add transaction in one header row", async () => {
     result([row])
     renderAt()
-    expect(screen.queryByRole("combobox", { name: "Sort" })).toBeNull()
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Transactions" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Add transaction" }),
+    ).toBeInTheDocument()
   })
 
   it("moves a page past the end back to the last page, with no empty state", async () => {

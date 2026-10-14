@@ -1,6 +1,6 @@
 # Transactions
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 14 Oct 2026
 **Scope:** the user's transactions — browsing, searching, filtering, adding, correcting and
 deleting them. Legacy v1.0 shipped this; the port rebuilds it in roadmap step 2,
 Transactions. Getting transactions in from a bank file is
@@ -24,9 +24,10 @@ user must be able to review and correct them, and to remove junk or duplicates.
   opens it for editing.
 - **Search** by merchant (substring, case-insensitive).
 - **Filter** by date range (shortcuts: today, this week, this month, last month, or a
-  custom range), by category (one or several), by amount range and by recurring or not.
-- **Sort** by date, amount or merchant, ascending or descending. On a phone, where cards
-  have no column headers, a sort menu offers the same orders.
+  custom range), by category (one or several), by amount range and to recurring only.
+- **Sort** by date, amount or merchant, ascending or descending, from the sort control at
+  the right of the toolbar — on every screen size. On desktop a column header sorts too;
+  the control shows whatever was chosen last.
 - **Add** a transaction by hand.
 - **Edit** a transaction — date, merchant, amount, description, category, recurring. On a
   phone, recategorising happens here, in the edit dialog's category field.

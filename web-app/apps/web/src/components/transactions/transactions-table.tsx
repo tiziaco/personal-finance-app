@@ -15,14 +15,13 @@ import {
   toServerTableControls,
 } from "@app/data-table/table-state"
 import { Button } from "@app/ui/button"
-import { useIsMobile } from "@app/ui/hooks/use-mobile"
 import { messages } from "@app/core/constants/messages"
 import {
   TransactionsFilterChips,
   TransactionsFilterPanel,
 } from "./transaction-filters"
 import { TransactionCard } from "./transaction-card"
-import { TransactionsSortSelect } from "./transactions-sort-select"
+import { TransactionsSortControl } from "./transactions-sort-select"
 import { BulkCategoryDialog } from "./bulk-category-dialog"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 import { TransactionFormDialog } from "./transaction-form-dialog"
@@ -51,9 +50,6 @@ export function TransactionsTable() {
     ids: string[]
     clear: () => void
   } | null>(null)
-  // Below 768px the table is cards (the same breakpoint @app/data-table uses):
-  // no headers to click, so a select sorts.
-  const isMobile = useIsMobile()
   // The refresh rides on the hook, so it runs even if the chip's menu is gone.
   const { mutate: updateTransaction } = useUpdateTransaction(
     useRefreshTransactionsOnSuccess(),
@@ -121,7 +117,14 @@ export function TransactionsTable() {
   )
 
   return (
-    <>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-2">
+        <h1 className="text-2xl font-semibold">Transactions</h1>
+        <Button size="sm" onClick={() => setEditing("new")}>
+          <PlusIcon />
+          Add transaction
+        </Button>
+      </div>
       <ServerDataTable<TransactionResponse, unknown>
         columns={columns}
         data={data?.items ?? []}
@@ -167,10 +170,10 @@ export function TransactionsTable() {
           </>
         )}
         headerActions={
-          <Button size="sm" onClick={() => setEditing("new")}>
-            <PlusIcon />
-            Add transaction
-          </Button>
+          <TransactionsSortControl
+            ordering={state.query.ordering}
+            onChange={(ordering) => state.setSort(orderingToSorting(ordering))}
+          />
         }
         renderCard={(row) => (
           <TransactionCard
@@ -186,14 +189,6 @@ export function TransactionsTable() {
               onChange={state.setSearch}
               placeholder="Search merchants"
             />
-            {isMobile && (
-              <TransactionsSortSelect
-                ordering={state.query.ordering}
-                onChange={(ordering) =>
-                  state.setSort(orderingToSorting(ordering))
-                }
-              />
-            )}
             <TransactionsFilterPanel
               filters={state.filters}
               setFilters={state.setFilters}
@@ -247,6 +242,6 @@ export function TransactionsTable() {
           onDeleted={bulk.clear}
         />
       )}
-    </>
+    </div>
   )
 }
