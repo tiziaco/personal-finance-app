@@ -187,7 +187,7 @@ In native dev the root `Makefile` exports `apps/web/.env.local`, so
 One Vitest config, two projects: `packages` and `web`, the latter aliasing `@/` to
 `apps/web/src/`. Tests sit beside their subject as `*.test.ts(x)`;
 `*.spec.ts` and the `e2e/**` exclude are reserved for Playwright, which does not exist
-yet: nothing drives a browser. `QueryProvider`'s retry rule is untested too
+yet: nothing drives a browser. `QueryProvider`'s retry rule and quiet refetch are untested too
 ([`../TODO.md`](../TODO.md), **Web — tests the suite does not have yet**). `make test-web`
 runs the suite and the pre-push hook runs it when `web-app/` changed. The traps are in the
 `web-app-testing` skill.

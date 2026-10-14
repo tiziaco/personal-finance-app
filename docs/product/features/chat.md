@@ -61,9 +61,19 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   `StreamingResponse` stops listening at ASGI spec 2.4; uvicorn reports 2.3, so the earlier
   route was cancelled in practice too. A test pins the behaviour at 2.4.) The frames are
   unchanged, plus periodic `: ping` comments.
+- **Stopping a reply while its web search runs leaves the conversation usable.** The
+  model's tool-call message is checkpointed before the tool runs, so a stop there leaves
+  a call with no result, which providers reject with a 400 on every later turn.
+  `drop_unanswered_tool_calls` (`app/agents/graph.py`) removes such a call, keeping any
+  text written beside it, before every model call.
 - **Every LLM call goes through OpenRouter** (`OPENROUTER_API_KEY`) — the agent, titles and
   memory. `LLM_BASE_URL` defaults to OpenRouter and model names are OpenRouter ids
-  (`openai/gpt-5-mini`); `server/.env.example` is the reference.
+  (`openai/gpt-5-mini`); `server/.env.example` is the reference. An id without its
+  provider prefix (`gpt-5-mini`) fails at startup, so an env file written for the OpenAI
+  API cannot run on a silent fallback model. With the key unset, mem0 is given a
+  placeholder rather than an empty key, which it would replace with `OPENAI_API_KEY` from
+  the environment and send to OpenRouter: memory search and writes then fail and are
+  logged, and erasure, which makes no model call, still deletes the user's memories.
 - Chat endpoints are rate limited per user.
 
 ## 5. Not built

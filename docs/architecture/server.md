@@ -381,7 +381,8 @@ Each table's reasoning is stated in its data-model doc ([`../data-model/`](../da
 - **Traces** of every LLM call go to Langfuse.
 - **Settings** are one `Settings` object in `app/core/config.py`, nested per concern
   (`settings.database`, `settings.auth`, `settings.rate_limits`, …), read from
-  `server/.env.<APP_ENV>`. An unrecognised `APP_ENV` fails at startup. The OpenAPI title,
+  `server/.env.<APP_ENV>`. An unrecognised `APP_ENV` fails at startup, and so does a
+  model id that is not an OpenRouter `provider/model` id (`OpenRouterModel`). The OpenAPI title,
   version and prefix are code, from `pyproject.toml` via `app/core/metadata.py`, never
   settings.
 

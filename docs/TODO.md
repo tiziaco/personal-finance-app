@@ -94,8 +94,13 @@ must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent
 
 ## Web — tests the suite does not have yet
 
-- **`QueryProvider`'s retry rule.** That a 4xx is not retried and a 5xx is retried once.
-  Which errors toast is covered (`query-provider.test.tsx`); the retry predicate is not.
+- **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a
+  5xx is retried once, and that a failed refetch behind data already shown does not toast.
+  `query-provider.test.tsx` covers the rest: a never-resolved query toasts, a mutation
+  toasts, and `silentError` (`true` or a predicate) opts either out.
+- **A failed conversation create.** In `ChatRuntimeProvider`, a create that answers 500
+  clears the exchange and gives the text back to the composer if the user is still there.
+  The provider restructure moved this into `ensureConversation`; no test exercises it.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.

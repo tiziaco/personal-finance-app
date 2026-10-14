@@ -47,8 +47,10 @@ CREATE TABLE conversation (
 - **D2 — `conversation` carries `UserOwnedMixin`; its `user_id` is the owner.**
 - **D3 — titles are written on request.** An empty `name` means untitled. After a
   completed reply, the client calls `POST /conversation/conversation/{id}/title`. The
-  server asks the model for a title of at most 6 words from the first exchange and saves
-  it, capped at 100 characters. A named conversation, or one with no reply yet, is
+  server asks the model for a title of at most 6 words from the first reply and the user
+  message it answered, and saves it, capped at 100 characters. Paired, not taken
+  separately: a first turn stopped before its reply leaves a question with no answer,
+  and the title must not mix two turns. A named conversation, or one with no reply yet, is
   returned unchanged. A model failure leaves it untitled, and the next completed reply
   retries. Not generated in the stream, whose event shape is fixed.
 

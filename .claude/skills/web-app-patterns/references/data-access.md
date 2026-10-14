@@ -69,7 +69,9 @@ Rules:
 - Never render `error.message` or `error.body`. Map `error.status` to `@app/core/constants/messages`.
 - Never return `null` while loading. Return a skeleton.
 - A background refetch that fails does **not** toast if the query already has data — that is
-  intentional. A polling query that should never toast sets `meta: { silentError: true }`.
+  intentional. A polling query that should never toast sets `meta: { silentError: true }`; one
+  that shows some errors itself passes a predicate, `meta: { silentError: (e) => ... }`, and
+  every other error still toasts (`useChatHistory` silences only not-found).
 - `QueryProvider` lives in the signed-in route group's layout (`(dashboard)`), never the
   root: the cache must not outlive the session. A generated hook outside that group has no client.
 

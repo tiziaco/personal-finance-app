@@ -840,14 +840,20 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             // onError fires for background refetches too. A poll that fails
             // every 30s would otherwise toast every 30s behind data the user
             // can already see — only a query that has never resolved toasts,
-            // and any query can opt out entirely via its own `meta`.
-            if (query.meta?.silentError === true) return
+            // and any query can opt out via its own `meta` (see isSilenced).
+            if (isSilenced(query.meta, err)) return
             if (query.state.data !== undefined) return
             mapErrorToToast(err)
           },
         }),
-        // Mutations always toast: the user just acted and is waiting for a result.
-        mutationCache: new MutationCache({ onError: mapErrorToToast }),
+        // Mutations toast: the user just acted and is waiting for a result.
+        // One the app fires on its own opts out the same way.
+        mutationCache: new MutationCache({
+          onError: (err, _vars, _ctx, mutation) => {
+            if (isSilenced(mutation.meta, err)) return
+            mapErrorToToast(err)
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
@@ -881,9 +887,11 @@ Consequences to design around:
 - **Query error toasts are gated on first load.** `onError` fires for background
   refetches too, not just the initial fetch — a polling query that fails repeatedly
   would otherwise toast on every failed poll, behind data the user can already see and
-  trust. Toast only when `query.state.data === undefined`; a query can also opt out
-  entirely with `meta: { silentError: true }`, for a widget that already renders its own
-  degraded/offline state.
+  trust. Toast only when `query.state.data === undefined`. A query or mutation opts out
+  with `meta.silentError`: `true` for every error (a widget that already renders its own
+  degraded/offline state), or a predicate for the errors it shows another way (the chat
+  page renders a 404 as its not-found screen). `src/query-meta.ts` types `meta` for every
+  hook through TanStack's `Register` and holds `isSilenced`.
 - **4xx is not retried.** A validation error or a 404 will not change on retry; `retry`
   becomes a predicate so only 5xx spends a second request.
 - **Keep the devtools**, gated on environment. They cost nothing once gated behind a
