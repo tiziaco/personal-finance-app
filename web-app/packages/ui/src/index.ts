@@ -43,6 +43,20 @@ export {
   DialogTitle,
   DialogTrigger,
 } from "./primitives/dialog"
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./primitives/alert-dialog"
 export { Label } from "./primitives/label"
 export {
   Select,
