@@ -17,7 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "@app/ui/dropdown-menu"
 import { CategoryPicker } from "./category-picker"
-import { formatAmount, formatDate, isExpense, isLowConfidence } from "./format"
+import {
+  amountClass,
+  formatAmount,
+  formatDate,
+  isLowConfidence,
+} from "./format"
 
 export type TransactionRowActions = {
   categories: CategoryResponse[]
@@ -47,13 +52,7 @@ export function useTransactionColumns(
         header: "Amount",
         meta: { align: "right", width: "8rem" },
         cell: ({ row }) => (
-          <span
-            className={
-              isExpense(row.original.amount)
-                ? "text-destructive"
-                : "text-emerald-600 dark:text-emerald-400"
-            }
-          >
+          <span className={amountClass(row.original.amount)}>
             {formatAmount(row.original.amount)}
           </span>
         ),

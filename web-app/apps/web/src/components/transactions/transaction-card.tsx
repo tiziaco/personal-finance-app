@@ -3,7 +3,8 @@
 import { useId } from "react"
 import type { TransactionResponse } from "@app/api-client/types"
 import { Card, CardContent } from "@app/ui/card"
-import { formatAmount, formatDate, isExpense } from "./format"
+import { cn } from "@app/core/lib/utils"
+import { amountClass, formatAmount, formatDate } from "./format"
 
 /** A transaction on a phone: tapping it opens the edit dialog. */
 export function TransactionCard({
@@ -35,11 +36,7 @@ export function TransactionCard({
           </div>
           <span
             id={`${id}-amount`}
-            className={
-              isExpense(transaction.amount)
-                ? "text-destructive tabular-nums"
-                : "text-emerald-600 tabular-nums dark:text-emerald-400"
-            }
+            className={cn("tabular-nums", amountClass(transaction.amount))}
           >
             {formatAmount(transaction.amount)}
           </span>
