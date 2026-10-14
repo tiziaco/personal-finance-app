@@ -49,7 +49,7 @@ export function TransactionsSortControl({
       <Button
         variant="outline"
         size="icon-sm"
-        aria-label={desc ? "Sort descending" : "Sort ascending"}
+        aria-label={desc ? "Switch to ascending" : "Switch to descending"}
         onClick={() => onChange(toOrdering(field, !desc))}
       >
         {desc ? <ArrowDown /> : <ArrowUp />}

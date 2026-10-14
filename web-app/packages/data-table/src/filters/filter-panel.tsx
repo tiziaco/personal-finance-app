@@ -1,6 +1,11 @@
 "use client"
 
-import { Children, type ComponentProps, type ReactNode } from "react"
+import {
+  Children,
+  isValidElement,
+  type ComponentProps,
+  type ReactNode,
+} from "react"
 import { ListFilter } from "lucide-react"
 import { Button } from "@app/ui/button"
 import {
@@ -73,7 +78,12 @@ export function FilterPanel({
             padding, so the spacing cannot go on the child. */}
         <div className="flex-1 divide-y overflow-y-auto px-4">
           {Children.toArray(children).map((child, i) => (
-            <section key={i} className="py-5">
+            // toArray's keys keep a child's slot even when an earlier one is
+            // `false`, so a section never remounts when its neighbour toggles.
+            <section
+              key={isValidElement(child) ? child.key : i}
+              className="py-5"
+            >
               {child}
             </section>
           ))}

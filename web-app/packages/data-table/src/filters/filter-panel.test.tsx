@@ -58,6 +58,21 @@ describe("FilterPanel", () => {
     expect(one.parentElement!.parentElement!.children).toHaveLength(2)
   })
 
+  it("keeps later sections mounted when an earlier one comes and goes", async () => {
+    const panel = (extra: boolean) => (
+      <FilterPanel activeCount={0} onClearAll={() => {}}>
+        {extra && <p>extra</p>}
+        <input key="amount" aria-label="Amount" />
+      </FilterPanel>
+    )
+    const { rerender } = render(panel(false))
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const before = await screen.findByLabelText("Amount")
+    rerender(panel(true))
+    // a remount would drop the focus of someone typing in it
+    expect(screen.getByLabelText("Amount")).toBe(before)
+  })
+
   it("closes from its close button", async () => {
     render(
       <FilterPanel activeCount={0} onClearAll={() => {}}>

@@ -234,7 +234,7 @@ describe("TransactionsTable", () => {
         .map((o) => o.textContent),
     ).toEqual(["Date", "Amount", "Merchant"])
     expect(
-      screen.getByRole("button", { name: "Sort descending" }),
+      screen.getByRole("button", { name: "Switch to ascending" }),
     ).toBeInTheDocument()
 
     await userEvent.selectOptions(field, "amount")
@@ -249,7 +249,7 @@ describe("TransactionsTable", () => {
     const events: UrlUpdateEvent[] = []
     renderAt("?ordering=-amount", (e) => events.push(e))
     await userEvent.click(
-      await screen.findByRole("button", { name: "Sort descending" }),
+      await screen.findByRole("button", { name: "Switch to ascending" }),
     )
     await waitFor(() =>
       expect(events.at(-1)?.searchParams.get("ordering")).toBe("amount"),
@@ -263,7 +263,7 @@ describe("TransactionsTable", () => {
       await screen.findByRole("combobox", { name: "Sort by" }),
     ).toHaveValue("amount")
     expect(
-      screen.getByRole("button", { name: "Sort ascending" }),
+      screen.getByRole("button", { name: "Switch to descending" }),
     ).toBeInTheDocument()
   })
 
