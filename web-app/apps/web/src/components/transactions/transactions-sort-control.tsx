@@ -2,8 +2,14 @@
 
 import { ArrowDown, ArrowUp } from "lucide-react"
 import type { ListTransactionsOrdering } from "@app/api-client/types"
-import { FilterSelect } from "@app/data-table/filters/filter-panel"
 import { Button } from "@app/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@app/ui/select"
 
 const FIELDS = [
   { value: "date", label: "Date" },
@@ -32,20 +38,22 @@ export function TransactionsSortControl({
   const field = current.replace(/^-/, "") as SortField
   return (
     <div className="flex items-center gap-1">
-      <FilterSelect
-        aria-label="Sort by"
-        className="w-auto"
+      <Select
+        items={FIELDS}
         value={field}
-        onChange={(e) =>
-          onChange(toOrdering(e.target.value as SortField, desc))
-        }
+        onValueChange={(next) => next && onChange(toOrdering(next, desc))}
       >
-        {FIELDS.map((f) => (
-          <option key={f.value} value={f.value}>
-            {f.label}
-          </option>
-        ))}
-      </FilterSelect>
+        <SelectTrigger size="sm" aria-label="Sort by" className="w-32">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {FIELDS.map((f) => (
+            <SelectItem key={f.value} value={f.value}>
+              {f.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <Button
         variant="outline"
         size="icon-sm"

@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, Trash2 } from "lucide-react"
 import { keepPreviousData } from "@tanstack/react-query"
 import {
   useListTransactions,
@@ -21,7 +21,7 @@ import {
   TransactionsFilterPanel,
 } from "./transaction-filters"
 import { TransactionCard } from "./transaction-card"
-import { TransactionsSortControl } from "./transactions-sort-select"
+import { TransactionsSortControl } from "./transactions-sort-control"
 import { BulkCategoryDialog } from "./bulk-category-dialog"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 import { TransactionFormDialog } from "./transaction-form-dialog"
@@ -143,7 +143,6 @@ export function TransactionsTable() {
           <>
             <Button
               size="sm"
-              variant="outline"
               onClick={() =>
                 setBulk({
                   kind: "category",
@@ -156,7 +155,7 @@ export function TransactionsTable() {
             </Button>
             <Button
               size="sm"
-              variant="outline"
+              variant="destructive"
               onClick={() =>
                 setBulk({
                   kind: "delete",
@@ -165,6 +164,7 @@ export function TransactionsTable() {
                 })
               }
             >
+              <Trash2 />
               Delete
             </Button>
           </>

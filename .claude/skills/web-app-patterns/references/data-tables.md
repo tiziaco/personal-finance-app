@@ -157,6 +157,10 @@ value from props.
 - **The filter panel** is a right-hand sheet (full width on a phone): a header with "N active", one
   ruled section per child, "Clear all filters" at the bottom while any is active. A field with one
   input is a `FilterField`; several inputs under one title (a min and a max) go in a `FilterSection`.
+- **Native or Base UI select:** `FilterSelect` is a native `<select>`, for a filter whose empty value
+  means "no filter" (Base UI's `Select` has no empty value). A form field or a sort control picks
+  with `@app/ui/select` instead — the transactions dialogs use `CategorySelect`, the toolbar
+  `TransactionsSortControl`. The `add-items-dialog` example predates this.
 - **Moving a page without trapping Back:** the url-state page setter takes `{ history: "replace" }`
   (the transactions page uses it to bring a past-the-end page back to the last one).
 - **A mutation that handles a status itself** sets `meta.silentStatuses: number[]` so `QueryProvider`

@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { useBatchUpdateTransactionCategory } from "@app/api-client/endpoints/transactions"
 import type { Category } from "@app/api-client/types"
-import { FilterSelect } from "@app/data-table/filters/filter-panel"
 import { Button } from "@app/ui/button"
 import {
   Dialog,
@@ -15,6 +14,7 @@ import {
   DialogTitle,
 } from "@app/ui/dialog"
 import { Label } from "@app/ui/label"
+import { CategorySelect } from "./category-select"
 import { useCategories } from "./use-categories"
 import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 
@@ -59,20 +59,12 @@ export function BulkCategoryDialog({
         </DialogHeader>
         <div className="grid gap-2">
           <Label htmlFor="bulk-category">Category</Label>
-          <FilterSelect
+          <CategorySelect
             id="bulk-category"
             value={category}
-            onChange={(e) => setCategory(e.target.value as Category)}
-          >
-            <option value="" disabled>
-              Pick a category
-            </option>
-            {categories.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={setCategory}
+            categories={categories}
+          />
         </div>
         <DialogFooter>
           <DialogClose render={<Button variant="outline" />}>

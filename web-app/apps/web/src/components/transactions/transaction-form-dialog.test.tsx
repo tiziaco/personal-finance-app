@@ -60,7 +60,12 @@ async function fillAdd(amount: string) {
   const user = userEvent.setup()
   await user.type(screen.getByLabelText("Merchant"), "Späti")
   await user.type(screen.getByLabelText("Amount"), amount)
-  await user.selectOptions(screen.getByLabelText("Category"), "food_groceries")
+  await user.click(screen.getByRole("combobox", { name: "Category" }))
+  await user.click(
+    within(await screen.findByRole("listbox")).getByRole("option", {
+      name: "Food & Groceries",
+    }),
+  )
   return user
 }
 

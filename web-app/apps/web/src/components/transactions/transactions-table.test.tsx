@@ -87,6 +87,16 @@ function setWidth(px: number) {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: px })
 }
 
+// Base UI's Select: open the combobox, then pick from the listbox it portals.
+async function pickOption(combobox: string, option: string) {
+  await userEvent.click(screen.getByRole("combobox", { name: combobox }))
+  await userEvent.click(
+    within(await screen.findByRole("listbox")).getByRole("option", {
+      name: option,
+    }),
+  )
+}
+
 describe("TransactionsTable", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -227,17 +237,21 @@ describe("TransactionsTable", () => {
     const events: UrlUpdateEvent[] = []
     renderAt("?page=3", (e) => events.push(e))
     const field = await screen.findByRole("combobox", { name: "Sort by" })
-    expect(field).toHaveValue("date")
-    expect(
-      within(field)
-        .getAllByRole("option")
-        .map((o) => o.textContent),
-    ).toEqual(["Date", "Amount", "Merchant"])
+    expect(field).toHaveTextContent("Date")
     expect(
       screen.getByRole("button", { name: "Switch to ascending" }),
     ).toBeInTheDocument()
 
-    await userEvent.selectOptions(field, "amount")
+    await userEvent.click(field)
+    const fields = await screen.findByRole("listbox")
+    expect(
+      within(fields)
+        .getAllByRole("option")
+        .map((o) => o.textContent),
+    ).toEqual(["Date", "Amount", "Merchant"])
+    await userEvent.click(
+      within(fields).getByRole("option", { name: "Amount" }),
+    )
     await waitFor(() =>
       expect(events.at(-1)?.searchParams.get("ordering")).toBe("-amount"),
     )
@@ -261,7 +275,7 @@ describe("TransactionsTable", () => {
     renderAt("?ordering=amount")
     expect(
       await screen.findByRole("combobox", { name: "Sort by" }),
-    ).toHaveValue("amount")
+    ).toHaveTextContent("Amount")
     expect(
       screen.getByRole("button", { name: "Switch to descending" }),
     ).toBeInTheDocument()
@@ -368,10 +382,7 @@ describe("TransactionsTable", () => {
           name: "Recategorise 2 transactions",
         }),
       ).toBeInTheDocument()
-      await userEvent.selectOptions(
-        screen.getByLabelText("Category"),
-        "food_groceries",
-      )
+      await pickOption("Category", "Food & Groceries")
       await userEvent.click(screen.getByRole("button", { name: "Apply" }))
       expect(batchCategoryMutate.mock.calls[0][0]).toEqual({
         data: { ids: ["1", "2"], category: "food_groceries" },

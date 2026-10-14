@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { act, render, screen } from "@testing-library/react"
+import { act, render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
@@ -31,6 +31,16 @@ const mockHook = (state: { isPending?: boolean; isSuccess?: boolean } = {}) =>
     ...state,
   } as unknown as ReturnType<typeof useBatchUpdateTransactionCategory>)
 
+// Base UI's Select: open the combobox, then pick from the listbox it portals.
+async function pickOption(combobox: string, option: string) {
+  await userEvent.click(screen.getByRole("combobox", { name: combobox }))
+  await userEvent.click(
+    within(await screen.findByRole("listbox")).getByRole("option", {
+      name: option,
+    }),
+  )
+}
+
 describe("BulkCategoryDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -53,7 +63,7 @@ describe("BulkCategoryDialog", () => {
       />,
       { wrapper },
     )
-    await userEvent.selectOptions(screen.getByLabelText("Category"), "atm")
+    await pickOption("Category", "ATM")
     await userEvent.click(screen.getByRole("button", { name: "Apply" }))
     expect(mutate.mock.calls[0][0]).toEqual({
       data: { ids: ["a", "b"], category: "atm" },
@@ -93,7 +103,7 @@ describe("BulkCategoryDialog", () => {
       />,
       { wrapper },
     )
-    await userEvent.selectOptions(screen.getByLabelText("Category"), "atm")
+    await pickOption("Category", "ATM")
     expect(screen.getByRole("button", { name: "Apply" })).toBeDisabled()
   })
 })

@@ -11,7 +11,6 @@ import type {
   TransactionResponse,
   TransactionUpdate,
 } from "@app/api-client/types"
-import { FilterSelect } from "@app/data-table/filters/filter-panel"
 import { DatePicker } from "@app/components/forms/date-picker"
 import { Button } from "@app/ui/button"
 import {
@@ -29,6 +28,7 @@ import { Switch } from "@app/ui/switch"
 import { Textarea } from "@app/ui/textarea"
 import { parseAmount } from "./amount-input"
 import { formatAmount, formatDate } from "./format"
+import { CategorySelect } from "./category-select"
 import { useCategories } from "./use-categories"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
@@ -250,21 +250,12 @@ function TransactionForm({
         </div>
         <div className="grid gap-2">
           <Label htmlFor="transaction-category">Category</Label>
-          <FilterSelect
+          <CategorySelect
             id="transaction-category"
-            required
             value={form.category}
-            onChange={(e) => set("category", e.target.value as Category)}
-          >
-            <option value="" disabled>
-              Pick a category
-            </option>
-            {categories.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.label}
-              </option>
-            ))}
-          </FilterSelect>
+            onChange={(category) => set("category", category)}
+            categories={categories}
+          />
         </div>
         <div className="grid gap-2">
           <Label htmlFor="transaction-description">Description</Label>
