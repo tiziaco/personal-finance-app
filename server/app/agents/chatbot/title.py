@@ -27,9 +27,14 @@ _QUOTES = "\"'“”‘’«»`"
 def clean_title(raw: str) -> str:
     """Normalise a model's title: one line, no quotes, prefix or trailing punctuation, capped."""
     title = " ".join(raw.split())
-    title = re.sub(r"^title:\s*", "", title, flags=re.IGNORECASE)
-    title = title.strip(_QUOTES).strip()
-    title = title.rstrip(".!?:;,").strip()
+    # Until nothing changes: each rule can expose what another strips, as in
+    # '"Budget tips".' (a quote behind a full stop) or '"Title: Rent"'.
+    previous = None
+    while title != previous:
+        previous = title
+        title = re.sub(r"^title:\s*", "", title, flags=re.IGNORECASE)
+        title = title.strip(_QUOTES).strip()
+        title = title.rstrip(".!?:;,").strip()
     return title[:TITLE_MAX_LENGTH].rstrip()
 
 

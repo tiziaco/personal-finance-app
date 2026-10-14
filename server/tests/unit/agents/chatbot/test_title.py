@@ -18,6 +18,10 @@ pytestmark = pytest.mark.unit
         ("Saving for a car.", "Saving for a car"),
         ("  Title: Travel fund\n", "Travel fund"),
         ("Line one\nline two", "Line one line two"),
+        # Each rule can expose what another strips: a quote behind punctuation,
+        # a prefix behind a quote.
+        ('"Budget tips".', "Budget tips"),
+        ('"Title: Rent"', "Rent"),
     ],
 )
 def test_clean_title(raw, expected):
