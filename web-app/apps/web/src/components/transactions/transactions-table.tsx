@@ -37,20 +37,19 @@ import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 import { useTransactionColumns } from "./use-transaction-columns"
 import { useTransactionsTableState } from "./use-transactions-table-state"
 
+/** The one dialog open, if any. `onDone` empties the table's selection after a bulk action. */
+type OpenDialog =
+  | { kind: "add" }
+  | { kind: "edit"; transaction: TransactionResponse }
+  | { kind: "delete"; ids: string[]; onDone?: () => void }
+  | { kind: "recategorise"; ids: string[]; onDone: () => void }
+
 export function TransactionsTable() {
   const state = useTransactionsTableState()
   const { categories, label } = useCategories()
-  // Which dialog is open: dialog state, not list state.
-  const [editing, setEditing] = useState<TransactionResponse | "new" | null>(
-    null,
-  )
-  const [deleting, setDeleting] = useState<string[] | null>(null)
-  // A bulk action in flight; `clear` empties the table's selection on success.
-  const [bulk, setBulk] = useState<{
-    kind: "category" | "delete"
-    ids: string[]
-    clear: () => void
-  } | null>(null)
+  // Dialog state, not list state.
+  const [dialog, setDialog] = useState<OpenDialog | null>(null)
+  const closeDialog = (open: boolean) => !open && setDialog(null)
   // The refresh rides on the hook, so it runs even if the chip's menu is gone.
   const { mutate: updateTransaction } = useUpdateTransaction(
     useRefreshTransactionsOnSuccess(),
@@ -60,13 +59,18 @@ export function TransactionsTable() {
       updateTransaction({ transactionId: t.id, data: { category } }),
     [updateTransaction],
   )
+  const onEdit = useCallback(
+    (transaction: TransactionResponse) =>
+      setDialog({ kind: "edit", transaction }),
+    [],
+  )
   const onDelete = useCallback(
-    (t: TransactionResponse) => setDeleting([t.id]),
+    (t: TransactionResponse) => setDialog({ kind: "delete", ids: [t.id] }),
     [],
   )
   const columns = useTransactionColumns(label, {
     categories,
-    onEdit: setEditing,
+    onEdit,
     onDelete,
     onRecategorise,
   })
@@ -102,7 +106,11 @@ export function TransactionsTable() {
   ) : (
     <div className="space-y-2">
       <p>No transactions yet.</p>
-      <Button variant="outline" size="sm" onClick={() => setEditing("new")}>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => setDialog({ kind: "add" })}
+      >
         Add a transaction
       </Button>
     </div>
@@ -112,7 +120,7 @@ export function TransactionsTable() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Transactions</h1>
-        <Button onClick={() => setEditing("new")}>
+        <Button onClick={() => setDialog({ kind: "add" })}>
           <PlusIcon />
           Add transaction
         </Button>
@@ -136,10 +144,10 @@ export function TransactionsTable() {
             <Button
               size="sm"
               onClick={() =>
-                setBulk({
-                  kind: "category",
+                setDialog({
+                  kind: "recategorise",
                   ids: selected.map((t) => t.id),
-                  clear,
+                  onDone: clear,
                 })
               }
             >
@@ -149,10 +157,10 @@ export function TransactionsTable() {
               size="sm"
               variant="destructive"
               onClick={() =>
-                setBulk({
+                setDialog({
                   kind: "delete",
                   ids: selected.map((t) => t.id),
-                  clear,
+                  onDone: clear,
                 })
               }
             >
@@ -171,7 +179,7 @@ export function TransactionsTable() {
           <TransactionCard
             transaction={row.original}
             categoryLabel={label(row.original.category)}
-            onEdit={() => setEditing(row.original)}
+            onEdit={() => onEdit(row.original)}
           />
         )}
         toolbar={
@@ -196,42 +204,31 @@ export function TransactionsTable() {
           />
         }
       />
-      {editing &&
-        (editing === "new" ? (
-          <TransactionFormDialog
-            mode="add"
-            open
-            onOpenChange={(open) => !open && setEditing(null)}
-          />
-        ) : (
-          <TransactionFormDialog
-            mode="edit"
-            transaction={editing}
-            open
-            onOpenChange={(open) => !open && setEditing(null)}
-          />
-        ))}
-      {deleting && (
-        <DeleteTransactionsDialog
-          ids={deleting}
+      {dialog?.kind === "add" && (
+        <TransactionFormDialog mode="add" open onOpenChange={closeDialog} />
+      )}
+      {dialog?.kind === "edit" && (
+        <TransactionFormDialog
+          mode="edit"
+          transaction={dialog.transaction}
           open
-          onOpenChange={(open) => !open && setDeleting(null)}
+          onOpenChange={closeDialog}
         />
       )}
-      {bulk?.kind === "category" && (
+      {dialog?.kind === "delete" && (
+        <DeleteTransactionsDialog
+          ids={dialog.ids}
+          open
+          onOpenChange={closeDialog}
+          onDeleted={dialog.onDone}
+        />
+      )}
+      {dialog?.kind === "recategorise" && (
         <BulkCategoryDialog
-          ids={bulk.ids}
+          ids={dialog.ids}
           open
-          onOpenChange={(open) => !open && setBulk(null)}
-          onDone={bulk.clear}
-        />
-      )}
-      {bulk?.kind === "delete" && (
-        <DeleteTransactionsDialog
-          ids={bulk.ids}
-          open
-          onOpenChange={(open) => !open && setBulk(null)}
-          onDeleted={bulk.clear}
+          onOpenChange={closeDialog}
+          onDone={dialog.onDone}
         />
       )}
     </div>
