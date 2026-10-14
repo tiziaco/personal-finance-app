@@ -68,7 +68,8 @@ Skip step 3 or 4 and the filter half-works: the rows change, and nothing on scre
 
 ## Add a date filter
 
-- Three keys: `<name>_mode` (`parseAsStringLiteral(DATE_FILTER_MODES)`), `<name>_from`, `<name>_to`.
+- Three keys: `<name>_mode` (`parseAsStringLiteral(DATE_FILTER_MODES)`), `<name>_from` and `<name>_to`
+  (`parseAsIsoDay`: a malformed day in a hand-edited link reads as absent, never a 422 or a crash).
 - `to…Filters`: `mode: v.<name>_mode ?? dateMode(v.<name>_from, v.<name>_to)`.
 - `from…Filters`: `<name>_mode: f.<name>.mode`, `<name>_from: dateVal(f.<name>, 1)`,
   `<name>_to: dateVal(f.<name>, 2)`. Without the mode line it is never persisted; `dateVal` drops the

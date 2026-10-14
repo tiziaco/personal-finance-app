@@ -8,6 +8,7 @@ import {
   dateVal,
   DATE_FILTER_MODES,
   parseAsInteger,
+  parseAsIsoDay,
   parseAsString,
   parseAsStringLiteral,
   toOffsetLimit,
@@ -39,8 +40,8 @@ export const ordersParsers = {
   status: parseAsStringLiteral(ORDER_STATUSES),
   customer_id: parseAsInteger,
   created_mode: parseAsStringLiteral(DATE_FILTER_MODES), // UI-only
-  created_from: parseAsString,
-  created_to: parseAsString,
+  created_from: parseAsIsoDay,
+  created_to: parseAsIsoDay,
 }
 
 // Tests parse a query string with it; the page itself never loads params.
