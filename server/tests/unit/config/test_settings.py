@@ -1,8 +1,9 @@
 """Tests for app.core.config — environment resolution and settings properties."""
 
 import pytest
+from pydantic import ValidationError
 
-from app.core.config import AuthSettings, Environment, get_environment
+from app.core.config import AuthSettings, Environment, EvaluationSettings, LLMSettings, MemorySettings, get_environment
 
 pytestmark = pytest.mark.unit
 
@@ -68,8 +69,27 @@ class TestEnvironmentEnum:
 
 
 def test_evaluation_key_falls_back_to_the_openrouter_key(monkeypatch):
-    from app.core.config import EvaluationSettings
-
     monkeypatch.setenv("OPENROUTER_API_KEY", "or-key")
     monkeypatch.delenv("EVALUATION_API_KEY", raising=False)
     assert EvaluationSettings().API_KEY.get_secret_value() == "or-key"
+
+
+class TestOpenRouterModelIds:
+    """Every model id names its provider: an env file written for the OpenAI API fails at startup."""
+
+    @pytest.mark.parametrize(
+        "build",
+        [
+            lambda: LLMSettings(DEFAULT_LLM_MODEL="gpt-4o-mini"),
+            lambda: MemorySettings(MODEL="gpt-5-nano"),
+            lambda: MemorySettings(EMBEDDER_MODEL="text-embedding-3-small"),
+            lambda: EvaluationSettings(LLM="gpt-5"),
+        ],
+        ids=["chat", "memory", "embedder", "evaluation"],
+    )
+    def test_an_unprefixed_model_id_fails(self, build):
+        with pytest.raises(ValidationError, match="provider/model"):
+            build()
+
+    def test_a_prefixed_model_id_passes(self):
+        assert LLMSettings(DEFAULT_LLM_MODEL="openai/gpt-4o-mini").DEFAULT_LLM_MODEL == "openai/gpt-4o-mini"

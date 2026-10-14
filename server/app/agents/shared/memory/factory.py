@@ -55,6 +55,13 @@ async def create_memory() -> AsyncMemory:
     global _memory_instance
 
     if _memory_instance is None:
+        # Checked before mem0 sees the config: given an empty key, its OpenAI
+        # client falls back to OPENAI_API_KEY from the environment and would
+        # send that secret to OpenRouter. Callers log this and carry on with no
+        # long-term memory, as they do for any other memory failure.
+        if not settings.llm.OPENROUTER_API_KEY.get_secret_value():
+            raise RuntimeError("OPENROUTER_API_KEY is not set: long-term memory needs it")
+
         # Not awaited: mem0ai 1.0.10 turned `AsyncMemory.from_config` from a
         # coroutine into a plain classmethod. Every other AsyncMemory method
         # used here (add/search/delete_all) is still async. Awaiting this one

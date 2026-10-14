@@ -8,9 +8,10 @@ configuration value parsing using Pydantic Settings for type safety and validati
 import os
 from enum import Enum
 from pathlib import Path
-from typing import List
+from typing import Annotated, List
 
 from pydantic import (
+    AfterValidator,
     Field,
     SecretStr,
     field_validator,
@@ -65,6 +66,21 @@ def get_environment() -> Environment:
             raise ValueError(f"Unrecognised APP_ENV {raw!r}; expected development, staging, production or test")
 
 
+def _require_provider_prefix(model: str) -> str:
+    """An OpenRouter model id names its provider: "openai/gpt-5-mini", not "gpt-5-mini".
+
+    Every LLM call goes through OpenRouter. An unprefixed id, left over from an
+    env file written for the OpenAI API, fails here at startup rather than as a
+    silent fallback model or a long-term memory that quietly stops working.
+    """
+    if "/" not in model:
+        raise ValueError(f"{model!r} is not an OpenRouter model id: expected provider/model, such as 'openai/{model}'")
+    return model
+
+
+OpenRouterModel = Annotated[str, AfterValidator(_require_provider_prefix)]
+
+
 # Database Settings
 class DatabaseSettings(BaseSettings):
     """PostgreSQL database configuration."""
@@ -104,7 +120,7 @@ class LLMSettings(BaseSettings):
     # Every LLM call (agent, titles, mem0, evals) goes through OpenRouter's
     # OpenAI-compatible API; model names are OpenRouter ids such as "openai/gpt-5-mini".
     LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
-    DEFAULT_LLM_MODEL: str = "openai/gpt-5-mini"
+    DEFAULT_LLM_MODEL: OpenRouterModel = "openai/gpt-5-mini"
     DEFAULT_LLM_TEMPERATURE: float = 0.2
     MAX_TOKENS: int = 2000
     MAX_LLM_CALL_RETRIES: int = 3
@@ -116,8 +132,8 @@ class MemorySettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="LONG_TERM_MEMORY_")
 
-    MODEL: str = "openai/gpt-5-nano"
-    EMBEDDER_MODEL: str = "openai/text-embedding-3-small"
+    MODEL: OpenRouterModel = "openai/gpt-5-nano"
+    EMBEDDER_MODEL: OpenRouterModel = "openai/text-embedding-3-small"
     COLLECTION_NAME: str = "longterm_memory"
 
     # Retrieval breadth for `get_relevant_memory`. Every hit is rendered into
@@ -218,7 +234,7 @@ class EvaluationSettings(BaseSettings):
 
     model_config = SettingsConfigDict(env_prefix="EVALUATION_")
 
-    LLM: str = "openai/gpt-5"
+    LLM: OpenRouterModel = "openai/gpt-5"
     BASE_URL: str = "https://openrouter.ai/api/v1"
     API_KEY: SecretStr = Field(default=SecretStr(""))
     SLEEP_TIME: int = 10

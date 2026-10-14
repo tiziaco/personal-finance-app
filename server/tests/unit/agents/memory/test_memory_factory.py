@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from mem0 import AsyncMemory
 from mem0.llms.base import LLMBase
+from pydantic import SecretStr
 
 import app.agents.shared.memory.factory as factory
 from app.core.config import settings
@@ -220,3 +221,17 @@ async def test_llm_and_embedder_both_go_through_openrouter(monkeypatch):
     assert config["embedder"]["config"]["api_key"] == key
     assert config["embedder"]["config"]["openai_base_url"] == settings.llm.LLM_BASE_URL
     assert config["embedder"]["config"]["model"] == "openai/text-embedding-3-small"
+
+
+async def test_create_memory_refuses_an_empty_key():
+    """Given an empty key, mem0's OpenAI client falls back to OPENAI_API_KEY from
+    the environment and sends that secret to OpenRouter's base URL."""
+    fake_cls = MagicMock()
+    with (
+        patch.object(factory, "AsyncMemory", fake_cls),
+        patch.object(settings.llm, "OPENROUTER_API_KEY", SecretStr("")),
+    ):
+        with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+            await factory.create_memory()
+
+    fake_cls.from_config.assert_not_called()
