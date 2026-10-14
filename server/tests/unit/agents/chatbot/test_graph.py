@@ -1,6 +1,9 @@
 """Tests for app.agents.chatbot.graph — tool execution, logging and metrics."""
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.tools import tool
 from prometheus_client import REGISTRY
 
@@ -11,7 +14,9 @@ from app.agents.chatbot.graph import (
     ChatbotAgent,
     _format_tool_args,
 )
+from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.tools import tools
+from app.integrations.llm.service import LLMRegistry
 
 pytestmark = pytest.mark.unit
 
@@ -117,3 +122,33 @@ class TestFormatToolArgs:
 
         assert len(rendered) == TOOL_ARGS_LOG_LIMIT + 3
         assert rendered.endswith("...")
+
+
+class TestChat:
+    """Tests for `_chat` — what the chat node sends to the model."""
+
+    @pytest.mark.asyncio
+    async def test_chat_does_not_send_a_tool_call_left_without_a_result(self, agent):
+        """Stop during a web search, then send again: the next call must not 400.
+
+        The chat node's AIMessage is checkpointed before the tool node runs; a
+        cancelled tool node leaves it there with no ToolMessage, and the next
+        turn appends a HumanMessage after it.
+        """
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
+        agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
+        state = GraphState(
+            messages=[
+                HumanMessage(content="Search rent prices"),
+                AIMessage(content="", tool_calls=[{"name": "web_search", "args": {"query": "rent"}, "id": "call_1"}]),
+                HumanMessage(content="Never mind, thanks"),
+            ]
+        )
+
+        await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+
+        sent = agent.llm_service.call.call_args.args[0]
+        assert not any(m.get("tool_calls") for m in sent)
+        assert [m["content"] for m in sent[1:]] == ["Search rent prices", "Never mind, thanks"]

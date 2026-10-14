@@ -23,6 +23,7 @@ from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.title import generate_title
 from app.agents.chatbot.tools import tools
 from app.agents.graph import (
+    drop_unanswered_tool_calls,
     dump_messages,
     prepare_messages,
     process_llm_response,
@@ -83,7 +84,7 @@ class ChatbotAgent(BaseAgent):
 
         system_prompt = load_system_prompt(long_term_memory=state.long_term_memory)
 
-        messages = prepare_messages(state.messages, current_llm, system_prompt)
+        messages = prepare_messages(drop_unanswered_tool_calls(state.messages), current_llm, system_prompt)
 
         try:
             with llm_inference_duration_seconds.labels(model=model_name).time():
