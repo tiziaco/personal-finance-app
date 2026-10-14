@@ -6,7 +6,7 @@ import { render, screen } from "@testing-library/react"
 import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChatRuntimeProvider } from "./chat-runtime-provider"
-import { ConversationPage } from "./chat-shell"
+import { ConversationPage } from "./conversation-page"
 import { CHAT_COPY } from "./copy"
 
 const mocks = vi.hoisted(() => ({ params: { conversationId: "missing" } }))

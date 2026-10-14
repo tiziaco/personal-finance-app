@@ -1,22 +1,17 @@
 "use client"
 
-import { ApiError, toastForError } from "@app/api-client"
 import { Button } from "@app/ui/button"
 import { Card } from "@app/ui/card"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
-import { Skeleton } from "@app/ui/skeleton"
 import { MessagesSquareIcon } from "lucide-react"
-import { useEffect, useState, type ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 
 import {
   ChatRuntimeProvider,
   useActiveConversationId,
-  useChatHistory,
 } from "./chat-runtime-provider"
 import { ConversationList } from "./conversation-list"
-import { ConversationNotFound } from "./conversation-not-found"
 import { CHAT_COPY } from "./copy"
-import { Thread } from "./thread"
 
 /**
  * The chat route's two panes. Sized to the viewport inside the dashboard's
@@ -71,44 +66,5 @@ export function ChatShell({ children }: { children: ReactNode }) {
         </section>
       </Card>
     </ChatRuntimeProvider>
-  )
-}
-
-/** /chat — a new conversation; nothing is created until the first send. */
-export function NewChatPage() {
-  return <Thread />
-}
-
-/** /chat/[conversationId] — one conversation, or not-found for an unknown, foreign or malformed id. */
-export function ConversationPage() {
-  const activeId = useActiveConversationId()
-  const history = useChatHistory(activeId)
-  // A malformed id is answered 422 by the path's UUID validation: to the user
-  // it is a conversation that doesn't exist, the same as a 404.
-  const notFound =
-    history.error instanceof ApiError &&
-    (history.error.status === 404 || history.error.status === 422)
-
-  // useChatHistory's silentError keeps QueryProvider from toasting, and a
-  // query's meta can't depend on the status. So the toast it would have shown
-  // is raised here, for every error but the not-found below.
-  const hasData = history.data !== undefined
-  useEffect(() => {
-    // Mirrors QueryProvider's rule: a failed refetch behind shown data stays silent.
-    if (history.error && !notFound && !hasData) toastForError(history.error)
-  }, [history.error, notFound, hasData])
-
-  if (notFound) return <ConversationNotFound />
-  if (history.isPending) return <ChatThreadSkeleton />
-  return <Thread />
-}
-
-export function ChatThreadSkeleton() {
-  return (
-    <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-4 px-4 pt-4">
-      <Skeleton className="ml-auto h-10 w-1/2 rounded-2xl" />
-      <Skeleton className="h-24 w-3/4" />
-      <Skeleton className="ml-auto h-10 w-1/3 rounded-2xl" />
-    </div>
   )
 }

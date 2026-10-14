@@ -3,7 +3,6 @@
 import { AuiIf, ThreadPrimitive } from "@assistant-ui/react"
 import { Button } from "@app/ui/button"
 import { ArrowDownIcon } from "lucide-react"
-import type { ReactNode } from "react"
 
 import { AssistantMessage, UserMessage } from "./chat-message"
 import { Composer } from "./composer"
@@ -20,13 +19,13 @@ function Welcome() {
 }
 
 /** The message list and composer. Render inside an AssistantRuntimeProvider. */
-export function Thread({ welcome }: { welcome?: ReactNode }) {
+export function Thread() {
   return (
     <ThreadPrimitive.Root className="flex h-full min-h-0 flex-col">
       <ThreadPrimitive.Viewport className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
         <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 pt-4">
           <AuiIf condition={(s) => s.thread.isEmpty}>
-            {welcome ?? <Welcome />}
+            <Welcome />
           </AuiIf>
           <ThreadPrimitive.Messages
             components={{ UserMessage, AssistantMessage }}

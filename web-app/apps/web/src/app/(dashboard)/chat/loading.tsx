@@ -1,4 +1,4 @@
-import { ChatThreadSkeleton } from "@/components/chat/chat-shell"
+import { ChatThreadSkeleton } from "@/components/chat/chat-thread-skeleton"
 
 /**
  * Next renders a segment's loading.tsx inside its layout.tsx, so this is the
