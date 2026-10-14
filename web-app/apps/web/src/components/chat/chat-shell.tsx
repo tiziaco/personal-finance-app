@@ -3,6 +3,7 @@
 import { ApiError, toastForError } from "@app/api-client"
 import { useListChatMessages } from "@app/api-client/endpoints/chatbot"
 import { Button } from "@app/ui/button"
+import { Card } from "@app/ui/card"
 import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "@app/ui/sheet"
 import { Skeleton } from "@app/ui/skeleton"
 import { MessagesSquareIcon } from "lucide-react"
@@ -22,9 +23,10 @@ import { Thread } from "./thread"
  * shared scroller (whose py-4 is the 2rem), so the thread scrolls in its own
  * viewport with the composer pinned beneath it. Nothing outside /chat changes.
  *
- * From md up the panes sit in a card styled like the floating sidebar. The
- * negative margins pull it out of the scroller's padding to the sidebar's
- * 0.5rem inset, so the two cards line up.
+ * From md up the panes sit in a Card, rounded and lifted like the floating
+ * sidebar. The negative margins pull it out of the scroller's padding to the
+ * sidebar's 0.5rem inset, so the two line up. On a phone the Card's surface
+ * is switched off: the panes run edge to edge, as the sidebar does there.
  */
 export function ChatShell({ children }: { children: ReactNode }) {
   const activeId = useActiveConversationId()
@@ -32,7 +34,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
 
   return (
     <ChatRuntimeProvider>
-      <div className="flex h-[calc(100svh-2rem)] min-h-0 gap-4 md:-my-2 md:-mr-2 md:h-[calc(100svh-1rem)] md:gap-0 md:overflow-hidden md:rounded-2xl md:bg-card md:shadow-sm md:ring-1 md:ring-border">
+      <Card className="h-[calc(100svh-2rem)] min-h-0 flex-row gap-4 py-0 max-md:overflow-visible max-md:rounded-none max-md:bg-transparent max-md:ring-0 md:-my-2 md:-mr-2 md:h-[calc(100svh-1rem)] md:gap-0 md:rounded-2xl md:shadow-sm">
         {/* The breakpoint is CSS, not useIsMobile(): that flag is false on
             first paint, so a phone would render the desktop aside for a frame
             and the composer would size itself to the squeezed thread. md is
@@ -67,7 +69,7 @@ export function ChatShell({ children }: { children: ReactNode }) {
           </div>
           {children}
         </section>
-      </div>
+      </Card>
     </ChatRuntimeProvider>
   )
 }
