@@ -18,7 +18,6 @@ import { SEARCH_DEBOUNCE_MS } from "@app/data-table/url-state/use-url-table-stat
 import {
   EMPTY_DATE_FILTER,
   dateFilterLabel,
-  isDateFilterActive,
 } from "@app/data-table/url-state/date-filter"
 import type { CategoryResponse } from "@app/api-client/types"
 import { Input } from "@app/ui/input"
@@ -27,20 +26,11 @@ import { Switch } from "@app/ui/switch"
 import { parseAmount } from "./amount-input"
 import {
   EMPTY_TRANSACTIONS_FILTERS,
+  activeFilterCount,
   type TransactionsFilters,
 } from "./transactions-table-params"
 
 type SetFilters = Dispatch<SetStateAction<TransactionsFilters>>
-
-// Every filter in the panel has a chip below, and both count it as active the same way.
-const activeCount = (f: TransactionsFilters) =>
-  [
-    f.categories.length > 0,
-    f.amountMin != null,
-    f.amountMax != null,
-    f.recurring != null,
-    isDateFilterActive(f.date),
-  ].filter(Boolean).length
 
 /**
  * One amount bound. The typed text is a draft: it reaches the URL (one
@@ -111,7 +101,7 @@ export function TransactionsFilterPanel({
 }) {
   return (
     <FilterPanel
-      activeCount={activeCount(filters)}
+      activeCount={activeFilterCount(filters)}
       onClearAll={() => setFilters(EMPTY_TRANSACTIONS_FILTERS)}
     >
       <DateFilterControl

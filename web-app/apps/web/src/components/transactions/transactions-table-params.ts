@@ -120,15 +120,16 @@ export function toTransactionsQuery(
   })
 }
 
+/** Filters set, as the panel's badge counts them. Every one of them has a chip. */
+export const activeFilterCount = (f: TransactionsFilters) =>
+  [
+    f.categories.length > 0,
+    f.amountMin != null,
+    f.amountMax != null,
+    f.recurring != null,
+    isDateFilterActive(f.date),
+  ].filter(Boolean).length
+
 /** Any filter or search narrows the list: the empty state then offers to clear them. */
-export function hasActiveTransactionsFilters(v: TransactionsValues): boolean {
-  const f = toTransactionsFilters(v)
-  return (
-    v.search.trim() !== "" ||
-    f.categories.length > 0 ||
-    f.amountMin != null ||
-    f.amountMax != null ||
-    f.recurring != null ||
-    isDateFilterActive(f.date)
-  )
-}
+export const hasActiveTransactionsFilters = (v: TransactionsValues) =>
+  v.search.trim() !== "" || activeFilterCount(toTransactionsFilters(v)) > 0
