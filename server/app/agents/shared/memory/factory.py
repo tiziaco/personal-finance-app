@@ -15,6 +15,12 @@ _memory_instance: Optional[AsyncMemory] = None
 # The graph config we hand through carries user_id for Langfuse, so strip them.
 MEM0_IDENTITY_KEYS = frozenset({"user_id", "agent_id", "run_id", "actor_id"})
 
+# Stands in for an unset OPENROUTER_API_KEY. Given an empty key, mem0's OpenAI
+# client falls back to OPENAI_API_KEY from the environment and would send that
+# secret to OpenRouter. With this, a memory search or write fails with a 401
+# that its caller logs, and erasure, which makes no LLM call, still runs.
+_NO_KEY = "openrouter-key-not-set"
+
 
 def _openrouter_credentials() -> Dict[str, Any]:
     """The key and base URL every mem0 client uses.
@@ -25,7 +31,7 @@ def _openrouter_credentials() -> Dict[str, Any]:
     base URLs makes either branch land on OpenRouter.
     """
     return {
-        "api_key": settings.llm.OPENROUTER_API_KEY.get_secret_value(),
+        "api_key": settings.llm.OPENROUTER_API_KEY.get_secret_value() or _NO_KEY,
         "openai_base_url": settings.llm.LLM_BASE_URL,
     }
 
@@ -55,13 +61,6 @@ async def create_memory() -> AsyncMemory:
     global _memory_instance
 
     if _memory_instance is None:
-        # Checked before mem0 sees the config: given an empty key, its OpenAI
-        # client falls back to OPENAI_API_KEY from the environment and would
-        # send that secret to OpenRouter. Callers log this and carry on with no
-        # long-term memory, as they do for any other memory failure.
-        if not settings.llm.OPENROUTER_API_KEY.get_secret_value():
-            raise RuntimeError("OPENROUTER_API_KEY is not set: long-term memory needs it")
-
         # Not awaited: mem0ai 1.0.10 turned `AsyncMemory.from_config` from a
         # coroutine into a plain classmethod. Every other AsyncMemory method
         # used here (add/search/delete_all) is still async. Awaiting this one

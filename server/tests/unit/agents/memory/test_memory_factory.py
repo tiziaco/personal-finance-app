@@ -223,15 +223,33 @@ async def test_llm_and_embedder_both_go_through_openrouter(monkeypatch):
     assert config["embedder"]["config"]["model"] == "openai/text-embedding-3-small"
 
 
-async def test_create_memory_refuses_an_empty_key():
-    """Given an empty key, mem0's OpenAI client falls back to OPENAI_API_KEY from
-    the environment and sends that secret to OpenRouter's base URL."""
+async def test_an_empty_key_never_lets_mem0_fall_back_to_openai_api_key(monkeypatch):
+    """Given an empty key, mem0's OpenAI client reads OPENAI_API_KEY from the
+    environment and would send that secret to OpenRouter's base URL."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-secret")
     fake_cls = MagicMock()
     with (
         patch.object(factory, "AsyncMemory", fake_cls),
         patch.object(settings.llm, "OPENROUTER_API_KEY", SecretStr("")),
     ):
-        with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
-            await factory.create_memory()
+        await factory.create_memory()
 
-    fake_cls.from_config.assert_not_called()
+    config = fake_cls.from_config.call_args.kwargs["config_dict"]
+    assert config["llm"]["config"]["api_key"]
+    assert config["embedder"]["config"]["api_key"]
+    assert "sk-openai-secret" not in str(config)
+
+
+async def test_erasure_deletes_memories_without_a_key():
+    """GDPR erasure makes no LLM call: an unset key must not leave a user's memories behind."""
+    instance = MagicMock(spec=AsyncMemory)
+    instance.delete_all = AsyncMock()
+    fake_cls = MagicMock()
+    fake_cls.from_config = MagicMock(return_value=instance)
+    with (
+        patch.object(factory, "AsyncMemory", fake_cls),
+        patch.object(settings.llm, "OPENROUTER_API_KEY", SecretStr("")),
+    ):
+        await factory.delete_user_memory(USER_ID)
+
+    instance.delete_all.assert_awaited_once_with(user_id=str(USER_ID))
