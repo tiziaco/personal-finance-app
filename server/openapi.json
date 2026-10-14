@@ -1409,6 +1409,68 @@
         "operationId": "listTransactions",
         "parameters": [
           {
+            "description": "Merchant contains, case-insensitive",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Merchant contains, case-insensitive",
+              "title": "Search"
+            }
+          },
+          {
+            "description": "Sort field; '-' for descending",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "default": "-date",
+              "description": "Sort field; '-' for descending",
+              "enum": [
+                "date",
+                "-date",
+                "amount",
+                "-amount",
+                "merchant",
+                "-merchant"
+              ],
+              "title": "Ordering",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
             "description": "On or after this day",
             "in": "query",
             "name": "date_from",
@@ -1527,68 +1589,6 @@
               ],
               "description": "Only recurring, or only not",
               "title": "Is Recurring"
-            }
-          },
-          {
-            "description": "Merchant contains, case-insensitive",
-            "in": "query",
-            "name": "search",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "maxLength": 100,
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "description": "Merchant contains, case-insensitive",
-              "title": "Search"
-            }
-          },
-          {
-            "description": "Sort field; '-' for descending",
-            "in": "query",
-            "name": "ordering",
-            "required": false,
-            "schema": {
-              "default": "-date",
-              "description": "Sort field; '-' for descending",
-              "enum": [
-                "date",
-                "-date",
-                "amount",
-                "-amount",
-                "merchant",
-                "-merchant"
-              ],
-              "title": "Ordering",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "offset",
-            "required": false,
-            "schema": {
-              "default": 0,
-              "minimum": 0,
-              "title": "Offset",
-              "type": "integer"
-            }
-          },
-          {
-            "in": "query",
-            "name": "limit",
-            "required": false,
-            "schema": {
-              "default": 20,
-              "maximum": 100,
-              "minimum": 1,
-              "title": "Limit",
-              "type": "integer"
             }
           }
         ],

@@ -10,6 +10,23 @@ import type { ListTransactionsOrdering } from "./listTransactionsOrdering"
 
 export type ListTransactionsParams = {
   /**
+   * Merchant contains, case-insensitive
+   */
+  search?: string | null
+  /**
+   * Sort field; '-' for descending
+   */
+  ordering?: ListTransactionsOrdering
+  /**
+   * @minimum 0
+   */
+  offset?: number
+  /**
+   * @minimum 1
+   * @maximum 100
+   */
+  limit?: number
+  /**
    * On or after this day
    */
   date_from?: string | null
@@ -33,21 +50,4 @@ export type ListTransactionsParams = {
    * Only recurring, or only not
    */
   is_recurring?: boolean | null
-  /**
-   * Merchant contains, case-insensitive
-   */
-  search?: string | null
-  /**
-   * Sort field; '-' for descending
-   */
-  ordering?: ListTransactionsOrdering
-  /**
-   * @minimum 0
-   */
-  offset?: number
-  /**
-   * @minimum 1
-   * @maximum 100
-   */
-  limit?: number
 }

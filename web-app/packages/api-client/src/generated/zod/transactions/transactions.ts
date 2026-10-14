@@ -25,12 +25,6 @@ export const DeleteAllTransactionsResponse = zod
  * One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.
  * @summary List transactions
  */
-export const listTransactionsQueryAmountMinTwoRegExp = new RegExp(
-  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
-)
-export const listTransactionsQueryAmountMaxTwoRegExp = new RegExp(
-  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
-)
 export const listTransactionsQuerySearchOneMax = 100
 
 export const listTransactionsQueryOrderingDefault = `-date`
@@ -40,7 +34,31 @@ export const listTransactionsQueryOffsetMin = 0
 export const listTransactionsQueryLimitDefault = 20
 export const listTransactionsQueryLimitMax = 100
 
+export const listTransactionsQueryAmountMinTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+)
+export const listTransactionsQueryAmountMaxTwoRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+)
+
 export const ListTransactionsQueryParams = zod.object({
+  search: zod
+    .union([zod.string().max(listTransactionsQuerySearchOneMax), zod.null()])
+    .optional()
+    .describe("Merchant contains, case-insensitive"),
+  ordering: zod
+    .enum(["date", "-date", "amount", "-amount", "merchant", "-merchant"])
+    .default(listTransactionsQueryOrderingDefault)
+    .describe("Sort field; '-' for descending"),
+  offset: zod
+    .int()
+    .min(listTransactionsQueryOffsetMin)
+    .default(listTransactionsQueryOffsetDefault),
+  limit: zod
+    .int()
+    .min(1)
+    .max(listTransactionsQueryLimitMax)
+    .default(listTransactionsQueryLimitDefault),
   date_from: zod
     .union([zod.iso.date(), zod.null()])
     .optional()
@@ -99,23 +117,6 @@ export const ListTransactionsQueryParams = zod.object({
     .union([zod.boolean(), zod.null()])
     .optional()
     .describe("Only recurring, or only not"),
-  search: zod
-    .union([zod.string().max(listTransactionsQuerySearchOneMax), zod.null()])
-    .optional()
-    .describe("Merchant contains, case-insensitive"),
-  ordering: zod
-    .enum(["date", "-date", "amount", "-amount", "merchant", "-merchant"])
-    .default(listTransactionsQueryOrderingDefault)
-    .describe("Sort field; '-' for descending"),
-  offset: zod
-    .int()
-    .min(listTransactionsQueryOffsetMin)
-    .default(listTransactionsQueryOffsetDefault),
-  limit: zod
-    .int()
-    .min(1)
-    .max(listTransactionsQueryLimitMax)
-    .default(listTransactionsQueryLimitDefault),
 })
 
 export const listTransactionsResponseItemsItemAmountRegExp = new RegExp(
