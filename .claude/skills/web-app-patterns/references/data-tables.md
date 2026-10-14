@@ -151,6 +151,9 @@ value from props.
   last month — from `@app/data-table/url-state/date-presets`.
 - **Several values from a fixed list:** `FilterCheckboxGroup`, from
   `@app/data-table/filters/filter-checkbox-group`.
+- **The filter panel** is a right-hand sheet (full width on a phone): a header with "N active", one
+  ruled section per child, "Clear all filters" at the bottom while any is active. A field with one
+  input is a `FilterField`; several inputs under one title (a min and a max) go in a `FilterSection`.
 - **Moving a page without trapping Back:** the url-state page setter takes `{ history: "replace" }`
   (the transactions page uses it to bring a past-the-end page back to the last one).
 - **A mutation that handles a status itself** sets `meta.silentStatuses: number[]` so `QueryProvider`

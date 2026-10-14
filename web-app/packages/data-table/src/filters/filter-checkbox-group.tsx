@@ -2,6 +2,8 @@
 
 import { useId } from "react"
 import { Checkbox } from "@app/ui/checkbox"
+import { cn } from "@app/core/lib/utils"
+import { FILTER_SECTION_TITLE } from "./filter-panel"
 
 /** Several values from a fixed list. The value keeps the options' order. */
 export function FilterCheckboxGroup<T extends string>({
@@ -24,11 +26,9 @@ export function FilterCheckboxGroup<T extends string>({
     onChange(options.map((o) => o.value).filter((v) => next.has(v)))
   }
   return (
-    <fieldset className="space-y-1">
-      <legend className="text-xs font-medium text-muted-foreground">
-        {label}
-      </legend>
-      <div className="max-h-48 space-y-1 overflow-y-auto pr-1">
+    <fieldset className="space-y-2">
+      <legend className={cn("mb-2", FILTER_SECTION_TITLE)}>{label}</legend>
+      <div className="space-y-1.5">
         {options.map((o) => (
           <label
             key={o.value}
