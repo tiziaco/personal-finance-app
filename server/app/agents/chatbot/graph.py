@@ -2,6 +2,7 @@
 
 import json
 import time
+import uuid
 from typing import Optional
 
 from langchain_core.messages import ToolMessage
@@ -112,9 +113,13 @@ class ChatbotAgent(BaseAgent):
             )
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
 
-    async def generate_title(self, user_text: str, reply_text: str) -> str:
+    async def generate_title(
+        self, user_text: str, reply_text: str, conversation_id: uuid.UUID, user_id: uuid.UUID
+    ) -> str:
         """A short title for a conversation from its first exchange, on the current model."""
-        return await generate_title(user_text, reply_text, self.llm_service.current_model_name())
+        return await generate_title(
+            user_text, reply_text, self.llm_service.current_model_name(), conversation_id, user_id
+        )
 
     async def _invoke_tool(self, tool_call: dict) -> ToolMessage:
         """Run one tool call, recording what happened.

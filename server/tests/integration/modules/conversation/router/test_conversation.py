@@ -238,7 +238,9 @@ class TestGenerateConversationTitle:
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == "Grocery budget"
-        mock_agent.generate_title.assert_awaited_once_with("Hello", "Hi there!")
+        mock_agent.generate_title.assert_awaited_once_with(
+            "Hello", "Hi there!", untitled_conversation.id, untitled_conversation.user_id
+        )
 
     async def test_named_conversation_is_unchanged(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session

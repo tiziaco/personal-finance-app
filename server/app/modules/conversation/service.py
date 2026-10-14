@@ -92,7 +92,7 @@ class ConversationService:
             return conversation
 
         try:
-            title = await agent.generate_title(user_text, reply_text)
+            title = await agent.generate_title(user_text, reply_text, conversation.id, conversation.user_id)
         except Exception as e:
             logger.warning("conversation_title_generation_failed", conversation_id=conversation.id, error=str(e))
             return conversation

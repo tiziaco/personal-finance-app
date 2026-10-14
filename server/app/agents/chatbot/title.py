@@ -1,6 +1,7 @@
 """A short title for a conversation, written by the model from its first exchange."""
 
 import re
+import uuid
 
 from langchain_core.messages import (
     HumanMessage,
@@ -8,6 +9,7 @@ from langchain_core.messages import (
 )
 
 from app.agents.graph import process_llm_response
+from app.agents.shared.observability import create_graph_config
 from app.integrations.llm import LLMRegistry
 
 # The rename route's limit: a generated title must be one a user could have typed.
@@ -38,11 +40,18 @@ def clean_title(raw: str) -> str:
     return title[:TITLE_MAX_LENGTH].rstrip()
 
 
-async def generate_title(user_text: str, reply_text: str, model_name: str) -> str:
+async def generate_title(
+    user_text: str,
+    reply_text: str,
+    model_name: str,
+    conversation_id: uuid.UUID,
+    user_id: uuid.UUID,
+) -> str:
     """Ask the model for a title. Raises ValueError on an empty one; model errors propagate.
 
     Uses a registry client directly: `llm_service` has the chatbot's tools bound,
-    and a title request must not come back as a tool call.
+    and a title request must not come back as a tool call. It runs outside the
+    graph, so it carries its own Langfuse config, traced to the conversation.
     """
     llm = LLMRegistry.get(model_name)
     response = await llm.ainvoke(
@@ -51,7 +60,8 @@ async def generate_title(user_text: str, reply_text: str, model_name: str) -> st
             HumanMessage(
                 content=f"User: {user_text[:TITLE_INPUT_LIMIT]}\n\nAssistant: {reply_text[:TITLE_INPUT_LIMIT]}"
             ),
-        ]
+        ],
+        config=create_graph_config(conversation_id, user_id),
     )
     title = clean_title(str(process_llm_response(response).content))
     if not title:
