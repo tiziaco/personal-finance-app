@@ -26,4 +26,17 @@ describe("DatePicker", () => {
     fireEvent.click(screen.getByRole("button", { name: /March 14/ }))
     expect(onChange).toHaveBeenCalledWith("2026-03-14")
   })
+
+  it("takes a name that still reads the chosen day", () => {
+    render(
+      <DatePicker
+        value="2026-03-03"
+        onChange={() => {}}
+        aria-label="Created from"
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: /^Created from, .*2026/ }),
+    ).toBeInTheDocument()
+  })
 })

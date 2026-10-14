@@ -37,7 +37,7 @@ primitives, `components` is composed chrome built from them. `auth`, `api-client
 
 ```
 apps/web  →  components  →  ui  →  core
-apps/web  →  data-table  →  ui, core
+apps/web  →  data-table  →  components, ui, core
 apps/web  →  api-client  →  auth, core
 apps/web  →  auth
 ```
@@ -46,7 +46,8 @@ apps/web  →  auth
 Clerk or the API reaches it through a slot (`userSlot`, `settingsSlot`, `footerSlot`).
 `api-client` depends on `auth` for the token and on `core` for copy. `data-table` owns
 TanStack Table and nuqs, so the app reaches both only through it; it does not fetch — a
-table's rows come from the app's generated hook. Only two of these
+table's rows come from the app's generated hook. It reuses `components`' date picker in its date
+filter, so filters and forms pick dates the same way. Only two of these
 rules are mechanical: `core` compiles without the `dom` lib, so a `window` in it is a
 type error, and each package's `package.json` is the only list of what it may import.
 The rest is review — the `web-app-patterns` skill's `references/components.md` lists

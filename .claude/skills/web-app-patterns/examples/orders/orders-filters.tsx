@@ -5,8 +5,14 @@ import type { Dispatch, SetStateAction } from "react"
 import {
   FilterField,
   FilterPanel,
-  FilterSelect,
 } from "@app/data-table/filters/filter-panel"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@app/ui/select"
 import { FilterChip } from "@app/data-table/filters/filter-chip"
 import { DateFilterControl } from "@app/data-table/filters/date-filter-control"
 import {
@@ -41,38 +47,56 @@ export function OrdersFilterPanel({ customers, filters, setFilters }: Props) {
       onClearAll={() => setFilters(EMPTY_ORDERS_FILTERS)}
     >
       <FilterField label="Status" htmlFor="orders-status">
-        <FilterSelect
-          id="orders-status"
-          value={filters.status ?? ""}
-          onChange={(e) => {
-            const status = (e.target.value || null) as OrderStatus | null
+        {/* null is "no filter": Base UI's Select models no value as null. */}
+        <Select
+          items={[
+            { value: null, label: "Any status" },
+            ...ORDER_STATUSES.map((s) => ({
+              value: s,
+              label: ORDER_STATUS_LABELS[s],
+            })),
+          ]}
+          value={filters.status}
+          onValueChange={(status: OrderStatus | null) =>
             setFilters((f) => ({ ...f, status }))
-          }}
+          }
         >
-          <option value="">Any status</option>
-          {ORDER_STATUSES.map((s) => (
-            <option key={s} value={s}>
-              {ORDER_STATUS_LABELS[s]}
-            </option>
-          ))}
-        </FilterSelect>
+          <SelectTrigger id="orders-status" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Any status</SelectItem>
+            {ORDER_STATUSES.map((s) => (
+              <SelectItem key={s} value={s}>
+                {ORDER_STATUS_LABELS[s]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </FilterField>
       <FilterField label="Customer" htmlFor="orders-customer">
-        <FilterSelect
-          id="orders-customer"
-          value={filters.customer ?? ""}
-          onChange={(e) => {
-            const customer = e.target.value === "" ? null : Number(e.target.value)
+        <Select
+          items={[
+            { value: null, label: "Any customer" },
+            ...customers.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+          value={filters.customer}
+          onValueChange={(customer: number | null) =>
             setFilters((f) => ({ ...f, customer }))
-          }}
+          }
         >
-          <option value="">Any customer</option>
-          {customers.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </FilterSelect>
+          <SelectTrigger id="orders-customer" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={null}>Any customer</SelectItem>
+            {customers.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </FilterField>
       <DateFilterControl
         label="Created"

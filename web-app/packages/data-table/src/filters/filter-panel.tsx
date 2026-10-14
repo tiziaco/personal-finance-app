@@ -1,11 +1,6 @@
 "use client"
 
-import {
-  Children,
-  isValidElement,
-  type ComponentProps,
-  type ReactNode,
-} from "react"
+import { Children, isValidElement, type ReactNode } from "react"
 import { ListFilter } from "lucide-react"
 import { Button } from "@app/ui/button"
 import {
@@ -133,24 +128,5 @@ export function FilterSection({
       <legend className={cn("mb-2", FILTER_SECTION_TITLE)}>{title}</legend>
       {children}
     </fieldset>
-  )
-}
-
-/**
- * Native select styled like `@app/ui/input`. Native because "" (no filter) is
- * a valid value, which the Base UI Select does not model.
- */
-export function FilterSelect({
-  className,
-  ...props
-}: ComponentProps<"select">) {
-  return (
-    <select
-      className={cn(
-        "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
-        className,
-      )}
-      {...props}
-    />
   )
 }

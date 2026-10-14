@@ -229,6 +229,9 @@ importers:
 
   packages/data-table:
     dependencies:
+      '@app/components':
+        specifier: workspace:*
+        version: link:../components
       '@app/core':
         specifier: workspace:*
         version: link:../core

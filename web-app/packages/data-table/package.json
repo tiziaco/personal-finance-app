@@ -25,6 +25,7 @@
     "./filters/filter-checkbox-group": "./src/filters/filter-checkbox-group.tsx"
   },
   "dependencies": {
+    "@app/components": "workspace:*",
     "@app/core": "workspace:*",
     "@app/ui": "workspace:*",
     "@tanstack/match-sorter-utils": "^8.19.4",

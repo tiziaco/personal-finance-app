@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { useState } from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { DateFilterControl } from "./date-filter-control"
 import {
@@ -22,31 +22,54 @@ function DateHarness({
   )
 }
 
+// Base UI's Select: open the combobox, then pick from the listbox it portals.
+async function pickMode(option: string) {
+  await userEvent.click(screen.getByRole("combobox", { name: "Created" }))
+  await userEvent.click(
+    within(await screen.findByRole("listbox")).getByRole("option", {
+      name: option,
+    }),
+  )
+}
+
 describe("DateFilterControl", () => {
-  it("shows the inputs the mode uses", async () => {
+  it("shows Any date until a mode is picked", () => {
     render(<DateHarness />)
-    expect(screen.queryByLabelText("Created from")).toBeNull()
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "Created" }),
-      "gte",
+    expect(screen.getByRole("combobox", { name: "Created" })).toHaveTextContent(
+      "Any date",
     )
-    expect(screen.getByLabelText("Created from")).toBeInTheDocument()
-    expect(screen.queryByLabelText("Created to")).toBeNull()
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "Created" }),
-      "range",
+  })
+
+  it("shows the date pickers the mode uses", async () => {
+    render(<DateHarness />)
+    expect(screen.queryByRole("button", { name: /^Created from/ })).toBeNull()
+    await pickMode("On or after")
+    expect(
+      screen.getByRole("button", { name: /^Created from/ }),
+    ).toBeInTheDocument()
+    expect(screen.queryByRole("button", { name: /^Created to/ })).toBeNull()
+    await pickMode("Between")
+    expect(
+      screen.getByRole("button", { name: /^Created to/ }),
+    ).toBeInTheDocument()
+  })
+
+  it("picks a day from the calendar as a local ISO date", async () => {
+    render(
+      <DateHarness initial={{ mode: "gte", date1: "2026-03-03", date2: "" }} />,
     )
-    expect(screen.getByLabelText("Created to")).toBeInTheDocument()
+    await userEvent.click(screen.getByRole("button", { name: /^Created from/ }))
+    await userEvent.click(
+      await screen.findByRole("button", { name: /March 14/ }),
+    )
+    expect(screen.getByRole("status")).toHaveTextContent('"date1":"2026-03-14"')
   })
 
   it("resets to empty when the mode is cleared", async () => {
     render(
       <DateHarness initial={{ mode: "gte", date1: "2026-01-01", date2: "" }} />,
     )
-    await userEvent.selectOptions(
-      screen.getByRole("combobox", { name: "Created" }),
-      "",
-    )
+    await pickMode("Any date")
     expect(screen.getByRole("status")).toHaveTextContent(
       JSON.stringify(EMPTY_DATE_FILTER),
     )

@@ -21,26 +21,33 @@ const display = new Intl.DateTimeFormat(undefined, {
   year: "numeric",
 })
 
-/** One day, picked from a calendar in a popover. The value is a local ISO date, "" when empty. */
+/**
+ * One day, picked from a calendar in a popover. The value is a local ISO date, "" when empty.
+ * Without a `<label>`, `aria-label` names it; the name still ends with the day shown.
+ */
 export function DatePicker({
   value,
   onChange,
   id,
   placeholder = "Pick a date",
+  "aria-label": ariaLabel,
 }: {
   value: string
   onChange: (iso: string) => void
   id?: string
   placeholder?: string
+  "aria-label"?: string
 }) {
   const [open, setOpen] = useState(false)
   const selected = value ? fromIso(value) : undefined
+  const shown = selected ? display.format(selected) : placeholder
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <Button
             id={id}
+            aria-label={ariaLabel && `${ariaLabel}, ${shown}`}
             variant="outline"
             className={cn(
               "w-full justify-start font-normal",
@@ -50,7 +57,7 @@ export function DatePicker({
         }
       >
         <CalendarIcon />
-        {selected ? display.format(selected) : placeholder}
+        {shown}
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">
         <Calendar
