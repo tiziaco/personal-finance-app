@@ -1,6 +1,7 @@
 """Tests for app.agents.chatbot.graph — tool execution, logging and metrics."""
 
-from unittest.mock import AsyncMock, MagicMock
+import uuid
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage
@@ -16,6 +17,7 @@ from app.agents.chatbot.graph import (
 )
 from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.tools import tools
+from app.agents.messages import Message
 from app.integrations.llm.service import LLMRegistry
 
 pytestmark = pytest.mark.unit
@@ -152,3 +154,33 @@ class TestChat:
         sent = agent.llm_service.call.call_args.args[0]
         assert not any(m.get("tool_calls") for m in sent)
         assert [m["content"] for m in sent[1:]] == ["Search rent prices", "Never mind, thanks"]
+
+
+class TestTitleFor:
+    """Tests for `title_for` — a conversation's title from its first exchange."""
+
+    CONVERSATION_ID = uuid.uuid4()
+    USER_ID = uuid.uuid4()
+
+    async def test_titles_the_first_exchange_on_the_current_model(self, agent):
+        agent.get_chat_history = AsyncMock(
+            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+        )
+        with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(return_value="Budget")) as generate:
+            assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) == "Budget"
+        generate.assert_awaited_once_with(
+            "Q", "A", agent.llm_service.current_model_name(), self.CONVERSATION_ID, self.USER_ID
+        )
+
+    async def test_no_reply_yet_is_none_without_a_model_call(self, agent):
+        agent.get_chat_history = AsyncMock(return_value=[Message(role="user", content="Q")])
+        with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock()) as generate:
+            assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None
+        generate.assert_not_awaited()
+
+    async def test_a_model_failure_is_none(self, agent):
+        agent.get_chat_history = AsyncMock(
+            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+        )
+        with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(side_effect=RuntimeError("down"))):
+            assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None

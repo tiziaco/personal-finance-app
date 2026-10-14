@@ -7,7 +7,6 @@ import pytest
 from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
-from app.agents.messages import Message
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
@@ -234,23 +233,21 @@ class TestGenerateConversationTitle:
     async def test_untitled_conversation_gets_a_title(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent
     ):
-        mock_agent.generate_title = AsyncMock(return_value="Grocery budget")
+        mock_agent.title_for = AsyncMock(return_value="Grocery budget")
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == "Grocery budget"
-        mock_agent.generate_title.assert_awaited_once_with(
-            "Hello", "Hi there!", untitled_conversation.id, untitled_conversation.user_id
-        )
+        mock_agent.title_for.assert_awaited_once_with(untitled_conversation.id, untitled_conversation.user_id)
 
     async def test_named_conversation_is_unchanged(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
     ):
         untitled_conversation.name = "My name"
         await db_session.flush()
-        mock_agent.generate_title = AsyncMock(return_value="Other")
+        mock_agent.title_for = AsyncMock(return_value="Other")
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.json()["name"] == "My name"
-        mock_agent.generate_title.assert_not_awaited()
+        mock_agent.title_for.assert_not_awaited()
 
     async def test_rename_during_the_model_call_wins(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
@@ -268,23 +265,17 @@ class TestGenerateConversationTitle:
             )
             return "Generated"
 
-        mock_agent.generate_title = AsyncMock(side_effect=rename_then_title)
+        mock_agent.title_for = AsyncMock(side_effect=rename_then_title)
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == "User rename"
 
-    async def test_no_reply_yet_is_unchanged(self, authenticated_client_with_agent, untitled_conversation, mock_agent):
-        mock_agent.get_chat_history.return_value = [Message(role="user", content="Hello")]
-        mock_agent.generate_title = AsyncMock(return_value="Other")
-        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
-        assert response.status_code == 200
-        assert response.json()["name"] == ""
-        mock_agent.generate_title.assert_not_awaited()
-
-    async def test_model_failure_returns_200_unchanged(
+    async def test_no_title_leaves_the_conversation_unchanged(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent
     ):
-        mock_agent.generate_title = AsyncMock(side_effect=RuntimeError("provider down"))
+        # The agent answers None for no reply yet or a failed model call
+        # (unit-tested on ChatbotAgent.title_for); the route still answers 200.
+        mock_agent.title_for = AsyncMock(return_value=None)
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == ""

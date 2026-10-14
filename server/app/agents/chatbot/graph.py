@@ -20,7 +20,7 @@ from langgraph.types import RunnableConfig
 from app.agents.base import BaseAgent
 from app.agents.chatbot.prompts import load_system_prompt
 from app.agents.chatbot.state import GraphState
-from app.agents.chatbot.title import generate_title
+from app.agents.chatbot.title import first_exchange, generate_title
 from app.agents.chatbot.tools import tools
 from app.agents.graph import (
     drop_unanswered_tool_calls,
@@ -114,13 +114,24 @@ class ChatbotAgent(BaseAgent):
             )
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
 
-    async def generate_title(
-        self, user_text: str, reply_text: str, conversation_id: uuid.UUID, user_id: uuid.UUID
-    ) -> str:
-        """A short title for a conversation from its first exchange, on the current model."""
-        return await generate_title(
-            user_text, reply_text, self.llm_service.current_model_name(), conversation_id, user_id
-        )
+    async def title_for(self, conversation_id: uuid.UUID, user_id: uuid.UUID) -> Optional[str]:
+        """A title for a conversation from its first exchange, on the current model, or None.
+
+        None before the first reply, or when the model fails or answers with
+        nothing usable: a title is cosmetic, and the client asks again after the
+        next completed reply.
+        """
+        exchange = first_exchange(await self.get_chat_history(conversation_id))
+        if exchange is None:
+            return None
+        user_text, reply_text = exchange
+        try:
+            return await generate_title(
+                user_text, reply_text, self.llm_service.current_model_name(), conversation_id, user_id
+            )
+        except Exception:
+            logger.exception("conversation_title_generation_failed", conversation_id=conversation_id)
+            return None
 
     async def _invoke_tool(self, tool_call: dict) -> ToolMessage:
         """Run one tool call, recording what happened.

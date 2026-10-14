@@ -8,7 +8,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from app.agents.graph import process_llm_response
+from app.agents.messages import Message
 from app.agents.shared.observability import create_graph_config
 from app.integrations.llm import LLMRegistry
 
@@ -40,14 +40,27 @@ def clean_title(raw: str) -> str:
     return title[:TITLE_MAX_LENGTH].rstrip()
 
 
+def first_exchange(history: list[Message]) -> tuple[str, str] | None:
+    """The first reply and the user message it answered, or None before any reply.
+
+    Paired, not taken separately: a first turn stopped before its reply leaves
+    a question with no answer, and the title must not mix two turns.
+    """
+    for index, message in enumerate(history):
+        if message.role == "assistant":
+            question = next((m.content for m in reversed(history[:index]) if m.role == "user"), None)
+            return (question, message.content) if question else None
+    return None
+
+
 async def generate_title(
     user_text: str,
     reply_text: str,
     model_name: str,
     conversation_id: uuid.UUID,
     user_id: uuid.UUID,
-) -> str:
-    """Ask the model for a title. Raises ValueError on an empty one; model errors propagate.
+) -> str | None:
+    """Ask the model for a title; None if it answers with nothing usable. Model errors propagate.
 
     Uses a registry client directly: `llm_service` has the chatbot's tools bound,
     and a title request must not come back as a tool call. It runs outside the
@@ -63,7 +76,4 @@ async def generate_title(
         ],
         config=create_graph_config(conversation_id, user_id),
     )
-    title = clean_title(str(process_llm_response(response).content))
-    if not title:
-        raise ValueError("the model returned an empty title")
-    return title
+    return clean_title(response.text) or None

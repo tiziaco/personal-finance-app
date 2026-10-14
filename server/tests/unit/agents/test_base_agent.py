@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 
-from app.agents.base.agent import BaseAgent, _chunk_text
+from app.agents.base.agent import BaseAgent
 from app.agents.messages import Message
 
 pytestmark = pytest.mark.unit
@@ -125,6 +125,10 @@ def test_history_joins_a_turns_assistant_messages_as_they_were_streamed():
     ]
 
 
-def test_chunk_text_handles_strings_and_blocks():
-    assert _chunk_text("plain") == "plain"
-    assert _chunk_text([{"type": "text", "text": "a"}, "b", {"type": "reasoning"}]) == "ab"
+@pytest.mark.asyncio
+async def test_structured_content_streams_only_its_text():
+    """GPT-5 sends content as blocks; only the text blocks are the reply."""
+    chunks = await _collect(
+        [AIMessageChunk(content=[{"type": "reasoning", "id": "r"}, {"type": "text", "text": "Hi"}])]
+    )
+    assert chunks == ["Hi"]

@@ -34,19 +34,6 @@ from app.core.logging import logger
 _TURN_MESSAGE_SEPARATOR = "\n\n"
 
 
-def _chunk_text(content: str | list) -> str:
-    """The text of a streamed message's content, which GPT-5 models send as a list of blocks."""
-    if isinstance(content, str):
-        return content
-    parts = []
-    for block in content:
-        if isinstance(block, str):
-            parts.append(block)
-        elif isinstance(block, dict) and block.get("type") == "text":
-            parts.append(block.get("text", ""))
-    return "".join(parts)
-
-
 class BaseAgent(ABC):
     """Abstract base class for all LangGraph agents.
 
@@ -128,7 +115,7 @@ class BaseAgent(ABC):
                 # tool results included. Only the model's own text is the reply.
                 if not isinstance(token, AIMessage):
                     continue
-                text = _chunk_text(token.content)
+                text = token.text
                 if not text:
                     continue
                 if last_message_id is not None and token.id != last_message_id:
