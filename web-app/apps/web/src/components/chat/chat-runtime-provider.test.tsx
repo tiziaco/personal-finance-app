@@ -78,9 +78,9 @@ beforeEach(() => {
   })
 })
 
-function renderChat() {
+function renderChat({ staleTime = 0 } = {}) {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: { queries: { retry: false, staleTime } },
   })
   const utils = render(
     <QueryClientProvider client={client}>
@@ -177,6 +177,46 @@ describe("ChatRuntimeProvider", () => {
       }),
     )
     expect(calls).toContain("POST /api/v1/conversation/conversation")
+  })
+
+  // The reply can finish before router.replace commits (a route compiling in
+  // dev). The URL still says /chat then, and the thread must not go blank
+  // between the exchange being cleared and the conversation's page mounting.
+  it("a first send whose reply ends before the URL moves keeps showing the exchange", async () => {
+    let saved = false
+    mocks.stream.mockImplementation(async function* () {
+      yield "Hello"
+      saved = true
+    })
+    routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
+      messages: saved
+        ? [
+            { role: "user", content: "hi" },
+            { role: "assistant", content: "Hello" },
+          ]
+        : [],
+    })
+    const { rerender, client } = renderChat({ staleTime: 60_000 })
+    await send("hi")
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+    expect(screen.getByText("Hello")).toBeInTheDocument()
+    expect(screen.getAllByText("hi")).toHaveLength(1)
+
+    mocks.params = { conversationId: "c1" }
+    rerender(
+      <QueryClientProvider client={client}>
+        <ChatRuntimeProvider>
+          <Thread />
+        </ChatRuntimeProvider>
+      </QueryClientProvider>,
+    )
+
+    expect(screen.getByText("Hello")).toBeInTheDocument()
+    expect(screen.getAllByText("hi")).toHaveLength(1)
   })
 
   it("swaps the in-flight exchange for the saved history, then asks for a title", async () => {

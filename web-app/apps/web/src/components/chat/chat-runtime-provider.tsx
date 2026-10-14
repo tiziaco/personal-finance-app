@@ -91,11 +91,17 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         ),
     },
   })
+  // A conversation created by a send from /chat, until the URL names it. The
+  // reply can end before router.replace commits (a route compiling in dev):
+  // the thread then shows this conversation's history, not an empty /chat,
+  // and the history refetch at the end of the send has an observer to run.
+  const [createdId, setCreatedId] = useState<string | null>(null)
+  const historyId = activeId ?? createdId
   // silentError on both observers of this query: a query's meta is whichever
   // observer set its options last, and ConversationPage renders the 404 as a
   // not-found screen, which a "Not found." toast would only repeat.
-  const history = useListChatMessages(activeId ?? "", {
-    query: { enabled: activeId !== null, meta: { silentError: true } },
+  const history = useListChatMessages(historyId ?? "", {
+    query: { enabled: historyId !== null, meta: { silentError: true } },
   })
 
   const [exchange, setExchange] = useState<Exchange | null>(null)
@@ -116,6 +122,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       inflightIdRef.current = null
     }
     setExchange((e) => (e && e.conversationId !== activeId ? null : e))
+    setCreatedId(null)
   }, [activeId])
 
   useEffect(
@@ -214,6 +221,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
           { messages: [] },
         )
         inflightIdRef.current = conversationId
+        setCreatedId(conversationId)
         update((e) => ({ ...e, conversationId }))
         router.replace(`/chat/${conversationId}`)
       } else {
@@ -283,7 +291,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       ? savedMessages.slice(0, visible.baseCount)
       : savedMessages
     const converted: ThreadMessageLike[] = base.map((m, i) => ({
-      id: `${activeId}-${i}`,
+      id: `${historyId}-${i}`,
       role: m.role === "user" ? "user" : "assistant",
       content: m.content,
     }))
@@ -304,7 +312,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
               },
       },
     ]
-  }, [activeId, exchange, savedMessages])
+  }, [activeId, exchange, historyId, savedMessages])
 
   const runtime = useExternalStoreRuntime<ThreadMessageLike>({
     messages,
