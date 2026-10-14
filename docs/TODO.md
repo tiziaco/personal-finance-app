@@ -81,6 +81,17 @@ refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS
 role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the first
 finance table.
 
+## Server — a model call holds the request's DB connection
+
+`POST /chatbot/chat/{id}` and `POST /conversation/conversation/{id}/title` load the
+conversation through `UserConversation`, which opens the request's `DbSession`
+transaction, then await a model call of several seconds before the session commits after
+the route. The pool connection sits idle in transaction for that long. Fine at one user's
+traffic; under concurrent chats it starves other requests of connections. The fix is to
+read what the call needs, release the session before the model call, and write with a
+short-lived session from `request.app.state.session_factory`, as a streaming body already
+must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent load.
+
 ## Web — tests the suite does not have yet
 
 - **`QueryProvider`'s error policy.** Which queries toast (never-resolved only, unless
