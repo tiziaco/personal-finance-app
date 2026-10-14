@@ -1,6 +1,12 @@
 "use client"
 
-import type { Dispatch, SetStateAction } from "react"
+import {
+  useCallback,
+  useEffect,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react"
 import {
   FilterPanel,
   FilterSection,
@@ -8,6 +14,7 @@ import {
 import { FilterChip } from "@app/data-table/filters/filter-chip"
 import { FilterCheckboxGroup } from "@app/data-table/filters/filter-checkbox-group"
 import { DateFilterControl } from "@app/data-table/filters/date-filter-control"
+import { SEARCH_DEBOUNCE_MS } from "@app/data-table/url-state/use-url-table-state"
 import {
   EMPTY_DATE_FILTER,
   dateFilterLabel,
@@ -17,6 +24,7 @@ import type { CategoryResponse } from "@app/api-client/types"
 import { Input } from "@app/ui/input"
 import { Label } from "@app/ui/label"
 import { Switch } from "@app/ui/switch"
+import { parseAmount } from "./amount-input"
 import {
   EMPTY_TRANSACTIONS_FILTERS,
   type TransactionsFilters,
@@ -33,6 +41,64 @@ const activeCount = (f: TransactionsFilters) =>
     f.recurring != null,
     isDateFilterActive(f.date),
   ].filter(Boolean).length
+
+/**
+ * One amount bound. The typed text is a draft: it reaches the URL (one
+ * history entry, one request) only once it is an amount and the user pauses,
+ * or leaves the field. Clearing it applies at once.
+ */
+function AmountBound({
+  id,
+  label,
+  value,
+  onCommit,
+}: {
+  id: string
+  label: string
+  value: string | null
+  onCommit: (value: string | null) => void
+}) {
+  const [draft, setDraft] = useState(value ?? "")
+  // The value last seen from the URL: a change there (a chip removed, "Clear
+  // all", Back) replaces the draft; this field's own commit does not.
+  const [seen, setSeen] = useState(value)
+  if (value !== seen) {
+    setSeen(value)
+    setDraft(value ?? "")
+  }
+  const parsed = draft.trim() === "" ? null : parseAmount(draft)
+  const invalid = draft.trim() !== "" && parsed === null
+
+  const commit = useCallback(() => {
+    if (invalid || parsed === value) return
+    setSeen(parsed)
+    onCommit(parsed)
+  }, [invalid, parsed, value, onCommit])
+
+  useEffect(() => {
+    if (invalid || parsed === value) return
+    // The same pause as search.
+    const timer = setTimeout(commit, parsed === null ? 0 : SEARCH_DEBOUNCE_MS)
+    return () => clearTimeout(timer)
+  }, [commit, invalid, parsed, value])
+
+  return (
+    <div className="space-y-1">
+      <Label htmlFor={id} className="text-xs font-normal text-muted-foreground">
+        {label}
+      </Label>
+      <Input
+        id={id}
+        inputMode="decimal"
+        placeholder="-50.00"
+        aria-invalid={invalid || undefined}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onBlur={commit}
+      />
+    </div>
+  )
+}
 
 export function TransactionsFilterPanel({
   filters,
@@ -62,42 +128,18 @@ export function TransactionsFilterPanel({
       />
       <FilterSection title="Amount range">
         <div className="grid grid-cols-2 gap-2">
-          <div className="space-y-1">
-            <Label
-              htmlFor="transactions-amount-min"
-              className="text-xs font-normal text-muted-foreground"
-            >
-              Min
-            </Label>
-            <Input
-              id="transactions-amount-min"
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              value={filters.amountMin ?? ""}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, amountMin: e.target.value || null }))
-              }
-            />
-          </div>
-          <div className="space-y-1">
-            <Label
-              htmlFor="transactions-amount-max"
-              className="text-xs font-normal text-muted-foreground"
-            >
-              Max
-            </Label>
-            <Input
-              id="transactions-amount-max"
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              value={filters.amountMax ?? ""}
-              onChange={(e) =>
-                setFilters((f) => ({ ...f, amountMax: e.target.value || null }))
-              }
-            />
-          </div>
+          <AmountBound
+            id="transactions-amount-min"
+            label="Min"
+            value={filters.amountMin}
+            onCommit={(amountMin) => setFilters((f) => ({ ...f, amountMin }))}
+          />
+          <AmountBound
+            id="transactions-amount-max"
+            label="Max"
+            value={filters.amountMax}
+            onCommit={(amountMax) => setFilters((f) => ({ ...f, amountMax }))}
+          />
         </div>
       </FilterSection>
       <div className="flex items-center justify-between gap-4">

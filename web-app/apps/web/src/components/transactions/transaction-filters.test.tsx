@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen, within } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { EMPTY_DATE_FILTER } from "@app/data-table/url-state/date-filter"
 import {
@@ -151,5 +151,38 @@ describe("TransactionsFilterPanel", () => {
     const group = await screen.findByRole("group", { name: "Amount range" })
     expect(within(group).getByLabelText("Min")).toBeInTheDocument()
     expect(within(group).getByLabelText("Max")).toBeInTheDocument()
+  })
+
+  async function openAmountMin(setFilters = vi.fn()) {
+    render(
+      <TransactionsFilterPanel
+        filters={EMPTY_TRANSACTIONS_FILTERS}
+        setFilters={setFilters}
+        categories={[]}
+      />,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const group = await screen.findByRole("group", { name: "Amount range" })
+    return { input: within(group).getByLabelText("Min"), setFilters }
+  }
+
+  it("writes a typed amount once, after the pause, as the API's decimal", async () => {
+    const { input, setFilters } = await openAmountMin()
+    await userEvent.type(input, "-250,5")
+    expect(setFilters).not.toHaveBeenCalled()
+    await waitFor(() => expect(setFilters).toHaveBeenCalledTimes(1))
+    const update = setFilters.mock.calls[0][0] as (
+      f: TransactionsFilters,
+    ) => TransactionsFilters
+    expect(update(EMPTY_TRANSACTIONS_FILTERS).amountMin).toBe("-250.50")
+  })
+
+  it("never writes what is not an amount, and says so", async () => {
+    const { input, setFilters } = await openAmountMin()
+    await userEvent.type(input, "1e3")
+    await userEvent.tab()
+    expect(input).toHaveAttribute("aria-invalid", "true")
+    await new Promise((r) => setTimeout(r, 400))
+    expect(setFilters).not.toHaveBeenCalled()
   })
 })

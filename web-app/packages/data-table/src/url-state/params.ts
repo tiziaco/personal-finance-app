@@ -2,6 +2,7 @@
 // through this package: one version, one owner.
 export {
   createLoader,
+  createParser,
   parseAsArrayOf,
   parseAsBoolean,
   parseAsInteger,

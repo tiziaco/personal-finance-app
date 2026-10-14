@@ -1,5 +1,6 @@
 import {
   createLoader,
+  createParser,
   compactQuery,
   dateMode,
   dateVal,
@@ -23,9 +24,16 @@ import {
   ListTransactionsOrdering,
   type ListTransactionsParams,
 } from "@app/api-client/types"
+import { parseAmount } from "./amount-input"
 
 /** ≤ the route's `limit` cap (100). */
 export const TRANSACTIONS_PAGE_SIZE = 20
+
+/** An amount bound: a hand-edited link that is not an amount reads as absent, never a 422. */
+const parseAsAmount = createParser({
+  parse: parseAmount,
+  serialize: (value: string) => value,
+})
 
 /** One parser set per API contract: every key is forwarded by toTransactionsQuery (except date_mode). */
 export const transactionsParsers = {
@@ -35,8 +43,8 @@ export const transactionsParsers = {
   category: parseAsArrayOf(
     parseAsStringLiteral(Object.values(Category)),
   ).withDefault([]),
-  amount_min: parseAsString,
-  amount_max: parseAsString,
+  amount_min: parseAsAmount,
+  amount_max: parseAsAmount,
   is_recurring: parseAsBoolean,
   date_mode: parseAsStringLiteral(DATE_FILTER_MODES), // UI-only
   date_from: parseAsIsoDay,

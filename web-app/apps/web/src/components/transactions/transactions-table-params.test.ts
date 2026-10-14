@@ -18,8 +18,8 @@ describe("transactions table params", () => {
     )
     expect(fromTransactionsFilters(toTransactionsFilters(values))).toEqual({
       category: ["salary", "atm"],
-      amount_min: "-100",
-      amount_max: "50.5",
+      amount_min: "-100.00",
+      amount_max: "50.50",
       is_recurring: true,
       date_mode: "range",
       date_from: "2026-01-01",
@@ -27,9 +27,13 @@ describe("transactions table params", () => {
     })
   })
 
-  it("reads a malformed date in the URL as absent", () => {
-    const query = toTransactionsQuery(load("date_mode=gte&date_from=2026-0"))
+  it("reads a malformed date or amount in the URL as absent", () => {
+    const query = toTransactionsQuery(
+      load("date_mode=gte&date_from=2026-0&amount_min=abc&amount_max=1e3"),
+    )
     expect(query).not.toHaveProperty("date_from")
+    expect(query).not.toHaveProperty("amount_min")
+    expect(query).not.toHaveProperty("amount_max")
   })
 
   it("trims the search and caps it at 100 characters", () => {
