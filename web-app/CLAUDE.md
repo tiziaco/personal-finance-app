@@ -194,7 +194,9 @@ Adding a screen — its route group, sidebar entry, loading state and copy — i
 ### Error Handling
 
 - API payloads are validated with the **generated Zod schemas** (`@app/api-client/zod/*`);
-  hand-written schemas are only for non-API input such as forms
+  hand-written schemas are only for non-API input such as forms. The one exception is the
+  chat stream's event (`apps/web/src/lib/chat/stream-chat.ts`): orval excludes `streaming`
+  routes, so no generated schema exists for it
 - Let TanStack Query's `error` state or an error boundary handle display — see the
   API Client section above for what may and may not be rendered
 - Never swallow errors silently
