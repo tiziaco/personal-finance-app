@@ -6,39 +6,37 @@ import type { ReactNode } from "react"
 import {
   getListTransactionsQueryKey,
   useBatchDeleteTransactions,
-  useDeleteTransaction,
 } from "@app/api-client/endpoints/transactions"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
 
 vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/transactions")>()),
-  useDeleteTransaction: vi.fn(),
   useBatchDeleteTransactions: vi.fn(),
 }))
 
-const one = vi.fn()
-const many = vi.fn()
+const mutate = vi.fn()
 
 let queryClient = new QueryClient()
 const wrapper = ({ children }: { children: ReactNode }) => (
   <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
 )
 
+const mockHook = (state: { isPending?: boolean; isSuccess?: boolean } = {}) =>
+  vi.mocked(useBatchDeleteTransactions).mockReturnValue({
+    mutate,
+    isPending: false,
+    isSuccess: false,
+    ...state,
+  } as unknown as ReturnType<typeof useBatchDeleteTransactions>)
+
 describe("DeleteTransactionsDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryClient = new QueryClient()
-    vi.mocked(useDeleteTransaction).mockReturnValue({
-      mutate: one,
-      isPending: false,
-    } as unknown as ReturnType<typeof useDeleteTransaction>)
-    vi.mocked(useBatchDeleteTransactions).mockReturnValue({
-      mutate: many,
-      isPending: false,
-    } as unknown as ReturnType<typeof useBatchDeleteTransactions>)
+    mockHook()
   })
 
-  it("deletes one by id, then closes", async () => {
+  it("deletes one through the batch route, then closes", async () => {
     const onOpenChange = vi.fn()
     const onDeleted = vi.fn()
     render(
@@ -53,9 +51,8 @@ describe("DeleteTransactionsDialog", () => {
     expect(screen.getByText("Delete this transaction?")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Delete" }))
 
-    expect(one.mock.calls[0][0]).toEqual({ transactionId: "a" })
-    expect(many).not.toHaveBeenCalled()
-    await act(() => one.mock.calls[0][1].onSuccess())
+    expect(mutate.mock.calls[0][0]).toEqual({ data: { ids: ["a"] } })
+    await act(() => mutate.mock.calls[0][1].onSuccess())
     expect(onDeleted).toHaveBeenCalled()
     expect(onOpenChange).toHaveBeenCalledWith(false)
   })
@@ -68,40 +65,40 @@ describe("DeleteTransactionsDialog", () => {
     expect(screen.getByText("Delete 2 transactions?")).toBeInTheDocument()
     await userEvent.click(screen.getByRole("button", { name: "Delete" }))
 
-    expect(many.mock.calls[0][0]).toEqual({ data: { ids: ["a", "b"] } })
-    expect(one).not.toHaveBeenCalled()
+    expect(mutate.mock.calls[0][0]).toEqual({ data: { ids: ["a", "b"] } })
   })
 
-  it("refreshes the list from the hooks, so a dialog closed mid-delete still refreshes", async () => {
+  it("refreshes the list from the hook, so a dialog gone by then still refreshes", async () => {
     render(
       <DeleteTransactionsDialog ids={["a"]} open onOpenChange={vi.fn()} />,
-      {
-        wrapper,
-      },
+      { wrapper },
     )
     const invalidate = vi.spyOn(queryClient, "invalidateQueries")
-    for (const hook of [useDeleteTransaction, useBatchDeleteTransactions]) {
-      const onSuccess = vi.mocked(hook).mock.calls[0][0]?.mutation
-        ?.onSuccess as () => Promise<void>
-      await onSuccess()
-    }
-    expect(invalidate).toHaveBeenCalledTimes(2)
+    const onSuccess = vi.mocked(useBatchDeleteTransactions).mock.calls[0][0]
+      ?.mutation?.onSuccess as () => Promise<void>
+    await onSuccess()
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: getListTransactionsQueryKey(),
     })
   })
 
+  it("cannot be closed while the delete is in flight", async () => {
+    mockHook({ isPending: true })
+    const onOpenChange = vi.fn()
+    render(
+      <DeleteTransactionsDialog ids={["a"]} open onOpenChange={onOpenChange} />,
+      { wrapper },
+    )
+    expect(screen.getByRole("button", { name: "Cancel" })).toBeDisabled()
+    await userEvent.keyboard("{Escape}")
+    expect(onOpenChange).not.toHaveBeenCalled()
+  })
+
   it("keeps Delete disabled once the delete succeeded, until the dialog closes", () => {
-    vi.mocked(useDeleteTransaction).mockReturnValue({
-      mutate: one,
-      isPending: false,
-      isSuccess: true,
-    } as unknown as ReturnType<typeof useDeleteTransaction>)
+    mockHook({ isSuccess: true })
     render(
       <DeleteTransactionsDialog ids={["a"]} open onOpenChange={vi.fn()} />,
-      {
-        wrapper,
-      },
+      { wrapper },
     )
     expect(screen.getByRole("button", { name: "Delete" })).toBeDisabled()
   })

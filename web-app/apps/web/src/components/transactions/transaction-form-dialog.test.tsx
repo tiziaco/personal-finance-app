@@ -8,7 +8,6 @@ import {
   getListTransactionsQueryKey,
   useBatchDeleteTransactions,
   useCreateTransaction,
-  useDeleteTransaction,
   useListTransactionCategories,
   useUpdateTransaction,
 } from "@app/api-client/endpoints/transactions"
@@ -20,7 +19,6 @@ vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/transactions")>()),
   useCreateTransaction: vi.fn(),
   useUpdateTransaction: vi.fn(),
-  useDeleteTransaction: vi.fn(),
   useBatchDeleteTransactions: vi.fn(),
   useListTransactionCategories: vi.fn(),
 }))
@@ -73,12 +71,8 @@ describe("TransactionFormDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     queryClient = new QueryClient()
-    vi.mocked(useDeleteTransaction).mockReturnValue({
-      mutate: deleteMutate,
-      isPending: false,
-    } as unknown as ReturnType<typeof useDeleteTransaction>)
     vi.mocked(useBatchDeleteTransactions).mockReturnValue({
-      mutate: vi.fn(),
+      mutate: deleteMutate,
       isPending: false,
     } as unknown as ReturnType<typeof useBatchDeleteTransactions>)
     // Only Date is faked, so user-event's timers still run.
@@ -290,7 +284,7 @@ describe("TransactionFormDialog", () => {
       "data-nested-dialog-open:after:bg-black/80",
     )
     await user.click(within(confirm).getByRole("button", { name: "Delete" }))
-    expect(deleteMutate.mock.calls[0][0]).toEqual({ transactionId: "t1" })
+    expect(deleteMutate.mock.calls[0][0]).toEqual({ data: { ids: ["t1"] } })
 
     act(() => deleteMutate.mock.calls[0][1].onSuccess())
     expect(onOpenChange).toHaveBeenCalledWith(false)

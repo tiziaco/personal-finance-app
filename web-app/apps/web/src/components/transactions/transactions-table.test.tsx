@@ -23,7 +23,6 @@ const mutationMocks = vi.hoisted(() => {
       mutate: updateMutate,
       isPending: false,
     })),
-    useDeleteTransaction: mutation,
     useBatchDeleteTransactions: () => ({
       mutate: batchDeleteMutate,
       isPending: false,

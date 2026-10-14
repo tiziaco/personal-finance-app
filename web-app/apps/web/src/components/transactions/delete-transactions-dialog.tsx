@@ -1,9 +1,6 @@
 "use client"
 
-import {
-  useBatchDeleteTransactions,
-  useDeleteTransaction,
-} from "@app/api-client/endpoints/transactions"
+import { useBatchDeleteTransactions } from "@app/api-client/endpoints/transactions"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -16,7 +13,7 @@ import {
 } from "@app/ui/alert-dialog"
 import { useRefreshTransactionsOnSuccess } from "./use-invalidate-transactions"
 
-/** Confirms, then deletes one transaction or a batch (all or nothing). */
+/** Confirms, then deletes one transaction or several (all or nothing): the batch route takes one id too. */
 export function DeleteTransactionsDialog({
   ids,
   open,
@@ -28,24 +25,29 @@ export function DeleteTransactionsDialog({
   onOpenChange: (open: boolean) => void
   onDeleted?: () => void
 }) {
-  // The refresh rides on the hooks, so it runs even if the dialog is gone by then.
-  const refresh = useRefreshTransactionsOnSuccess()
-  const one = useDeleteTransaction(refresh)
-  const many = useBatchDeleteTransactions(refresh)
-  const done = () => {
-    onDeleted?.()
-    onOpenChange(false)
-  }
+  // The refresh rides on the hook, so it runs even if the dialog is gone by then.
+  const { mutate, isPending, isSuccess } = useBatchDeleteTransactions(
+    useRefreshTransactionsOnSuccess(),
+  )
+  // Not closable mid-delete: closing would unmount the dialog and skip
+  // onDeleted, leaving an edit form open on a deleted transaction.
+  const setOpen = (next: boolean) => (next || !isPending) && onOpenChange(next)
   const title =
     ids.length === 1
       ? "Delete this transaction?"
       : `Delete ${ids.length} transactions?`
   const confirm = () =>
-    ids.length === 1
-      ? one.mutate({ transactionId: ids[0] }, { onSuccess: done })
-      : many.mutate({ data: { ids } }, { onSuccess: done })
+    mutate(
+      { data: { ids } },
+      {
+        onSuccess: () => {
+          onDeleted?.()
+          onOpenChange(false)
+        },
+      },
+    )
   return (
-    <AlertDialog open={open} onOpenChange={onOpenChange}>
+    <AlertDialog open={open} onOpenChange={setOpen}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
@@ -54,13 +56,11 @@ export function DeleteTransactionsDialog({
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
             // Stays disabled after success, through the closing animation.
-            disabled={
-              one.isPending || many.isPending || one.isSuccess || many.isSuccess
-            }
+            disabled={isPending || isSuccess}
             onClick={confirm}
           >
             Delete
