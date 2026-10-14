@@ -105,6 +105,29 @@ describe("Thread", () => {
     expect(screen.getByText(CHAT_COPY.failed)).toBeInTheDocument()
   })
 
+  it("keeps every reply's Copy mounted, hiding only earlier ones by opacity", () => {
+    render(
+      <TestRuntime
+        messages={[
+          user("u1", "one"),
+          assistant("a1", "first"),
+          user("u2", "two"),
+          assistant("a2", "second"),
+        ]}
+      >
+        <Thread />
+      </TestRuntime>,
+    )
+    // Mounted on hover, an earlier reply's bar would push the thread down.
+    const [earlier, last] = screen.getAllByRole("button", {
+      name: CHAT_COPY.copy,
+    })
+    expect(earlier.parentElement).toHaveClass("[@media(hover:hover)]:opacity-0")
+    expect(last.parentElement).not.toHaveClass(
+      "[@media(hover:hover)]:opacity-0",
+    )
+  })
+
   it("offers no edit or regenerate action", () => {
     render(
       <TestRuntime messages={[user("u1", "q"), assistant("a1", "a")]}>

@@ -5,6 +5,7 @@ import {
   MessagePrimitive,
   useAuiState,
 } from "@assistant-ui/react"
+import { cn } from "@app/core/lib/utils"
 import { Button } from "@app/ui/button"
 import { CopyIcon } from "lucide-react"
 
@@ -25,9 +26,10 @@ export function UserMessage() {
 export function AssistantMessage() {
   const status = useAuiState((s) => s.message.status)
   const reason = status?.type === "incomplete" ? status.reason : undefined
+  const isLast = useAuiState((s) => s.message.isLast)
 
   return (
-    <MessagePrimitive.Root className="py-2" data-role="assistant">
+    <MessagePrimitive.Root className="group/message py-2" data-role="assistant">
       <div className="break-words">
         <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
       </div>
@@ -39,19 +41,34 @@ export function AssistantMessage() {
       {reason === "error" && (
         <p className="mt-1 text-sm text-destructive">{CHAT_COPY.failed}</p>
       )}
-      <ActionBarPrimitive.Root
-        hideWhenRunning
-        autohide="not-last"
-        className="mt-1 flex gap-1"
-      >
-        <IconTooltip label={CHAT_COPY.copy}>
-          <ActionBarPrimitive.Copy asChild>
-            <Button variant="ghost" size="icon-sm" aria-label={CHAT_COPY.copy}>
-              <CopyIcon />
-            </Button>
-          </ActionBarPrimitive.Copy>
-        </IconTooltip>
-      </ActionBarPrimitive.Root>
+      {/* A fixed-height slot, so the bar never moves the thread: it is
+          unmounted only while a reply streams, and an earlier reply's bar is
+          revealed by opacity, not mounted on hover (assistant-ui's autohide).
+          As with a conversation row's options, only a hover-capable pointer
+          hides it; touch and keyboard always reach it. */}
+      <div className="mt-1 h-7">
+        <ActionBarPrimitive.Root
+          hideWhenRunning
+          className={cn(
+            "flex gap-1",
+            !isLast &&
+              "focus-within:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover/message:opacity-100",
+          )}
+        >
+          <IconTooltip label={CHAT_COPY.copy}>
+            <ActionBarPrimitive.Copy asChild>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                className="text-muted-foreground"
+                aria-label={CHAT_COPY.copy}
+              >
+                <CopyIcon />
+              </Button>
+            </ActionBarPrimitive.Copy>
+          </IconTooltip>
+        </ActionBarPrimitive.Root>
+      </div>
     </MessagePrimitive.Root>
   )
 }
