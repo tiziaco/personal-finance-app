@@ -21,6 +21,10 @@ import { Thread } from "./thread"
  * The chat route's two panes. Sized to the viewport inside the dashboard's
  * shared scroller (whose py-4 is the 2rem), so the thread scrolls in its own
  * viewport with the composer pinned beneath it. Nothing outside /chat changes.
+ *
+ * From md up the panes sit in a card styled like the floating sidebar. The
+ * negative margins pull it out of the scroller's padding to the sidebar's
+ * 0.5rem inset, so the two cards line up.
  */
 export function ChatShell({ children }: { children: ReactNode }) {
   const activeId = useActiveConversationId()
@@ -28,12 +32,12 @@ export function ChatShell({ children }: { children: ReactNode }) {
 
   return (
     <ChatRuntimeProvider>
-      <div className="flex h-[calc(100svh-2rem)] min-h-0 gap-4">
+      <div className="flex h-[calc(100svh-2rem)] min-h-0 gap-4 md:-my-2 md:-mr-2 md:h-[calc(100svh-1rem)] md:gap-0 md:overflow-hidden md:rounded-2xl md:bg-card md:shadow-sm md:ring-1 md:ring-border">
         {/* The breakpoint is CSS, not useIsMobile(): that flag is false on
             first paint, so a phone would render the desktop aside for a frame
             and the composer would size itself to the squeezed thread. md is
             768px, the hook's MOBILE_BREAKPOINT. */}
-        <aside className="hidden w-64 shrink-0 flex-col border-r pr-2 md:flex">
+        <aside className="hidden w-64 shrink-0 flex-col border-r p-2 md:flex">
           <ConversationList activeId={activeId} />
         </aside>
         <section className="flex min-h-0 min-w-0 flex-1 flex-col">

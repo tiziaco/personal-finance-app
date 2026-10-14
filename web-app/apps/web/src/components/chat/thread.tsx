@@ -31,7 +31,9 @@ export function Thread({ welcome }: { welcome?: ReactNode }) {
             components={{ UserMessage, AssistantMessage }}
           />
         </div>
-        <div className="sticky bottom-0 mx-auto flex w-full max-w-3xl flex-col items-center gap-2 bg-background px-4 pt-2 pb-4">
+        {/* The strip hides the messages scrolling under it, so it takes the
+            surface's colour: the page on a phone, ChatShell's card from md. */}
+        <div className="sticky bottom-0 mx-auto flex w-full max-w-3xl flex-col items-center gap-2 bg-background px-4 pt-2 pb-4 md:bg-card">
           <ThreadPrimitive.ScrollToBottom asChild>
             <Button
               variant="outline"
