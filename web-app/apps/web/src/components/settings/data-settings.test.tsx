@@ -56,7 +56,7 @@ describe("DataSettings", () => {
     )
     expect(
       screen.getByText(
-        "Permanently deletes all 12 transactions. This cannot be undone.",
+        "Permanently deletes all 12 transactions, and any you deleted earlier. This cannot be undone.",
       ),
     ).toBeInTheDocument()
     expect(mutate).not.toHaveBeenCalled()
