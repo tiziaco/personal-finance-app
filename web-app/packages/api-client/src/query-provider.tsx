@@ -13,6 +13,20 @@ import { ApiError } from "./errors"
 import { isDevelopment } from "@app/core/lib/env"
 import { messages } from "@app/core/constants/messages"
 
+// What QueryProvider reads from `meta`, typed at every useQuery / useMutation.
+declare module "@tanstack/react-query" {
+  interface Register {
+    queryMeta: {
+      /** never toast this query's errors (a poll that fails behind visible data) */
+      silentError?: boolean
+    }
+    mutationMeta: {
+      /** statuses the caller answers itself, so QueryProvider does not toast them */
+      silentStatuses?: number[]
+    }
+  }
+}
+
 /**
  * Map an error to a toast.
  *
@@ -66,11 +80,9 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
         // a 409 inline — lists them in meta.silentStatuses.
         mutationCache: new MutationCache({
           onError: (error, _variables, _context, mutation) => {
-            const silent = mutation.meta?.silentStatuses
             if (
               error instanceof ApiError &&
-              Array.isArray(silent) &&
-              silent.includes(error.status)
+              mutation.meta?.silentStatuses?.includes(error.status)
             )
               return
             toastForError(error)
