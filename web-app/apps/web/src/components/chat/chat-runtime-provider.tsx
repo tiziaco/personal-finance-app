@@ -79,8 +79,11 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   // The cache update is in the hook's options, not the mutate call: a call's
   // own callbacks run only for the latest call, so a title for one
   // conversation would be lost if another's was asked for before it landed.
+  // Silent: the title is asked for in the background, and the server
+  // already treats a failed one as cosmetic.
   const generateTitle = useGenerateConversationTitle({
     mutation: {
+      meta: { silentError: true },
       onSuccess: (updated) =>
         queryClient.setQueryData<ConversationResponse[]>(
           getListConversationsQueryKey(),

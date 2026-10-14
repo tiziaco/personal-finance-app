@@ -27,8 +27,14 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             toastForError(error)
           },
         }),
-        // Mutations always toast: the user just acted and is waiting for a result.
-        mutationCache: new MutationCache({ onError: toastForError }),
+        // Mutations toast: the user just acted and is waiting for a result.
+        // One the app fires on its own (a generated title) opts out.
+        mutationCache: new MutationCache({
+          onError: (error, _variables, _context, mutation) => {
+            if (mutation.meta?.silentError === true) return
+            toastForError(error)
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,

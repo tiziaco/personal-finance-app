@@ -266,6 +266,23 @@ describe("ChatRuntimeProvider", () => {
     )
   })
 
+  // The title is asked for in the background: a failure must not toast
+  // after a reply the user already has. QueryProvider reads this meta.
+  it("asks for the title as a silent mutation", async () => {
+    mocks.params = { conversationId: "c1" }
+    mocks.stream.mockImplementation(() => chunks("Hello"))
+    const { client } = renderChat()
+    await send("hi")
+
+    await waitFor(() =>
+      expect(client.getMutationCache().getAll()).toContainEqual(
+        expect.objectContaining({
+          options: expect.objectContaining({ meta: { silentError: true } }),
+        }),
+      ),
+    )
+  })
+
   it("does not ask for a title when the conversation already has a name", async () => {
     mocks.params = { conversationId: "c1" }
     mocks.stream.mockImplementation(() => chunks("Hello"))
