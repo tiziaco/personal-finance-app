@@ -56,7 +56,7 @@ export function TransactionsSortControl({
       </Select>
       <Button
         variant="outline"
-        size="icon-sm"
+        size="icon"
         aria-label={desc ? "Switch to ascending" : "Switch to descending"}
         onClick={() => onChange(toOrdering(field, !desc))}
       >

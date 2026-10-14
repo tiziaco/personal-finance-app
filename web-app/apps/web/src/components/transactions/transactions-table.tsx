@@ -120,7 +120,7 @@ export function TransactionsTable() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Transactions</h1>
-        <Button size="sm" onClick={() => setEditing("new")}>
+        <Button onClick={() => setEditing("new")}>
           <PlusIcon />
           Add transaction
         </Button>

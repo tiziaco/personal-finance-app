@@ -142,6 +142,9 @@ value from props.
   after the pager so the page can scroll clear of it. Not sticky: the dashboard scrolls the window,
   and its `overflow-auto` content wrapper would capture a sticky bar without ever scrolling. It is
   desktop only: hidden in card mode.
+- **One toolbar height:** every control in a table's toolbar and page header is the default 32px —
+  `Button` with no `size` (`icon` for an icon-only one), `Input`, `SelectTrigger size="sm"` (its
+  default is 36px). `sm` buttons are for compact spots: the bulk-action pill, the date presets.
 - **The frame:** every table sits in a card (`rounded-xl border bg-card shadow-sm`) with uppercase
   muted header labels on a `bg-muted/50` strip. Sticky and frozen header cells use opaque `bg-muted`.
 - **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).

@@ -28,7 +28,7 @@ export function DataTableColumnToggle<TData>({
   // so several columns can be toggled in one visit.
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger render={<Button variant="outline" size="sm" />}>
+      <DropdownMenuTrigger render={<Button variant="outline" />}>
         {labels.columns}
         <ChevronDown />
       </DropdownMenuTrigger>

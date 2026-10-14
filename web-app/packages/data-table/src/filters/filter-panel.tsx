@@ -43,7 +43,6 @@ export function FilterPanel({
         render={
           <Button
             variant="outline"
-            size="sm"
             className={cn(activeCount > 0 && "border-primary text-primary")}
           />
         }
