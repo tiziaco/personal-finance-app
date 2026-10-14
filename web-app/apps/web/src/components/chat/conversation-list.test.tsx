@@ -207,7 +207,7 @@ describe("ConversationList", () => {
     await userEvent.click(
       await screen.findByRole("menuitem", { name: CHAT_COPY.delete }),
     )
-    const dialog = await screen.findByRole("dialog")
+    const dialog = await screen.findByRole("alertdialog")
     expect(within(dialog).getByText(CHAT_COPY.deleteTitle)).toBeInTheDocument()
     await userEvent.click(
       within(dialog).getByRole("button", { name: CHAT_COPY.delete }),

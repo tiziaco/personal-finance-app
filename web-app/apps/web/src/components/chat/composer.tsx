@@ -6,6 +6,7 @@ import { Button } from "@app/ui/button"
 import { ArrowUpIcon, SquareIcon } from "lucide-react"
 
 import { CHAT_COPY } from "./copy"
+import { IconTooltip } from "./icon-tooltip"
 
 // The counter appears once a message gets close to the server's limit.
 const COUNTER_FROM = sendChatMessageBodyMessageMax - 500
@@ -30,18 +31,26 @@ export function Composer() {
           </span>
         )}
         <AuiIf condition={(s) => !s.thread.isRunning}>
-          <ComposerPrimitive.Send asChild>
-            <Button size="icon" aria-label={CHAT_COPY.send}>
-              <ArrowUpIcon />
-            </Button>
-          </ComposerPrimitive.Send>
+          <IconTooltip label={CHAT_COPY.send}>
+            <ComposerPrimitive.Send asChild>
+              <Button size="icon" aria-label={CHAT_COPY.send}>
+                <ArrowUpIcon />
+              </Button>
+            </ComposerPrimitive.Send>
+          </IconTooltip>
         </AuiIf>
         <AuiIf condition={(s) => s.thread.isRunning}>
-          <ComposerPrimitive.Cancel asChild>
-            <Button size="icon" variant="secondary" aria-label={CHAT_COPY.stop}>
-              <SquareIcon />
-            </Button>
-          </ComposerPrimitive.Cancel>
+          <IconTooltip label={CHAT_COPY.stop}>
+            <ComposerPrimitive.Cancel asChild>
+              <Button
+                size="icon"
+                variant="secondary"
+                aria-label={CHAT_COPY.stop}
+              >
+                <SquareIcon />
+              </Button>
+            </ComposerPrimitive.Cancel>
+          </IconTooltip>
         </AuiIf>
       </div>
     </ComposerPrimitive.Root>

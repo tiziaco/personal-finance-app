@@ -3,16 +3,17 @@
 import type { ConversationResponse } from "@app/api-client/types"
 import { renameConversationBodyNameMax } from "@app/api-client/zod/conversation"
 import { cn } from "@app/core/lib/utils"
-import { Button } from "@app/ui/button"
 import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@app/ui/dialog"
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@app/ui/alert-dialog"
+import { Button } from "@app/ui/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,6 +26,7 @@ import Link from "next/link"
 import { useState } from "react"
 
 import { CHAT_COPY } from "./copy"
+import { IconTooltip } from "./icon-tooltip"
 
 export function ConversationRow({
   conversation,
@@ -82,21 +84,23 @@ export function ConversationRow({
       )}
 
       <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={`Options for ${label}`}
-              // Shown by default: a touch screen has no hover to reveal it
-              // (Tailwind's hover variants apply only under hover: hover).
-              // Only a hover-capable pointer hides it until hover, focus or open.
-              className="focus-visible:opacity-100 data-[popup-open]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
-            />
-          }
-        >
-          <MoreHorizontalIcon />
-        </DropdownMenuTrigger>
+        <IconTooltip label={CHAT_COPY.options}>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Options for ${label}`}
+                // Shown by default: a touch screen has no hover to reveal it
+                // (Tailwind's hover variants apply only under hover: hover).
+                // Only a hover-capable pointer hides it until hover, focus or open.
+                className="focus-visible:opacity-100 data-[popup-open]:opacity-100 [@media(hover:hover)]:opacity-0 [@media(hover:hover)]:group-hover:opacity-100"
+              />
+            }
+          >
+            <MoreHorizontalIcon />
+          </DropdownMenuTrigger>
+        </IconTooltip>
         <DropdownMenuContent align="end">
           <DropdownMenuItem onClick={() => setEditing(true)}>
             <PencilIcon /> {CHAT_COPY.rename}
@@ -110,17 +114,17 @@ export function ConversationRow({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Dialog open={confirming} onOpenChange={setConfirming}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{CHAT_COPY.deleteTitle}</DialogTitle>
-            <DialogDescription>{CHAT_COPY.deleteBody}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <DialogClose render={<Button variant="outline" />}>
-              {CHAT_COPY.cancel}
-            </DialogClose>
-            <Button
+      <AlertDialog open={confirming} onOpenChange={setConfirming}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{CHAT_COPY.deleteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {CHAT_COPY.deleteBody}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{CHAT_COPY.cancel}</AlertDialogCancel>
+            <AlertDialogAction
               variant="destructive"
               onClick={() => {
                 setConfirming(false)
@@ -128,10 +132,10 @@ export function ConversationRow({
               }}
             >
               {CHAT_COPY.delete}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

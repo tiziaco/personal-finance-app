@@ -15,6 +15,7 @@ export const CHAT_COPY = {
   conversations: "Conversations",
   rename: "Rename",
   delete: "Delete",
+  options: "Options",
   deleteTitle: "Delete this conversation?",
   deleteBody: "Its messages are deleted permanently.",
   cancel: "Cancel",

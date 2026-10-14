@@ -7,6 +7,8 @@ import {
   useRenameConversation,
 } from "@app/api-client/endpoints/conversation"
 import type { ConversationResponse } from "@app/api-client/types"
+import { cn } from "@app/core/lib/utils"
+import { buttonVariants } from "@app/ui/button"
 import { Skeleton } from "@app/ui/skeleton"
 import { useQueryClient } from "@tanstack/react-query"
 import { SquarePenIcon } from "lucide-react"
@@ -67,9 +69,9 @@ export function ConversationList({
       <Link
         href="/chat"
         onClick={onNavigate}
-        className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium hover:bg-muted"
+        className={cn(buttonVariants({ variant: "ghost" }), "justify-start")}
       >
-        <SquarePenIcon className="size-4" /> {CHAT_COPY.newChat}
+        <SquarePenIcon /> {CHAT_COPY.newChat}
       </Link>
 
       <div className="flex min-h-0 flex-col gap-0.5 overflow-y-auto">

@@ -9,6 +9,7 @@ import { Button } from "@app/ui/button"
 import { CopyIcon } from "lucide-react"
 
 import { CHAT_COPY } from "./copy"
+import { IconTooltip } from "./icon-tooltip"
 import { MarkdownText } from "./markdown-text"
 
 export function UserMessage() {
@@ -43,11 +44,13 @@ export function AssistantMessage() {
         autohide="not-last"
         className="mt-1 flex gap-1"
       >
-        <ActionBarPrimitive.Copy asChild>
-          <Button variant="ghost" size="icon-sm" aria-label={CHAT_COPY.copy}>
-            <CopyIcon />
-          </Button>
-        </ActionBarPrimitive.Copy>
+        <IconTooltip label={CHAT_COPY.copy}>
+          <ActionBarPrimitive.Copy asChild>
+            <Button variant="ghost" size="icon-sm" aria-label={CHAT_COPY.copy}>
+              <CopyIcon />
+            </Button>
+          </ActionBarPrimitive.Copy>
+        </IconTooltip>
       </ActionBarPrimitive.Root>
     </MessagePrimitive.Root>
   )
