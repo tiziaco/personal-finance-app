@@ -157,7 +157,8 @@ component
 - **assistant-ui's `ExternalStoreRuntime`.** TanStack Query (the generated hooks) holds
   conversations and history; the runtime only renders them plus the in-flight exchange. It
   opens that exchange before its first await, so a send cannot be doubled while the
-  conversation is created.
+  conversation is created. The exchange is a pure reducer over one immutable `Send` per
+  send (`lib/chat/exchange.ts`); the provider's cache edits are `lib/chat/chat-cache.ts`.
 - **The stream is the one hand-written call** (`apps/web/src/lib/chat/stream-chat.ts`),
   because orval excludes `streaming` routes. It goes through `useApiRequest`, the
   transport under `useApiFetch`, so its URL, token and `ApiError` are the generated

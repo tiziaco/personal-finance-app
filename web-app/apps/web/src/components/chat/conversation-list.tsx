@@ -1,12 +1,10 @@
 "use client"
 
 import {
-  getListConversationsQueryKey,
   useDeleteConversation,
   useListConversations,
   useRenameConversation,
 } from "@app/api-client/endpoints/conversation"
-import type { ConversationResponse } from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
 import { buttonVariants } from "@app/ui/button"
 import { Skeleton } from "@app/ui/skeleton"
@@ -15,6 +13,8 @@ import { SquarePenIcon } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef } from "react"
+
+import { removeConversation, replaceConversation } from "@/lib/chat/chat-cache"
 
 import { ConversationRow } from "./conversation-row"
 import { CHAT_COPY } from "./copy"
@@ -28,7 +28,6 @@ export function ConversationList({
 }) {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const listKey = getListConversationsQueryKey()
   const { data, isPending } = useListConversations()
 
   // Read when a delete succeeds, not when it was asked for.
@@ -42,20 +41,13 @@ export function ConversationList({
   // or delete sent before the first resolved would drop the first's update.
   const rename = useRenameConversation({
     mutation: {
-      onSuccess: (updated) =>
-        queryClient.setQueryData<ConversationResponse[]>(listKey, (rows) =>
-          rows?.map((r) =>
-            r.conversation_id === updated.conversation_id ? updated : r,
-          ),
-        ),
+      onSuccess: (updated) => replaceConversation(queryClient, updated),
     },
   })
   const remove = useDeleteConversation({
     mutation: {
       onSuccess: (_, { conversationId }) => {
-        queryClient.setQueryData<ConversationResponse[]>(listKey, (rows) =>
-          rows?.filter((r) => r.conversation_id !== conversationId),
-        )
+        removeConversation(queryClient, conversationId)
         if (conversationId === activeIdRef.current) router.push("/chat")
       },
     },
