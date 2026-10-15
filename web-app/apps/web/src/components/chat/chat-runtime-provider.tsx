@@ -117,8 +117,8 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const sendRef = useRef<Send | null>(null)
   const restoreTextRef = useRef<(text: string) => void>(() => {})
 
-  // Leaving a conversation abandons its send, and with WS7 the server stops
-  // the model call. A first send on /chat names its new conversation before
+  // Leaving a conversation abandons its send, and the server then stops the
+  // model call. A first send on /chat names its new conversation before
   // moving the URL there: that move is not leaving.
   useEffect(() => {
     const send = sendRef.current
