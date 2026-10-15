@@ -8,6 +8,7 @@ from sqlalchemy import delete
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from uuid_utils.compat import uuid7
 
 from app.core.logging import logger
 from app.modules.transaction.imports.models import HeldUpload, MappingProfile
@@ -61,6 +62,36 @@ class ImportRepository:
             MappingProfile.user_id == user_id, MappingProfile.column_key == column_key
         )
         return (await session.execute(statement)).scalar_one_or_none()
+
+    @staticmethod
+    async def take_upload(session: AsyncSession, user_id: uuid.UUID, upload_id: uuid.UUID) -> bool:
+        """Delete this user's held upload; False when it is already gone.
+
+        The row lock is the double-confirm guard: a second confirm's DELETE waits
+        for the first to commit, then finds nothing.
+        """
+        statement = (
+            delete(HeldUpload)
+            .where(HeldUpload.id == upload_id, HeldUpload.user_id == user_id)
+            .returning(HeldUpload.id)
+        )
+        return (await session.execute(statement)).scalar_one_or_none() is not None
+
+    @staticmethod
+    async def put_profile(session: AsyncSession, user_id: uuid.UUID, column_key: str, mapping: dict[str, str]) -> None:
+        """Remember a confirmed mapping for this column set, replacing the one remembered before."""
+        now = datetime.now(UTC)
+        statement = (
+            insert(MappingProfile)
+            .values(
+                id=uuid7(), user_id=user_id, column_key=column_key, mapping=mapping, created_at=now, updated_at=now
+            )
+            .on_conflict_do_update(
+                constraint="uq_csv_mapping_profile_user_id_column_key", set_={"mapping": mapping, "updated_at": now}
+            )
+        )
+        await session.execute(statement)
+        await session.flush()
 
     @staticmethod
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> None:

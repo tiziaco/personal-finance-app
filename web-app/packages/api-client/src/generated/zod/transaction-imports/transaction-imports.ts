@@ -63,3 +63,56 @@ export const UploadTransactionsCsvResponse = zod
     upload_id: zod.uuid().describe("The held upload; confirm takes it"),
   })
   .describe("An uploaded file held for 30 minutes, and its proposed mapping.")
+
+/**
+ * Read the held file through the confirmed mapping, skip duplicates, categorise every row and save. 404 IMPORT_UPLOAD_NOT_FOUND for an expired, confirmed, replaced or another user's upload; 422 INVALID_IMPORT_MAPPING with details.reason; 503 CATEGORISATION_UNAVAILABLE keeps the upload for a retry.
+ * @summary Confirm an import
+ */
+export const ConfirmTransactionsImportParams = zod.object({
+  upload_id: zod.uuid(),
+})
+
+export const ConfirmTransactionsImportBody = zod
+  .object({
+    mapping: zod
+      .record(
+        zod.string(),
+        zod
+          .enum([
+            "date",
+            "merchant",
+            "amount",
+            "description",
+            "original_category",
+            "recurring",
+            "ignore",
+          ])
+          .describe(
+            "What a CSV column can be mapped to. `ignore` drops the column.",
+          ),
+      )
+      .describe("Column name to field"),
+  })
+  .describe("The mapping the user confirmed. A column left out is ignored.")
+
+export const ConfirmTransactionsImportResponse = zod
+  .object({
+    imported: zod.int().describe("Rows saved"),
+    rejected: zod
+      .array(
+        zod
+          .object({
+            reason: zod.string().describe("Why it was left out"),
+            row: zod.int().describe("The row's line number in the file"),
+          })
+          .describe("A row that was not imported."),
+      )
+      .describe("Rows left out, in file order"),
+    skipped_duplicates: zod.int().describe("Rows already held, skipped"),
+    uncategorised: zod
+      .int()
+      .describe(
+        "Rows saved under Miscellaneous because the labeller could not place them",
+      ),
+  })
+  .describe("What a confirm did.")

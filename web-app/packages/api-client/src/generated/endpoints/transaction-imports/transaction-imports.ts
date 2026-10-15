@@ -16,7 +16,9 @@ import type {
 import type {
   BodyUploadTransactionsCsv,
   HTTPValidationError,
+  ImportConfirm,
   ImportPreview,
+  ImportResult,
 } from "../../types"
 
 import { useApiFetch } from "../../../use-api-fetch"
@@ -129,6 +131,128 @@ export const useUploadTransactionsCsv = <
 > => {
   return useMutation(
     useUploadTransactionsCsvMutationOptions(options),
+    queryClient,
+  )
+}
+export const getConfirmTransactionsImportUrl = (uploadId: string) => {
+  return `/api/v1/transactions/imports/${uploadId}/confirm`
+}
+
+/**
+ * Read the held file through the confirmed mapping, skip duplicates, categorise every row and save. 404 IMPORT_UPLOAD_NOT_FOUND for an expired, confirmed, replaced or another user's upload; 422 INVALID_IMPORT_MAPPING with details.reason; 503 CATEGORISATION_UNAVAILABLE keeps the upload for a retry.
+ * @summary Confirm an import
+ */
+export const useConfirmTransactionsImportHook = (): ((
+  uploadId: string,
+  importConfirm: ImportConfirm,
+  options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+) => Promise<ImportResult>) => {
+  const getHeaders = (
+    h?: NonNullable<RequestInit["headers"]>,
+  ): Record<string, string | readonly string[]> => {
+    if (!h) return {}
+    if (h instanceof Headers) return Object.fromEntries(h.entries())
+    if (Array.isArray(h)) return Object.fromEntries(h)
+    return h
+  }
+
+  const customFetcher = useApiFetch()
+  return (
+    uploadId: string,
+    importConfirm: ImportConfirm,
+    options?: Parameters<ReturnType<typeof useApiFetch>>[1],
+  ) => {
+    return customFetcher(getConfirmTransactionsImportUrl(uploadId), {
+      ...options,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...getHeaders(options?.headers),
+      },
+      body: JSON.stringify(importConfirm),
+    })
+  }
+}
+
+export const getConfirmTransactionsImportMutationKey = () =>
+  ["confirmTransactionsImport"] as const
+
+export const useConfirmTransactionsImportMutationOptions = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>,
+    TError,
+    ConfirmTransactionsImportMutationVariables,
+    TContext
+  >
+  request?: SecondParameter<ReturnType<typeof useApiFetch>>
+}): UseMutationOptions<
+  Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>,
+  TError,
+  ConfirmTransactionsImportMutationVariables,
+  TContext
+> => {
+  const mutationKey = getConfirmTransactionsImportMutationKey()
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined }
+
+  const confirmTransactionsImport = useConfirmTransactionsImportHook()
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>,
+    ConfirmTransactionsImportMutationVariables
+  > = (props) => {
+    const { uploadId, data } = props ?? {}
+
+    return confirmTransactionsImport(uploadId, data, requestOptions)
+  }
+
+  return { mutationFn, ...mutationOptions }
+}
+
+export type ConfirmTransactionsImportMutationResult = NonNullable<
+  Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>
+>
+export type ConfirmTransactionsImportMutationBody = ImportConfirm
+export type ConfirmTransactionsImportMutationError =
+  ErrorType<HTTPValidationError>
+export type ConfirmTransactionsImportMutationVariables = {
+  uploadId: string
+  data: ImportConfirm
+}
+
+/**
+ * @summary Confirm an import
+ */
+export const useConfirmTransactionsImport = <
+  TError = ErrorType<HTTPValidationError>,
+  TContext = unknown,
+>(
+  options?: {
+    mutation?: UseMutationOptions<
+      Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>,
+      TError,
+      ConfirmTransactionsImportMutationVariables,
+      TContext
+    >
+    request?: SecondParameter<ReturnType<typeof useApiFetch>>
+  },
+  queryClient?: QueryClient,
+): UseMutationResult<
+  Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>,
+  TError,
+  ConfirmTransactionsImportMutationVariables,
+  TContext
+> => {
+  return useMutation(
+    useConfirmTransactionsImportMutationOptions(options),
     queryClient,
   )
 }

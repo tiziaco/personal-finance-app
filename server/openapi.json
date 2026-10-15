@@ -477,6 +477,24 @@
         "title": "ImportColumn",
         "type": "object"
       },
+      "ImportConfirm": {
+        "description": "The mapping the user confirmed. A column left out is ignored.",
+        "properties": {
+          "mapping": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ImportField"
+            },
+            "description": "Column name to field",
+            "title": "Mapping",
+            "type": "object"
+          }
+        },
+        "required": [
+          "mapping"
+        ],
+        "title": "ImportConfirm",
+        "type": "object"
+      },
       "ImportField": {
         "description": "What a CSV column can be mapped to. `ignore` drops the column.",
         "enum": [
@@ -543,6 +561,63 @@
           "sample_rows"
         ],
         "title": "ImportPreview",
+        "type": "object"
+      },
+      "ImportRejection": {
+        "description": "A row that was not imported.",
+        "properties": {
+          "reason": {
+            "description": "Why it was left out",
+            "title": "Reason",
+            "type": "string"
+          },
+          "row": {
+            "description": "The row's line number in the file",
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "reason"
+        ],
+        "title": "ImportRejection",
+        "type": "object"
+      },
+      "ImportResult": {
+        "description": "What a confirm did.",
+        "properties": {
+          "imported": {
+            "description": "Rows saved",
+            "title": "Imported",
+            "type": "integer"
+          },
+          "rejected": {
+            "description": "Rows left out, in file order",
+            "items": {
+              "$ref": "#/components/schemas/ImportRejection"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "skipped_duplicates": {
+            "description": "Rows already held, skipped",
+            "title": "Skipped Duplicates",
+            "type": "integer"
+          },
+          "uncategorised": {
+            "description": "Rows saved under Miscellaneous because the labeller could not place them",
+            "title": "Uncategorised",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped_duplicates",
+          "uncategorised",
+          "rejected"
+        ],
+        "title": "ImportResult",
         "type": "object"
       },
       "MappingSource": {
@@ -2026,6 +2101,65 @@
           }
         ],
         "summary": "Upload a CSV",
+        "tags": [
+          "transaction-imports"
+        ]
+      }
+    },
+    "/api/v1/transactions/imports/{upload_id}/confirm": {
+      "post": {
+        "description": "Read the held file through the confirmed mapping, skip duplicates, categorise every row and save. 404 IMPORT_UPLOAD_NOT_FOUND for an expired, confirmed, replaced or another user's upload; 422 INVALID_IMPORT_MAPPING with details.reason; 503 CATEGORISATION_UNAVAILABLE keeps the upload for a retry.",
+        "operationId": "confirmTransactionsImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Confirm an import",
         "tags": [
           "transaction-imports"
         ]

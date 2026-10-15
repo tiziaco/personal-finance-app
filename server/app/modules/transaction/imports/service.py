@@ -1,29 +1,48 @@
 """The import: upload a bank's CSV, review its mapping, confirm (docs/product/features/csv-import.md)."""
 
+import statistics
 import uuid
 from datetime import UTC, datetime, timedelta
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.csv_mapping import ColumnHint, propose_mapping
+from app.agents.transaction_labeler import MerchantToLabel, label
 from app.core.logging import logger
+from app.modules.transaction.domain import fingerprint, normalise_merchant, plan_count_matched
 from app.modules.transaction.imports.domain import (
     IGNORE,
     MAX_BYTES,
     ColumnProfile,
     CsvFormatError,
     CsvRow,
+    ImportRow,
     ParsedCsv,
     clean_proposal,
     column_key,
     decode,
+    mapping_problem,
     parse,
     pick_samples,
     profile_columns,
+    read_rows,
 )
-from app.modules.transaction.imports.exceptions import InvalidImportFileError
+from app.modules.transaction.imports.exceptions import (
+    CategorisationUnavailableError,
+    ImportUploadNotFoundError,
+    InvalidImportFileError,
+    InvalidImportMappingError,
+)
 from app.modules.transaction.imports.repository import import_repository
-from app.modules.transaction.imports.schemas import ImportColumn, ImportPreview, MappingSource
+from app.modules.transaction.imports.schemas import (
+    ImportColumn,
+    ImportPreview,
+    ImportRejection,
+    ImportResult,
+    MappingSource,
+)
+from app.modules.transaction.schemas import CATEGORIES, TransactionImport
+from app.modules.transaction.service import transaction_service
 
 UPLOAD_TTL = timedelta(minutes=30)
 
@@ -40,6 +59,23 @@ async def _release_connection(session: AsyncSession) -> None:
     DbSession in this app; keep it that way.
     """
     await session.commit()
+
+
+def _merchants_to_label(rows: list[ImportRow]) -> list[MerchantToLabel]:
+    """One item per merchant key: its first spelling, a description and bank category if any row has one, the median amount."""
+    by_key: dict[str, list[ImportRow]] = {}
+    for row in rows:
+        by_key.setdefault(normalise_merchant(row.merchant), []).append(row)
+    return [
+        MerchantToLabel(
+            key=key,
+            merchant=group[0].merchant,
+            description=next((r.description for r in group if r.description), None),
+            original_category=next((r.original_category for r in group if r.original_category), None),
+            amount=statistics.median_low([r.amount for r in group]),
+        )
+        for key, group in by_key.items()
+    ]
 
 
 class ImportService:
@@ -106,6 +142,71 @@ class ImportService:
         if proposal is None:
             return {c: IGNORE for c in parsed.columns}, MappingSource.NONE
         return clean_proposal(parsed.columns, proposal), MappingSource.PROPOSED
+
+    @staticmethod
+    async def confirm(
+        session: AsyncSession, user_id: uuid.UUID, upload_id: uuid.UUID, mapping: dict[str, str]
+    ) -> ImportResult:
+        """Read the held file through the mapping, skip duplicates, label, save (spec §5.3).
+
+        Raises ImportUploadNotFoundError, InvalidImportMappingError, or
+        CategorisationUnavailableError — after which nothing is saved and the
+        upload is still held.
+        """
+        held = await import_repository.get_live_upload(session, user_id, upload_id, datetime.now(UTC))
+        if held is None:
+            raise ImportUploadNotFoundError("Upload not found or expired", upload_id=str(upload_id))
+        parsed = parse(held.content)
+        problem = mapping_problem(parsed.columns, mapping)
+        if problem is not None:
+            raise InvalidImportMappingError(problem.message, reason=problem.reason)
+        rows, rejected = read_rows(parsed, mapping)
+
+        prints = [fingerprint(user_id, r.date, r.merchant, r.amount, r.description) for r in rows]
+        existing = await transaction_service.count_active_by_fingerprints(session, user_id, prints)
+        fresh = [row for row, keep in zip(rows, plan_count_matched(prints, existing), strict=True) if keep]
+
+        await _release_connection(session)
+        labelled = await label(_merchants_to_label(fresh), CATEGORIES, user_id=user_id, upload_id=upload_id)
+        if labelled.all_failed:
+            raise CategorisationUnavailableError("Categorisation is unavailable", upload_id=str(upload_id))
+
+        if not await import_repository.take_upload(session, user_id, upload_id):
+            raise ImportUploadNotFoundError("Upload already confirmed", upload_id=str(upload_id))
+        keys = [normalise_merchant(row.merchant) for row in fresh]
+        imported = await transaction_service.import_many(
+            session,
+            user_id,
+            [
+                TransactionImport(
+                    date=row.date,
+                    merchant=row.merchant,
+                    amount=row.amount,
+                    description=row.description,
+                    original_category=row.original_category,
+                    category=labelled.labels[key].category,
+                    confidence=labelled.labels[key].confidence,
+                    is_recurring=row.is_recurring,
+                )
+                for row, key in zip(fresh, keys, strict=True)
+            ],
+        )
+        await import_repository.put_profile(session, user_id, column_key(parsed.columns), mapping)
+        result = ImportResult(
+            imported=imported,
+            skipped_duplicates=len(rows) - len(fresh),
+            uncategorised=sum(key in labelled.fallback_keys for key in keys),
+            rejected=[ImportRejection(row=r.number, reason=r.reason) for r in rejected],
+        )
+        logger.info(
+            "transactions_import_confirmed",
+            user_id=user_id,
+            imported=result.imported,
+            skipped=result.skipped_duplicates,
+            uncategorised=result.uncategorised,
+            rejected=len(result.rejected),
+        )
+        return result
 
     @staticmethod
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> None:
