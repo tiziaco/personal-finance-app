@@ -12,6 +12,7 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Optional
 
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, RootModel
 
 from app.agents.shared.observability import create_trace_config
@@ -86,8 +87,9 @@ async def label(
             unknown.append(item)
 
     batches = [unknown[i : i + BATCH_SIZE] for i in range(0, len(unknown), BATCH_SIZE)]
-    config = create_trace_config(user_id, upload_id, "transaction_labeler")
-    config["metadata"]["prompt_version"] = PROMPT_VERSION
+    config = create_trace_config(
+        user_id, upload_id, "transaction_labeler", metadata={"prompt_version": PROMPT_VERSION}
+    )
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_BATCHES)
     service = structured_llm()
 
@@ -114,7 +116,7 @@ async def label(
 
 
 async def _label_batch(
-    service: LLMService, batch: list[MerchantToLabel], categories: list[tuple[str, str]], config: dict
+    service: LLMService, batch: list[MerchantToLabel], categories: list[tuple[str, str]], config: RunnableConfig
 ) -> dict[str, Label]:
     """One model call for up to BATCH_SIZE merchants: the labels it gave that name a real category."""
     slugs = {slug for slug, _ in categories}

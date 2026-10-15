@@ -39,3 +39,9 @@ def test_a_trace_config_groups_calls_by_session_and_names_the_run():
     assert config["metadata"]["langfuse_session_id"] == str(session_id)
     assert "transaction_labeler" in config["metadata"]["langfuse_tags"]
     assert "configurable" not in config
+
+
+def test_a_trace_config_takes_extra_metadata():
+    config = create_trace_config(uuid7(), uuid7(), "transaction_labeler", metadata={"prompt_version": "v2"})
+    assert config["metadata"]["prompt_version"] == "v2"
+    assert config["metadata"]["environment"]

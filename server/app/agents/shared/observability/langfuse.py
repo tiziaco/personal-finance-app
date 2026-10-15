@@ -3,9 +3,23 @@
 import uuid
 from typing import Optional
 
+from langchain_core.runnables import RunnableConfig
 from langfuse.langchain import CallbackHandler
 
 from app.core.config import settings
+
+
+def _metadata(user: Optional[str], session: str, tags: list[str]) -> dict:
+    """What every trace carries: its user, the session it groups under, the environment."""
+    return {
+        # Standard metadata
+        "user_id": user,
+        "environment": settings.ENVIRONMENT.value,
+        # Langfuse-specific metadata keys (v3 approach)
+        "langfuse_user_id": user,
+        "langfuse_session_id": session,
+        "langfuse_tags": [settings.ENVIRONMENT.value, *tags],
+    }
 
 
 def create_graph_config(
@@ -28,34 +42,20 @@ def create_graph_config(
     return {
         "configurable": {"thread_id": thread_id},
         "callbacks": [CallbackHandler()],
-        "metadata": {
-            # Standard metadata
-            "user_id": user,
-            "conversation_id": thread_id,
-            "environment": settings.ENVIRONMENT.value,
-            # Langfuse-specific metadata keys (v3 approach)
-            "langfuse_user_id": user,
-            "langfuse_session_id": thread_id,
-            "langfuse_tags": [settings.ENVIRONMENT.value],
-        },
+        "metadata": {**_metadata(user, thread_id, []), "conversation_id": thread_id},
     }
 
 
-def create_trace_config(user_id: uuid.UUID, session_id: uuid.UUID, name: str) -> dict:
+def create_trace_config(
+    user_id: uuid.UUID, session_id: uuid.UUID, name: str, metadata: Optional[dict] = None
+) -> RunnableConfig:
     """Langfuse config for a model call made outside a graph.
 
     Traced to the user, grouped by `session_id` (an import's upload id), named
-    `name`. No thread id: nothing is checkpointed.
+    `name`, with `metadata` added. No thread id: nothing is checkpointed.
     """
-    user, session = str(user_id), str(session_id)
     return {
         "callbacks": [CallbackHandler()],
         "run_name": name,
-        "metadata": {
-            "user_id": user,
-            "environment": settings.ENVIRONMENT.value,
-            "langfuse_user_id": user,
-            "langfuse_session_id": session,
-            "langfuse_tags": [settings.ENVIRONMENT.value, name],
-        },
+        "metadata": {**_metadata(str(user_id), str(session_id), [name]), **(metadata or {})},
     }

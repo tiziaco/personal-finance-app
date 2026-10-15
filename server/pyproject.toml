@@ -222,3 +222,19 @@ name = "R9: a domain slot imports neither the ORM nor the framework"
 type = "forbidden"
 source_modules = ["app.modules.*.domain", "app.modules.*.*.domain"]
 forbidden_modules = ["sqlmodel", "sqlalchemy", "fastapi"]
+
+[[tool.importlinter.contracts]]
+name = "R10: a module's core never imports its feature sub-package"
+type = "forbidden"
+source_modules = [
+    "app.modules.transaction.dependencies",
+    "app.modules.transaction.domain",
+    "app.modules.transaction.exceptions",
+    "app.modules.transaction.handlers",
+    "app.modules.transaction.models",
+    "app.modules.transaction.repository",
+    "app.modules.transaction.router",
+    "app.modules.transaction.schemas",
+    "app.modules.transaction.service",
+]
+forbidden_modules = ["app.modules.transaction.imports"]

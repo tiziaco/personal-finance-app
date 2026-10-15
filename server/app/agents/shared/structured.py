@@ -5,6 +5,7 @@ import re
 from typing import TypeVar
 
 from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, ValidationError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
@@ -45,12 +46,12 @@ def parse_answer(text: str, shape: type[T]) -> T:
     retry=retry_if_exception_type(InvalidModelAnswer),
     reraise=True,
 )
-async def _ask_once(service: LLMService, messages: list, shape: type[T], config: dict) -> T:
+async def _ask_once(service: LLMService, messages: list, shape: type[T], config: RunnableConfig) -> T:
     response = await service.call(messages, config=config)
     return parse_answer(response.text, shape)
 
 
-async def ask_json(service: LLMService, system: str, user: str, shape: type[T], config: dict) -> T:
+async def ask_json(service: LLMService, system: str, user: str, shape: type[T], config: RunnableConfig) -> T:
     """Ask, parse and validate; an invalid answer is asked once more, then raises InvalidModelAnswer.
 
     A model error (LLMServiceError) propagates: the service has already retried

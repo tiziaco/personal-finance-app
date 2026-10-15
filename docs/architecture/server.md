@@ -129,10 +129,10 @@ app/modules/transactions/
   exceptions.py
 ```
 
-On every rung the root stays the only import surface and R1–R9 hold. A module on the second
+On every rung the root stays the only import surface and R1–R10 hold. A module on the second
 rung beside one that is all files is an expected state.
 
-**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it. The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it.
+**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it (R10). The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it.
 
 Settings live in `app/core/config.py`; a module with settings of its own gets a nested model
 there named for it, so `settings.<module>.X` reads like the rest. Every route keeps an
@@ -185,6 +185,9 @@ tables is one import line there.
 `sqlalchemy` or `fastapi`. It calls nothing above the standard library and the foundation's
 value types.
 
+**R10 — A module's core never imports its feature sub-package.** The sub-package calls the core;
+the module root alone re-exports from it (§2).
+
 **Enforcement.** R1, R2 and R6 are [`import-linter`](https://import-linter.readthedocs.io/)
 contracts in `server/pyproject.toml`, run by `make check-server` (the pre-push hook) and by
 `.github/workflows/module-boundaries.yml` on every pull request and push to `main`. R2 is one
@@ -195,7 +198,8 @@ dependency order; modules that do not depend on each other share a layer with `|
 imports are excluded from the graph, which lets R4's hint through; every directory under `app/`
 carries an `__init__.py` because the graph builder needs regular packages. R9 is a `forbidden` contract too: it
 forbids `sqlmodel`, `sqlalchemy` and `fastapi` in `app.modules.*.domain` and
-`app.modules.*.*.domain`.
+`app.modules.*.*.domain`. R10 is one `forbidden` contract per feature sub-package, with the
+core's slots as sources; `transaction/imports/` has the only one.
 
 A new module is three edits to `pyproject.toml` before it is enforced.
 `tests/unit/test_module_contracts.py` fails when a module is missing its R1 contract, is absent
