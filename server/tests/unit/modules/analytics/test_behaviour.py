@@ -37,6 +37,16 @@ def test_weekend_per_day_divides_by_real_calendar_days():
     assert result.weekend_bias_pct == 275.0
 
 
+@pytest.mark.parametrize("start", [dt.date(2026, 3, 2) + dt.timedelta(days=i) for i in range(7)])
+@pytest.mark.parametrize("length", [1, 6, 7, 8, 13, 400])
+def test_weekday_and_weekend_days_match_a_day_by_day_count(start, length):
+    end = start + dt.timedelta(days=length - 1)
+    days = [start + dt.timedelta(days=i) for i in range(length)]
+    result = behaviour_analysis([], start, end)
+    assert result.weekend.days == sum(1 for d in days if d.weekday() >= 5)
+    assert result.weekday.days == sum(1 for d in days if d.weekday() < 5)
+
+
 def test_stability_classes_need_five_expenses():
     rows = [row(f"2026-03-0{d}", "-10.00", category="food_groceries") for d in range(1, 6)]
     rows += [

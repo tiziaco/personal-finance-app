@@ -4,8 +4,7 @@ import datetime as dt
 from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
-from decimal import Decimal
-from statistics import mean, pstdev
+from decimal import Decimal, localcontext
 from typing import Optional
 
 from app.modules.analytics.domain._aggregate import Row, expenses, group_by, money, span, spend, total_spend
@@ -59,28 +58,43 @@ def _days_before(day: dt.date, days: int) -> dt.date:
 
 
 def _outliers(spent: Sequence[Row], std_threshold: float, window_days: int) -> list[Outlier]:
-    """Each expense against the expenses of the window_days days before its own day."""
+    """Each expense against the expenses of the window_days days before its own day.
+
+    Prefix sums of the amounts and their squares give each window's mean and spread in O(1),
+    exactly: with n expenses summing to s, squares to q, the spread is √(nq − s²) ÷ n and an
+    expense x scores (nx − s) ÷ √(nq − s²).
+    """
     ordered = sorted(spent, key=lambda r: r.date)
     dates = [r.date for r in ordered]
-    amounts = [spend(r) for r in ordered]
     found: list[Outlier] = []
-    for current in ordered:
-        low = bisect_left(dates, _days_before(current.date, window_days))
-        high = bisect_left(dates, current.date)
-        window = amounts[low:high]
-        if len(window) < MIN_WINDOW_EXPENSES:
-            continue
-        spread = pstdev(window)
-        if spread == 0:
-            continue
-        centre = mean(window)
-        z = float((spend(current) - centre) / spread)
-        if z > std_threshold:
-            found.append(
-                Outlier(
-                    current.date, current.merchant, current.category, money(spend(current)), round(z, 2), money(centre)
+    with localcontext() as ctx:
+        ctx.prec = 60  # every sum below stays exact for 2-decimal amounts
+        sums, squares = [Decimal(0)], [Decimal(0)]
+        for r in ordered:
+            sums.append(sums[-1] + spend(r))
+            squares.append(squares[-1] + spend(r) * spend(r))
+        for current in ordered:
+            low = bisect_left(dates, _days_before(current.date, window_days))
+            high = bisect_left(dates, current.date)
+            n = high - low
+            if n < MIN_WINDOW_EXPENSES:
+                continue
+            s, q = sums[high] - sums[low], squares[high] - squares[low]
+            spread = n * q - s * s
+            if spread <= 0:
+                continue
+            z = float((n * spend(current) - s) / spread.sqrt())
+            if z > std_threshold:
+                found.append(
+                    Outlier(
+                        current.date,
+                        current.merchant,
+                        current.category,
+                        money(spend(current)),
+                        round(z, 2),
+                        money(s / n),
+                    )
                 )
-            )
     found.sort(key=lambda o: (-o.z_score, o.date))
     return found[:MAX_OUTLIERS]
 
@@ -113,7 +127,7 @@ def find_anomalies(
 ) -> Anomalies:
     """Outliers by trailing z-score, and category spikes in the range's last 30 days."""
     spent = expenses(rows)
-    covered = span(spent, date_from, date_to)
+    covered = span(rows, date_from, date_to)
     spikes = _spikes(spent, *covered) if covered else []
     return Anomalies(
         std_threshold=std_threshold,

@@ -7,7 +7,7 @@
  */
 
 /**
- * A merchant charged like a subscription, about monthly, without being flagged recurring.
+ * An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less.
  */
 export interface HiddenSubscriptionResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

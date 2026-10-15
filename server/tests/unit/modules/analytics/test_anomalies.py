@@ -110,3 +110,9 @@ def test_outliers_match_a_brute_force_reference_over_two_years(window_days):
     expected = _brute_force_outliers(rows, 2.5, window_days)
     got = [(o.date, o.merchant, o.z_score) for o in find_anomalies(rows, 2.5, window_days).outliers]
     assert expected and got == expected
+
+
+def test_without_bounds_the_range_ends_at_the_latest_row_of_any_kind():
+    rows = [row("2026-01-05", "-10.00"), row("2026-03-01", "-10.00"), row("2026-03-20", "2000.00", category="salary")]
+    result = find_anomalies(rows)
+    assert (result.spike_window_start, result.spike_window_end) == (dt.date(2026, 2, 19), dt.date(2026, 3, 20))

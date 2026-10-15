@@ -2,17 +2,25 @@
 
 import datetime as dt
 from decimal import Decimal
-from typing import List, Literal, Optional
+from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.modules.analytics.domain.behaviour import Stability
+from app.modules.analytics.domain.merchants import Risk
 
 
 class _Out(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+# The dates analytics covers. An explicit bound outside them is a 422; a row outside them is left out.
+MIN_DATE = dt.date(1900, 1, 1)
+MAX_DATE = dt.date(2100, 12, 31)
+
+
 class DateRange(BaseModel):
-    """Inclusive, optional bounds; omitted means all time."""
+    """Inclusive, optional bounds; omitted means all time, MIN_DATE to MAX_DATE."""
 
     date_from: Optional[dt.date] = None
     date_to: Optional[dt.date] = None
@@ -137,7 +145,7 @@ class MerchantConcentrationResponse(_Out):
     top_5_share_pct: float
     top_10_share_pct: float
     herfindahl_index: float = Field(..., description="Σ(share %)² over every merchant, 0–10000")
-    risk: Literal["low", "medium", "high"]
+    risk: Risk
     unique_merchants: int
 
 
@@ -164,7 +172,7 @@ class RecurringMerchantResponse(_Out):
 
 
 class HiddenSubscriptionResponse(_Out):
-    """A merchant charged like a subscription, about monthly, without being flagged recurring."""
+    """An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less."""
 
     merchant: str
     charges: int
@@ -222,7 +230,7 @@ class CategoryStabilityResponse(_Out):
     category: str
     count: int
     cv: float
-    stability: Literal["stable", "moderate", "volatile"]
+    stability: Stability
 
 
 class BehaviourResponse(_Out):

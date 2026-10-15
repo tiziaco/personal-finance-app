@@ -38,7 +38,7 @@ class RecurringMerchant:
 
 @dataclass(frozen=True)
 class HiddenSubscription:
-    """An unflagged merchant that charges small amounts often, a likely subscription."""
+    """An unflagged merchant charging small amounts often (HIDDEN_MIN_PER_MONTH a month, at most HIDDEN_MAX_AVERAGE)."""
 
     merchant: str
     charges: int

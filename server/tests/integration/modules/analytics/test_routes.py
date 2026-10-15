@@ -105,3 +105,14 @@ async def test_anomalies_echo_their_parameters(authenticated_client):
     body = (await authenticated_client.get(f"{BASE}/anomalies", params={"std_threshold": 3, "window_days": 14})).json()
     assert (body["std_threshold"], body["window_days"]) == (3.0, 14)
     assert (await authenticated_client.get(f"{BASE}/anomalies", params={"window_days": 6})).status_code == 422
+
+
+async def test_rows_outside_1900_2100_are_left_out(authenticated_client, test_user, add):
+    await add(test_user, "2026-03-15", "-40.00")
+    await add(test_user, "9999-12-31", "-10.00")
+    await add(test_user, "0001-01-01", "-10.00")
+
+    body = (await authenticated_client.get(f"{BASE}/spending")).json()
+
+    assert body["total_expenses"] == "40.00"
+    assert [m["month"] for m in body["months"]] == ["2026-03"]

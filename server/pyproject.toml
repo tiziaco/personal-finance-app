@@ -174,7 +174,8 @@ layers = [
 name = "R6: modules form a DAG — a module imports only those listed below it"
 type = "layers"
 layers = [
-    "app.modules.conversation | app.modules.analytics",
+    "app.modules.conversation",
+    "app.modules.analytics",  # below conversation: step 7's chat tools call it
     "app.modules.transaction",
     "app.modules.account",
 ]

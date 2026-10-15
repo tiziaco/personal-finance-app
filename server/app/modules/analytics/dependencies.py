@@ -6,10 +6,7 @@ from typing import Annotated, Optional
 from fastapi import Depends, Query
 
 from app.modules.analytics.exceptions import InvalidDateRangeError
-from app.modules.analytics.schemas import DateRange
-
-MIN_DATE = dt.date(1900, 1, 1)
-MAX_DATE = dt.date(2100, 12, 31)
+from app.modules.analytics.schemas import MAX_DATE, MIN_DATE, DateRange
 
 
 def get_date_range(

@@ -16,14 +16,14 @@ export function toCategorySlices(
   label: (slug: string) => string,
 ): CategorySlice[] {
   return slices.map((slice, i) => {
-    const other = slice.category === null
+    const category = slice.category
     return {
-      key: other ? "other" : slice.category!,
-      name: other ? "Other" : label(slice.category!),
+      key: category ?? "other",
+      name: category === null ? "Other" : label(category),
       amount: Number(slice.amount),
       display: formatAmount(slice.amount),
       share: slice.share_pct,
-      fill: other ? "var(--chart-6)" : `var(--chart-${i + 1})`,
+      fill: category === null ? "var(--chart-6)" : `var(--chart-${i + 1})`,
     }
   })
 }

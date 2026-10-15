@@ -8,7 +8,7 @@ import { getListTransactionsQueryKey } from "@app/api-client/endpoints/transacti
  * Generated query keys are `[url, params?]`, so no key is a prefix of every
  * analytics query's; a predicate on the url catches them all.
  */
-export const ANALYTICS_KEY_PREFIX = "/api/v1/analytics/"
+const ANALYTICS_KEY_PREFIX = "/api/v1/analytics/"
 
 const isAnalyticsQuery = (query: Query) => {
   const [url] = query.queryKey

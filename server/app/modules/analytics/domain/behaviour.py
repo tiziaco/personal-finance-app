@@ -94,7 +94,9 @@ def _week_part(spent: Sequence[Row], covered: Optional[tuple[dt.date, dt.date]],
     days = 0
     if covered:
         length = (covered[1] - covered[0]).days + 1
-        days = sum(1 for i in range(length) if ((covered[0] + dt.timedelta(days=i)).weekday() in WEEKEND) == weekend)
+        weeks, extra = divmod(length, 7)  # whole weeks hold two weekend days; count the rest one by one
+        weekend_days = weeks * len(WEEKEND) + sum(1 for i in range(extra) if (covered[0].weekday() + i) % 7 in WEEKEND)
+        days = weekend_days if weekend else length - weekend_days
     total = total_spend(rows)
     return WeekPart(days, total, average(total, days))
 

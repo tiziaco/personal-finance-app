@@ -4,8 +4,9 @@
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
 calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
-**Data model:** none — analytics stores nothing. It reads the transaction table through one
-read path ([`../../data-model/transaction.md`](../../data-model/transaction.md)).
+**Data model:** none — analytics stores nothing. It reads the user's active transactions
+([`../../data-model/transaction.md`](../../data-model/transaction.md)) through one read path,
+`transaction_service.list_for_analysis`.
 **Related:** [`insights.md`](./insights.md) · PRD [§6](../prd-mvp.md#6-analytics).
 
 ---
@@ -66,11 +67,15 @@ All of them accept an optional start and end date.
 How they compute, so the numbers can be checked:
 
 - Money is a decimal string to the cent; every percent is on the 0–100 scale, to 2
-  decimal places. A ratio with nothing to divide by is null, not zero. Months with no
-  transactions are zero-filled in every series.
+  decimal places. A percent change, coefficient of variation or seasonal index with nothing
+  to divide by is null, not zero. A share or an average of nothing is 0, beside the zero
+  total or count it comes from. Months with no transactions are zero-filled in every series.
+- A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
+  outside it is left out of every analysis.
 - The sign decides; a zero amount is ignored by every sum, count and average.
 - Recurring is the stored flag, grouped by merchant. A merchant's monthly recurring cost is
-  its median charge × charges ÷ months charged.
+  its median charge × charges ÷ months charged. A likely hidden subscription is an unflagged
+  merchant charged 3 or more times a month on average, averaging 50 or less a charge.
 - A category spike compares its last 30 days with its average 30 days over the rest of the
   range: flagged above 50%, and only when the rest holds at least 30 days.
 - An outlier is an expense whose z-score against the individual expenses of the preceding

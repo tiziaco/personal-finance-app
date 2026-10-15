@@ -859,7 +859,7 @@
         "type": "object"
       },
       "HiddenSubscriptionResponse": {
-        "description": "A merchant charged like a subscription, about monthly, without being flagged recurring.",
+        "description": "An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less.",
         "properties": {
           "average_charge": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",

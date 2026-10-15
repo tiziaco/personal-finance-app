@@ -13,6 +13,8 @@ from app.modules.analytics.domain.merchants import merchant_breakdown
 from app.modules.analytics.domain.recurring import recurring_analysis
 from app.modules.analytics.domain.spending import spending_summary
 from app.modules.analytics.schemas import (
+    MAX_DATE,
+    MIN_DATE,
     AnomaliesResponse,
     BehaviourResponse,
     CategoryBreakdownResponse,
@@ -26,8 +28,13 @@ from app.modules.transaction import AnalysisRow, transaction_service
 
 
 async def _rows(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> list[AnalysisRow]:
-    """The user's active rows inside the range."""
-    return await transaction_service.list_for_analysis(session, user_id, date_range.date_from, date_range.date_to)
+    """The user's active rows inside the range; an omitted bound stops at MIN_DATE or MAX_DATE.
+
+    Without that stop, one row dated 9999 would stretch every month and day series to the year 9999.
+    """
+    return await transaction_service.list_for_analysis(
+        session, user_id, date_range.date_from or MIN_DATE, date_range.date_to or MAX_DATE
+    )
 
 
 class AnalyticsService:
@@ -46,7 +53,7 @@ class AnalyticsService:
         """Income, expenses and net over the range."""
         rows = await _rows(session, user_id, date_range)
         result = spending_summary(rows, date_range.date_from, date_range.date_to)
-        return SpendingResponse.model_validate(result, from_attributes=True)
+        return SpendingResponse.model_validate(result)
 
     @staticmethod
     async def categories(
@@ -55,7 +62,7 @@ class AnalyticsService:
         """Spend by category over the range."""
         rows = await _rows(session, user_id, date_range)
         result = category_breakdown(rows, top_n, date_range.date_from, date_range.date_to)
-        return CategoryBreakdownResponse.model_validate(result, from_attributes=True)
+        return CategoryBreakdownResponse.model_validate(result)
 
     @staticmethod
     async def merchants(
@@ -63,20 +70,20 @@ class AnalyticsService:
     ) -> MerchantBreakdownResponse:
         """Spend by merchant over the range."""
         rows = await _rows(session, user_id, date_range)
-        return MerchantBreakdownResponse.model_validate(merchant_breakdown(rows, top_n), from_attributes=True)
+        return MerchantBreakdownResponse.model_validate(merchant_breakdown(rows, top_n))
 
     @staticmethod
     async def recurring(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> RecurringResponse:
         """Recurring spend over the range."""
         rows = await _rows(session, user_id, date_range)
-        return RecurringResponse.model_validate(recurring_analysis(rows), from_attributes=True)
+        return RecurringResponse.model_validate(recurring_analysis(rows))
 
     @staticmethod
     async def behaviour(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> BehaviourResponse:
         """Spending patterns over the range."""
         rows = await _rows(session, user_id, date_range)
         result = behaviour_analysis(rows, date_range.date_from, date_range.date_to)
-        return BehaviourResponse.model_validate(result, from_attributes=True)
+        return BehaviourResponse.model_validate(result)
 
     @staticmethod
     async def anomalies(
@@ -85,7 +92,7 @@ class AnalyticsService:
         """Outliers and category spikes over the range."""
         rows = await _rows(session, user_id, date_range)
         result = find_anomalies(rows, std_threshold, window_days, date_range.date_from, date_range.date_to)
-        return AnomaliesResponse.model_validate(result, from_attributes=True)
+        return AnomaliesResponse.model_validate(result)
 
 
 analytics_service = AnalyticsService()

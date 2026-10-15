@@ -11,6 +11,8 @@ from app.modules.analytics.domain._aggregate import Row, average, expenses, grou
 HIGH_CONCENTRATION = 2500
 MEDIUM_CONCENTRATION = 1500
 
+Risk = Literal["low", "medium", "high"]
+
 
 @dataclass(frozen=True)
 class MerchantSpend:
@@ -32,7 +34,7 @@ class MerchantConcentration:
     top_5_share_pct: float
     top_10_share_pct: float
     herfindahl_index: float
-    risk: Literal["low", "medium", "high"]
+    risk: Risk
     unique_merchants: int
 
 
@@ -59,9 +61,7 @@ def display_names(rows: Sequence[Row]) -> dict[str, str]:
 def _concentration(ranked: Sequence[MerchantSpend], whole: Decimal) -> MerchantConcentration:
     shares = [float(m.total / whole * 100) for m in ranked] if whole else []
     hhi = round(sum(s * s for s in shares), 2)
-    risk: Literal["low", "medium", "high"] = (
-        "high" if hhi > HIGH_CONCENTRATION else "medium" if hhi > MEDIUM_CONCENTRATION else "low"
-    )
+    risk: Risk = "high" if hhi > HIGH_CONCENTRATION else "medium" if hhi > MEDIUM_CONCENTRATION else "low"
     return MerchantConcentration(
         top_5_share_pct=round(sum(shares[:5]), 2),
         top_10_share_pct=round(sum(shares[:10]), 2),
