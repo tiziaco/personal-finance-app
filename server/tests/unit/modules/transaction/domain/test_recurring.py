@@ -73,24 +73,25 @@ def test_one_skipped_period_still_fits():
 
 
 def test_seeds_do_not_drift():
-    """Clusters are anchored on fixed seeds, so a chain of near amounts does not pull its own ends together.
+    """A cluster is anchored on its seed, not on a median that moves as rows join.
 
-    10.00 -> 11.40 -> 12.80 each sit within the band of the next, but 12.80 is the most
-    frequent amount, so it seeds the cluster and 11.40 joins it. 10.00 is 2.80 from that seed
-    and stays alone. A running-median clusterer anchors on 10.00, drifts to 10.70 with 11.40,
-    rejects 12.80 and marks every row False, which this test catches.
+    Ten, ten, eleven-forty and eleven-forty all join the 10.00 seed (the tie on count
+    goes to the smallest amount), leaving the median at 10.70. 12.00 is 2.00 from the
+    seed, outside the band, so it stands alone and is not a series. A running median
+    takes it in (1.30 from 10.70, inside the band), making five monthly rows a series.
+    The 10.00 and 11.40 rows are True under both, so only the 12.00 verdict separates
+    them; this fails under a running median in the rule's own order and in ascending order.
     """
     rows = [
         RecurringRow(uuid7(), START, Decimal("-10.00"), DETECTED),
         RecurringRow(uuid7(), START + dt.timedelta(days=30), Decimal("-11.40"), DETECTED),
-        RecurringRow(uuid7(), START + dt.timedelta(days=60), Decimal("-12.80"), DETECTED),
-        RecurringRow(uuid7(), START + dt.timedelta(days=90), Decimal("-12.80"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=60), Decimal("-10.00"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=90), Decimal("-11.40"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=120), Decimal("-12.00"), DETECTED),
     ]
-    lone, drifted, *anchored = rows
     result = detect_recurring(rows)
-    assert result[lone.id] is False
-    assert result[drifted.id] is True
-    assert [result[r.id] for r in anchored] == [True, True]
+    assert [result[r.id] for r in rows[:4]] == [True, True, True, True]
+    assert result[rows[4].id] is False
 
 
 def test_three_quarters_of_the_gaps_must_fit():
