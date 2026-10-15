@@ -1,0 +1,5 @@
+"Date","Payee","Account number","Transaction type","Payment reference","Amount (EUR)"
+"2026-02-01","Spotify","","MasterCard Payment","","-10.99"
+"2026-02-03","Lidl","","MasterCard Payment","","-34.12"
+"2026-02-10","Uber","","MasterCard Payment","Trip","-14.50"
+"2026-02-14","Amazon","","MasterCard Payment","","-129.99"

@@ -1,0 +1,9 @@
+Kontonummer:;DE12 3456 7890 1234 5678 90;
+Zeitraum:;01.01.2026 - 31.03.2026;
+Buchungsdatum;Empfänger;Verwendungszweck;Betrag (€);
+15.01.2026;REWE Markt GmbH;Einkauf Filiale 1234;-23,45;
+03.01.2026;Stadtwerke München;Strom Abschlag Januar;-62,00;
+02.02.2026;Stadtwerke München;Strom Abschlag Februar;-62,00;
+03.03.2026;Stadtwerke München;Strom Abschlag März;-62,00;
+28.01.2026;Arbeitgeber AG;Gehalt Januar;2.345,67;
+31.01.2026;Café Müller;Frühstück;-8,90;
