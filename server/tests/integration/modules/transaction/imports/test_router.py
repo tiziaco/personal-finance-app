@@ -93,6 +93,7 @@ class TestUpload:
             ("konto.csv", "a;b\n", "no_rows"),
             ("konto.csv", "Betrag;betrag\n1;2\n", "duplicate_column"),
             ("konto.csv", 'd,m,a\n"' + "x" * 140_000, "malformed"),
+            ("konto.csv", "Datum;Betrag\n15.01.2026;-3,00\n".encode("utf-16"), "malformed"),
         ],
     )
     async def test_refusals_carry_a_reason(self, authenticated_client, propose, name, content, reason):

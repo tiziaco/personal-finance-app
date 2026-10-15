@@ -38,8 +38,8 @@ user must be able to review and correct them, and to remove junk or duplicates.
 - **Delete all** of their transactions from Settings, permanently, after confirming. The
   button is always enabled: it also removes deleted transactions, so it has work to do
   even when the list is empty.
-- **Start from an empty state.** A user with no transactions sees a prompt to add a
-  transaction (to upload a CSV once CSV import ships); a filter with no match offers to clear the filters.
+- **Start from an empty state.** A user with no transactions sees a prompt that leads with
+  **Upload a CSV**, which opens the import dialog, or to add a transaction by hand; a filter with no match offers to clear the filters.
 
 ## 3. The fields
 

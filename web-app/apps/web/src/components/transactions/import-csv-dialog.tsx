@@ -46,7 +46,7 @@ const DESCRIPTIONS: Record<Step["name"], string> = {
 
 const n = (v: number) => v.toLocaleString("en-GB")
 const summary = (r: ImportResult) =>
-  `Imported ${n(r.imported)} · ${n(r.skipped_duplicates)} ${r.skipped_duplicates === 1 ? "duplicate" : "duplicates"} skipped · ${n(r.rejected.length)} rejected`
+  `Imported ${n(r.imported)} · ${n(r.skipped_duplicates)} ${r.skipped_duplicates === 1 ? "duplicate" : "duplicates"} skipped · ${n(r.rejected.length)} rejected${r.uncategorised > 0 ? ` · ${n(r.uncategorised)} filed under Miscellaneous` : ""}`
 
 /**
  * Upload → review → import → result. Mounted for as long as the table is, so

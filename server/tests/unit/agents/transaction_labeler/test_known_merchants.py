@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.agents.transaction_labeler.known_merchants import KNOWN_MERCHANTS, match_known
+from app.agents.transaction_labeler.known_merchants import EXCLUDED, KNOWN_MERCHANTS, match_known
 from app.modules.transaction import CATEGORIES
 from app.modules.transaction.domain import normalise_merchant
 
@@ -33,3 +33,13 @@ def test_a_word_inside_another_does_not_match():
 
 def test_the_longest_name_wins():
     assert match_known("aldi süd filiale") == KNOWN_MERCHANTS["aldi süd"]
+
+
+def test_the_users_exclusions_are_gone_and_db_stays():
+    assert EXCLUDED.isdisjoint(KNOWN_MERCHANTS)
+    assert "db" in KNOWN_MERCHANTS
+
+
+@pytest.mark.parametrize("key", ["ing diba", "sparkasse berlin", "n26"])
+def test_bank_names_are_not_matched(key):
+    assert match_known(key) is None

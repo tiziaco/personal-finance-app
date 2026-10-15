@@ -207,6 +207,18 @@ class TestRecurringOnWrite:
         renamed = await transaction_service.update(db_session, rows[2], TransactionUpdate(merchant="Spotify"))
         assert renamed.merchant_key == "spotify"
         assert await _series(db_session, test_user.id, "netflix") == [(False, "detected")] * 2
+        assert (renamed.is_recurring, renamed.recurring_source) == (False, "detected")  # alone under its new key
+
+    async def test_another_users_rows_are_neither_evidence_nor_updated(
+        self, db_session, test_user, other_user, make_transaction
+    ):
+        for m in (1, 2):
+            await make_transaction(other_user, merchant="Netflix", amount=Decimal("-9.99"), date=dt.date(2026, m, 5))
+
+        added = await transaction_service.create(db_session, test_user.id, _netflix(dt.date(2026, 3, 5)))
+
+        assert (added.is_recurring, added.recurring_source) == (False, "detected")
+        assert await _series(db_session, other_user.id, "netflix") == [(False, "detected")] * 2
 
     async def test_deleting_one_breaks_the_series(self, db_session, test_user, make_transaction):
         rows = [

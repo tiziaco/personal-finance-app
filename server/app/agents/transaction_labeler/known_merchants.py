@@ -5,6 +5,9 @@ exactly; tests/unit/agents/transaction_labeler/test_known_merchants.py holds
 them to that. Values are category slugs.
 """
 
+# Generic or bank names that mislabel at 0.95 (user decision, 15 Oct 2026). Removed deliberately; "db" stays.
+EXCLUDED = frozenset({"bank", "sparkasse", "ing", "n26", "gas", "uni", "sky", "spa", "gym", "sos"})
+
 KNOWN_MERCHANTS: dict[str, str] = {
     "netflix": "leisure_entertainment",
     "spotify": "leisure_entertainment",
@@ -12,7 +15,6 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "amazon prime": "leisure_entertainment",
     "apple tv": "leisure_entertainment",
     "disney": "leisure_entertainment",
-    "sky": "leisure_entertainment",
     "wolt": "food_delivery",
     "deliveroo": "food_delivery",
     "uber eats": "food_delivery",
@@ -77,7 +79,6 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "eon": "household_utilities",
     "eon energy": "household_utilities",
     "strom": "household_utilities",
-    "gas": "household_utilities",
     "wasser": "household_utilities",
     "telekom": "household_utilities",
     "vodafone": "household_utilities",
@@ -95,9 +96,7 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "cinema": "leisure_entertainment",
     "theater": "leisure_entertainment",
     "fitnessstudio": "leisure_entertainment",
-    "gym": "leisure_entertainment",
     "decathlon": "leisure_entertainment",
-    "spa": "leisure_entertainment",
     "museum": "leisure_entertainment",
     "zoo": "leisure_entertainment",
     "fitness": "leisure_entertainment",
@@ -117,22 +116,16 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "debeka": "insurances",
     "ergo": "insurances",
     "versicherung": "insurances",
-    "bank": "insurances",
-    "sparkasse": "insurances",
     "deutsche bank": "insurances",
     "comdirect": "insurances",
-    "ing": "insurances",
-    "n26": "insurances",
     "aok": "insurances",
     "feather": "insurances",
     "vhs": "education",
-    "uni": "education",
     "universität": "education",
     "kurse": "education",
     "schule": "education",
     "udemy": "education",
     "coursera": "education",
-    "sos": "donations_charity",
     "savings": "savings_investments",
     "instant savings": "savings_investments",
 }

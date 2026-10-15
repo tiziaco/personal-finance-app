@@ -38,8 +38,9 @@ Date, merchant and amount must be mapped; the rest are optional.
   three representative rows (picked to cover as many non-empty columns as possible).
 - **Remembered per bank.** When the user confirms, the mapping is saved against the
   file's set of column names. The next file with the same columns skips the LLM and shows
-  the saved mapping, still open to correction. A user importing from two banks has two
-  profiles.
+  the saved mapping, still open to correction. Profiles are keyed by the (case-folded) column set, not
+  by bank: two banks with different headers have two profiles, and two with identical headers
+  share one.
 - **The upload is held for 30 minutes** between the two steps. After that, or once it has
   been confirmed, the user must upload again.
 

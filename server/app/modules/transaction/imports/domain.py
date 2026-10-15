@@ -166,8 +166,10 @@ def parse(text: str) -> ParsedCsv:
     skipped; short rows are padded; cells beyond the header are kept out of
     `cells` and flagged on the row. A trailing column with no name and no
     values — a delimiter ending every line — is dropped. A file the csv module
-    cannot read is malformed.
+    cannot read, or one holding NUL characters, is malformed.
     """
+    if "\x00" in text:  # UTF-16 or a binary file: Postgres refuses NUL in text
+        raise CsvFormatError("malformed", "The file isn't a well-formed CSV.")
     try:
         reader = csv.reader(io.StringIO(text, newline=""), delimiter=sniff_delimiter(text))
         records = [(reader.line_num, [c.strip() for c in row]) for row in reader if any(c.strip() for c in row)]

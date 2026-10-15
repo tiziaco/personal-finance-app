@@ -81,6 +81,16 @@ short-lived session from `request.app.state.session_factory`, as a streaming bod
 must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
 (`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
 
+## Server — CSV import follow-ups
+
+- During an LLM outage every labeller batch walks the full model fallback chain before
+  failing, so a large file takes several waves to become a 503. Stop launching batches once
+  the first wave has all failed.
+- `profile_columns` and `read_rows` are synchronous CPU work on the event loop (about 0.6 s
+  for 3,000 rows × 12 columns). Move them to `run_in_threadpool` if traffic grows.
+- A short DKB export whose preamble lines outnumber its transactions is refused as
+  `unnamed_column`, because the most common line width is the preamble's.
+
 ## Web — tests the suite does not have yet
 
 - **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a

@@ -191,9 +191,9 @@ joined by `:` may import each other. R6 is a second `layers` contract listing th
 dependency order; modules that do not depend on each other share a layer with `|`. R1 is one
 `forbidden` contract per module, listing every other module's submodules. Type-checking-only
 imports are excluded from the graph, which lets R4's hint through; every directory under `app/`
-carries an `__init__.py` because the graph builder needs regular packages. R9 has no contract
-until the first `domain` slot ([`../TODO.md`](../TODO.md), **Server — the R9 import-linter
-contract**).
+carries an `__init__.py` because the graph builder needs regular packages. R9 is a `forbidden` contract too: it
+forbids `sqlmodel`, `sqlalchemy` and `fastapi` in `app.modules.*.domain` and
+`app.modules.*.*.domain`.
 
 A new module is three edits to `pyproject.toml` before it is enforced.
 `tests/unit/test_module_contracts.py` fails when a module is missing its R1 contract, is absent

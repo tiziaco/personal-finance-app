@@ -84,6 +84,11 @@ class TestParse:
             parse('a,b\n1,"' + "x" * 140_000 + "\n")
         assert caught.value.reason == "malformed"
 
+    def test_utf16_text_with_its_nuls_is_malformed(self):
+        with pytest.raises(CsvFormatError) as caught:
+            parse(decode("Datum;Betrag\n15.01.2026;-3,00\n".encode("utf-16")))
+        assert caught.value.reason == "malformed"
+
     def test_a_header_without_a_trailing_delimiter_beats_rows_with_one(self):
         parsed = parse("Datum;Empfaenger;Betrag\n15.01.2026;REWE;-3,00;\n16.01.2026;Lidl;-4,00;\n")
         assert parsed.columns == ["Datum", "Empfaenger", "Betrag"]

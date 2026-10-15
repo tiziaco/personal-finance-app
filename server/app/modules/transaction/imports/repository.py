@@ -26,7 +26,7 @@ class ImportRepository:
         statement = (
             insert(HeldUpload)
             .values(
-                id=uuid.uuid4(),
+                id=uuid7(),
                 user_id=user_id,
                 content=content,
                 expires_at=expires_at,
@@ -36,7 +36,7 @@ class ImportRepository:
             .on_conflict_do_update(
                 constraint="uq_csv_upload_user_id",
                 # A new id each time: a confirm against the replaced upload's id is a 404.
-                set_={"id": uuid.uuid4(), "content": content, "expires_at": expires_at, "updated_at": now},
+                set_={"id": uuid7(), "content": content, "expires_at": expires_at, "updated_at": now},
             )
             .returning(HeldUpload)
         )

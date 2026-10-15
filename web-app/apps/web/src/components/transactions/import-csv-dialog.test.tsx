@@ -187,7 +187,9 @@ describe("ImportCsvDialog", () => {
     rerender(false)
     await act(() => succeed(result))
     const [message, options] = vi.mocked(toast.success).mock.calls[0]
-    expect(message).toBe("Imported 412 · 3 duplicates skipped · 1 rejected")
+    expect(message).toBe(
+      "Imported 412 · 3 duplicates skipped · 1 rejected · 1 filed under Miscellaneous",
+    )
     ;(
       options as unknown as { action: { onClick: () => void } }
     ).action.onClick()
@@ -206,7 +208,7 @@ describe("ImportCsvDialog", () => {
       ),
     )
     expect(toast.success).toHaveBeenCalledWith(
-      "Imported 412 · 3 duplicates skipped · 1 rejected",
+      "Imported 412 · 3 duplicates skipped · 1 rejected · 1 filed under Miscellaneous",
       undefined,
     )
     expect(
@@ -240,6 +242,22 @@ describe("ImportCsvDialog", () => {
     )
     expect(vi.mocked(toast.success).mock.calls[1][0]).toBe(
       "Imported 5,000 · 1,204 duplicates skipped · 0 rejected",
+    )
+  })
+
+  it("adds the uncategorised count to the toast only when there is one", async () => {
+    const { rerender } = renderDialog()
+    rerender(false)
+    await act(() =>
+      succeed({
+        imported: 5000,
+        skipped_duplicates: 0,
+        uncategorised: 1204,
+        rejected: [],
+      }),
+    )
+    expect(vi.mocked(toast.success).mock.calls[0][0]).toBe(
+      "Imported 5,000 · 0 duplicates skipped · 0 rejected · 1,204 filed under Miscellaneous",
     )
   })
 
