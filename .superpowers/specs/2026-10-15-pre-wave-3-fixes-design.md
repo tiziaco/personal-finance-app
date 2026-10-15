@@ -30,7 +30,7 @@ ends on `/sign-in` instead of "Something went wrong".
 | # | Decision |
 |---|---|
 | D1 | The 401 race is fixed at the auth seam: `@app/auth`'s `getToken` resolves only once the session state is settled. Rendering is not gated. |
-| D2 | A 401 gets one retry with a forced-fresh token. A second 401 calls `signOut()`, single-flight. |
+| D2 | A 401 gets one retry with a forced-fresh token. A second 401 calls `signOut()`, which `@app/auth` makes single-flight. |
 | D3 | The server answers 401 only for missing or invalid request credentials. A provisioning failure is 503; the server's own Clerk credential being rejected is 502. |
 | D4 | `LLMService` keeps the model index and client in locals for each call. No fallback position survives a call; every call starts from the default, or from the pinned model. |
 | D5 | `MIN_DATE`/`MAX_DATE` move to `app/modules/transaction/domain/dates.py`, exported from the `transaction` package root. Analytics imports them from there. |
@@ -105,9 +105,9 @@ In `packages/api-client/src/use-api-fetch.ts`, `useApiRequest`:
    ran no handler, so replaying a POST, a FormData upload or the chat stream is safe. Bodies
    in this app are strings or FormData, which replay; a `ReadableStream` body is not, and is
    not used.
-3. A second 401: call `useAppAuth().signOut()` once for the page, guarded by a module-level
-   in-flight flag so many failing queries sign out once. The `ApiError` still throws to the
-   caller. `signOut()` ends the Clerk session, then loads `/sign-in` as a new document; ending
+3. A second 401: call `useAppAuth().signOut()`. `AuthProvider` makes `signOut` single-flight
+   (a call while one is in flight returns the same promise), so many failing queries sign out
+   once. The `ApiError` still throws to the caller. `signOut()` ends the Clerk session, then loads `/sign-in` as a new document; ending
    the session is what stops `/sign-in` bouncing back to the dashboard in a loop.
 
 The 401 toast ("session expired") stays as it is; the document load to `/sign-in` replaces
@@ -115,8 +115,8 @@ the page. `meta.silentError` is unaffected. `QueryProvider`'s retry rule is unch
 not retry a 4xx, and the 503 from D3 is a 5xx, which it retries once.
 
 Tests in `use-api-fetch.test.ts`: a 401 then a 200 retries with a forced-fresh token and
-resolves; two 401s call `signOut` once and reject with the `ApiError`; concurrent double-401s
-call `signOut` once; a 403 neither retries nor signs out.
+resolves; two 401s call `signOut` and reject with the `ApiError`; a 403 neither retries nor
+signs out. In `provider.test.tsx`: two concurrent `signOut()` calls end the Clerk session once.
 
 ## 3. `LLMService`'s position is per call (D4)
 
