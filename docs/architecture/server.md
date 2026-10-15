@@ -290,6 +290,12 @@ exception inherits a category class in `app/exceptions/base.py`, which fixes its
 | `ServiceError` (the root), `DatabaseError` | 500 |
 | `DatabaseConnectionError` | 503 |
 
+**A 401 means the request's credentials, nothing else.** The web retries a 401 once with
+a fresh token and signs out on the second ([`web-app.md`](./web-app.md) §5), so a failure
+behind valid credentials must not be a 401: provisioning that fails is
+`UserProvisioningError` (503), and the server's own Clerk secret being refused is
+`ClerkAuthenticationError` (502).
+
 Modules subclass these in their `exceptions` slot; adapters in
 `app/integrations/<provider>/exceptions.py`. Keyword arguments to the constructor become the
 exception's `context`.

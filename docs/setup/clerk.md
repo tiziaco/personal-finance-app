@@ -271,7 +271,7 @@ hand, from the same file:
 | Server won't start, `SettingsError` on `ALLOWED_ORIGINS` | Not a JSON array (§4). |
 | Browser CORS error on every request | Same as the 401 row — one setting, two symptoms (§4). |
 | Works locally, not in staging/production | `ALLOWED_ORIGINS` is per-environment; each `server/.env.<env>` needs its own origins. |
-| A new user signs up and the first call answers 401 "Failed to provision user" | Clerk's API was unreachable or the user has no primary email — see the `user_provisioning_failed` log line. |
+| A new user signs up and the first call answers 503 `USER_PROVISIONING_FAILED` "Failed to provision user" | Clerk's API was unreachable or the user has no primary email — see the `user_provisioning_failed` log line. |
 | Every webhook delivery 401s | Wrong `whsec_` for this instance, or the variable never reached the process — check the running process's environment, not the file (§6). |
 | No webhook deliveries at all | Endpoint on the wrong instance, or the tunnel is down (§6). |
 | ngrok `ERR_NGROK_320` | The authtoken belongs to a different account than the domain — check the host `ngrok.yml`, which beats the env var (§6). |

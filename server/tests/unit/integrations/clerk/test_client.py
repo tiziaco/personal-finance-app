@@ -166,3 +166,8 @@ class TestGetPrimaryEmail:
         clerk_user.email_addresses = []
 
         assert service.get_primary_email(clerk_user) is None
+
+
+def test_a_rejected_server_secret_is_a_bad_gateway_not_a_401():
+    """The server's own Clerk secret being refused is an upstream failure; a 401 would sign the user out."""
+    assert ClerkAuthenticationError("Authentication with Clerk API failed").status_code == 502

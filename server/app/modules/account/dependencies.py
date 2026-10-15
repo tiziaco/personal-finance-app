@@ -14,6 +14,7 @@ from app.core.config import settings
 from app.core.logging import bind_context, logger
 from app.database.dependencies import DbSession
 from app.exceptions.base import AuthenticationError
+from app.modules.account.exceptions import UserProvisioningError
 from app.modules.account.models import User
 from app.modules.account.service import user_service
 
@@ -52,7 +53,7 @@ async def get_current_user(
         bind_context(user_id=user.id)
     except Exception as e:
         logger.error("user_provisioning_failed", clerk_id=clerk_id, error=str(e))
-        raise AuthenticationError("Failed to provision user") from e
+        raise UserProvisioningError("Failed to provision user") from e
     return user
 
 

@@ -18,6 +18,17 @@ class TestGetMe:
         response = await client.get("/api/v1/auth/me")
         assert response.status_code == 401
 
+    @patch("app.modules.account.dependencies.user_service.resolve_user", side_effect=RuntimeError("db down"))
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_a_provisioning_failure_is_503_not_401(self, mock_verifier, _resolve, client):
+        """The web signs out on a persistent 401, and an outage behind valid credentials is not an ended session."""
+        mock_verifier.verify_token.return_value = {"sub": "clerk_provision_fails"}
+
+        response = await client.get("/api/v1/auth/me", headers={"Authorization": "Bearer t"})
+
+        assert response.status_code == 503
+        assert response.json()["error"] == "USER_PROVISIONING_FAILED"
+
     async def test_authenticated_returns_200(self, authenticated_client):
         response = await authenticated_client.get("/api/v1/auth/me")
         assert response.status_code == 200
