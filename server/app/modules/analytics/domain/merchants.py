@@ -48,14 +48,9 @@ class MerchantBreakdown:
     concentration: MerchantConcentration
 
 
-def merchant_key(name: str) -> str:
-    """Spellings that differ only in case or padding are one merchant."""
-    return name.strip().casefold()
-
-
 def display_names(rows: Sequence[Row]) -> dict[str, str]:
     """Each merchant key's latest spelling (rows are in date order, so the last one wins)."""
-    return {merchant_key(r.merchant): r.merchant.strip() for r in rows}
+    return {r.merchant_key: r.merchant.strip() for r in rows}
 
 
 def _concentration(ranked: Sequence[MerchantSpend], whole: Decimal) -> MerchantConcentration:
@@ -86,7 +81,7 @@ def merchant_breakdown(rows: Sequence[Row], top_n: int = 15) -> MerchantBreakdow
             last_date=max(r.date for r in group),
             share_pct=share_pct(total_spend(group), whole),
         )
-        for key, group in group_by(spent, lambda r: merchant_key(r.merchant)).items()
+        for key, group in group_by(spent, lambda r: r.merchant_key).items()
     ]
     by_spend = sorted(items, key=lambda m: (-m.total, m.merchant.casefold()))
     by_count = sorted(items, key=lambda m: (-m.count, -m.total, m.merchant.casefold()))

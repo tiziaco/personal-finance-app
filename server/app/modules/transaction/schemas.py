@@ -127,10 +127,11 @@ class TransactionResponse(BaseModel):
 
 
 class AnalysisRow(BaseModel):
-    """One active transaction as analytics reads it: the five fields every calculation uses."""
+    """One active transaction as analytics reads it: the six fields every calculation uses."""
 
     date: dt.date
     merchant: str
+    merchant_key: str
     amount: Decimal
     category: str
     is_recurring: bool

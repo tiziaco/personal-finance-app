@@ -189,9 +189,12 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
   strip a web-domain suffix (`.com`, `.de`, `.eu`, `.it`, `.co.uk`) and a legal-form suffix
   (`gmbh`, `ag`, `se`, `kg`, `bv`, `b.v.`, `ltd`, `inc`, `srl`, `spa`); drop trailing tokens
   holding three or more digits; turn punctuation other than `&` into spaces and collapse
-  whitespace (an empty result falls back to the casefolded raw text). **Conservative by
+  whitespace (an empty result falls back to the casefolded raw text), and cut to the
+  column's 255 characters, since folding can lengthen text (`ß` → `ss`). **Conservative by
   design:** no fuzzy matching, because a missed merge loses a series and a wrong merge invents
   one. The column is stored, indexed with `user_id`, and recomputed with the fingerprint.
+  It is the one definition of a merchant: analytics groups every merchant analysis by it too
+  (`AnalysisRow.merchant_key`).
   **A change to the normaliser changes stored keys and needs a backfill revision**, as a slug
   rename does (D2); the revision `5b7e2c9d4f10` backfilled every row, soft-deleted ones too, by
   calling the live normaliser, not a frozen copy.

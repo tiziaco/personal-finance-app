@@ -155,6 +155,7 @@ class TransactionRepository:
             select(
                 Transaction.date,
                 Transaction.merchant,
+                Transaction.merchant_key,
                 Transaction.amount,
                 Transaction.category,
                 Transaction.is_recurring,
@@ -163,10 +164,7 @@ class TransactionRepository:
             .order_by(Transaction.date, Transaction.created_at, Transaction.id)
         )
         result = await session.execute(statement)
-        return [
-            AnalysisRow(date=date, merchant=merchant, amount=amount, category=category, is_recurring=is_recurring)
-            for date, merchant, amount, category, is_recurring in result.all()
-        ]
+        return [AnalysisRow.model_validate(row, from_attributes=True) for row in result.all()]
 
     @staticmethod
     async def set_category_for_ids(

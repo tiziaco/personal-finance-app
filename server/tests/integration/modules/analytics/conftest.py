@@ -7,8 +7,8 @@ import pytest
 import pytest_asyncio
 
 from app.modules.account.models import User
+from app.modules.transaction.domain import USER, fingerprint, normalise_merchant
 from app.modules.transaction.models import Transaction
-from app.modules.transaction.service import fingerprint
 
 
 @pytest_asyncio.fixture
@@ -35,8 +35,10 @@ def add(db_session):
             category=category,
             confidence=1.0,
             is_recurring=recurring,
+            recurring_source=USER,
             original_category=None,
             fingerprint=fingerprint(user.id, date, merchant, value, None),
+            merchant_key=normalise_merchant(merchant),
         )
         if deleted:
             txn.soft_delete()

@@ -20,6 +20,11 @@ class Row(Protocol):
     def merchant(self) -> str: ...
 
     @property
+    def merchant_key(self) -> str:
+        """The stored merchant key (data-model/transaction.md, D7): rows sharing one are one merchant."""
+        ...
+
+    @property
     def amount(self) -> Decimal: ...
 
     @property

@@ -19,7 +19,7 @@ from app.modules.analytics.domain._aggregate import (
     spend,
     total_spend,
 )
-from app.modules.analytics.domain.merchants import display_names, merchant_key
+from app.modules.analytics.domain.merchants import display_names
 
 HIDDEN_MAX_AVERAGE = Decimal("50.00")
 HIDDEN_MIN_PER_MONTH = 3
@@ -73,7 +73,7 @@ def recurring_analysis(rows: Sequence[Row]) -> RecurringAnalysis:
     names = display_names(spent)
 
     merchants: list[RecurringMerchant] = []
-    for key, group in group_by(flagged, lambda r: merchant_key(r.merchant)).items():
+    for key, group in group_by(flagged, lambda r: r.merchant_key).items():
         charge = money(median(spend(r) for r in group))
         months = _months(group)
         merchants.append(
@@ -82,7 +82,7 @@ def recurring_analysis(rows: Sequence[Row]) -> RecurringAnalysis:
     merchants.sort(key=lambda m: (-m.monthly_cost, m.merchant.casefold()))
 
     hidden: list[HiddenSubscription] = []
-    for key, group in group_by(unflagged, lambda r: merchant_key(r.merchant)).items():
+    for key, group in group_by(unflagged, lambda r: r.merchant_key).items():
         months = _months(group)
         mean_charge = average(total_spend(group), len(group))
         per_month = round(len(group) / months, 2)

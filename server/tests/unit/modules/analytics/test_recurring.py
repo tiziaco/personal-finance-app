@@ -54,3 +54,14 @@ def test_empty_input():
     assert result.recurring_total == Decimal("0.00")
     assert result.amount_share_pct == 0.0
     assert result.merchants == () and result.hidden_subscriptions == ()
+
+
+def test_a_recurring_merchant_is_its_merchant_key():
+    rows = [
+        row("2026-01-01", "-10.00", merchant="PAYPAL *NETFLIX 4029357733", recurring=True),
+        row("2026-02-01", "-10.00", merchant="NETFLIX.COM", recurring=True),
+        row("2026-03-01", "-10.00", merchant="Netflix", recurring=True),
+    ]
+    assert recurring_analysis(rows).merchants == (
+        RecurringMerchant("Netflix", 3, 3, Decimal("10.00"), Decimal("10.00")),
+    )

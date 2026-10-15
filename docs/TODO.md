@@ -159,15 +159,6 @@ cover could be answered by generated code run in an isolated sandbox with its ow
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
 
-## Server — analytics groups merchants by step 4's merchant_key
-
-After step 4 merges, `transaction` stores `merchant_key = normalise_merchant(merchant)` and step
-4's recurring rule groups by it; analytics groups by `strip().casefold()`
-(`domain/merchants.py`), so "PAYPAL *Spotify" and "Spotify" become two merchants and a recurring
-cost can double-count. Fix: add `merchant_key` to `AnalysisRow` and group by it. **Unblocks:**
-steps 6 and 7 consuming recurring and merchant analyses. Decided with step 5a's final review
-(15 Oct 2026).
-
 ## Web — dedicated income and expense colours
 
 The trend chart draws income and expenses in `--chart-1`/`--chart-2`, which the donut beside it

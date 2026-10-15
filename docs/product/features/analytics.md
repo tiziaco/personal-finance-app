@@ -73,6 +73,8 @@ How they compute, so the numbers can be checked:
 - A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
   outside it is left out of every analysis.
 - The sign decides; a zero amount is ignored by every sum, count and average.
+- A merchant is its stored merchant key ([`data-model/transaction.md`](../../data-model/transaction.md)
+  D7), so `PAYPAL *Spotify` and `Spotify` are one; it is shown under its latest spelling.
 - Recurring is the stored flag, grouped by merchant. A merchant's monthly recurring cost is
   its median charge × charges ÷ months charged. A likely hidden subscription is an unflagged
   merchant charged 3 or more times a month on average, averaging 50 or less a charge.
