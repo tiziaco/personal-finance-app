@@ -1,10 +1,11 @@
 # Analytics
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 15 Oct 2026
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
 calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
-**Data model:** none — analytics stores nothing. It reads the transaction table through one read path ([`../../data-model/transaction.md`](../../data-model/transaction.md)).
+**Data model:** none — analytics stores nothing. It reads the transaction table through one
+read path ([`../../data-model/transaction.md`](../../data-model/transaction.md)).
 **Related:** [`insights.md`](./insights.md) · PRD [§6](../prd-mvp.md#6-analytics).
 
 ---
@@ -21,7 +22,9 @@ user's own transactions on request; nothing is entered.
 
 - a welcome header;
 - four summary cards for the **reference month** — the latest calendar month holding a
-  transaction, named on the page ("September 2026"): **Total Spent**, that month's
+  transaction, up to the current month (a future-dated row never takes the page over; if
+  every row is in the future, the latest of them), named on the page ("September 2026"):
+  **Total Spent**, that month's
   expenses; **Recurring Costs**, the expenses flagged recurring in that month and how many
   there were; **Net Balance**, income minus expenses; **Average Cashflow**, the mean
   monthly net over the three months to it (fewer when the data starts later; an empty
@@ -59,6 +62,22 @@ In product terms, the calculations cover:
   over a 30-day window) and recent category spikes.
 
 All of them accept an optional start and end date.
+
+How they compute, so the numbers can be checked:
+
+- Money is a decimal string to the cent; every percent is on the 0–100 scale, to 2
+  decimal places. A ratio with nothing to divide by is null, not zero. Months with no
+  transactions are zero-filled in every series.
+- The sign decides; a zero amount is ignored by every sum, count and average.
+- Recurring is the stored flag, grouped by merchant. A merchant's monthly recurring cost is
+  its median charge × charges ÷ months charged.
+- A category spike compares its last 30 days with its average 30 days over the rest of the
+  range: flagged above 50%, and only when the rest holds at least 30 days.
+- An outlier is an expense whose z-score against the individual expenses of the preceding
+  `window_days` (its own day excluded) passes the threshold; it needs at least 5 such
+  expenses and a nonzero spread. The top 20 are returned.
+- Merchant concentration is the Herfindahl index over all merchants, 0–10000.
+- Weekday and weekend spend are per real calendar day in the range.
 
 ## 4. Rules and edge cases
 
