@@ -1,5 +1,5 @@
-function HomePage() {
-  return <div>Home dashboard</div>
-}
+import { HomeDashboard } from "@/components/dashboard/home-dashboard"
 
-export default HomePage
+export default function HomePage() {
+  return <HomeDashboard />
+}

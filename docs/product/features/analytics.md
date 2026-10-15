@@ -1,11 +1,12 @@
 # Analytics
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 15 Oct 2026
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
 calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
-**Data model:** pending — written with step 5a. Analytics
-stores nothing of its own: it reads [`transactions.md`](./transactions.md).
+**Data model:** none — analytics stores nothing. It reads the user's active transactions
+([`../../data-model/transaction.md`](../../data-model/transaction.md)) through one read path,
+`transaction_service.list_for_analysis`.
 **Related:** [`insights.md`](./insights.md) · PRD [§6](../prd-mvp.md#6-analytics).
 
 ---
@@ -21,10 +22,18 @@ user's own transactions on request; nothing is entered.
 **The dashboard** (the page after sign-in) shows:
 
 - a welcome header;
-- four summary cards: **Total Spent**, **Recurring Costs**, **Net Balance** and **Average
-  Cashflow**;
-- a pie chart of spending by category and a line chart of the monthly trend;
-- the ten most recent transactions, linking to the full table;
+- four summary cards for the **reference month** — the latest calendar month holding a
+  transaction, up to the current month (a future-dated row never takes the page over; if
+  every row is in the future, the latest of them), named on the page ("September 2026"):
+  **Total Spent**, that month's
+  expenses; **Recurring Costs**, the expenses flagged recurring in that month and how many
+  there were; **Net Balance**, income minus expenses; **Average Cashflow**, the mean
+  monthly net over the three months to it (fewer when the data starts later; an empty
+  month counts as zero);
+- a donut of the reference month's top five categories plus Other, and a line chart of
+  income and expenses over the six months to it;
+- the ten most recent transactions, linking to the full table. With no transactions, the
+  page shows an empty state linking to the transactions page.
 - a callout with the top AI insights, linking to the insights page.
 
 **The analytics page** has four tabs, each loaded the first time it is opened:
@@ -55,6 +64,26 @@ In product terms, the calculations cover:
 
 All of them accept an optional start and end date.
 
+How they compute, so the numbers can be checked:
+
+- Money is a decimal string to the cent; every percent is on the 0–100 scale, to 2
+  decimal places. A percent change, coefficient of variation or seasonal index with nothing
+  to divide by is null, not zero. A share or an average of nothing is 0, beside the zero
+  total or count it comes from. Months with no transactions are zero-filled in every series.
+- A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
+  outside it is left out of every analysis.
+- The sign decides; a zero amount is ignored by every sum, count and average.
+- Recurring is the stored flag, grouped by merchant. A merchant's monthly recurring cost is
+  its median charge × charges ÷ months charged. A likely hidden subscription is an unflagged
+  merchant charged 3 or more times a month on average, averaging 50 or less a charge.
+- A category spike compares its last 30 days with its average 30 days over the rest of the
+  range: flagged above 50%, and only when the rest holds at least 30 days.
+- An outlier is an expense whose z-score against the individual expenses of the preceding
+  `window_days` (its own day excluded) passes the threshold; it needs at least 5 such
+  expenses and a nonzero spread. The top 20 are returned.
+- Merchant concentration is the Herfindahl index over all merchants, 0–10000.
+- Weekday and weekend spend are per real calendar day in the range.
+
 ## 4. Rules and edge cases
 
 - **The sign of the amount decides.** Positive amounts are income, negative are expenses;
@@ -81,5 +110,6 @@ All of them accept an optional start and end date.
   were rated worth having in the v1.0 research (priority 2) and not built.
 - **A savings rate.** The v1.0 research asked for a savings-rate card; the cards that
   shipped are different (above). Is a savings rate wanted?
-- **Date range on the dashboard.** The dashboard has no range control; is "this month" the
-  right default?
+- **Date range on the dashboard** — decided 15 Oct 2026: the latest month with data,
+  labelled by name, not the calendar month (imports lag the calendar). A month picker is
+  in [`TODO.md`](../../TODO.md).
