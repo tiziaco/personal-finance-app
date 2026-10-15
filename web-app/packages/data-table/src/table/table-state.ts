@@ -18,7 +18,11 @@ export interface DataTableState<TFilters> {
   setSearch: (value: string) => void
   /** 0-based */
   pageIndex: number
-  setPage: (pageIndex: number) => void
+  /** history defaults to "push"; "replace" corrects the page without a Back entry (URL state only) */
+  setPage: (
+    pageIndex: number,
+    options?: { history?: "push" | "replace" },
+  ) => void
   sorting: SortingState
   setSort: (sorting: SortingState) => void
 }

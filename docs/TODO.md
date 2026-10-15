@@ -31,20 +31,6 @@ Two findings do not wait on that decision and are small on their own:
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
 
-## Server — email uniqueness, before the first finance table
-
-`user.email` is unique, so a stale row holding an email locks out whoever signs up with it
-next ([`BUGS.md`](./BUGS.md), **A re-registered or changed email locks the new account
-out**). **Decide before** the first finance table references `user` (roadmap step 2,
-Transactions), because the choice changes the migration. Either:
-
-- drop `unique=True` on `User.email`: Clerk owns email uniqueness and `clerk_id` is the
-  identity; or
-- keep it, and on an email collision in JIT reclaim the stale row when
-  `exists_in_clerk(holder.clerk_id)` is false.
-
-**Unblocks:** closing that bug.
-
 ## Server — the R9 import-linter contract
 
 The rule that a `domain` slot imports no ORM and no framework has no contract yet,
@@ -107,16 +93,31 @@ must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
+## Web — the transactions empty state, with CSV import (roadmap step 4)
+
+With no transactions the page offers **Add a transaction**. When CSV upload ships, the
+prompt becomes **Upload a CSV** (`transactions.md` §2).
+
+**Unblocks:** nothing; it lands with step 4.
+
+## Web — legacy's theme
+
+Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
+floating bulk bar, the sort control — but not its theme: the teal accent, the grey-green page
+background and the font. The theme changes every page, so it is a decision of its own, made
+once for the whole app, not per screen. Corners are already decided, against legacy's pills:
+one radius scale, in the `web-app-patterns` skill's `references/components.md`. Legacy's
+calendar date-range picker is out too; the date filter uses the shared single-day picker. Reference screenshots of both apps were taken with the same
+data on 14 Oct 2026.
+
+**Unblocks:** nothing; the app is usable with the template's theme.
+
 ## Port — carry into backend modules
 
 Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
 when it rebuilds each module. One line each, pointing at the legacy file, and the roadmap
 step that owns it.
 
-- **N+1 in batch update** (step 2) — one `SELECT` per item before updating; fetch with one
-  `WHERE id IN (...)`. `server/app/services/transaction/service.py` (`batch_update`).
-- **N+1 in batch delete** (step 2) — the same, before the soft delete.
-  `server/app/services/transaction/service.py` (`batch_delete`).
 - **Services returning `None` on a miss** (step 4) — `CSVMappingService.get_session` returns
   `None` and the route checks; raise a not-found error in the service instead.
   `server/app/services/csv_mapping/service.py`.

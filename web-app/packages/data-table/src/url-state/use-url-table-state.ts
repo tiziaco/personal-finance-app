@@ -88,13 +88,14 @@ export function useUrlTableState<KeyMap extends ListKeyMap>(
     [setValues],
   )
 
+  // A correction (a page past the end) replaces, so Back skips the bad page.
   const setPage = useCallback(
-    (pageIndex: number) =>
+    (pageIndex: number, options?: { history?: "push" | "replace" }) =>
       setValues(
         {
           page: pageIndex <= 0 ? null : pageIndex + 1,
         } as Partial<Values<KeyMap>>,
-        { history: "push" },
+        { history: options?.history ?? "push" },
       ),
     [setValues],
   )

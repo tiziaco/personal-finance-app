@@ -1,11 +1,11 @@
 # Account — Data Model
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
 **Describes:** [`../product/features/account.md`](../product/features/account.md).
 **Scope:** the `"user"` table — the platform's record of a person Clerk has told it about.
 **Source of truth:** the code — `server/app/modules/account/models.py` and the Alembic
-revision `0c7838405158` (the initial schema). The
-sketch below was last brought in line with them on 12 Oct 2026; where the two disagree,
+revisions `0c7838405158` (the initial schema) and `ab81d9d078e3` (email no longer unique). The
+sketch below was last brought in line with them on 13 Oct 2026; where the two disagree,
 the code wins. The conventions every table follows are in [`README.md`](./README.md).
 
 ---
@@ -32,7 +32,7 @@ at a valid one.
 CREATE TABLE "user" (
     id              UUID        PRIMARY KEY DEFAULT uuidv7(),
     clerk_id        VARCHAR     NOT NULL,      -- unique; 'deleted_user_<id>' after erasure
-    email           VARCHAR     NOT NULL,      -- unique; '<anonymous id>@anonymized.local' after erasure
+    email           VARCHAR     NOT NULL,      -- not unique: Clerk owns uniqueness; '<anonymous id>@anonymized.local' after erasure
     email_verified  BOOLEAN     NOT NULL,
     first_name      VARCHAR,
     last_name       VARCHAR,
@@ -49,7 +49,7 @@ CREATE TABLE "user" (
 | Index | Unique | Serves |
 |---|---|---|
 | `ix_user_clerk_id` | yes | finding the row for a token — every authenticated request |
-| `ix_user_email` | yes | one row per email |
+| `ix_user_email` | no | looking a row up by email by hand — nothing on the server does |
 | `ix_user_created_at` | no | recent sign-ups |
 | `ix_user_anonymized_at` | no | finding erased rows |
 
@@ -61,3 +61,9 @@ CREATE TABLE "user" (
   no guaranteed order, and an event older than the row is skipped; a host-clock value
   would make every later event look stale ([`../architecture/authentication.md`](../architecture/authentication.md)
   §4).
+- **D3 — email is not unique (13 Oct 2026).** Clerk owns email uniqueness and `clerk_id` is the
+  identity. A unique `email` let a stale row — a deletion or an email change whose webhook was
+  missed — lock the next account with that address out with a 401. Nothing on the server looks a
+  user up by email, so nothing depends on it being unique. Rejected: reclaiming the stale row in
+  JIT when Clerk no longer has its `clerk_id`, which costs a Clerk call on a collision for a
+  guarantee nothing reads.

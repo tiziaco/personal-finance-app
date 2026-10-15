@@ -154,3 +154,7 @@ export {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "./primitives/alert-dialog"
+export { Calendar, CalendarDayButton } from "./primitives/calendar"
+export { Checkbox } from "./primitives/checkbox"
+export { Switch } from "./primitives/switch"
+export { Textarea } from "./primitives/textarea"

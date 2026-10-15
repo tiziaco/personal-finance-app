@@ -48,8 +48,7 @@ class UserService:
 
         Raises:
             RuntimeError: If user cannot be provisioned from Clerk.
-            UserAlreadyExistsError: A genuine (non-race) unique constraint
-                conflict during provisioning — see UserRepository.create_or_get.
+            UserAlreadyExistsError: an IntegrityError that was not the clerk_id race — see UserRepository.create_or_get.
         """
         # 1. Look up by clerk_id (unique + indexed -> single index scan).
         #    There is deliberately no clerk_id -> user_id cache: a hit would

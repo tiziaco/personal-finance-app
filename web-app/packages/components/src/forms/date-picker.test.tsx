@@ -1,0 +1,57 @@
+import { describe, it, expect, vi } from "vitest"
+import { render, screen, fireEvent } from "@testing-library/react"
+import { DatePicker } from "./date-picker"
+
+describe("DatePicker", () => {
+  it("shows the placeholder when empty", () => {
+    render(
+      <DatePicker value="" onChange={() => {}} placeholder="Pick a date" />,
+    )
+    expect(
+      screen.getByRole("button", { name: /Pick a date/ }),
+    ).toBeInTheDocument()
+  })
+
+  it("shows a malformed value as empty instead of throwing", () => {
+    render(<DatePicker value="2026-0" onChange={() => {}} />)
+    expect(
+      screen.getByRole("button", { name: /Pick a date/ }),
+    ).toBeInTheDocument()
+  })
+
+  it("shows the chosen day as a local date", () => {
+    render(<DatePicker value="2026-03-03" onChange={() => {}} />)
+    expect(
+      screen.getByRole("button", { name: /2026|Mar|3/ }),
+    ).toHaveTextContent(/3/)
+  })
+
+  it("reports a picked day as local ISO, never shifted by the timezone", () => {
+    const onChange = vi.fn()
+    render(<DatePicker value="2026-03-03" onChange={onChange} />)
+    fireEvent.click(screen.getByRole("button"))
+    fireEvent.click(screen.getByRole("button", { name: /March 14/ }))
+    expect(onChange).toHaveBeenCalledWith("2026-03-14")
+  })
+
+  it("takes a name that still reads the chosen day", () => {
+    render(
+      <DatePicker
+        value="2026-03-03"
+        onChange={() => {}}
+        aria-label="Created from"
+      />,
+    )
+    expect(
+      screen.getByRole("button", { name: /^Created from, .*2026/ }),
+    ).toBeInTheDocument()
+  })
+
+  it("starts the week on Monday, as the date presets do", async () => {
+    render(<DatePicker value="2026-03-03" onChange={() => {}} />)
+    fireEvent.click(screen.getByRole("button"))
+    expect(
+      (await screen.findAllByRole("columnheader", { hidden: true }))[0],
+    ).toHaveAccessibleName("Monday")
+  })
+})

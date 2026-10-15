@@ -35,7 +35,8 @@ class User(BaseModel, UUIDPrimaryKeyMixin, AnonymizableMixin, table=True):
     """
 
     clerk_id: str = Field(unique=True, index=True)
-    email: str = Field(unique=True, index=True)
+    # Not unique: Clerk owns email uniqueness and clerk_id is the identity (data-model/account.md D3).
+    email: str = Field(index=True)
     email_verified: bool = Field(default=False)
     first_name: Optional[str] = Field(default=None)
     last_name: Optional[str] = Field(default=None)

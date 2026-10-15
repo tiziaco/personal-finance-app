@@ -37,7 +37,8 @@ server/app/
 ├── modules/
 │   ├── account/              # the Clerk-backed identity: user row, CurrentUser, Clerk webhook handlers,
 │   │                         #   JIT provisioning, erasure
-│   └── conversation/         # the chatbot: conversations and chat routes, the agent dependency
+│   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
+│   └── transaction/          # the user's transactions and the category list
 ├── integrations/
 │   ├── clerk/                # client, exceptions, timestamps, webhooks/{verification,schemas} — the provider half
 │   └── llm/                  # a provider adapter, not a domain
@@ -341,7 +342,7 @@ request**).
 | Event | Published by | Payload | Subscribers | Why inline |
 | :---- | :---- | :---- | :---- | :---- |
 | `account.USER_SYNCED` | JIT provisioning; the `user.created` webhook handler | `user_id`, `metadata` (Clerk public metadata — merged from the API on JIT, the webhook's own on the webhook path) | none yet — the hook for seeding a new user's data on first sign-up | the seeding it is for runs in the request that provisions the user |
-| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints | the subscriber's identifiers are what `anonymize_user()` destroys |
+| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `transaction` — hard-deletes every transaction the user owns | the subscriber's identifiers are what `anonymize_user()` destroys |
 
 `erase_user` logs `subscriber_count`: zero means the modules were never imported. Memory
 deletion during erasure is a direct call — `agents/` is an adapter, below every module.

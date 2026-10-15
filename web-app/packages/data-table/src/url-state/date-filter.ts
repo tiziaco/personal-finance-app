@@ -1,5 +1,14 @@
+import { createParser } from "nuqs"
+import { isIsoDay } from "@app/core/lib/dates"
+
 export const DATE_FILTER_MODES = ["gte", "lte", "range"] as const
 export type DateFilterMode = (typeof DATE_FILTER_MODES)[number]
+
+/** A `<name>_from` / `<name>_to` key: a malformed day in the URL reads as absent. */
+export const parseAsIsoDay = createParser({
+  parse: (value) => (isIsoDay(value) ? value : null),
+  serialize: (value: string) => value,
+})
 
 export interface DateFilterValue {
   mode: DateFilterMode | null

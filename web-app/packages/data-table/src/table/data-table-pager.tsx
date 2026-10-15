@@ -41,7 +41,7 @@ export function DataTablePager<TData>({
   return (
     <nav
       aria-label={labels.pagination}
-      className="flex items-center justify-between border-t py-3"
+      className="flex items-center justify-between py-3"
     >
       <p className="hidden text-xs text-muted-foreground tabular-nums sm:block">
         {labels.pagerSummary(startItem, endItem, totalCount)}

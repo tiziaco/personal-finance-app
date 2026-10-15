@@ -11,7 +11,13 @@ import { TableSearchInput } from "@app/data-table/table-search-input"
 import { toListQuery } from "@app/data-table/list-query"
 import { toServerTableControls } from "@app/data-table/table-state"
 import { useLocalTableState } from "@app/data-table/use-local-table-state"
-import { FilterSelect } from "@app/data-table/filters/filter-panel"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@app/ui/select"
 import { useListItems } from "@app/api-client/endpoints/items"
 import type { ItemResponse, ListItemsParams } from "@app/api-client/types"
 import { messages } from "@app/core/constants/messages"
@@ -20,6 +26,12 @@ import { useItemColumns } from "./use-item-columns"
 const ITEMS_PAGE_SIZE = 10 // ≤ the route's limit cap
 
 type ItemFilters = { status: "active" | "archived" | null }
+// null is "no filter": Base UI's Select models no value as null.
+const ITEM_STATUSES: { value: ItemFilters["status"]; label: string }[] = [
+  { value: null, label: "Any status" },
+  { value: "active", label: "Active" },
+  { value: "archived", label: "Archived" },
+]
 
 export function AddItemsDialog({
   open,
@@ -73,19 +85,24 @@ function AddItemsPicker({ onAdd }: { onAdd: (item: ItemResponse) => void }) {
             onChange={state.setSearch}
             placeholder="Search items"
           />
-          <FilterSelect
-            aria-label="Status"
-            className="w-40"
-            value={state.filters.status ?? ""}
-            onChange={(e) => {
-              const status = (e.target.value || null) as ItemFilters["status"]
+          <Select
+            items={ITEM_STATUSES}
+            value={state.filters.status}
+            onValueChange={(status: ItemFilters["status"]) =>
               state.setFilters((f) => ({ ...f, status }))
-            }}
+            }
           >
-            <option value="">Any status</option>
-            <option value="active">Active</option>
-            <option value="archived">Archived</option>
-          </FilterSelect>
+            <SelectTrigger aria-label="Status" className="w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ITEM_STATUSES.map((s) => (
+                <SelectItem key={s.value ?? "any"} value={s.value}>
+                  {s.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </>
       }
     />

@@ -1,0 +1,1068 @@
+date,merchant,amount,description,category,confidence,is_recurring,original_category
+2023-02-10,Card Top-up,41.04,Top-up,savings_investments,1.0,false,Credit Transfer
+2023-02-27,Employer GmbH,1005.90,Salary 02/2023,salary,1.0,true,Credit Transfer
+2023-03-01,Späti,-3.93,,food_groceries,0.9,false,Presentment
+2023-03-02,REWE,-11.09,,food_groceries,1.0,false,Presentment
+2023-03-03,Bio Market,-10.04,,food_groceries,1.0,false,Presentment
+2023-03-08,REWE,-5.18,,food_groceries,1.0,false,Presentment
+2023-03-09,Share Now,-6.77,,transportation,0.9,false,Presentment
+2023-03-10,EDEKA,-17.99,,food_groceries,1.0,false,Presentment
+2023-03-12,BONBON BAR,-32.31,,bars_restaurants,0.9,false,Presentment
+2023-03-15,EDEKA,-16.46,,food_groceries,1.0,false,Presentment
+2023-03-17,EDEKA,-8.00,,food_groceries,1.0,false,Presentment
+2023-03-22,Bio Market,-10.37,,food_groceries,1.0,false,Presentment
+2023-03-22,EDEKA,-4.55,,food_groceries,1.0,false,Presentment
+2023-03-25,Späti,-3.06,,food_groceries,0.9,false,Presentment
+2023-03-26,Miss Saigon,-20.96,,bars_restaurants,0.9,false,Presentment
+2023-03-29,Employer GmbH,2450.64,Salary 03/2023,salary,1.0,true,Credit Transfer
+2023-03-30,Bio Market,-9.82,,food_groceries,1.0,false,Presentment
+2023-03-31,Flatmate,-99.55,Rent share,household_utilities,1.0,false,Debit Transfer
+2023-03-31,Späti,-3.06,,food_groceries,0.9,false,Presentment
+2023-04-01,Bio Market,-9.68,,food_groceries,1.0,false,Presentment
+2023-04-02,OXI Club,-44.19,,leisure_entertainment,0.9,false,Presentment
+2023-04-03,Uber Eats,-13.06,,food_delivery,0.5,false,Presentment
+2023-04-04,Späti,-3.93,,food_groceries,0.9,false,Presentment
+2023-04-05,Hedonismus,-10.46,,leisure_entertainment,0.9,false,Presentment
+2023-04-05,Charity e.V.,-13.10,Donation,donations_charity,1.0,true,Direct Debit
+2023-04-06,Späti,-3.06,,food_groceries,0.9,false,Presentment
+2023-04-07,CHEF EXPRESS S.P.A,-13.54,,bars_restaurants,0.9,false,Presentment
+2023-04-07,Trenitalia,-12.23,,transportation,0.95,false,Presentment
+2023-04-09,CASUALFOOD FLUGHAFEN,-3.06,,bars_restaurants,0.9,false,Presentment
+2023-04-12,Beach Bar,-38.42,,bars_restaurants,0.9,false,Presentment
+2023-04-12,Ryanair,-112.98,,travel_holidays,1.0,false,Presentment
+2023-04-13,EDEKA,-12.92,,food_groceries,1.0,false,Presentment
+2023-04-15,EDEKA,-7.89,,food_groceries,1.0,false,Presentment
+2023-04-15,moa - cafe bar,-5.76,,bars_restaurants,0.9,false,Presentment
+2023-04-16,Uber Eats,-12.29,,food_delivery,0.5,false,Presentment
+2023-04-17,Wolt,-12.23,,food_delivery,1.0,false,Presentment
+2023-04-19,EDEKA,-15.23,,food_groceries,1.0,false,Presentment
+2023-04-20,Bio Market,-8.85,,food_groceries,1.0,false,Presentment
+2023-04-24,EDEKA,-2.04,,food_groceries,1.0,false,Presentment
+2023-04-24,EDEKA,-27.09,,food_groceries,1.0,false,Presentment
+2023-04-25,EDEKA,-11.45,,food_groceries,1.0,false,Presentment
+2023-04-27,Employer GmbH,2312.42,Salary 04/2023,salary,1.0,true,Credit Transfer
+2023-04-28,IKEA,-451.47,,shopping,1.0,false,Presentment
+2023-04-28,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2023-04-30,Stiftung Dt. Technikm,-13.97,,leisure_entertainment,0.9,false,Presentment
+2023-05-01,Paloma,-6.55,,bars_restaurants,1.0,false,Presentment
+2023-05-01,Paloma,-8.73,,bars_restaurants,1.0,false,Presentment
+2023-05-02,Topografie des Terrors,-9.87,,leisure_entertainment,0.9,false,Presentment
+2023-05-03,EDEKA,-6.17,,food_groceries,1.0,false,Presentment
+2023-05-03,Charity e.V.,-13.10,Donation,donations_charity,1.0,true,Direct Debit
+2023-05-05,EDEKA,-10.31,,food_groceries,1.0,false,Presentment
+2023-05-06,EDEKA,-3.11,,food_groceries,1.0,false,Presentment
+2023-05-07,EDEKA,-15.79,,food_groceries,1.0,false,Presentment
+2023-05-08,Urban Sports Club,-28.82,,leisure_entertainment,0.9,true,Presentment
+2023-05-08,we are. second,-37.80,,bars_restaurants,0.9,false,Presentment
+2023-05-08,KBB GMBH TICKET OFFICE,-13.10,,leisure_entertainment,0.8,false,Presentment
+2023-05-09,EDEKA,-6.17,,food_groceries,1.0,false,Presentment
+2023-05-11,Bio Market,-8.52,,food_groceries,1.0,false,Presentment
+2023-05-12,Deutsche Bahn,-5.41,,transportation,0.9,false,Presentment
+2023-05-14,Wolt,-11.61,,food_delivery,1.0,false,Presentment
+2023-05-14,Stoll Photobox,-3.49,,leisure_entertainment,0.6,false,Presentment
+2023-05-15,Uber,-7.05,,transportation,1.0,false,Presentment
+2023-05-15,Uber,-6.55,,transportation,1.0,false,Presentment
+2023-05-16,EDEKA,-18.61,,food_groceries,1.0,false,Presentment
+2023-05-17,EDEKA,-12.87,,food_groceries,1.0,false,Presentment
+2023-05-19,Friend L,-26.20,,family_friends,0.9,false,Presentment
+2023-05-21,Wolt,-14.40,,food_delivery,1.0,false,Presentment
+2023-05-21,cassiopeia Club,-9.78,,bars_restaurants,0.8,false,Presentment
+2023-05-22,Friend L,26.20,Refund,family_friends,0.9,false,Presentment Refund
+2023-05-22,Wolt,-12.21,,food_delivery,1.0,false,Presentment
+2023-05-23,EDEKA,-5.02,,food_groceries,1.0,false,Presentment
+2023-05-26,BVG,-3.49,,transportation,0.9,false,Presentment
+2023-05-26,Asiagourmet,-10.26,,food_groceries,0.9,false,Presentment
+2023-05-27,LA ROSE DE FRANCE,-14.15,,food_groceries,0.5,false,Presentment
+2023-05-27,RATP,-11.83,,transportation,0.95,false,Presentment
+2023-05-28,MONOP,-4.85,,food_groceries,0.9,false,Presentment
+2023-05-28,LE LIEU EXQUIS,-6.11,,bars_restaurants,0.85,false,Presentment
+2023-05-28,LE LIEU EXQUIS,-31.87,,bars_restaurants,0.85,false,Presentment
+2023-05-28,AMORINO,-4.63,,bars_restaurants,0.9,false,Presentment
+2023-05-29,RATP,-16.68,,transportation,0.95,false,Presentment
+2023-05-29,BREIZH CAFE PAR,-16.16,,bars_restaurants,0.9,false,Presentment
+2023-05-29,SUPERMARCHE RIV,-1.74,,food_groceries,0.9,false,Presentment
+2023-05-29,BADABOUM,-37.55,,leisure_entertainment,0.9,false,Presentment
+2023-05-30,Wolt,-14.57,,food_delivery,1.0,false,Presentment
+2023-05-30,PAUL,-7.34,,bars_restaurants,0.9,false,Presentment
+2023-05-31,Lime,-2.29,,transportation,1.0,false,Presentment
+2023-06-01,Previous Landlord,-392.97,Rent,household_utilities,1.0,false,Debit Transfer
+2023-06-01,Apotheke,-10.51,,healthcare_drug_stores,0.95,false,Presentment
+2023-06-04,Flatmate,21.83,Transfer,family_friends,1.0,false,MoneyBeam
+2023-06-05,Wolt,-14.75,,food_delivery,1.0,false,Presentment
+2023-06-05,Wolt,-15.45,,food_delivery,1.0,false,Presentment
+2023-06-05,BVG,-79.47,,transportation,0.9,false,Presentment
+2023-06-06,Adana Grillhaus,-32.31,,bars_restaurants,0.9,false,Presentment
+2023-06-07,REWE,-3.27,,food_groceries,1.0,false,Presentment
+2023-06-08,Urban Sports Club,-57.64,,leisure_entertainment,0.9,true,Presentment
+2023-06-09,Friend N,-7.86,,family_friends,0.9,false,Presentment
+2023-06-09,EDEKA,-9.32,,food_groceries,1.0,false,Presentment
+2023-06-10,AeDEN AeVE CLUB,-21.83,,leisure_entertainment,0.9,false,Presentment
+2023-06-10,AeDEN AeVE CLUB,-12.66,,leisure_entertainment,0.9,false,Presentment
+2023-06-10,EDEKA,-10.43,,food_groceries,1.0,false,Presentment
+2023-06-11,EDEKA,-15.52,,food_groceries,1.0,false,Presentment
+2023-06-12,RESTAURANT PETIT,-28.21,,bars_restaurants,0.9,false,Presentment
+2023-06-14,Lidl,-7.22,,food_groceries,1.0,false,Presentment
+2023-06-15,Chicha,-34.93,,bars_restaurants,0.9,false,Presentment
+2023-06-16,Wolt,-11.79,,food_delivery,1.0,false,Presentment
+2023-06-17,BirgitBier,-4.89,,bars_restaurants,0.9,false,Presentment
+2023-06-17,BirgitBier,-2.45,,bars_restaurants,0.9,false,Presentment
+2023-06-17,Hedonismus,-4.36,,leisure_entertainment,0.9,false,Presentment
+2023-06-17,Hedonismus,-4.36,,leisure_entertainment,0.9,false,Presentment
+2023-06-18,EDEKA,-9.11,,food_groceries,1.0,false,Presentment
+2023-06-19,Uber,-8.64,,transportation,1.0,false,Presentment
+2023-06-21,Lidl,-13.01,,food_groceries,1.0,false,Presentment
+2023-06-23,Lidl,-10.34,,food_groceries,1.0,false,Presentment
+2023-06-26,Uber Eats,-12.16,,food_delivery,0.5,false,Presentment
+2023-06-27,Lidl,-15.57,,food_groceries,1.0,false,Presentment
+2023-06-29,Lidl,-3.30,,food_groceries,1.0,false,Presentment
+2023-07-01,LERCHEN & EULEN,-2.79,,bars_restaurants,0.9,false,Presentment
+2023-07-02,MILES,-5.06,,transportation,0.9,false,Presentment
+2023-07-02,Landlord,-1135.24,Rent,household_utilities,1.0,true,Debit Transfer
+2023-07-03,Uber,-6.42,,transportation,1.0,false,Presentment
+2023-07-04,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2023-07-05,MILES,-24.89,,transportation,0.9,false,Presentment
+2023-07-07,Centopassi,-26.20,,bars_restaurants,0.9,false,Presentment
+2023-07-08,Urban Sports Club,-32.21,,leisure_entertainment,0.9,true,Presentment
+2023-07-08,Wolt,-11.17,,food_delivery,1.0,false,Presentment
+2023-07-09,Lidl,-23.15,,food_groceries,1.0,false,Presentment
+2023-07-09,Curry Wolf,-3.06,,bars_restaurants,0.9,false,Presentment
+2023-07-09,BirgitBier,-2.49,,bars_restaurants,0.9,false,Presentment
+2023-07-10,RESIDENT ADVISOR TICKE,-19.74,,leisure_entertainment,0.95,false,Presentment
+2023-07-12,Ryanair,-280.57,,travel_holidays,1.0,false,Presentment
+2023-07-12,Pull&Bear,-43.65,,shopping,0.9,false,Presentment
+2023-07-14,Flatmate,261.98,Transfer,family_friends,1.0,false,MoneyBeam
+2023-07-15,Renate,-3.93,,bars_restaurants,1.0,false,Presentment
+2023-07-15,Arena Berlin Betriebs,-6.99,,leisure_entertainment,0.9,false,Presentment
+2023-07-16,Eisbox,-2.18,,food_groceries,0.6,false,Presentment
+2023-07-16,Renate,-4.89,,bars_restaurants,1.0,false,Presentment
+2023-07-17,TRANSAVIA,-122.26,,travel_holidays,0.9,false,Presentment
+2023-07-17,Uber,-14.79,,transportation,1.0,false,Presentment
+2023-07-17,Jederzeit,-15.98,,miscellaneous,0.3,false,Presentment
+2023-07-18,Wolt,-15.09,,food_delivery,1.0,false,Presentment
+2023-07-18,Bio Market,-8.72,,food_groceries,1.0,false,Presentment
+2023-07-20,Himmelreich,-4.37,,bars_restaurants,0.9,false,Presentment
+2023-07-20,Pink Burgers,-6.64,,bars_restaurants,0.9,false,Presentment
+2023-07-21,Schum EuroShop,-4.54,,shopping,0.9,false,Presentment
+2023-07-22,Pink Burgers,-6.99,,bars_restaurants,0.9,false,Presentment
+2023-07-24,Kiosk,-87.33,,food_groceries,0.9,false,Presentment
+2023-07-26,RESIDENT ADVISOR TICKE,18.60,Refund,leisure_entertainment,0.95,false,Presentment Refund
+2023-07-27,Tor164,-21.83,,bars_restaurants,0.9,false,Presentment
+2023-07-28,Bio Market,-11.14,,food_groceries,1.0,false,Presentment
+2023-07-29,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2023-07-29,Renate,-2.18,,bars_restaurants,1.0,false,Presentment
+2023-07-29,Renate,-13.10,,bars_restaurants,1.0,false,Presentment
+2023-07-31,Call & More Dr,-9.43,,media_electronics,0.9,false,Presentment
+2023-07-31,Renate,-3.93,,bars_restaurants,1.0,false,Presentment
+2023-07-31,Uber,-8.29,,transportation,1.0,false,Presentment
+2023-08-01,Restaurant Alverdes,-5.68,,bars_restaurants,0.9,false,Presentment
+2023-08-02,moa - cafe bar,-17.10,,bars_restaurants,0.9,false,Presentment
+2023-08-03,Landlord,-1091.57,Rent,household_utilities,1.0,true,Debit Transfer
+2023-08-04,Udemy,-13.09,,education,1.0,false,Presentment
+2023-08-05,Spotify,-8.72,,leisure_entertainment,1.0,true,Presentment
+2023-08-06,REWE,-4.49,,food_groceries,1.0,false,Presentment
+2023-08-06,REWE,-33.96,,food_groceries,1.0,false,Presentment
+2023-08-10,Petrol Station,-13.11,,transportation,0.9,false,Presentment
+2023-08-11,Bank ATM,-87.33,,atm,0.9,false,Presentment
+2023-08-14,WHITE BEACH,-6.11,,bars_restaurants,0.9,false,Presentment
+2023-08-17,Ristorante,-26.20,,bars_restaurants,0.9,false,Presentment
+2023-08-21,Feather Insurance,-1.53,,insurances,1.0,true,Presentment
+2023-08-22,REWE,-28.60,,food_groceries,1.0,false,Presentment
+2023-08-23,CASUALFOOD FLUGHAFEN,-3.45,,bars_restaurants,0.9,false,Presentment
+2023-08-25,Lidl,-19.78,,food_groceries,1.0,false,Presentment
+2023-08-29,REWE,-26.97,,food_groceries,1.0,false,Presentment
+2023-08-30,Employer GmbH,1137.45,Salary 08/2023,salary,1.0,true,Credit Transfer
+2023-08-31,REWE,-19.85,,food_groceries,1.0,false,Presentment
+2023-09-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2023-09-02,Lime,-2.05,,transportation,1.0,false,Presentment
+2023-09-03,Friend C,-1.21,,family_friends,0.4,false,Presentment
+2023-09-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2023-09-05,Lime,-1.82,,transportation,1.0,false,Presentment
+2023-09-06,Charity e.V.,-13.10,Donation,donations_charity,1.0,true,Direct Debit
+2023-09-08,Urban Sports Club,-57.64,,leisure_entertainment,0.9,true,Presentment
+2023-09-08,W Pizza GmbH,-15.72,,bars_restaurants,0.9,false,Presentment
+2023-09-09,EDEKA,-5.41,,food_groceries,1.0,false,Presentment
+2023-09-10,TIER,-2.40,,transportation,1.0,false,Presentment
+2023-09-11,TIER,-2.18,,transportation,1.0,false,Presentment
+2023-09-12,TIER,-1.96,,transportation,1.0,false,Presentment
+2023-09-13,Friend C,-4.95,,family_friends,0.4,false,Presentment
+2023-09-14,EDEKA,-5.48,,food_groceries,1.0,false,Presentment
+2023-09-15,EDEKA,-16.52,,food_groceries,1.0,false,Presentment
+2023-09-17,Lidl,-14.93,,food_groceries,1.0,false,Presentment
+2023-09-20,Lidl,-19.21,,food_groceries,1.0,false,Presentment
+2023-09-22,REWE,-2.65,,food_groceries,1.0,false,Presentment
+2023-09-22,REWE,-3.69,,food_groceries,1.0,false,Presentment
+2023-09-25,Coffee Fellows,-2.27,,bars_restaurants,0.9,false,Presentment
+2023-09-29,Lidl,-4.10,,food_groceries,1.0,false,Presentment
+2023-10-01,Lidl,-20.28,,food_groceries,1.0,false,Presentment
+2023-10-03,EDEKA,-15.40,,food_groceries,1.0,false,Presentment
+2023-10-04,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2023-10-05,New Media Art,-16.59,,leisure_entertainment,0.7,false,Presentment
+2023-10-06,REWE,-20.74,,food_groceries,1.0,false,Presentment
+2023-10-07,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2023-10-07,Renate,-2.18,,bars_restaurants,1.0,false,Presentment
+2023-10-09,Urban Sports Club,-57.64,,leisure_entertainment,0.9,true,Presentment
+2023-10-09,Uber,-6.62,,transportation,1.0,false,Presentment
+2023-10-11,Mauerwerk Berl,-10.13,,leisure_entertainment,0.9,false,Presentment
+2023-10-13,Restaurant Weltwirtsc,-10.92,,bars_restaurants,0.95,false,Presentment
+2023-10-15,Lidl,-32.19,,food_groceries,1.0,false,Presentment
+2023-10-15,BD Berlin,-13.54,,bars_restaurants,0.9,false,Presentment
+2023-10-16,Charity e.V.,0.01,Thank you,donations_charity,1.0,false,Credit Transfer
+2023-10-17,Apotheke,-4.37,,healthcare_drug_stores,0.9,false,Presentment
+2023-10-19,Own Account,436.63,Transfer,savings_investments,1.0,false,Credit Transfer
+2023-10-19,St. Oberholz,-3.06,,bars_restaurants,0.9,false,Presentment
+2023-10-20,Vending Machine,-87.33,,miscellaneous,0.45,false,Presentment
+2023-10-22,Kiosk,-13.19,,food_groceries,0.9,false,Presentment
+2023-10-23,TRESOR BERLIN GMBH,-19.21,,leisure_entertainment,0.9,false,Presentment
+2023-10-24,Lidl,-7.71,,food_groceries,1.0,false,Presentment
+2023-10-26,Bio Market,-7.80,,food_groceries,1.0,false,Presentment
+2023-10-28,BOULANGERIE SEC,-1.22,,food_groceries,0.9,false,Presentment
+2023-10-28,MAISON ST GEORG,-5.41,,bars_restaurants,0.9,false,Presentment
+2023-10-29,BOMBARDIER,-8.30,,miscellaneous,0.4,false,Presentment
+2023-10-29,RATP,-9.17,,transportation,0.95,false,Presentment
+2023-10-29,BD MULTI MEDIA,-30.56,,media_electronics,0.9,false,Presentment
+2023-10-30,CICERONE,-3.93,,bars_restaurants,0.9,false,Presentment
+2023-10-31,PAUL,-6.51,,bars_restaurants,0.9,false,Presentment
+2023-10-31,RATP,-12.31,,transportation,0.95,false,Presentment
+2023-11-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2023-11-02,Cash Withdrawal,-43.66,,atm,0.95,false,Presentment
+2023-11-05,Wolt,-11.86,,food_delivery,1.0,false,Presentment
+2023-11-05,Lidl,-17.66,,food_groceries,1.0,false,Presentment
+2023-11-05,Paloma,-10.48,,bars_restaurants,1.0,false,Presentment
+2023-11-07,REWE,-22.05,,food_groceries,1.0,false,Presentment
+2023-11-10,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
+2023-11-14,Lime,-2.05,,transportation,1.0,false,Presentment
+2023-11-15,Regenbogen Kiosk,-13.10,,food_groceries,0.8,false,Presentment
+2023-11-16,Friend C,-3.05,,family_friends,0.4,false,Presentment
+2023-11-17,TIER,-1.75,,transportation,1.0,false,Presentment
+2023-11-18,Lidl,-19.81,,food_groceries,1.0,false,Presentment
+2023-11-20,Friend B,174.65,Gift,family_friends,1.0,false,Credit Transfer
+2023-11-20,Ryanair,-325.95,,travel_holidays,1.0,false,Presentment
+2023-11-21,Own Account,523.95,Transfer,savings_investments,1.0,false,Credit Transfer
+2023-11-22,Goldies Smashburge,-5.68,,bars_restaurants,0.9,false,Presentment
+2023-11-22,Lidl,-27.50,,food_groceries,1.0,false,Presentment
+2023-11-24,TIER,-2.40,,transportation,1.0,false,Presentment
+2023-11-26,Lydia,-4.37,,family_friends,0.9,false,Presentment
+2023-11-26,Spaetify,-8.73,,food_groceries,0.9,false,Presentment
+2023-11-27,Cafe Wunder,-14.22,,bars_restaurants,0.9,false,Presentment
+2023-11-28,Friend C,-3.91,,family_friends,0.4,false,Presentment
+2023-11-29,Friend C,-3.56,,family_friends,0.4,false,Presentment
+2023-11-30,Raclette bitte,-6.11,,bars_restaurants,0.8,false,Presentment
+2023-11-30,Look Catering,-4.80,,bars_restaurants,0.9,false,Presentment
+2023-12-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2023-12-02,MILES,-2.84,,transportation,0.9,false,Presentment
+2023-12-03,Lidl,-9.62,,food_groceries,1.0,false,Presentment
+2023-12-04,Kiosk,-43.66,,food_groceries,0.9,false,Presentment
+2023-12-06,Friend C,-4.09,,family_friends,0.4,false,Presentment
+2023-12-06,Charity e.V.,-13.10,Donation,donations_charity,1.0,true,Direct Debit
+2023-12-07,MILES,-39.30,,transportation,0.9,false,Presentment
+2023-12-08,EDEKA,-6.35,,food_groceries,1.0,false,Presentment
+2023-12-10,Lidl,-29.45,,food_groceries,1.0,false,Presentment
+2023-12-11,MediaMarkt,-32.29,,media_electronics,0.9,false,Presentment
+2023-12-14,Ritter Butzke,-30.56,,leisure_entertainment,0.9,false,Presentment
+2023-12-15,Local Shop,-4.89,,shopping,0.9,false,Presentment
+2023-12-16,Lidl,-10.56,,food_groceries,1.0,false,Presentment
+2023-12-17,Wolt,-20.51,,food_delivery,1.0,false,Presentment
+2023-12-18,Friend E,-21.83,,family_friends,0.4,false,Presentment
+2023-12-19,Wolt,-13.79,,food_delivery,1.0,false,Presentment
+2023-12-20,Ritter Butzke,-61.13,,leisure_entertainment,0.9,false,Presentment
+2023-12-28,Regional Rail,-5.68,,transportation,0.7,false,Presentment
+2023-12-28,CASANIK,-29.69,,bars_restaurants,0.9,false,Presentment
+2023-12-30,Wine Shop,-1.22,,food_groceries,0.6,false,Presentment
+2023-12-31,Lidl,-30.60,,food_groceries,1.0,false,Presentment
+2023-12-31,Lidl,-11.33,,food_groceries,1.0,false,Presentment
+2024-01-01,Amrit I GmbH,-58.68,,bars_restaurants,0.9,false,Presentment
+2024-01-01,Bulbul Berlin,-9.17,,bars_restaurants,0.9,false,Presentment
+2024-01-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-01-01,Bolt,-9.96,,transportation,1.0,false,Presentment
+2024-01-03,Uniqlo,-11.27,,shopping,0.9,false,Presentment
+2024-01-03,Ryanair,-27.94,,travel_holidays,1.0,false,Presentment
+2024-01-04,MAYD GROUP GMBH,-13.44,,healthcare_drug_stores,0.9,false,Presentment
+2024-01-05,P61 Gallery Gm,-11.35,,leisure_entertainment,0.9,false,Presentment
+2024-01-07,Lidl,-7.05,,food_groceries,1.0,false,Presentment
+2024-01-10,Lidl,-12.00,,food_groceries,1.0,false,Presentment
+2024-01-13,Lidl,-19.88,,food_groceries,1.0,false,Presentment
+2024-01-14,Wolt,-14.14,,food_delivery,1.0,false,Presentment
+2024-01-17,EDEKA,-22.24,,food_groceries,1.0,false,Presentment
+2024-01-19,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2024-01-24,Kramer Restaurant,-38.42,,bars_restaurants,0.9,false,Presentment
+2024-01-28,REWE,-23.43,,food_groceries,1.0,false,Presentment
+2024-02-01,Wolt,-10.73,,food_delivery,1.0,false,Presentment
+2024-02-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-02-03,SmokePlanet GmbH,-19.19,,shopping,0.7,false,Presentment
+2024-02-05,Wolt,-10.55,,food_delivery,1.0,false,Presentment
+2024-02-07,Apotheke,-10.39,,healthcare_drug_stores,0.95,false,Presentment
+2024-02-08,Own Account,523.95,Transfer,savings_investments,1.0,false,Credit Transfer
+2024-02-08,EDEKA,-7.74,,food_groceries,1.0,false,Presentment
+2024-02-11,Lidl,-21.67,,food_groceries,1.0,false,Presentment
+2024-02-12,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2024-02-15,Lidl,-6.11,,food_groceries,1.0,false,Presentment
+2024-02-17,Privatbrauerei Schalan,-4.63,,bars_restaurants,0.9,false,Presentment
+2024-02-18,Lidl,-30.82,,food_groceries,1.0,false,Presentment
+2024-02-20,Friend C,-3.31,,family_friends,0.4,false,Presentment
+2024-02-23,Lidl,-9.61,,food_groceries,1.0,false,Presentment
+2024-02-25,REWE,-25.75,,food_groceries,1.0,false,Presentment
+2024-02-28,Mater,-16.59,,bars_restaurants,0.9,false,Presentment
+2024-03-01,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2024-03-02,Friend C,-3.31,,family_friends,0.4,false,Presentment
+2024-03-03,REWE,-16.17,,food_groceries,1.0,false,Presentment
+2024-03-06,Lidl,-11.47,,food_groceries,1.0,false,Presentment
+2024-03-07,UCI Kinowelten,-35.63,,leisure_entertainment,0.9,false,Presentment
+2024-03-08,UNITED CINEMAS INTERNA,-8.91,,leisure_entertainment,0.9,false,Presentment
+2024-03-11,Friend G,-8.73,,family_friends,0.9,false,Presentment
+2024-03-12,EDEKA,-9.05,,food_groceries,1.0,false,Presentment
+2024-03-14,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2024-03-17,Pawn Dot Com Bar,-24.29,,bars_restaurants,0.9,false,Presentment
+2024-03-17,The Senses,-8.73,,bars_restaurants,0.9,false,Presentment
+2024-03-18,ARMA TRADE GMBH,-4.43,,shopping,0.9,false,Presentment
+2024-03-19,EDEKA,-10.58,,food_groceries,1.0,false,Presentment
+2024-03-21,EDEKA,-12.37,,food_groceries,1.0,false,Presentment
+2024-03-23,Cash Withdrawal,-43.66,,atm,0.95,false,Presentment
+2024-03-24,Der blaue Fuchs,-34.93,,bars_restaurants,0.7,false,Presentment
+2024-03-25,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
+2024-03-25,Paloma,-10.48,,bars_restaurants,1.0,false,Presentment
+2024-03-27,Uber Eats,-11.48,,food_delivery,0.5,false,Presentment
+2024-03-28,Mikkeller Berlin,-3.93,,bars_restaurants,0.9,false,Presentment
+2024-03-29,Lidl,-10.00,,food_groceries,1.0,false,Presentment
+2024-03-31,Klunkerkranich,-6.99,,bars_restaurants,1.0,false,Presentment
+2024-04-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-04-03,EDEKA,-9.51,,food_groceries,1.0,false,Presentment
+2024-04-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2024-04-07,EDEKA,-5.82,,food_groceries,1.0,false,Presentment
+2024-04-08,EDEKA,-7.56,,food_groceries,1.0,false,Presentment
+2024-04-10,Friend C,-3.31,,family_friends,0.4,false,Presentment
+2024-04-11,Friend C,-3.92,,family_friends,0.4,false,Presentment
+2024-04-12,Friend C,-3.48,,family_friends,0.4,false,Presentment
+2024-04-14,Di Napoli & Fr,-9.17,,bars_restaurants,0.9,false,Presentment
+2024-04-14,BERLINER DOM,-15.28,,leisure_entertainment,0.9,false,Presentment
+2024-04-14,Hedonismus,-4.89,,leisure_entertainment,0.9,false,Presentment
+2024-04-14,Hedonismus,-7.42,,leisure_entertainment,0.9,false,Presentment
+2024-04-17,Lidl,-15.37,,food_groceries,1.0,false,Presentment
+2024-04-18,Ambinoid Cosmetics and,-21.83,,healthcare_drug_stores,0.9,false,Presentment
+2024-04-21,EDEKA,-12.45,,food_groceries,1.0,false,Presentment
+2024-04-21,Apple,-6.10,,media_electronics,0.95,true,Presentment
+2024-04-21,KINK,-12.01,,bars_restaurants,0.9,false,Presentment
+2024-04-22,Online Shop,-12.62,,shopping,0.3,false,Presentment
+2024-04-25,EDEKA,-10.87,,food_groceries,1.0,false,Presentment
+2024-04-25,Friend C,-3.05,,family_friends,0.4,false,Presentment
+2024-04-27,Klunkerkranich,-2.18,,bars_restaurants,1.0,false,Presentment
+2024-04-27,Klunkerkranich,-6.11,,bars_restaurants,1.0,false,Presentment
+2024-04-28,Apple,-6.10,,media_electronics,0.95,true,Presentment
+2024-04-29,Paloma,-14.41,,bars_restaurants,1.0,false,Presentment
+2024-04-29,Paloma,-3.49,,bars_restaurants,1.0,false,Presentment
+2024-04-30,Ryanair,-105.63,,travel_holidays,1.0,false,Presentment
+2024-04-30,Friend C,-4.70,,family_friends,0.4,false,Presentment
+2024-05-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-05-03,Charity e.V.,-13.10,Donation,donations_charity,1.0,true,Direct Debit
+2024-05-04,Friend C,-3.31,,family_friends,0.4,false,Presentment
+2024-05-06,Teufelsberg Be,-8.73,,leisure_entertainment,0.9,false,Presentment
+2024-05-08,EDEKA,-19.04,,food_groceries,1.0,false,Presentment
+2024-05-11,Friend M,-3.49,,family_friends,0.9,false,Presentment
+2024-05-12,Lidl,-8.63,,food_groceries,1.0,false,Presentment
+2024-05-13,MediaMarkt,-21.82,,media_electronics,0.9,false,Presentment
+2024-05-15,Friend C,-3.92,,family_friends,0.4,false,Presentment
+2024-05-16,Bus Company,-4.37,,transportation,0.9,false,Presentment
+2024-05-17,Supermarket,-1.75,,food_groceries,0.9,false,Presentment
+2024-05-18,CASUALFOOD FLUGHAFEN,-6.90,,bars_restaurants,0.9,false,Presentment
+2024-05-23,Ryanair,-17.03,,travel_holidays,1.0,false,Presentment
+2024-05-25,Friend C,-5.05,,family_friends,0.4,false,Presentment
+2024-05-26,Lidl,-26.50,,food_groceries,1.0,false,Presentment
+2024-05-28,MILES,-1.98,,transportation,0.9,false,Presentment
+2024-05-28,EDEKA,-11.61,,food_groceries,1.0,false,Presentment
+2024-05-31,Friend C,-4.09,,family_friends,0.4,false,Presentment
+2024-06-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-06-03,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2024-06-04,Bio Market,-0.23,,food_groceries,1.0,false,Presentment
+2024-06-04,Friend C,-4.96,,family_friends,0.4,false,Presentment
+2024-06-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2024-06-07,Friend C,-4.70,,family_friends,0.4,false,Presentment
+2024-06-08,SCHWESTERHERZ K,-2.53,,bars_restaurants,0.9,false,Presentment
+2024-06-08,dm,-7.60,,healthcare_drug_stores,0.9,false,Presentment
+2024-06-08,Klunkerkranich,-4.10,,bars_restaurants,1.0,false,Presentment
+2024-06-08,Big Stuff Smoked B,-8.73,,bars_restaurants,0.9,false,Presentment
+2024-06-09,Lidl,-22.94,,food_groceries,1.0,false,Presentment
+2024-06-10,The Front Gastro & Hot,-13.01,,bars_restaurants,0.9,false,Presentment
+2024-06-11,Steam,-6.79,,media_electronics,0.9,false,Presentment
+2024-06-14,Friend C,-3.92,,family_friends,0.4,false,Presentment
+2024-06-15,Friend C,-1.74,,family_friends,0.4,false,Presentment
+2024-06-16,Apotheke,-5.63,,healthcare_drug_stores,0.9,false,Presentment
+2024-06-17,BRLO BRWHOUSE,-15.31,,bars_restaurants,0.9,false,Presentment
+2024-06-18,Uber,-3.23,,transportation,1.0,false,Presentment
+2024-06-18,Own Account,-26.20,Transfer,savings_investments,1.0,false,Debit Transfer
+2024-06-20,Lidl,-29.59,,food_groceries,1.0,false,Presentment
+2024-06-23,Bio Market,-12.67,,food_groceries,1.0,false,Presentment
+2024-06-26,REWE,-25.56,,food_groceries,1.0,false,Presentment
+2024-06-29,Lidl,-5.22,,food_groceries,1.0,false,Presentment
+2024-06-30,Klunkerkranich,-6.99,,bars_restaurants,1.0,false,Presentment
+2024-07-01,Klunkerkranich,-6.72,,bars_restaurants,1.0,false,Presentment
+2024-07-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-07-02,Lidl,-13.83,,food_groceries,1.0,false,Presentment
+2024-07-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2024-07-06,EDEKA,-10.22,,food_groceries,1.0,false,Presentment
+2024-07-07,Maaya Event Gm,-11.79,,leisure_entertainment,0.9,false,Presentment
+2024-07-07,BirgitBier,-2.45,,bars_restaurants,0.9,false,Presentment
+2024-07-08,Restaurant Scheune,-13.88,,bars_restaurants,0.9,false,Presentment
+2024-07-08,Cash Withdrawal,-43.66,,atm,0.95,false,Presentment
+2024-07-09,Friend C,-4.09,,family_friends,0.4,false,Presentment
+2024-07-10,Uber,-3.49,,transportation,1.0,false,Presentment
+2024-07-13,EDEKA,-21.28,,food_groceries,1.0,false,Presentment
+2024-07-14,REWE,-4.92,,food_groceries,1.0,false,Presentment
+2024-07-15,Wolt,-12.59,,food_delivery,1.0,false,Presentment
+2024-07-16,EDEKA,-2.35,,food_groceries,1.0,false,Presentment
+2024-07-18,Apotheke,-4.37,,healthcare_drug_stores,0.9,false,Presentment
+2024-07-19,Amazon,-33.16,,shopping,1.0,false,Presentment
+2024-07-20,Decathlon,-45.38,,shopping,0.9,false,Presentment
+2024-07-21,Lidl,-6.70,,food_groceries,1.0,false,Presentment
+2024-07-22,Friend O,-52.40,,family_friends,0.9,false,Presentment
+2024-07-22,SuBfein,-4.61,,bars_restaurants,0.9,false,Presentment
+2024-07-24,Online Pharmacy,-34.06,,healthcare_drug_stores,0.9,false,Presentment
+2024-07-25,Friend D,-23.58,,family_friends,0.6,false,Presentment
+2024-07-26,Lidl,-3.70,,food_groceries,1.0,false,Presentment
+2024-07-27,Lidl,-4.17,,food_groceries,1.0,false,Presentment
+2024-07-28,Paloma,-9.17,,bars_restaurants,1.0,false,Presentment
+2024-07-29,Paloma,-3.23,,bars_restaurants,1.0,false,Presentment
+2024-07-29,Customs Office,-1931.17,Customs duty,tax_fines,1.0,false,Debit Transfer
+2024-07-31,EDEKA,-12.68,,food_groceries,1.0,false,Presentment
+2024-07-31,Friend C,-4.09,,family_friends,0.4,false,Presentment
+2024-08-01,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2024-08-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-08-02,Friend C,-4.79,,family_friends,0.4,false,Presentment
+2024-08-04,drinks & bottl,-12.92,,bars_restaurants,0.7,false,Presentment
+2024-08-04,Apotheke,-6.10,,healthcare_drug_stores,0.95,false,Presentment
+2024-08-04,Bolt,-15.02,,transportation,1.0,false,Presentment
+2024-08-04,BirgitBier,-7.42,,bars_restaurants,0.9,false,Presentment
+2024-08-05,Uber,-6.53,,transportation,1.0,false,Presentment
+2024-08-05,POCO EINRICHTUNGSMÄRKT,-18.52,,shopping,1.0,false,Presentment
+2024-08-06,Big Stuff Smoked B,-10.48,,bars_restaurants,0.9,false,Presentment
+2024-08-07,The Visit Coffee Roast,-11.27,,bars_restaurants,0.9,false,Presentment
+2024-08-08,BOWLING WORLD GERMANY,-36.68,,leisure_entertainment,0.9,false,Presentment
+2024-08-09,Lidl,-6.03,,food_groceries,1.0,false,Presentment
+2024-08-12,Health Insurer,1931.17,Contribution refund,insurances,1.0,false,Credit Transfer
+2024-08-12,Namecheap,-8.72,,media_electronics,0.9,true,Presentment
+2024-08-12,Uber,-2.76,,transportation,1.0,false,Presentment
+2024-08-13,IKEA,-78.59,,shopping,1.0,false,Presentment
+2024-08-14,beetsroots,-9.74,,bars_restaurants,0.9,false,Presentment
+2024-08-15,Supermarket,-1.75,,food_groceries,0.9,false,Presentment
+2024-08-16,Supermarket,-11.76,,food_groceries,0.9,false,Presentment
+2024-08-16,Thello,-25.76,,transportation,0.9,false,Presentment
+2024-08-18,Ristorante,-11.18,,bars_restaurants,0.9,false,Presentment
+2024-08-20,Lufthansa,-210.93,,travel_holidays,0.9,false,Presentment
+2024-08-24,PayPal Pay in 3,-72.25,,shopping,0.6,false,Presentment
+2024-08-27,Beach Club,-3.06,,bars_restaurants,0.8,false,Presentment
+2024-08-28,Cocolo Restaurant,-19.69,,bars_restaurants,0.95,false,Presentment
+2024-08-28,REWE,-33.60,,food_groceries,1.0,false,Presentment
+2024-08-29,RELAY,-7.95,,shopping,0.9,false,Presentment
+2024-08-29,Beumer & Lutum Bae,-7.86,,food_groceries,0.9,false,Presentment
+2024-09-01,EDEKA,-26.03,,food_groceries,1.0,false,Presentment
+2024-09-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-09-04,EDEKA,-11.61,,food_groceries,1.0,false,Presentment
+2024-09-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2024-09-06,Uber,-4.17,,transportation,1.0,false,Presentment
+2024-09-07,BER Airport,-10.83,,travel_holidays,0.9,false,Presentment
+2024-09-07,AREAS PORTUGAL SA,-6.81,,bars_restaurants,0.9,false,Presentment
+2024-09-07,CPPB - CASCAIS,-6.64,,transportation,0.9,false,Presentment
+2024-09-08,FARMACIA CORDEIRO,-19.20,,healthcare_drug_stores,0.9,false,Presentment
+2024-09-08,MINI PRECO SAO JOAO,-21.92,,food_groceries,0.9,false,Presentment
+2024-09-09,MINI PRECO SAO JOAO,-15.53,,food_groceries,0.9,false,Presentment
+2024-09-09,ESTALAGEM MUCHAXO,-5.24,,travel_holidays,0.9,false,Presentment
+2024-09-09,HOUSE OF WONDERS,-34.06,,leisure_entertainment,0.9,false,Presentment
+2024-09-09,Uber,-8.29,,transportation,1.0,false,Presentment
+2024-09-10,Marisqueira M,-87.33,,bars_restaurants,0.9,false,Presentment
+2024-09-11,PINGO DOCE,-33.99,,food_groceries,0.9,false,Presentment
+2024-09-11,ADAMASTOR,-3.32,,bars_restaurants,0.6,false,Presentment
+2024-09-11,ALE HOP SE LISBOA,-14.85,,shopping,0.9,false,Presentment
+2024-09-12,Museu da Farmacia,-6.99,,leisure_entertainment,0.9,false,Presentment
+2024-09-12,QUIOSQUE FLORES,-5.15,,food_groceries,0.6,false,Presentment
+2024-09-12,Bolt,-4.75,,transportation,1.0,false,Presentment
+2024-09-13,SAGA,-3.80,,bars_restaurants,0.9,false,Presentment
+2024-09-13,Bolt,-4.90,,transportation,1.0,false,Presentment
+2024-09-14,CANTINA FLORES,-14.50,,bars_restaurants,0.9,false,Presentment
+2024-09-14,Bolt,-13.62,,transportation,1.0,false,Presentment
+2024-09-15,MARTIM MONIZ,-2.01,,transportation,0.9,false,Presentment
+2024-09-15,CP CAIS SODRE,-2.53,,transportation,0.9,false,Presentment
+2024-09-16,OLAIAS,-1.57,,transportation,0.9,false,Presentment
+2024-09-16,MIAMI MAMI,-38.25,,bars_restaurants,0.9,false,Presentment
+2024-09-16,FEITO PORTUGAL SA,-13.58,,shopping,0.8,false,Presentment
+2024-09-16,DAMAS,-20.96,,bars_restaurants,0.9,false,Presentment
+2024-09-16,GRABIT,-3.14,,food_groceries,0.9,false,Presentment
+2024-09-16,HMS Host International,-9.66,,bars_restaurants,0.9,false,Presentment
+2024-09-17,Lidl,-22.97,,food_groceries,1.0,false,Presentment
+2024-09-19,Chutnify,-20.26,,bars_restaurants,0.9,false,Presentment
+2024-09-21,Lidl,-23.46,,food_groceries,1.0,false,Presentment
+2024-09-23,Caffetteria,-4.37,,bars_restaurants,0.95,false,Presentment
+2024-09-23,Hedonismus,-2.45,,leisure_entertainment,0.9,false,Presentment
+2024-09-23,Wolt,-10.73,,food_delivery,1.0,false,Presentment
+2024-09-25,Wolt,-12.23,,food_delivery,1.0,false,Presentment
+2024-09-26,REWE,-30.85,,food_groceries,1.0,false,Presentment
+2024-09-27,BURGER VISION,-11.27,,bars_restaurants,0.9,false,Presentment
+2024-09-29,Vending Machine,-61.13,,miscellaneous,0.2,false,Presentment
+2024-09-29,Wolt,-20.06,,food_delivery,1.0,false,Presentment
+2024-09-30,Brick Berlin,-26.46,,bars_restaurants,0.9,false,Presentment
+2024-10-01,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
+2024-10-02,POCO EINRICHTUNGSMÄRKT,-30.95,,shopping,1.0,false,Presentment
+2024-10-02,Friend C,-4.79,,family_friends,0.4,false,Presentment
+2024-10-03,Woolworth,-3.49,,shopping,0.9,false,Presentment
+2024-10-04,Apple,-3.48,,media_electronics,0.95,true,Presentment
+2024-10-04,Landlord,-833.96,Rent,household_utilities,1.0,true,Debit Transfer
+2024-10-07,REWE,-27.39,,food_groceries,1.0,false,Presentment
+2024-10-07,Burgermeister,-9.17,,bars_restaurants,0.95,false,Presentment
+2024-10-09,Burgermeister,9.17,Refund,bars_restaurants,0.95,false,Presentment Refund
+2024-10-11,Lidl,-26.96,,food_groceries,1.0,false,Presentment
+2024-10-11,Big Stuff Smoked B,-20.96,,bars_restaurants,0.9,false,Presentment
+2024-10-11,BOWLING WORLD GERMANY,-9.08,,leisure_entertainment,0.9,false,Presentment
+2024-10-13,LOST MY VOICE BAR,-21.83,,bars_restaurants,0.9,false,Presentment
+2024-10-13,Bolt,-12.14,,transportation,1.0,false,Presentment
+2024-10-14,Bolt,-17.90,,transportation,1.0,false,Presentment
+2024-10-14,Wolt,-12.34,,food_delivery,1.0,false,Presentment
+2024-10-16,REWE,-28.42,,food_groceries,1.0,false,Presentment
+2024-10-17,QCC B Gastro,-5.24,,bars_restaurants,0.9,false,Presentment
+2024-10-18,IKEA,-92.45,,shopping,1.0,false,Presentment
+2024-10-20,POCO EINRICHTUNGSMÄRKT,-6.53,,shopping,1.0,false,Presentment
+2024-10-23,PayPal Pay in 3,-72.25,,shopping,0.6,false,Presentment
+2024-10-25,REWE,-39.45,,food_groceries,1.0,false,Presentment
+2024-10-28,Lidl,-9.82,,food_groceries,1.0,false,Presentment
+2024-10-30,Udemy,-14.83,,education,1.0,false,Presentment
+2024-10-30,Shodo Udon Lab,-18.25,,bars_restaurants,0.9,false,Presentment
+2024-11-01,BVG,-25.32,Monthly ticket,transportation,1.0,true,Direct Debit
+2024-11-02,REWE,-35.86,,food_groceries,1.0,false,Presentment
+2024-11-04,Apotheke,-22.21,,healthcare_drug_stores,0.9,false,Presentment
+2024-11-04,Landlord,-833.96,Rent,household_utilities,1.0,true,Debit Transfer
+2024-11-05,REWE,-18.84,,food_groceries,1.0,false,Presentment
+2024-11-06,Uniqlo,-50.56,,shopping,0.9,false,Presentment
+2024-11-09,Giro Coffee Bar,-3.32,,bars_restaurants,0.9,false,Presentment
+2024-11-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2024-11-10,THEO AUTOMATEN,-2.18,,food_groceries,0.9,false,Presentment
+2024-11-10,Slim-Chickens,-10.39,,bars_restaurants,0.9,false,Presentment
+2024-11-16,Aral,-7.41,,transportation,0.9,false,Presentment
+2024-11-17,Sparkasse ATM,-87.33,,atm,0.9,false,Presentment
+2024-11-18,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
+2024-11-18,Paloma,-9.61,,bars_restaurants,1.0,false,Presentment
+2024-11-20,MILES,-4.37,,transportation,0.9,false,Presentment
+2024-11-22,EDEKA,-10.92,,food_groceries,1.0,false,Presentment
+2024-11-23,PayPal Pay in 3,-123.75,,shopping,0.6,false,Presentment
+2024-11-24,MILES,-5.20,,transportation,0.9,false,Presentment
+2024-11-24,Bouldergarten,-13.97,,leisure_entertainment,0.9,false,Presentment
+2024-11-28,Lidl,-5.05,,food_groceries,1.0,false,Presentment
+2024-12-02,Klunkerkranich,-3.49,,bars_restaurants,1.0,false,Presentment
+2024-12-02,Klunkerkranich,-6.99,,bars_restaurants,1.0,false,Presentment
+2024-12-02,Uniqlo,-89.86,,shopping,0.9,false,Presentment
+2024-12-02,Klunkerkranich,-14.32,,bars_restaurants,1.0,false,Presentment
+2024-12-03,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2024-12-03,Klunkerkranich,-7.79,,bars_restaurants,1.0,false,Presentment
+2024-12-05,Lidl,-10.53,,food_groceries,1.0,false,Presentment
+2024-12-06,Lidl,-7.17,,food_groceries,1.0,false,Presentment
+2024-12-07,REWE,-12.96,,food_groceries,1.0,false,Presentment
+2024-12-08,Lidl,-8.88,,food_groceries,1.0,false,Presentment
+2024-12-09,Imbiss Haroun,-7.86,,bars_restaurants,0.95,false,Presentment
+2024-12-09,REWE,-30.91,,food_groceries,1.0,false,Presentment
+2024-12-11,Bio Market,-13.07,,food_groceries,1.0,false,Presentment
+2024-12-14,Sparkasse ATM,-52.40,,atm,0.9,false,Presentment
+2024-12-15,Lidl,-31.93,,food_groceries,1.0,false,Presentment
+2024-12-16,Friend O,-4.80,,family_friends,0.9,false,Presentment
+2024-12-17,Riedel Berlin Cruises,-11.79,,leisure_entertainment,0.9,false,Presentment
+2024-12-17,REWE,-9.99,,food_groceries,1.0,false,Presentment
+2024-12-18,Lidl,-13.74,,food_groceries,1.0,false,Presentment
+2024-12-22,EDEKA,-3.13,,food_groceries,1.0,false,Presentment
+2024-12-23,WHSmith,-3.36,,shopping,0.9,false,Presentment
+2024-12-23,PayPal Pay in 3,-123.75,,shopping,0.6,false,Presentment
+2024-12-28,Playtomic,-60.25,,leisure_entertainment,1.0,false,Presentment
+2024-12-28,Regional Rail,-5.94,,transportation,0.7,false,Presentment
+2024-12-29,QuantConnect,-8.39,,miscellaneous,0.6,false,Presentment
+2024-12-31,BVG,-3.84,,transportation,0.9,false,Presentment
+2025-01-01,NDerre A La Lanze Aer,-1.48,,bars_restaurants,0.9,false,Presentment
+2025-01-01,NDerre A La Lanze Aer,-6.72,,bars_restaurants,0.9,false,Presentment
+2025-01-01,MILES,-7.94,,transportation,0.9,false,Presentment
+2025-01-02,Health Insurer,-203.68,Contribution,insurances,1.0,true,Debit Transfer
+2025-01-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-01-04,Savings Space,-0.87,Savings,savings_investments,1.0,false,Debit Transfer
+2025-01-05,Decathlon,-103.87,,shopping,0.9,false,Presentment
+2025-01-06,EDEKA,-3.05,,food_groceries,1.0,false,Presentment
+2025-01-07,Lidl,-4.57,,food_groceries,1.0,false,Presentment
+2025-01-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-01-10,Rueya,-12.92,,bars_restaurants,1.0,false,Presentment
+2025-01-10,fraenk,-13.10,,household_utilities,1.0,true,Presentment
+2025-01-13,Lidl,-4.30,,food_groceries,1.0,false,Presentment
+2025-01-15,Lidl,-7.87,,food_groceries,1.0,false,Presentment
+2025-01-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
+2025-01-16,Lidl,-5.92,,food_groceries,1.0,false,Presentment
+2025-01-18,REWE,-10.63,,food_groceries,1.0,false,Presentment
+2025-01-21,Lidl,-13.79,,food_groceries,1.0,false,Presentment
+2025-01-24,EDEKA,-5.92,,food_groceries,1.0,false,Presentment
+2025-01-26,Biererei,-13.54,,bars_restaurants,0.9,false,Presentment
+2025-01-27,Lidl,-25.05,,food_groceries,1.0,false,Presentment
+2025-01-27,Friend O,-4.14,,family_friends,0.9,false,Presentment
+2025-01-29,QuantConnect,-8.36,,miscellaneous,0.6,false,Presentment
+2025-01-31,Landlord,-833.96,Rent,household_utilities,1.0,true,Debit Transfer
+2025-02-01,Wolt,-10.73,,food_delivery,1.0,false,Presentment
+2025-02-02,Lidl,-28.56,,food_groceries,1.0,false,Presentment
+2025-02-03,PayPal Pay in 3,-42.79,,shopping,0.6,false,Presentment
+2025-02-04,REWE,-1.04,,food_groceries,1.0,false,Presentment
+2025-02-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2025-02-05,Landlord,-833.96,Rent,household_utilities,1.0,true,Debit Transfer
+2025-02-08,Steam,-20.07,,media_electronics,0.9,false,Presentment
+2025-02-09,Amazon,-19.20,,shopping,1.0,false,Presentment
+2025-02-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-02-10,N26,-41.04,Membership,miscellaneous,1.0,true,Fee
+2025-02-11,Lidl,-11.81,,food_groceries,1.0,false,Presentment
+2025-02-13,REWE,-19.53,,food_groceries,1.0,false,Presentment
+2025-02-14,BVG,-4.10,,transportation,0.9,false,Presentment
+2025-02-14,Navigo,-11.35,,transportation,0.9,false,Presentment
+2025-02-15,THE MOOSE,-9.61,,bars_restaurants,0.9,false,Presentment
+2025-02-15,Bolt,-13.80,,transportation,1.0,false,Presentment
+2025-02-15,LE CLOWN CAFE,-8.30,,bars_restaurants,0.9,false,Presentment
+2025-02-16,Navigo,-2.18,,transportation,0.9,false,Presentment
+2025-02-16,CPP FLUX PDP,-7.86,,transportation,0.9,false,Presentment
+2025-02-17,SC.LE,-13.97,,shopping,0.9,false,Presentment
+2025-02-17,BVG,-4.10,,transportation,0.9,false,Presentment
+2025-02-17,CAFE DU MARCHE,-22.22,,bars_restaurants,0.9,false,Presentment
+2025-02-17,Navigo,-2.18,,transportation,0.9,false,Presentment
+2025-02-17,BOWLING,-15.72,,leisure_entertainment,0.9,false,Presentment
+2025-02-17,Gym,-4.21,Membership,leisure_entertainment,1.0,true,Direct Debit
+2025-02-17,illy,-2.58,,bars_restaurants,0.9,false,Presentment
+2025-02-18,REWE,-17.36,,food_groceries,1.0,false,Presentment
+2025-02-20,Lidl,-6.91,,food_groceries,1.0,false,Presentment
+2025-02-21,Playtomic,-49.34,,leisure_entertainment,1.0,false,Presentment
+2025-02-21,Ankerklause,-8.56,,bars_restaurants,0.9,false,Presentment
+2025-02-22,Lidl,-32.57,,food_groceries,1.0,false,Presentment
+2025-02-23,Lidl,-3.82,,food_groceries,1.0,false,Presentment
+2025-02-24,Playtomic,48.51,Refund,leisure_entertainment,1.0,false,Presentment Refund
+2025-02-24,Savings Space,-192.12,Savings,savings_investments,1.0,false,Debit Transfer
+2025-02-26,REWE,-20.71,,food_groceries,1.0,false,Presentment
+2025-03-01,QuantConnect,-8.39,,miscellaneous,0.6,false,Presentment
+2025-03-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-03-02,Orangerie,-3.93,,bars_restaurants,0.9,false,Presentment
+2025-03-03,Cafe Babette,-1.83,,bars_restaurants,0.9,false,Presentment
+2025-03-03,Velomax - Velodrom,-10.48,,leisure_entertainment,0.9,false,Presentment
+2025-03-03,Wolt,-11.65,,food_delivery,1.0,false,Presentment
+2025-03-03,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-03-05,Friend I,-4.80,,family_friends,0.9,false,Presentment
+2025-03-05,Zara,-11.31,,shopping,0.9,false,Presentment
+2025-03-06,Lidl,-18.35,,food_groceries,1.0,false,Presentment
+2025-03-08,Bolt,-0.93,,transportation,1.0,false,Presentment
+2025-03-08,AeDEN AeVE CLUB,-11.35,,leisure_entertainment,0.9,false,Presentment
+2025-03-08,Bolt,-2.67,,transportation,1.0,false,Presentment
+2025-03-08,AeDEN AeVE CLUB,-6.55,,leisure_entertainment,0.9,false,Presentment
+2025-03-09,Burgermeister,-8.56,,bars_restaurants,0.95,false,Presentment
+2025-03-10,Wolt,-14.10,,food_delivery,1.0,false,Presentment
+2025-03-12,Playtomic,-13.53,,leisure_entertainment,1.0,false,Presentment
+2025-03-12,REWE,-22.30,,food_groceries,1.0,false,Presentment
+2025-03-14,REWE,-10.66,,food_groceries,1.0,false,Presentment
+2025-03-15,Lidl,-20.79,,food_groceries,1.0,false,Presentment
+2025-03-17,Pandoras Cafe,-17.29,,bars_restaurants,0.9,false,Presentment
+2025-03-17,Savings Space,-192.12,Savings,savings_investments,1.0,false,Debit Transfer
+2025-03-18,Elfi-Supermarkt,-1.30,,food_groceries,0.9,false,Presentment
+2025-03-20,Uber,-12.45,,transportation,1.0,false,Presentment
+2025-03-20,Pawn Dot Com Bar,-8.41,,bars_restaurants,0.9,false,Presentment
+2025-03-21,Uber,-6.30,,transportation,1.0,false,Presentment
+2025-03-21,Lidl,-12.97,,food_groceries,1.0,false,Presentment
+2025-03-22,Playtomic,-13.10,,leisure_entertainment,1.0,false,Presentment
+2025-03-23,BirgitBier,-9.61,,bars_restaurants,0.9,false,Presentment
+2025-03-23,Rossmann,-0.44,,healthcare_drug_stores,0.9,false,Presentment
+2025-03-23,Bolt,-8.99,,transportation,1.0,false,Presentment
+2025-03-24,Steam,-6.52,,media_electronics,0.9,false,Presentment
+2025-03-27,Lidl,-24.32,,food_groceries,1.0,false,Presentment
+2025-03-29,Uber,-2.29,,transportation,1.0,false,Presentment
+2025-03-29,Lidl,-6.53,,food_groceries,1.0,false,Presentment
+2025-03-31,REWE,-29.76,,food_groceries,1.0,false,Presentment
+2025-03-31,La Maison,-6.46,,bars_restaurants,0.9,false,Presentment
+2025-04-01,Playtomic,-1.31,,leisure_entertainment,1.0,false,Presentment
+2025-04-01,Amazon,-19.68,,shopping,1.0,false,Presentment
+2025-04-01,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-04-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-04-03,Lidl,-10.08,,food_groceries,1.0,false,Presentment
+2025-04-04,Wolt,-14.02,,food_delivery,1.0,false,Presentment
+2025-04-05,De la Gelato Natura,-4.02,,bars_restaurants,0.9,false,Presentment
+2025-04-06,Lidl,-36.60,,food_groceries,1.0,false,Presentment
+2025-04-06,Lidl,-5.87,,food_groceries,1.0,false,Presentment
+2025-04-08,Uniqlo,-26.29,,shopping,0.9,false,Presentment
+2025-04-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-04-09,Lidl,-4.43,,food_groceries,1.0,false,Presentment
+2025-04-11,Lidl,-13.76,,food_groceries,1.0,false,Presentment
+2025-04-12,BirgitBier,-4.80,,bars_restaurants,0.9,false,Presentment
+2025-04-12,Revier Suedost,-20.52,,leisure_entertainment,0.9,false,Presentment
+2025-04-13,Amazon,-63.24,,shopping,1.0,false,Presentment
+2025-04-13,Revier Suedost,-6.55,,leisure_entertainment,0.9,false,Presentment
+2025-04-14,Asia Snack,-19.21,,bars_restaurants,0.9,false,Presentment
+2025-04-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
+2025-04-16,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-04-16,Sparkasse ATM,-104.79,,atm,0.9,false,Presentment
+2025-04-17,BRLO BRWHOUSE,-6.11,,bars_restaurants,0.9,false,Presentment
+2025-04-17,Own Account,174.65,Transfer,savings_investments,1.0,false,Credit Transfer
+2025-04-18,POCO EINRICHTUNGSMÄRKT,-5.91,,shopping,1.0,false,Presentment
+2025-04-18,Lidl,-46.66,,food_groceries,1.0,false,Presentment
+2025-04-19,TIO TIO Hub Berlin,-8.73,,bars_restaurants,0.9,false,Presentment
+2025-04-20,Apotheke,-4.50,,healthcare_drug_stores,1.0,false,Presentment
+2025-04-21,Hedonismus,-7.42,,leisure_entertainment,0.9,false,Presentment
+2025-04-21,Hedonismus,-13.10,,leisure_entertainment,0.9,false,Presentment
+2025-04-23,N26,-1.75,Fee,miscellaneous,1.0,false,Fee
+2025-04-24,POCO EINRICHTUNGSMÄRKT,-18.31,,shopping,1.0,false,Presentment
+2025-04-24,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
+2025-04-25,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-04-27,Decathlon,-28.36,,shopping,0.9,false,Presentment
+2025-04-27,C&A,-43.86,,shopping,0.95,false,Presentment
+2025-04-28,99 grapes GmbH,-53.85,,bars_restaurants,0.9,false,Presentment
+2025-04-29,QuantConnect,-7.72,,miscellaneous,0.6,false,Presentment
+2025-05-01,Lidl,-8.28,,food_groceries,1.0,false,Presentment
+2025-05-02,Gym,-25.49,Membership,leisure_entertainment,1.0,true,Direct Debit
+2025-05-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-05-03,Hedonismus,-13.10,,leisure_entertainment,0.9,false,Presentment
+2025-05-04,Hedonismus,-2.45,,leisure_entertainment,0.9,false,Presentment
+2025-05-04,CG Eismanufakt,-9.08,,bars_restaurants,0.9,false,Presentment
+2025-05-06,Apotheke,-10.44,,healthcare_drug_stores,0.9,false,Presentment
+2025-05-07,REWE,-20.98,,food_groceries,1.0,false,Presentment
+2025-05-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-05-09,STRANDHAUS BERLIN GMBH,-8.56,,bars_restaurants,0.9,false,Presentment
+2025-05-11,Lidl,-28.54,,food_groceries,1.0,false,Presentment
+2025-05-11,RESIDENT ADVISOR TICKE,-25.67,,leisure_entertainment,0.95,false,Presentment
+2025-05-11,Sage,-28.82,,bars_restaurants,1.0,false,Presentment
+2025-05-12,The Visit Coffee Roast,-6.99,,bars_restaurants,0.9,false,Presentment
+2025-05-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
+2025-05-17,Lidl,-14.32,,food_groceries,1.0,false,Presentment
+2025-05-18,Roter Rabe,-10.57,,bars_restaurants,0.9,false,Presentment
+2025-05-18,Health Insurer,-225.11,Contribution,insurances,1.0,true,Debit Transfer
+2025-05-19,Wolt,-10.91,,food_delivery,1.0,false,Presentment
+2025-05-20,Lidl,-13.67,,food_groceries,1.0,false,Presentment
+2025-05-22,Sun Day Burger,-10.48,,bars_restaurants,0.9,false,Presentment
+2025-05-23,Lidl,-7.57,,food_groceries,1.0,false,Presentment
+2025-05-26,Lidl,-12.89,,food_groceries,1.0,false,Presentment
+2025-05-26,Steam,-2.61,,media_electronics,0.9,false,Presentment
+2025-05-26,Amazon,-10.21,,shopping,1.0,false,Presentment
+2025-05-28,Lidl,-17.08,,food_groceries,1.0,false,Presentment
+2025-05-29,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
+2025-05-29,Mano Cafe,-3.49,,bars_restaurants,0.9,false,Presentment
+2025-06-01,Lidl,-21.94,,food_groceries,1.0,false,Presentment
+2025-06-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-06-02,Gym,-26.20,Membership,leisure_entertainment,1.0,true,Direct Debit
+2025-06-03,Wolt,-12.21,,food_delivery,1.0,false,Presentment
+2025-06-04,Lidl,-10.92,,food_groceries,1.0,false,Presentment
+2025-06-05,PayPal,-9.60,,miscellaneous,0.9,false,Presentment
+2025-06-05,Lidl,-9.39,,food_groceries,1.0,false,Presentment
+2025-06-06,BVG,25.32,Refund,transportation,1.0,false,Credit Transfer
+2025-06-07,fraenk,-13.10,,household_utilities,1.0,true,Presentment
+2025-06-07,Uniqlo,-35.02,,shopping,0.9,false,Presentment
+2025-06-07,Friend A,11.35,Transfer,family_friends,1.0,false,Credit Transfer
+2025-06-08,Lidl,-16.79,,food_groceries,1.0,false,Presentment
+2025-06-08,Renate,-19.21,,bars_restaurants,1.0,false,Presentment
+2025-06-09,Renate,-2.45,,bars_restaurants,1.0,false,Presentment
+2025-06-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-06-09,Wolt,-13.55,,food_delivery,1.0,false,Presentment
+2025-06-11,VANILLE EIS,-4.54,,bars_restaurants,0.9,false,Presentment
+2025-06-11,Lidl,-13.94,,food_groceries,1.0,false,Presentment
+2025-06-14,Padel Berlin G,-11.79,,leisure_entertainment,0.85,false,Presentment
+2025-06-15,POCO EINRICHTUNGSMÄRKT,-14.83,,shopping,1.0,false,Presentment
+2025-06-15,Playtomic,12.34,Refund,leisure_entertainment,1.0,false,Presentment Refund
+2025-06-15,Lidl,-18.18,,food_groceries,1.0,false,Presentment
+2025-06-16,Concierge Coff,-2.88,,bars_restaurants,0.9,false,Presentment
+2025-06-17,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
+2025-06-17,Playtomic,-13.10,,leisure_entertainment,1.0,false,Presentment
+2025-06-18,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-06-20,Vilarnau Salon,-33.18,,shopping,0.4,false,Presentment
+2025-06-22,Playtomic,-13.10,,leisure_entertainment,1.0,false,Presentment
+2025-06-22,Spaetify,-13.97,,food_groceries,0.9,false,Presentment
+2025-06-25,Lidl,-20.38,,food_groceries,1.0,false,Presentment
+2025-06-25,Espresso House,-5.94,,bars_restaurants,0.9,false,Presentment
+2025-06-27,Royal Back,-1.14,,food_groceries,0.9,false,Presentment
+2025-06-27,Espresso House,-8.56,,bars_restaurants,0.9,false,Presentment
+2025-06-29,Playtomic,-18.33,,leisure_entertainment,1.0,false,Presentment
+2025-06-30,Wolt,-19.80,,food_delivery,1.0,false,Presentment
+2025-07-01,Wolt,-13.11,,food_delivery,1.0,false,Presentment
+2025-07-01,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-07-02,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-07-03,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
+2025-07-04,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-07-05,Falafel Jakoub,-6.55,,bars_restaurants,0.9,false,Presentment
+2025-07-05,MILES,-1.19,,transportation,0.9,false,Presentment
+2025-07-05,MILES,-8.73,,transportation,0.9,false,Presentment
+2025-07-05,IKEA,-89.45,,shopping,1.0,false,Presentment
+2025-07-06,Sage,-24.89,,bars_restaurants,1.0,false,Presentment
+2025-07-06,Sage,-11.79,,bars_restaurants,1.0,false,Presentment
+2025-07-07,PayPal Pay in 3,-56.45,,shopping,0.6,false,Presentment
+2025-07-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-07-09,REWE,-25.60,,food_groceries,1.0,false,Presentment
+2025-07-10,Health Insurer,-236.02,Contribution,insurances,1.0,true,Debit Transfer
+2025-07-11,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-07-11,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-07-12,UK Visas,-16.85,,travel_holidays,0.9,false,Presentment
+2025-07-12,Bar,-10.36,,bars_restaurants,0.4,false,Presentment
+2025-07-12,REWE,-4.17,,food_groceries,1.0,false,Presentment
+2025-07-13,REWE,-22.08,,food_groceries,1.0,false,Presentment
+2025-07-14,Apotheke,-19.17,,healthcare_drug_stores,0.95,false,Presentment
+2025-07-14,REWE,-8.62,,food_groceries,1.0,false,Presentment
+2025-07-15,Wandelhalle HH,-7.77,,bars_restaurants,0.9,false,Presentment
+2025-07-15,Savings Space,-192.12,Savings,savings_investments,1.0,false,Debit Transfer
+2025-07-16,Bio Market,-9.99,,food_groceries,1.0,false,Presentment
+2025-07-17,Bio Market,-11.08,,food_groceries,1.0,false,Presentment
+2025-07-18,Friend F,-11.35,,family_friends,0.9,false,Presentment
+2025-07-18,BER Airport,-3.49,,travel_holidays,0.9,false,Presentment
+2025-07-18,Caffetteria,-8.30,,bars_restaurants,0.95,false,Presentment
+2025-07-19,Honest Burger,-17.00,,bars_restaurants,0.9,false,Presentment
+2025-07-19,Kolkati Street,-10.62,,bars_restaurants,0.9,false,Presentment
+2025-07-20,Magic Falafel,-7.99,,bars_restaurants,0.9,false,Presentment
+2025-07-20,TfL,-14.97,,transportation,0.9,false,Presentment
+2025-07-20,Caffè Nero,-3.49,,bars_restaurants,0.9,false,Presentment
+2025-07-20,SUPERDRUG STORES PLC,-0.86,,healthcare_drug_stores,0.9,false,Presentment
+2025-07-21,MOON ON THE SQUARE,-6.27,,bars_restaurants,0.9,false,Presentment
+2025-07-21,PUTNEY PIES LTD,-18.21,,bars_restaurants,0.9,false,Presentment
+2025-07-22,TfL,-1.77,,transportation,0.9,false,Presentment
+2025-07-22,MILES,-8.65,,transportation,0.9,false,Presentment
+2025-07-23,Lidl,-27.45,,food_groceries,1.0,false,Presentment
+2025-07-24,Badeschiff,-13.97,,leisure_entertainment,0.9,false,Presentment
+2025-07-26,Lidl,-5.08,,food_groceries,1.0,false,Presentment
+2025-07-26,Bullys Bakery,-47.07,,bars_restaurants,0.9,false,Presentment
+2025-07-26,Bolt,-6.20,,transportation,1.0,false,Presentment
+2025-07-27,Bio Market,-10.49,,food_groceries,1.0,false,Presentment
+2025-07-28,Kaufland,-6.78,,food_groceries,0.9,false,Presentment
+2025-07-29,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-07-29,Lidl,-2.31,,food_groceries,1.0,false,Presentment
+2025-07-30,Klunkerkranich,-8.73,,bars_restaurants,1.0,false,Presentment
+2025-07-31,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-08-01,Gym,-26.20,Membership,leisure_entertainment,1.0,true,Direct Debit
+2025-08-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-08-04,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-08-05,Bio Market,-11.27,,food_groceries,1.0,false,Presentment
+2025-08-06,WHSmith,-3.62,,shopping,0.9,false,Presentment
+2025-08-06,Spotify,-3.15,,leisure_entertainment,1.0,true,Presentment
+2025-08-07,Bus Company,-11.00,,transportation,0.9,false,Presentment
+2025-08-07,BVG,25.32,Refund,transportation,1.0,false,Credit Transfer
+2025-08-08,FRESH CASSA,-8.73,,food_groceries,0.9,false,Presentment
+2025-08-09,Beach Club,-9.17,,bars_restaurants,0.8,false,Presentment
+2025-08-10,Amazon Prime,-7.85,,media_electronics,0.9,true,Presentment
+2025-08-12,Apple,-8.72,,media_electronics,0.95,true,Presentment
+2025-08-14,Playtomic,-26.63,,leisure_entertainment,1.0,false,Presentment
+2025-08-15,Health Insurer,-225.11,Contribution,insurances,1.0,true,Debit Transfer
+2025-08-17,Beach Club,-13.10,,bars_restaurants,0.8,false,Presentment
+2025-08-19,Supermarket,-18.77,,food_groceries,0.9,false,Presentment
+2025-08-20,Bio Market,-4.38,,food_groceries,1.0,false,Presentment
+2025-08-21,Espresso House,-5.94,,bars_restaurants,0.9,false,Presentment
+2025-08-22,Restaurant Konstantin,-4.80,,bars_restaurants,0.9,false,Presentment
+2025-08-24,TICKETS,-18.34,,leisure_entertainment,0.6,false,Presentment
+2025-08-25,Apotheke,-22.70,,healthcare_drug_stores,0.95,false,Presentment
+2025-08-25,Alimentari,-16.65,,bars_restaurants,0.9,false,Presentment
+2025-08-25,Cash Withdrawal,-61.13,,atm,0.95,false,Presentment
+2025-08-26,Lidl,-6.10,,food_groceries,1.0,false,Presentment
+2025-08-27,Playtomic,-13.31,,leisure_entertainment,1.0,false,Presentment
+2025-08-27,REWE,-12.27,,food_groceries,1.0,false,Presentment
+2025-08-29,Wolt,-11.74,,food_delivery,1.0,false,Presentment
+2025-08-31,Rossmann,-15.39,,healthcare_drug_stores,0.9,false,Presentment
+2025-09-01,Namecheap,-7.39,,media_electronics,0.9,true,Presentment
+2025-09-01,Caffetteria,-5.85,,bars_restaurants,0.95,false,Presentment
+2025-09-01,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-09-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2025-09-02,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-09-03,Columbia Theat,-4.80,,leisure_entertainment,0.95,false,Presentment
+2025-09-04,Lidl,-1.69,,food_groceries,1.0,false,Presentment
+2025-09-05,BANH MI NONG,-10.39,,bars_restaurants,0.9,false,Presentment
+2025-09-05,Spotify,-9.60,,leisure_entertainment,1.0,true,Presentment
+2025-09-05,Playtomic,-27.06,,leisure_entertainment,1.0,false,Presentment
+2025-09-06,Thai Noods,-24.74,,bars_restaurants,0.9,false,Presentment
+2025-09-07,Frau Luna,-13.93,,bars_restaurants,0.9,false,Presentment
+2025-09-07,Il Pizzaiolo,-62.00,,bars_restaurants,0.9,false,Presentment
+2025-09-08,fraenk,-13.10,,household_utilities,1.0,true,Presentment
+2025-09-08,Cash Withdrawal,-43.66,,atm,0.95,false,Presentment
+2025-09-10,Lidl,-2.51,,food_groceries,1.0,false,Presentment
+2025-09-10,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-09-12,Lidl,-8.01,,food_groceries,1.0,false,Presentment
+2025-09-13,Lidl,-9.86,,food_groceries,1.0,false,Presentment
+2025-09-13,Decathlon,-9.59,,shopping,0.9,false,Presentment
+2025-09-14,Lidl,-1.52,,food_groceries,1.0,false,Presentment
+2025-09-15,Health Insurer,-739.32,Contribution,insurances,1.0,true,Debit Transfer
+2025-09-15,Wolt,-14.01,,food_delivery,1.0,false,Presentment
+2025-09-17,TICKET.IO,-116.57,,leisure_entertainment,0.9,false,Presentment
+2025-09-18,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
+2025-09-20,Bio Market,-9.94,,food_groceries,1.0,false,Presentment
+2025-09-20,Zola Zita GmbH,-24.01,,bars_restaurants,0.9,false,Presentment
+2025-09-21,Playtomic,-27.06,,leisure_entertainment,1.0,false,Presentment
+2025-09-22,Headline Live,-14.85,,leisure_entertainment,0.95,false,Presentment
+2025-09-25,REWE,-26.64,,food_groceries,1.0,false,Presentment
+2025-09-28,Lidl,-28.58,,food_groceries,1.0,false,Presentment
+2025-09-29,Local Shop,-7.86,,shopping,0.9,false,Presentment
+2025-09-30,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-09-30,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-10-01,Lidl,-22.13,,food_groceries,1.0,false,Presentment
+2025-10-01,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-10-02,Lidl,-5.40,,food_groceries,1.0,false,Presentment
+2025-10-02,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-10-03,TRIP.COM,-1501.61,,travel_holidays,0.9,false,Presentment
+2025-10-03,Chungking Noodles,-44.19,,bars_restaurants,0.9,false,Presentment
+2025-10-04,Freelance Client,3143.73,Invoice 10/2025,salary,1.0,true,Credit Transfer
+2025-10-05,Alimentari,-11.89,,bars_restaurants,0.9,false,Presentment
+2025-10-05,easyJet,-37.57,,travel_holidays,1.0,false,Presentment
+2025-10-06,Amazon,-29.95,,shopping,1.0,false,Presentment
+2025-10-08,Lidl,-7.27,,food_groceries,1.0,false,Presentment
+2025-10-08,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-10-09,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-10-11,Apple,-8.72,,media_electronics,0.95,true,Presentment
+2025-10-12,The Mood Burger,-8.73,,bars_restaurants,0.9,false,Presentment
+2025-10-13,Friend H,-13.29,,family_friends,0.9,false,Presentment
+2025-10-13,Amazon,-42.77,,shopping,1.0,false,Presentment
+2025-10-15,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-10-15,Playtomic,13.96,Refund,leisure_entertainment,1.0,false,Presentment Refund
+2025-10-16,Vilarnau Salon,-36.50,,shopping,0.4,false,Presentment
+2025-10-17,luca Dump Ling Termina,-15.11,,bars_restaurants,0.9,false,Presentment
+2025-10-18,Vending Machine,-61.13,,miscellaneous,0.2,false,Presentment
+2025-10-19,Friend J,-8.73,,family_friends,0.9,false,Presentment
+2025-10-20,Uber,-2.76,,transportation,1.0,false,Presentment
+2025-10-20,Ryanair,-45.81,,travel_holidays,1.0,false,Presentment
+2025-10-23,Vending Machine,-113.52,,miscellaneous,0.2,false,Presentment
+2025-10-23,Wolt,-10.82,,food_delivery,1.0,false,Presentment
+2025-10-24,easyJet,-30.99,,travel_holidays,1.0,false,Presentment
+2025-10-25,VOIRIE DIJON,-3.93,,transportation,1.0,false,Presentment
+2025-10-25,BER Airport,-10.13,,travel_holidays,0.9,false,Presentment
+2025-10-26,ROTISS.GEVREY,-93.44,,bars_restaurants,0.9,false,Presentment
+2025-10-26,APRR NFC,-1.48,,transportation,0.9,false,Presentment
+2025-10-27,Local Shop,-6.35,,shopping,0.9,false,Presentment
+2025-10-27,SCEV DOMAINE CH,-51.52,,bars_restaurants,0.9,false,Presentment
+2025-10-27,MR BREIZH,-26.20,,bars_restaurants,0.9,false,Presentment
+2025-10-27,Hospices Civils de Beaune,-12.23,,leisure_entertainment,0.9,false,Presentment
+2025-10-28,CRF DIJON -MARSA,-27.38,,food_groceries,0.9,false,Presentment
+2025-10-28,A LA GITANE,-7.86,,bars_restaurants,0.9,false,Presentment
+2025-10-28,VOIRIE DIJON,-2.18,,transportation,1.0,false,Presentment
+2025-10-28,BOUCHERIEALVISET,-1.93,,food_groceries,0.95,false,Presentment
+2025-10-28,COLOMBUS CAFE,-7.42,,bars_restaurants,0.9,false,Presentment
+2025-10-28,Selecta SAS,-2.18,,food_groceries,0.9,false,Presentment
+2025-10-29,Trenitalia,-25.85,,transportation,0.95,false,Presentment
+2025-10-29,RHONEXPRESS,-14.93,,transportation,0.9,false,Presentment
+2025-10-29,BUTEL,-13.19,,bars_restaurants,0.9,false,Presentment
+2025-10-31,Playtomic,-14.62,,leisure_entertainment,1.0,false,Presentment
+2025-11-03,Freelance Client,2095.82,Invoice 11/2025,salary,1.0,true,Credit Transfer
+2025-11-03,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-11-05,Spotify,-10.47,,leisure_entertainment,1.0,true,Presentment
+2025-11-05,Trenitalia,-25.85,,transportation,0.95,false,Presentment
+2025-11-06,Parafarmacia,-13.35,,healthcare_drug_stores,0.95,false,Presentment
+2025-11-06,Playtomic,14.62,Refund,leisure_entertainment,1.0,false,Presentment Refund
+2025-11-06,Bio Market,-10.24,,food_groceries,1.0,false,Presentment
+2025-11-08,Bolt,-2.31,,transportation,1.0,false,Presentment
+2025-11-08,fraenk,-13.10,,household_utilities,1.0,true,Presentment
+2025-11-09,Arturo Bistro,-9.17,,bars_restaurants,0.9,false,Presentment
+2025-11-09,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-11-09,Lidl,-27.67,,food_groceries,1.0,false,Presentment
+2025-11-09,NOMI Weinbar,-34.06,,bars_restaurants,0.9,false,Presentment
+2025-11-11,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-11-11,Proton,-8.72,,media_electronics,0.9,true,Presentment
+2025-11-12,Wolt,-12.64,,food_delivery,1.0,false,Presentment
+2025-11-13,Lidl,-17.73,,food_groceries,1.0,false,Presentment
+2025-11-13,Wolt,-11.74,,food_delivery,1.0,false,Presentment
+2025-11-14,REWE,-2.61,,food_groceries,1.0,false,Presentment
+2025-11-16,Späti,-15.28,,food_groceries,0.9,false,Presentment
+2025-11-16,Promobo,-22.22,,shopping,0.7,false,Presentment
+2025-11-17,Lidl,-5.05,,food_groceries,1.0,false,Presentment
+2025-11-17,Family,-34.93,Transfer,family_friends,1.0,false,Debit Transfer
+2025-11-18,THALIA BUCHHANDLUNG N,-2.61,,education,0.9,false,Presentment
+2025-11-20,Apotheke,-5.95,,healthcare_drug_stores,0.95,false,Presentment
+2025-11-22,denns Biomarkt Berlin,-6.70,,food_groceries,0.9,false,Presentment
+2025-11-23,Apotheke,-14.76,,healthcare_drug_stores,0.95,false,Presentment
+2025-11-23,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-11-24,Lidl,-16.40,,food_groceries,1.0,false,Presentment
+2025-11-24,PayPal Pay in 3,-13.16,,shopping,0.6,false,Presentment
+2025-11-24,Amazon,-227.03,,shopping,1.0,false,Presentment
+2025-11-30,Decathlon,-55.84,,shopping,0.9,false,Presentment
+2025-11-30,C&A,-45.59,,shopping,0.95,false,Presentment
+2025-11-30,Savings Space,873.26,Savings,savings_investments,1.0,false,Credit Transfer
+2025-12-01,BVG,-50.65,Monthly ticket,transportation,1.0,true,Direct Debit
+2025-12-01,Lidl,-47.13,,food_groceries,1.0,false,Presentment
+2025-12-02,LS Cafe Mugrabi,-5.24,,bars_restaurants,0.9,false,Presentment
+2025-12-02,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2025-12-04,Wolt,-4.36,,food_delivery,1.0,false,Presentment
+2025-12-05,Playtomic,-13.20,,leisure_entertainment,1.0,false,Presentment
+2025-12-07,Spotify,-10.37,,leisure_entertainment,1.0,true,Presentment
+2025-12-07,Freelance Client,2095.82,Invoice 12/2025,salary,1.0,true,Credit Transfer
+2025-12-09,EDEKA,-11.31,,food_groceries,1.0,false,Presentment
+2025-12-10,Anthropic,-4.47,,media_electronics,0.9,false,Presentment
+2025-12-10,LS The Rabbit Cafe,-41.31,,bars_restaurants,0.9,false,Presentment
+2025-12-11,Amazon Prime,-7.85,,media_electronics,0.8,true,Presentment
+2025-12-13,Levy Restaurants,-8.99,,bars_restaurants,0.9,false,Presentment
+2025-12-13,Levy Restaurants,5.24,Refund,bars_restaurants,0.9,false,Presentment Refund
+2025-12-13,OpenAI,-4.47,,media_electronics,0.8,false,Presentment
+2025-12-13,Amazon,9.60,Refund,shopping,1.0,false,Presentment Refund
+2025-12-13,Renate,-20.96,,bars_restaurants,1.0,false,Presentment
+2025-12-14,denns Biomarkt Berlin,-14.16,,food_groceries,0.9,false,Presentment
+2025-12-15,Uber,-12.17,,transportation,1.0,false,Presentment
+2025-12-15,Amazon,-18.33,,shopping,1.0,false,Presentment
+2025-12-16,Bio Market,-9.06,,food_groceries,1.0,false,Presentment
+2025-12-18,Friend K,-26.20,,family_friends,0.9,false,Presentment
+2025-12-19,LS Flava,-12.65,,bars_restaurants,0.5,false,Presentment
+2025-12-20,Playtomic,13.20,Refund,leisure_entertainment,1.0,false,Presentment Refund
+2025-12-20,Bal Koefte,-9.61,,bars_restaurants,0.9,false,Presentment
+2025-12-21,Decathlon,-28.79,,shopping,0.9,false,Presentment
+2025-12-22,REWE,-24.11,,food_groceries,1.0,false,Presentment
+2025-12-22,Apotheke,-17.29,,healthcare_drug_stores,1.0,false,Presentment
+2025-12-22,NoLe Cafe,-3.67,,bars_restaurants,0.85,false,Presentment
+2025-12-22,Vending Machine,-174.65,,miscellaneous,0.2,false,Presentment
+2025-12-24,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
+2025-12-24,DEAN&DELUCA-SVB AIRSID,-2.59,,bars_restaurants,0.9,false,Presentment
+2025-12-24,ARL. RPR,-0.96,,transportation,0.9,false,Presentment
+2025-12-25,Beijing Capital Airport,-6.15,,travel_holidays,0.9,false,Presentment
+2025-12-25,2C2P,-5.97,,miscellaneous,0.5,false,Presentment
+2025-12-25,N26,-2.14,Fee,miscellaneous,1.0,false,Fee
+2025-12-26,Playtomic,-13.96,,leisure_entertainment,1.0,false,Presentment
+2025-12-26,2C2P,-10.02,,miscellaneous,0.5,false,Presentment
+2025-12-26,Don Mueang Airport,-10.42,,travel_holidays,0.9,false,Presentment
+2025-12-26,McDonald's,-1.29,,bars_restaurants,0.9,false,Presentment
+2025-12-26,Savings Space,-1.47,Savings,savings_investments,1.0,false,Debit Transfer
+2025-12-27,ZAMA LOCAL FOOD,-23.72,,bars_restaurants,0.9,false,Presentment
+2025-12-27,Savings Space,-1.31,Savings,savings_investments,1.0,false,Debit Transfer
+2025-12-28,MASSAGE CORNER,-39.51,,healthcare_drug_stores,0.9,false,Presentment
+2025-12-28,THE BOAT COFFEE,-11.12,,bars_restaurants,0.9,false,Presentment
+2025-12-29,Savings Space,-0.23,Savings,savings_investments,1.0,false,Debit Transfer
+2025-12-29,GetYourGuide,-120.16,,travel_holidays,0.9,false,Presentment
+2025-12-30,Savings Space,-1.64,Savings,savings_investments,1.0,false,Debit Transfer
+2025-12-30,2C2P,-9.49,,miscellaneous,0.5,false,Presentment
+2025-12-30,Savings Space,-0.02,Savings,savings_investments,1.0,false,Debit Transfer
+2025-12-31,Maehad Beach,-1.39,,travel_holidays,0.8,false,Presentment
+2025-12-31,N26,-0.91,Fee,miscellaneous,1.0,false,Fee
+2025-12-31,BAYA,-125.80,,bars_restaurants,0.9,false,Presentment
+2026-01-01,Savings Space,-0.45,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-01,BAYA,-53.36,,bars_restaurants,0.9,false,Presentment
+2026-01-02,Savings Space,-0.98,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-02,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
+2026-01-02,Gym,-26.20,Membership,leisure_entertainment,1.0,true,Direct Debit
+2026-01-02,Landlord,-845.31,Rent,household_utilities,1.0,true,Debit Transfer
+2026-01-03,Savings Space,-0.73,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-03,7-Eleven,-11.10,,food_groceries,0.9,false,Presentment
+2026-01-03,2C2P,-8.24,,miscellaneous,0.5,false,Presentment
+2026-01-03,N26,-0.51,Fee,miscellaneous,1.0,false,Fee
+2026-01-03,Savings Space,-0.09,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-03,Savings Space,-1.73,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-03,Savings Space,-0.37,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-03,Savings Space,-1.34,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-04,2C2P,-0.88,,miscellaneous,0.5,false,Presentment
+2026-01-04,2C2P,-7.97,,miscellaneous,0.5,false,Presentment
+2026-01-04,SCB ATM,29.73,Refund,atm,0.9,false,Presentment Refund
+2026-01-04,Kasikornbank ATM,-19.19,,atm,0.6,false,Presentment
+2026-01-04,Savings Space,-0.30,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-05,ASIAN CORNER-SUVARNABH,-14.17,,bars_restaurants,0.9,false,Presentment
+2026-01-05,Freelance Client,2095.82,Invoice 01/2026,salary,1.0,true,Credit Transfer
+2026-01-06,Lidl,-33.80,,food_groceries,1.0,false,Presentment
+2026-01-07,Lidl,-9.95,,food_groceries,1.0,false,Presentment
+2026-01-08,Savings Space,-1.24,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-09,fraenk,-13.10,,household_utilities,1.0,true,Presentment
+2026-01-09,Savings Space,-0.77,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-10,REWE,-26.69,,food_groceries,1.0,false,Presentment
+2026-01-10,Savings Space,-1.05,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-11,Bolt,-7.34,,transportation,1.0,false,Presentment
+2026-01-12,Caffetteria,-8.91,,bars_restaurants,0.95,false,Presentment
+2026-01-14,Lidl,-25.29,,food_groceries,1.0,false,Presentment
+2026-01-16,Savings Space,-0.52,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-16,Savings Space,-0.52,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-17,Savings Space,-0.87,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-17,Savings Space,-0.35,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-17,Savings Space,-1.73,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-17,Ancestral Spri,-6.99,,bars_restaurants,0.9,false,Presentment
+2026-01-17,FGV VALENCIA,-9.34,,transportation,0.9,false,Presentment
+2026-01-17,Savings Space,-0.02,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-18,Market Stall,-4.37,,food_groceries,0.9,false,Presentment
+2026-01-18,SAONA VIRGEN,-5.02,,bars_restaurants,0.85,false,Presentment
+2026-01-18,Savings Space,-1.40,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-18,Apple,-3.48,,media_electronics,0.95,true,Presentment
+2026-01-19,Savings Space,-0.52,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-19,LARROSET,-15.46,,bars_restaurants,0.9,false,Presentment
+2026-01-19,TALLAT Special,-10.65,,bars_restaurants,0.9,false,Presentment
+2026-01-19,Savings Space,-0.35,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-19,SANTA MARCELITA RENTAL,-13.97,,travel_holidays,0.9,false,Presentment
+2026-01-19,Savings Space,-0.24,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-20,FGV VALENCIA,-9.34,,transportation,0.9,false,Presentment
+2026-01-20,Savings Space,-1.19,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-20,easyJet,-7.34,,travel_holidays,1.0,false,Presentment
+2026-01-20,Kaufland,-9.29,,food_groceries,0.9,false,Presentment
+2026-01-21,Lidl,-16.51,,food_groceries,1.0,false,Presentment
+2026-01-22,Savings Space,-1.64,Savings,savings_investments,1.0,false,Debit Transfer
+2026-01-23,PayPal Pay in 3,-13.15,,shopping,0.6,false,Presentment

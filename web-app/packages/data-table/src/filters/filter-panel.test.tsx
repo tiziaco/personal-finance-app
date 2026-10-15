@@ -1,34 +1,100 @@
 import { describe, it, expect, vi } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { FilterPanel } from "./filter-panel"
+import { FilterPanel, FilterSection } from "./filter-panel"
 
 describe("FilterPanel", () => {
-  it("shows the active count and clears all from the popover", async () => {
+  it("opens a sheet with the active count, and clears all from its footer", async () => {
     const onClearAll = vi.fn()
     render(
       <FilterPanel activeCount={2} onClearAll={onClearAll}>
         <p>fields</p>
       </FilterPanel>,
     )
-    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
-    expect(screen.getByRole("button", { name: /Filters/ })).toHaveTextContent(
-      "2",
-    )
+    const trigger = screen.getByRole("button", { name: /Filters/ })
+    expect(trigger).toHaveTextContent("2")
+    await userEvent.click(trigger)
+    const sheet = await screen.findByRole("dialog", { name: "Filters" })
+    expect(within(sheet).getByText("2 active")).toBeInTheDocument()
+    expect(within(sheet).getByText("fields")).toBeInTheDocument()
     await userEvent.click(
-      await screen.findByRole("button", { name: "Clear all" }),
+      within(sheet).getByRole("button", { name: "Clear all filters" }),
     )
     expect(onClearAll).toHaveBeenCalled()
   })
 
-  it("hides Clear all when nothing is active", async () => {
+  it("has no count and no Clear all when nothing is active", async () => {
     render(
       <FilterPanel activeCount={0} onClearAll={() => {}}>
         <p>fields</p>
       </FilterPanel>,
     )
     await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
-    expect(await screen.findByText("fields")).toBeInTheDocument()
-    expect(screen.queryByRole("button", { name: "Clear all" })).toBeNull()
+    const sheet = await screen.findByRole("dialog", { name: "Filters" })
+    expect(within(sheet).queryByText(/active/)).toBeNull()
+    expect(
+      within(sheet).queryByRole("button", { name: "Clear all filters" }),
+    ).toBeNull()
+  })
+
+  it("puts each child in a ruled section of its own, skipping empty ones", async () => {
+    render(
+      <FilterPanel activeCount={0} onClearAll={() => {}}>
+        <fieldset aria-label="one" />
+        {false}
+        <fieldset aria-label="two" />
+      </FilterPanel>,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const sheet = await screen.findByRole("dialog", { name: "Filters" })
+    const one = within(sheet).getByRole("group", { name: "one" })
+    const two = within(sheet).getByRole("group", { name: "two" })
+    // A fieldset's legend sits above its padding, so the section, not the
+    // fieldset, carries the spacing.
+    expect(one.parentElement).not.toBe(two.parentElement)
+    expect(one.parentElement!.parentElement).toBe(
+      two.parentElement!.parentElement,
+    )
+    expect(one.parentElement!.parentElement!.children).toHaveLength(2)
+  })
+
+  it("keeps later sections mounted when an earlier one comes and goes", async () => {
+    const panel = (extra: boolean) => (
+      <FilterPanel activeCount={0} onClearAll={() => {}}>
+        {extra && <p>extra</p>}
+        <input key="amount" aria-label="Amount" />
+      </FilterPanel>
+    )
+    const { rerender } = render(panel(false))
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const before = await screen.findByLabelText("Amount")
+    rerender(panel(true))
+    // a remount would drop the focus of someone typing in it
+    expect(screen.getByLabelText("Amount")).toBe(before)
+  })
+
+  it("closes from its close button", async () => {
+    render(
+      <FilterPanel activeCount={0} onClearAll={() => {}}>
+        <p>fields</p>
+      </FilterPanel>,
+    )
+    await userEvent.click(screen.getByRole("button", { name: /Filters/ }))
+    const sheet = await screen.findByRole("dialog", { name: "Filters" })
+    await userEvent.click(within(sheet).getByRole("button", { name: "Close" }))
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
+  })
+})
+
+describe("FilterSection", () => {
+  it("names its group by the title", () => {
+    render(
+      <FilterSection title="Amount range">
+        <input aria-label="Min" />
+      </FilterSection>,
+    )
+    expect(
+      screen.getByRole("group", { name: "Amount range" }),
+    ).toContainElement(screen.getByLabelText("Min"))
   })
 })

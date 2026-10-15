@@ -278,7 +278,7 @@ in a comment, so the fix is what changes it — invert it then, don't delete it.
 When a user is deleted (`DELETE /api/v1/auth/me`, or Clerk's `user.deleted`), `account`'s `erase_user` runs, in order:
 
 1. Clerk deletion, by the route only — on the webhook path Clerk's deletion is the trigger (JWTs immediately invalidated)
-2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes the LangGraph checkpoints of every conversation they own (soft-deleted ones included), and blanks their names
+2. `USER_ERASING` published, inline: `conversation` soft-deletes the user's conversations, hard-deletes the LangGraph checkpoints of every conversation they own (soft-deleted ones included), and blanks their names; `transaction` hard-deletes every transaction the user owns, soft-deleted ones included
 3. mem0 memories deleted (`delete_user_memory`)
 4. User PII anonymised via `AnonymizableMixin.anonymize_user()`
 
@@ -288,6 +288,6 @@ Steps 2 and 3 run before step 4 because they are keyed by identifiers `anonymize
 
 Rules:
 - Never use `SoftDeleteMixin` on `User` — it leaves PII in the DB
-- New models with PII must implement `AnonymizableMixin` and an `anonymize_*()` method
+- New models with PII implement `AnonymizableMixin` and an `anonymize_*()` method, or — when nothing references their rows — are hard-deleted by their module's `USER_ERASING` subscriber (`transaction`)
 - Always call `delete_conversation_checkpoints()` before blanking or soft-deleting a conversation
 - Erasure clears checkpoints for every conversation the user owns, soft-deleted ones included — never only the active ones

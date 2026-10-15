@@ -1,15 +1,28 @@
 "use client"
 
-import type { ComponentProps, ReactNode } from "react"
+import { Children, isValidElement, type ReactNode } from "react"
 import { ListFilter } from "lucide-react"
 import { Button } from "@app/ui/button"
-import { Popover, PopoverContent, PopoverTrigger } from "@app/ui/popover"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@app/ui/sheet"
 import { cn } from "@app/core/lib/utils"
 import { labels } from "../labels"
 
+/** The title style every filter section shares. */
+export const FILTER_SECTION_TITLE =
+  "text-xs font-semibold tracking-wider text-muted-foreground uppercase"
+
 /**
- * Popover shell for a list's filters. The fields inside are per list and
- * read/write only through `filters` / `setFilters`: no local state.
+ * A right-hand sheet for a list's filters; full width on a phone. Each child
+ * is one ruled section. The fields inside are per list and read/write only
+ * through `filters` / `setFilters`: no local state.
  */
 export function FilterPanel({
   activeCount,
@@ -25,12 +38,11 @@ export function FilterPanel({
   className?: string
 }) {
   return (
-    <Popover>
-      <PopoverTrigger
+    <Sheet>
+      <SheetTrigger
         render={
           <Button
             variant="outline"
-            size="sm"
             className={cn(activeCount > 0 && "border-primary text-primary")}
           />
         }
@@ -43,22 +55,46 @@ export function FilterPanel({
             <span className="sr-only"> {labels.activeFilters}</span>
           </span>
         )}
-      </PopoverTrigger>
-      <PopoverContent align="end" aria-label={label} className={className}>
-        <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">{label}</p>
+      </SheetTrigger>
+      <SheetContent
+        side="right"
+        className={cn("gap-0 data-[side=right]:w-full", className)}
+      >
+        <SheetHeader className="border-b pr-12">
+          <SheetTitle>{label}</SheetTitle>
           {activeCount > 0 && (
-            <Button variant="ghost" size="sm" onClick={onClearAll}>
+            <SheetDescription className="text-xs">
+              {labels.activeCount(activeCount)}
+            </SheetDescription>
+          )}
+        </SheetHeader>
+        {/* Each child gets a section: a fieldset's legend sits above its own
+            padding, so the spacing cannot go on the child. */}
+        <div className="flex-1 divide-y overflow-y-auto px-4">
+          {Children.toArray(children).map((child, i) => (
+            // toArray's keys keep a child's slot even when an earlier one is
+            // `false`, so a section never remounts when its neighbour toggles.
+            <section
+              key={isValidElement(child) ? child.key : i}
+              className="py-5"
+            >
+              {child}
+            </section>
+          ))}
+        </div>
+        {activeCount > 0 && (
+          <SheetFooter className="border-t">
+            <Button variant="outline" className="w-full" onClick={onClearAll}>
               {labels.clearAll}
             </Button>
-          )}
-        </div>
-        {children}
-      </PopoverContent>
-    </Popover>
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
   )
 }
 
+/** One labelled input: a section of its own, or a field inside a FilterSection. */
 export function FilterField({
   label,
   htmlFor,
@@ -69,11 +105,8 @@ export function FilterField({
   children: ReactNode
 }) {
   return (
-    <div className="space-y-1">
-      <label
-        htmlFor={htmlFor}
-        className="text-xs font-medium text-muted-foreground"
-      >
+    <div className="space-y-2">
+      <label htmlFor={htmlFor} className={cn("block", FILTER_SECTION_TITLE)}>
         {label}
       </label>
       {children}
@@ -81,21 +114,18 @@ export function FilterField({
   )
 }
 
-/**
- * Native select styled like `@app/ui/input`. Native because "" (no filter) is
- * a valid value, which the Base UI Select does not model.
- */
-export function FilterSelect({
-  className,
-  ...props
-}: ComponentProps<"select">) {
+/** A section holding several inputs under one title (e.g. a min and a max). */
+export function FilterSection({
+  title,
+  children,
+}: {
+  title: string
+  children: ReactNode
+}) {
   return (
-    <select
-      className={cn(
-        "h-8 w-full rounded-lg border border-input bg-transparent px-2.5 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30",
-        className,
-      )}
-      {...props}
-    />
+    <fieldset className="space-y-2">
+      <legend className={cn("mb-2", FILTER_SECTION_TITLE)}>{title}</legend>
+      {children}
+    </fieldset>
   )
 }

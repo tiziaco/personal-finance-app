@@ -4,7 +4,6 @@ import pytest
 from sqlalchemy.exc import IntegrityError
 from uuid_utils.compat import uuid7
 
-from app.modules.account.exceptions import UserAlreadyExistsError
 from app.modules.account.models import User
 from app.modules.account.repository import UserRepository
 
@@ -61,13 +60,15 @@ class TestCreateUser:
                 email="different@example.com",
             )
 
-    async def test_create_duplicate_email_raises(self, db_session, saved_user):
-        with pytest.raises(IntegrityError):
-            await UserRepository.create(
-                db_session,
-                clerk_id="clerk_unique_999",
-                email=saved_user.email,  # duplicate
-            )
+    async def test_create_allows_an_email_another_clerk_id_holds(self, db_session, saved_user):
+        """Clerk owns email uniqueness; clerk_id is the identity (data-model/account.md D3)."""
+        user = await UserRepository.create(
+            db_session,
+            clerk_id="clerk_unique_999",
+            email=saved_user.email,
+        )
+        assert user.id != saved_user.id
+        assert user.email == saved_user.email
 
 
 class TestCreateOrGetUser:
@@ -99,18 +100,19 @@ class TestCreateOrGetUser:
         assert user.id == saved_user.id
         assert user.email == saved_user.email  # untouched, not overwritten
 
-    async def test_genuine_conflict_raises_user_already_exists(self, db_session, saved_user):
-        """A different clerk_id colliding on email is not the race this recovers from."""
-        with pytest.raises(UserAlreadyExistsError):
-            await UserRepository.create_or_get(
-                db_session,
-                clerk_id="clerk_cog_never_created",
-                email=saved_user.email,  # duplicate, but clerk_id differs
-            )
+    async def test_held_email_with_new_clerk_id_creates_a_second_user(self, db_session, saved_user):
+        """Email is not unique (docs/data-model/account.md D3): a stale row holding it does not block a new account."""
+        user = await UserRepository.create_or_get(
+            db_session,
+            clerk_id="clerk_cog_new_account",
+            email=saved_user.email,
+        )
+        assert user.clerk_id == "clerk_cog_new_account"
+        assert user.id != saved_user.id
 
 
 class TestGetUser:
-    """Tests for UserRepository.get_by_id/clerk_id/email."""
+    """Tests for UserRepository.get_by_id/clerk_id."""
 
     async def test_get_by_id_found(self, db_session, saved_user):
         found = await UserRepository.get_by_id(db_session, saved_user.id)
@@ -128,15 +130,6 @@ class TestGetUser:
 
     async def test_get_by_clerk_id_not_found(self, db_session):
         found = await UserRepository.get_by_clerk_id(db_session, "clerk_nonexistent")
-        assert found is None
-
-    async def test_get_by_email_found(self, db_session, saved_user):
-        found = await UserRepository.get_by_email(db_session, saved_user.email)
-        assert found is not None
-        assert found.email == saved_user.email
-
-    async def test_get_by_email_not_found(self, db_session):
-        found = await UserRepository.get_by_email(db_session, "nobody@example.com")
         assert found is None
 
 

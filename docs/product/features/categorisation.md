@@ -1,10 +1,10 @@
 # Categorisation
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
 **Scope:** how each transaction gets a category, and how the user overrules it. Legacy v1.0
 shipped this; the port rebuilds it (correcting a category in roadmap step 2,
 Transactions; the labelling agent in step 4, CSV import).
-**Data model:** pending — written with steps 2 and 4.
+**Data model:** [`transaction.md`](../../data-model/transaction.md).
 **Related:** [`csv-import.md`](./csv-import.md) · [`transactions.md`](./transactions.md) ·
 PRD [§5](../prd-mvp.md#5-categorisation).
 
@@ -25,7 +25,9 @@ labelling is imperfect, so correcting it must be quick.
 
 ## 3. The categories
 
-A fixed list of twenty. The user cannot add, rename or remove categories.
+A fixed list of twenty. The user cannot add, rename or remove categories. The list is defined once on the server and the app reads it from there.
+Changing it is one server edit; renaming or removing a category also moves the transactions
+that carry it.
 
 Income · Salary · Transportation · Household & Utilities · Tax & Fines · Food & Groceries ·
 Food Delivery · Bars & Restaurants · ATM · Insurances · Shopping · Education · Family &

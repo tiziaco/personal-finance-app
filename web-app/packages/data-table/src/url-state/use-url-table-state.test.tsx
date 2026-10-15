@@ -96,6 +96,16 @@ describe("useUrlTableState", () => {
     expect(event?.options.history).toBe("push")
   })
 
+  it("setPage replaces history when asked", async () => {
+    let event: UrlUpdateEvent | undefined
+    const { result } = setup("?page=3", (u) => (event = u))
+    await act(async () => {
+      await result.current.setPage(1, { history: "replace" })
+    })
+    expect(event?.searchParams.get("page")).toBe("2")
+    expect(event?.options.history).toBe("replace")
+  })
+
   it("setSort pushes history and resets page", async () => {
     let event: UrlUpdateEvent | undefined
     const { result } = setup("?page=3", (u) => (event = u))

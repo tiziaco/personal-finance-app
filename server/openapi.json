@@ -22,6 +22,83 @@
         "title": "AgentStatus",
         "type": "object"
       },
+      "BatchCategoryUpdate": {
+        "description": "Give every listed transaction one category.",
+        "properties": {
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "ids": {
+            "description": "Transaction ids, distinct",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids",
+          "category"
+        ],
+        "title": "BatchCategoryUpdate",
+        "type": "object"
+      },
+      "BatchDeleteResponse": {
+        "description": "How many transactions a batch deleted.",
+        "properties": {
+          "deleted": {
+            "description": "Transactions deleted",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "BatchDeleteResponse",
+        "type": "object"
+      },
+      "BatchIds": {
+        "description": "1\u2013100 distinct transaction ids.",
+        "properties": {
+          "ids": {
+            "description": "Transaction ids, distinct",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "title": "BatchIds",
+        "type": "object"
+      },
+      "BatchUpdateResponse": {
+        "description": "How many transactions a batch changed.",
+        "properties": {
+          "updated": {
+            "description": "Transactions changed",
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "updated"
+        ],
+        "title": "BatchUpdateResponse",
+        "type": "object"
+      },
       "Body_renameConversation": {
         "properties": {
           "name": {
@@ -34,6 +111,52 @@
           "name"
         ],
         "title": "Body_renameConversation",
+        "type": "object"
+      },
+      "Category": {
+        "enum": [
+          "income",
+          "salary",
+          "transportation",
+          "household_utilities",
+          "tax_fines",
+          "food_groceries",
+          "food_delivery",
+          "bars_restaurants",
+          "atm",
+          "insurances",
+          "shopping",
+          "education",
+          "family_friends",
+          "donations_charity",
+          "healthcare_drug_stores",
+          "leisure_entertainment",
+          "media_electronics",
+          "savings_investments",
+          "travel_holidays",
+          "miscellaneous"
+        ],
+        "title": "Category",
+        "type": "string"
+      },
+      "CategoryResponse": {
+        "description": "One category, as the web lists it.",
+        "properties": {
+          "label": {
+            "description": "The category's display name",
+            "title": "Label",
+            "type": "string"
+          },
+          "value": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category's slug, as stored and sent"
+          }
+        },
+        "required": [
+          "value",
+          "label"
+        ],
+        "title": "CategoryResponse",
         "type": "object"
       },
       "ChatRequest": {
@@ -224,6 +347,21 @@
         "title": "DatabaseStatus",
         "type": "object"
       },
+      "DeleteAllResponse": {
+        "description": "How many transactions delete-all removed.",
+        "properties": {
+          "deleted": {
+            "description": "Transactions permanently removed, earlier deleted ones included",
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "DeleteAllResponse",
+        "type": "object"
+      },
       "Environment": {
         "description": "Application environment types.\n\nDefines the possible environments the application can run in:\ndevelopment, staging, production, and test.",
         "enum": [
@@ -386,6 +524,287 @@
           "redoc_url"
         ],
         "title": "RootResponse",
+        "type": "object"
+      },
+      "TransactionCreate": {
+        "description": "A transaction added by hand. Confidence is 1; no original category.",
+        "properties": {
+          "allow_duplicate": {
+            "default": false,
+            "description": "Add even when an active transaction has the same date, merchant, amount and description",
+            "title": "Allow Duplicate",
+            "type": "boolean"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "description": "Money out is negative, money in positive; a decimal string",
+            "title": "Amount"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "date": {
+            "description": "The day the transaction happened",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; blank is stored as null",
+            "title": "Description"
+          },
+          "is_recurring": {
+            "default": false,
+            "description": "Whether it recurs",
+            "title": "Is Recurring",
+            "type": "boolean"
+          },
+          "merchant": {
+            "description": "Who was paid, or who paid",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Merchant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "merchant",
+          "amount",
+          "category"
+        ],
+        "title": "TransactionCreate",
+        "type": "object"
+      },
+      "TransactionListResponse": {
+        "description": "One page of transactions.",
+        "properties": {
+          "items": {
+            "description": "The transactions on this page",
+            "items": {
+              "$ref": "#/components/schemas/TransactionResponse"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "limit": {
+            "description": "Page size",
+            "title": "Limit",
+            "type": "integer"
+          },
+          "offset": {
+            "description": "Rows skipped",
+            "title": "Offset",
+            "type": "integer"
+          },
+          "total": {
+            "description": "Active transactions matching the filters, across all pages",
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "title": "TransactionListResponse",
+        "type": "object"
+      },
+      "TransactionResponse": {
+        "description": "A transaction as the API returns it.",
+        "properties": {
+          "amount": {
+            "description": "Money out negative, money in positive; a decimal string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/Category",
+            "description": "The category slug"
+          },
+          "confidence": {
+            "description": "How sure the categoriser was, 0 to 1; 1 for a manual entry or edit",
+            "title": "Confidence",
+            "type": "number"
+          },
+          "created_at": {
+            "description": "When the row was created",
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "description": "The day it happened",
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text",
+            "title": "Description"
+          },
+          "id": {
+            "description": "The transaction id",
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_recurring": {
+            "description": "Whether it recurs",
+            "title": "Is Recurring",
+            "type": "boolean"
+          },
+          "merchant": {
+            "description": "Who was paid, or who paid",
+            "title": "Merchant",
+            "type": "string"
+          },
+          "original_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The bank's category, as imported",
+            "title": "Original Category"
+          },
+          "updated_at": {
+            "description": "When the row was last changed",
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "merchant",
+          "amount",
+          "category",
+          "confidence",
+          "is_recurring",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TransactionResponse",
+        "type": "object"
+      },
+      "TransactionUpdate": {
+        "description": "A partial edit. An omitted field is untouched; `description: null` clears it.",
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A decimal string",
+            "title": "Amount"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Category"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category slug"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The day the transaction happened",
+            "title": "Date"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Free text; null or blank clears it",
+            "title": "Description"
+          },
+          "is_recurring": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Whether it recurs",
+            "title": "Is Recurring"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Who was paid, or who paid",
+            "title": "Merchant"
+          }
+        },
+        "title": "TransactionUpdate",
         "type": "object"
       },
       "UserResponse": {
@@ -1004,6 +1423,520 @@
         "summary": "List all user chat conversations",
         "tags": [
           "conversation"
+        ]
+      }
+    },
+    "/api/v1/transactions": {
+      "delete": {
+        "description": "Permanently remove every transaction the caller owns, earlier deleted ones included.",
+        "operationId": "deleteAllTransactions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteAllResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete all transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "get": {
+        "description": "One page of the caller's transactions, newest first by default. Bounds are inclusive; category repeats; search matches the merchant.",
+        "operationId": "listTransactions",
+        "parameters": [
+          {
+            "description": "Merchant contains, case-insensitive",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Merchant contains, case-insensitive",
+              "title": "Search"
+            }
+          },
+          {
+            "description": "Sort field; '-' for descending",
+            "in": "query",
+            "name": "ordering",
+            "required": false,
+            "schema": {
+              "default": "-date",
+              "description": "Sort field; '-' for descending",
+              "enum": [
+                "date",
+                "-date",
+                "amount",
+                "-amount",
+                "merchant",
+                "-merchant"
+              ],
+              "title": "Ordering",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 20,
+              "maximum": 100,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "On or after this day",
+            "in": "query",
+            "name": "date_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "On or after this day",
+              "title": "Date From"
+            }
+          },
+          {
+            "description": "On or before this day",
+            "in": "query",
+            "name": "date_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "On or before this day",
+              "title": "Date To"
+            }
+          },
+          {
+            "description": "Any of these categories; repeat the parameter",
+            "in": "query",
+            "name": "category",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/Category"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Any of these categories; repeat the parameter",
+              "title": "Category"
+            }
+          },
+          {
+            "description": "Signed amount at least this",
+            "in": "query",
+            "name": "amount_min",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Signed amount at least this",
+              "title": "Amount Min"
+            }
+          },
+          {
+            "description": "Signed amount at most this",
+            "in": "query",
+            "name": "amount_max",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,10}|(?=[\\d.]{1,13}0*$)\\d{0,10}\\.\\d{0,2}0*$)",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Signed amount at most this",
+              "title": "Amount Max"
+            }
+          },
+          {
+            "description": "Only recurring, or only not",
+            "in": "query",
+            "name": "is_recurring",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Only recurring, or only not",
+              "title": "Is Recurring"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "List transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "post": {
+        "description": "Add a transaction by hand. 409 DUPLICATE_TRANSACTION when an active one has the same date, merchant, amount and description, unless allow_duplicate is true.",
+        "operationId": "createTransaction",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Add a transaction",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/batch": {
+      "delete": {
+        "description": "Hide up to 100 transactions. All or nothing: one missing id deletes none (404).",
+        "operationId": "batchDeleteTransactions",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchIds"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchDeleteResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete transactions",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "description": "Give up to 100 transactions one category. All or nothing: one missing id changes none (404).",
+        "operationId": "batchUpdateTransactionCategory",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BatchCategoryUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BatchUpdateResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Recategorise transactions",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/categories": {
+      "get": {
+        "description": "Every category a transaction can carry, in display order.",
+        "operationId": "listTransactionCategories",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CategoryResponse"
+                  },
+                  "title": "Response Listtransactioncategories",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "List the categories",
+        "tags": [
+          "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/{transaction_id}": {
+      "delete": {
+        "description": "Hide a transaction from every list and analytic. The row is kept.",
+        "operationId": "deleteTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Delete a transaction",
+        "tags": [
+          "transactions"
+        ]
+      },
+      "patch": {
+        "description": "Change some fields of a transaction. Omitted fields are untouched; description: null clears it.",
+        "operationId": "updateTransaction",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransactionUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Edit a transaction",
+        "tags": [
+          "transactions"
         ]
       }
     },

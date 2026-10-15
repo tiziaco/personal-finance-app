@@ -132,6 +132,46 @@ export function useOrderColumns({ canEdit, onEdit }: { canEdit: boolean; onEdit:
 the same controlled shape and save, debounced, in the setter; the table never resets a controlled
 value from props.
 
+## Selection, bulk actions and phone cards
+
+- **Selection:** `enableRowSelection` adds a checkbox column. `renderBulkActions(selected, clearSelection)`
+  fills the bulk bar ("N selected", Clear, your actions). Selection holds only rows on screen and is
+  committed to state, so a row that leaves the page and returns stays deselected, and a bulk action
+  never touches a row the user cannot see. The bar is a pill fixed to the bottom of the viewport,
+  centred on the table by measuring it (so it never covers the sidebar), with an in-flow spacer
+  after the pager so the page can scroll clear of it. Not sticky: the dashboard scrolls the window,
+  and its `overflow-auto` content wrapper would capture a sticky bar without ever scrolling. It is
+  desktop only: hidden in card mode.
+- **One toolbar height:** every control in a table's toolbar and page header is the default 32px —
+  `Button` with no `size` (`icon` for an icon-only one), `Input`, `SelectTrigger size="sm"` (its
+  default is 36px). `sm` buttons are for compact spots: the bulk-action pill, the date presets.
+- **The frame:** every table sits in a card (`rounded-xl border bg-card shadow-sm`) with uppercase
+  muted header labels on a `bg-muted/50` strip. Sticky and frozen header cells use opaque `bg-muted`.
+- **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).
+  Toolbar, chips and pager stay; column headers, row menus and the bulk bar do not. So a card that
+  acts is a `<button>` (the transactions card opens the edit dialog), and a list that sorts needs a
+  control of its own — transactions puts one in `headerActions` on every screen size — writing
+  through the state hook's `setSort(orderingToSorting(value))` so the page resets as a header click
+  would.
+- **Date presets:** `DateFilterControl` takes `presets` — today, this week (Monday first), this month,
+  last month — from `@app/data-table/url-state/date-presets`.
+- **Several values from a fixed list:** `FilterCheckboxGroup`, from
+  `@app/data-table/filters/filter-checkbox-group`.
+- **The filter panel** is a right-hand sheet (full width on a phone): a header with "N active", one
+  ruled section per child, "Clear all filters" at the bottom while any is active. A field with one
+  input is a `FilterField`; several inputs under one title (a min and a max) go in a `FilterSection`.
+- **Selects and dates are Base UI, never native:** a pick-one field is `@app/ui/select`, and a
+  filter's "any" is a `null` item (`items` with `{ value: null, label: "Any …" }`), which the
+  trigger shows while nothing is picked. A date is `DatePicker` from
+  `@app/components/forms/date-picker` — `DateFilterControl` uses both, which is why
+  `@app/data-table` depends on `@app/components`.
+- **Moving a page without trapping Back:** the url-state page setter takes `{ history: "replace" }`
+  (the transactions page uses it to bring a past-the-end page back to the last one).
+- **A mutation that handles an error itself** sets `meta.silentError` to a predicate so `QueryProvider`
+  does not toast it (the add dialog's `isDuplicate`, a 409; see `@app/api-client`'s `query-meta.ts`).
+
+Worked example: `apps/web/src/components/transactions/`.
+
 ## Rules
 
 - Feature code imports `ClientDataTable` or `ServerDataTable` — the export map doesn't offer the core.

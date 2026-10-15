@@ -149,9 +149,10 @@ A validation failure raises a domain exception from the module's `exceptions.py`
 
 ## Pagination
 
-Invented — no route paginates yet. Use offset/limit, plus `ordering` and `search` when the list sorts or searches.
-Return an envelope with `items`, `total`, `offset`, `limit`. The web app's shared table (`@app/data-table`) is built
-against exactly these names.
+The reference is `list_transactions` in `app/modules/transaction/router.py`, with its filters dependency in
+`app/modules/transaction/dependencies.py`; the payments example below is the same shape. Use offset/limit, plus
+`ordering` and `search` when the list sorts or searches. Return an envelope with `items`, `total`, `offset`, `limit`.
+The web app's shared table (`@app/data-table`) is built against exactly these names.
 
 ```python
 PaymentOrdering = Literal["created_at", "-created_at", "amount", "-amount"]
@@ -168,7 +169,7 @@ async def list_payments(
     request: Request,
     db_session: DbSession,
     user: CurrentUser,
-    filters: PaymentFilters = Depends(),
+    filters: PaymentListFilters,
     ordering: Optional[PaymentOrdering] = Query(None),
     search: Optional[str] = Query(None, max_length=100),
     offset: int = Query(0, ge=0),
@@ -192,16 +193,41 @@ async def list_payments(
   Bounded like every free-text input.
 - The client sends `limit` as its page size; any size up to the cap works.
 
-Group filter query params into a `Depends()` class:
+Group the filters in a dependency **function** in the module's `dependencies.py`. Each filter is a `Query(...)`
+parameter of the function, carrying its bounds and description; the function returns a plain model the service and
+repository take:
 
 ```python
+# app/modules/payment/schemas.py — a plain container, never parsed by FastAPI
 class PaymentFilters(BaseModel):
-    model_config = {"arbitrary_types_allowed": True}
+    date_from: Optional[date] = None
+    status: Optional[List[PaymentStatus]] = None
 
-    date_from: Optional[date] = Query(None)
-    date_to: Optional[date] = Query(None)
-    status: Optional[str] = Query(None)
+# app/modules/payment/dependencies.py
+def get_payment_filters(
+    date_from: Optional[date] = Query(None, description="On or after this day"),
+    status: Optional[List[PaymentStatus]] = Query(None, description="Any of these; repeat the parameter"),
+) -> PaymentFilters:
+    return PaymentFilters(date_from=date_from, status=status)
+
+PaymentListFilters = Annotated[PaymentFilters, Depends(get_payment_filters)]
 ```
+
+FastAPI reads a function's own signature, so every `Query(...)` reaches the spec as a flat query parameter and a
+list repeats (`?status=paid&status=refunded`); orval generates the same flat params. The spec lists these after the
+route's own parameters (`search`, `ordering`, …).
+
+Two shapes look equivalent and are not:
+
+- **A `Depends()` model** (`filters: PaymentFilters = Depends()` with `= Query(None)` field defaults): the `Query`
+  marker does not survive into the model's signature, so FastAPI reads a list field from the request **body**. On a
+  GET nothing errors: `?status=paid` is ignored and the list comes back unfiltered. Only `server/openapi.json`
+  shows it, as a `requestBody`.
+- **A query model** (`filters: Annotated[PaymentFilters, Query()]`): in this app's spec the generated client takes
+  the filters as one nested object and stops repeating list params.
+
+After adding or changing a filter, check the `git diff` of `server/openapi.json` that `make gen-contract`
+produces: each filter is its own `"in": "query"` parameter, and there is no `requestBody` on the GET.
 
 ## Batch operations
 
