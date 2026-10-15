@@ -11,6 +11,12 @@ from jwt import PyJWKClient
 
 from app.core.config import settings
 from app.core.logging import logger
+from app.exceptions.base import AuthUnavailableError
+
+# Clerk's backend SDK allows 5 s. Without it a server clock behind Clerk's refuses a token
+# Clerk has just minted (iat/nbf ahead of us), the web's forced-refresh retry mints another
+# that is refused the same way, and the user is signed out.
+CLOCK_SKEW_SECONDS = 5
 
 
 class ClerkJWTVerifier:
@@ -41,19 +47,31 @@ class ClerkJWTVerifier:
             token: The JWT token string.
 
         Returns:
-            The decoded payload dict if valid, None otherwise.
+            The decoded payload dict if valid, None if the credentials are bad.
+
+        Raises:
+            AuthUnavailableError: the token could not be checked (JWKS unreachable or
+                misconfigured, or an unexpected failure) -- not the caller's fault.
         """
         if not token or not isinstance(token, str):
             logger.warning("token_invalid_format")
             return None
 
         try:
-            signing_key = self.jwks_client.get_signing_key_from_jwt(token)
+            jwks_client = self.jwks_client
+        except jwt.PyJWKClientError as e:
+            # Raised while building the client: CLERK_ISSUER is not an http(s) URL.
+            logger.error("token_jwks_client_invalid", jwks_url=settings.auth.jwks_url, error=str(e))
+            raise AuthUnavailableError("The signing-key service is misconfigured") from e
+
+        try:
+            signing_key = jwks_client.get_signing_key_from_jwt(token)
             payload = jwt.decode(
                 token,
                 signing_key.key,
                 algorithms=["RS256"],
                 issuer=settings.auth.ISSUER,
+                leeway=CLOCK_SKEW_SECONDS,
                 options={
                     "verify_exp": True,
                     "verify_iss": True,
@@ -82,12 +100,24 @@ class ClerkJWTVerifier:
         except jwt.ExpiredSignatureError:
             logger.debug("token_expired")
             return None
+        except jwt.ImmatureSignatureError as e:
+            # iat/nbf ahead of our clock by more than CLOCK_SKEW_SECONDS. A warning, not debug:
+            # the user is signed out, and the cause is our clock, so production must see it.
+            logger.warning("token_not_yet_valid", error=str(e))
+            return None
         except jwt.InvalidTokenError as e:
             logger.debug("token_verification_failed", error=str(e))
             return None
+        except jwt.PyJWKClientConnectionError as e:
+            logger.error("token_jwks_unreachable", error=str(e))
+            raise AuthUnavailableError("Could not reach the signing-key service") from e
+        except jwt.PyJWKClientError as e:
+            # The key lookup found no key for this token's kid: the token is wrong, not the service.
+            logger.debug("token_signing_key_not_found", error=str(e))
+            return None
         except Exception as e:
             logger.error("token_verification_error", error=str(e))
-            return None
+            raise AuthUnavailableError("Could not verify the token") from e
 
 
 # Singleton verifier instance

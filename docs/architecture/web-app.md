@@ -101,8 +101,8 @@ Clerk type. `useAppAuth()` returns:
 |---|---|
 | `user` | `AppUser` — `name`, `email`, `imageUrl`, each `null` when absent — or `null` while loading or signed out |
 | `isLoaded` | Clerk has resolved |
-| `getToken` | the session token, fresh on every call |
-| `signOut` | ends the session, then loads `signOutUrl` as a new document |
+| `getToken` | the session token, fresh on every call; `{ forceRefresh }` skips Clerk's cache. Without a session it waits up to 5 s for one being activated, and answers `null` only once the state has settled; a `forceRefresh` does not wait (it follows a refusal, and the first call already waited) |
+| `signOut` | ends the session, then loads `signOutUrl` as a new document; a second call while one is in flight shares it |
 
 Two decisions keep one user's data from reaching the next person at the same browser:
 
@@ -147,7 +147,12 @@ component
   for every error, or a predicate for the errors the caller shows another way;
   `query-meta.ts` types it for every hook through TanStack's `Register`. The toast
   maps `status` to copy in `@app/core`'s `constants/messages.ts`; server text never
-  reaches the UI. A 4xx is not retried.
+  reaches the UI. `QueryProvider` does not retry a 4xx (the transport's own 401 handling is below).
+- **A 401 is an auth event, not an error.** `useApiRequest`, under every hook and the
+  chat stream, retries a 401 once with a token fetched fresh (Clerk's cache skipped). A
+  second 401 means the session is over: `signOut()` ends it and loads `/sign-in`, so a
+  stale session never bounces back from the sign-in page. It only works because the
+  server keeps 401 for bad credentials ([`server.md`](./server.md), the error table).
 - **Reading an error body goes through the generated Zod schema.** `useServerStatus` is
   the example: `/ready` answers 503 with a valid payload when degraded, which arrives as
   `ApiError.body`. The hook parses it with `GetReadinessResponse` and prefers it over

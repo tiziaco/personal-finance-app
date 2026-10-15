@@ -2,7 +2,6 @@
 
 from app.integrations.llm.exceptions import (
     LLMAPIError,
-    LLMFallbackExhaustedError,
     LLMRateLimitError,
     LLMServiceError,
     LLMStreamingError,
@@ -16,7 +15,6 @@ from app.integrations.llm.service import (
 
 __all__ = [
     "LLMAPIError",
-    "LLMFallbackExhaustedError",
     "LLMRateLimitError",
     "LLMRegistry",
     "LLMService",

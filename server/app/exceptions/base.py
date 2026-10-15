@@ -37,6 +37,22 @@ class ServiceError(Exception):
 
 
 # ============================================================================
+# Availability Errors
+# ============================================================================
+
+
+class ServiceUnavailableError(ServiceError):
+    """We, or something we depend on, cannot serve the request now; a retry later may work.
+
+    The category for an outage behind valid credentials. Never a 401: the web treats a
+    401 that survives a retry as an ended session and signs out.
+    """
+
+    status_code = 503
+    error_code = "SERVICE_UNAVAILABLE"
+
+
+# ============================================================================
 # Authentication & Authorization Errors
 # ============================================================================
 
@@ -46,6 +62,12 @@ class AuthenticationError(ServiceError):
 
     status_code = 401
     error_code = "AUTHENTICATION_ERROR"
+
+
+class AuthUnavailableError(ServiceUnavailableError):
+    """The server could not check the request's credentials: Clerk's JWKS is unreachable or misconfigured."""
+
+    error_code = "AUTH_UNAVAILABLE"
 
 
 class AuthorizationError(ServiceError):

@@ -14,11 +14,6 @@ class _Out(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
-# The dates analytics covers. An explicit bound outside them is a 422; a row outside them is left out.
-MIN_DATE = dt.date(1900, 1, 1)
-MAX_DATE = dt.date(2100, 12, 31)
-
-
 class DateRange(BaseModel):
     """Inclusive, optional bounds; omitted means all time, MIN_DATE to MAX_DATE."""
 
