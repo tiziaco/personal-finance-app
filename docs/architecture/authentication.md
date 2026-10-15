@@ -51,7 +51,7 @@ before the fix it was enough to send the first queries bare. `@app/auth`'s `getT
 waits for the session instead, up to five seconds, and the first queries go out with a
 token. A forced refresh, which only follows a refused request, does not wait.
 
-**The server reads four claims.** PyJWT also checks `nbf` and `iat`; the rest Clerk adds
+**The server reads four claims.** PyJWT also checks `nbf` and `iat`, allowing 5 s of clock skew (`CLOCK_SKEW_SECONDS`, `app/utils/auth.py`); the rest Clerk adds
 (`sid`, `jti`, `fva`, …) are ignored:
 
 | Claim | Holds | Read by |

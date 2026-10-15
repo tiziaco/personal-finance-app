@@ -20,16 +20,19 @@ ServiceError (500, INTERNAL_ERROR)                              app/exceptions/b
 │   └── DatabaseConnectionError (503)
 ├── ClerkServiceError (502)                                     app/integrations/clerk/exceptions.py
 │   ├── ClerkAPIError
-│   ├── ClerkAuthenticationError (401)
+│   ├── ClerkAuthenticationError (502)
 │   └── ClerkRateLimitError (429)
 ├── WebhookError (400)                                          app/integrations/clerk/webhooks/exceptions.py
 │   └── WebhookPayloadTooLargeError (413)
-└── LLMServiceError (503)                                       app/integrations/llm/exceptions.py
-    ├── LLMRateLimitError
-    ├── LLMTimeoutError
-    ├── LLMStreamingError
-    ├── LLMFallbackExhaustedError
-    └── LLMAPIError
+└── ServiceUnavailableError (503)
+    ├── AuthUnavailableError
+    ├── UserProvisioningError                                   app/modules/account/exceptions.py
+    ├── CategorisationUnavailableError                          app/modules/transaction/imports/exceptions.py
+    └── LLMServiceError                                         app/integrations/llm/exceptions.py
+        ├── LLMRateLimitError
+        ├── LLMTimeoutError
+        ├── LLMStreamingError
+        └── LLMAPIError
 ```
 
 ## Base class (`app/exceptions/base.py`)

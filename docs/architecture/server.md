@@ -288,15 +288,18 @@ exception inherits a category class in `app/exceptions/base.py`, which fixes its
 | `ConflictError`, `DatabaseConflictError` | 409 |
 | `ValidationError` | 422 |
 | `ServiceError` (the root), `DatabaseError` | 500 |
-| `DatabaseConnectionError`, `AuthUnavailableError` | 503 |
+| `ServiceUnavailableError` — under it `AuthUnavailableError`, `UserProvisioningError`, `LLMServiceError`, `CategorisationUnavailableError` — and `DatabaseConnectionError` | 503 |
 
 **A 401 means the request's credentials, nothing else.** The web retries a 401 once with
 a fresh token and signs out on the second ([`web-app.md`](./web-app.md) §5), so a failure
-behind valid credentials must not be a 401: provisioning that fails is
-`UserProvisioningError` (503), the server being unable to reach Clerk's signing keys
-(or failing unexpectedly while checking a token) is `AuthUnavailableError` (503,
-`AUTH_UNAVAILABLE`), and the server's own Clerk secret being refused is
-`ClerkAuthenticationError` (502).
+behind valid credentials is never a 401: an outage is a `ServiceUnavailableError` (503).
+The server unable to check a token — Clerk's signing keys unreachable, `CLERK_ISSUER`
+not a URL, an unexpected failure — is `AuthUnavailableError` (`AUTH_UNAVAILABLE`).
+Provisioning lets a typed error keep its status (the server's own Clerk secret refused
+is `ClerkAuthenticationError`, 502; a Clerk rate limit 429) and wraps anything else in
+`UserProvisioningError` (`USER_PROVISIONING_FAILED`). A valid token for a user Clerk no
+longer has is a 401. `tests/unit/exceptions/test_exceptions.py` fails if any other
+exception answers 401.
 
 Modules subclass these in their `exceptions` slot; adapters in
 `app/integrations/<provider>/exceptions.py`. Keyword arguments to the constructor become the

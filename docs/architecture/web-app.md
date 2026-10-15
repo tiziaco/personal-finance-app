@@ -101,7 +101,6 @@ Clerk type. `useAppAuth()` returns:
 |---|---|
 | `user` | `AppUser` — `name`, `email`, `imageUrl`, each `null` when absent — or `null` while loading or signed out |
 | `isLoaded` | Clerk has resolved |
-| `isSignedIn` | Clerk has an active session; straight after sign-in it trails the navigation |
 | `getToken` | the session token, fresh on every call; `{ forceRefresh }` skips Clerk's cache. Without a session it waits up to 5 s for one being activated, and answers `null` only once the state has settled; a `forceRefresh` does not wait (it follows a refusal, and the first call already waited) |
 | `signOut` | ends the session, then loads `signOutUrl` as a new document; a second call while one is in flight shares it |
 
