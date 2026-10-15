@@ -37,6 +37,8 @@ server/app/
 ├── modules/
 │   ├── account/              # the Clerk-backed identity: user row, CurrentUser, Clerk webhook handlers,
 │   │                         #   JIT provisioning, erasure
+│   ├── analytics/            # every calculation over the user's transactions; stores nothing.
+│   │                         #   domain/ holds the pure functions (R9)
 │   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
 │   └── transaction/          # the user's transactions and the category list
 ├── integrations/

@@ -133,3 +133,27 @@ Facts that exist only because the app was ported from a legacy codebase:
 - Never run it while this stack is up: both publish port 3000.
 - Keep the legacy OAuth redirect URI on the shared Clerk OAuth client until cutover, then
   remove it.
+
+## Web — the currency symbol
+
+Money shows in EUR everywhere: `formatAmount` in
+`apps/web/src/components/transactions/format.ts` hard-codes it. `analytics.md` §4 promises the
+symbol the user picks in Settings. The setting is display only — amounts are stored without a
+currency. **Unblocks:** a user outside the euro area. **Decide first:** where the preference
+lives (the user row, or the browser).
+
+## Web — a month picker on the dashboard
+
+The home dashboard shows the latest month with data (decision of 15 Oct 2026). A picker would let
+the user look back; every analytics route already takes `date_from`/`date_to`, but
+`GET /analytics/dashboard` picks its own month, so it gains a `month` parameter. **Unblocks:**
+looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
+
+## Chat — free-form questions over the user's data
+
+The chat tools (step 7) call the analytics library's fixed functions. A question they do not
+cover could be answered by generated code run in an isolated sandbox with its own environment
+(polars or similar); the server only hands it the user's rows from
+`transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
+`server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
+(15 Oct 2026): the server library stays plain Python.

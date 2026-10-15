@@ -4,8 +4,7 @@
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
 calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
-**Data model:** pending — written with step 5a. Analytics
-stores nothing of its own: it reads [`transactions.md`](./transactions.md).
+**Data model:** none — analytics stores nothing. It reads the transaction table through one read path ([`../../data-model/transaction.md`](../../data-model/transaction.md)).
 **Related:** [`insights.md`](./insights.md) · PRD [§6](../prd-mvp.md#6-analytics).
 
 ---
@@ -21,10 +20,16 @@ user's own transactions on request; nothing is entered.
 **The dashboard** (the page after sign-in) shows:
 
 - a welcome header;
-- four summary cards: **Total Spent**, **Recurring Costs**, **Net Balance** and **Average
-  Cashflow**;
-- a pie chart of spending by category and a line chart of the monthly trend;
-- the ten most recent transactions, linking to the full table;
+- four summary cards for the **reference month** — the latest calendar month holding a
+  transaction, named on the page ("September 2026"): **Total Spent**, that month's
+  expenses; **Recurring Costs**, the expenses flagged recurring in that month and how many
+  there were; **Net Balance**, income minus expenses; **Average Cashflow**, the mean
+  monthly net over the three months to it (fewer when the data starts later; an empty
+  month counts as zero);
+- a donut of the reference month's top five categories plus Other, and a line chart of
+  income and expenses over the six months to it;
+- the ten most recent transactions, linking to the full table. With no transactions, the
+  page shows an empty state linking to the transactions page.
 - a callout with the top AI insights, linking to the insights page.
 
 **The analytics page** has four tabs, each loaded the first time it is opened:
@@ -81,5 +86,6 @@ All of them accept an optional start and end date.
   were rated worth having in the v1.0 research (priority 2) and not built.
 - **A savings rate.** The v1.0 research asked for a savings-rate card; the cards that
   shipped are different (above). Is a savings rate wanted?
-- **Date range on the dashboard.** The dashboard has no range control; is "this month" the
-  right default?
+- **Date range on the dashboard** — decided 15 Oct 2026: the latest month with data,
+  labelled by name, not the calendar month (imports lag the calendar). A month picker is
+  in [`TODO.md`](../../TODO.md).
