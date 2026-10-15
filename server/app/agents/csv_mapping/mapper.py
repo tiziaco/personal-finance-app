@@ -9,7 +9,7 @@ from typing import Optional
 from pydantic import RootModel
 
 from app.agents.shared.observability import create_trace_config
-from app.agents.shared.structured import ask_json, structured_llm
+from app.agents.shared.structured import ask_json, structured_llm_service
 from app.core.logging import logger
 
 CELL_LIMIT = 100
@@ -48,7 +48,7 @@ async def propose_mapping(
     }
     try:
         answer = await ask_json(
-            structured_llm(),
+            structured_llm_service,
             _PROMPT,
             json.dumps(payload, ensure_ascii=False),
             _Mapping,

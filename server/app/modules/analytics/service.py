@@ -13,8 +13,6 @@ from app.modules.analytics.domain.merchants import merchant_breakdown
 from app.modules.analytics.domain.recurring import recurring_analysis
 from app.modules.analytics.domain.spending import spending_summary
 from app.modules.analytics.schemas import (
-    MAX_DATE,
-    MIN_DATE,
     AnomaliesResponse,
     BehaviourResponse,
     CategoryBreakdownResponse,
@@ -24,7 +22,7 @@ from app.modules.analytics.schemas import (
     RecurringResponse,
     SpendingResponse,
 )
-from app.modules.transaction import AnalysisRow, transaction_service
+from app.modules.transaction import MAX_DATE, MIN_DATE, AnalysisRow, transaction_service
 
 
 async def _rows(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> list[AnalysisRow]:

@@ -15,6 +15,8 @@ from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from enum import StrEnum
 from typing import Optional
 
+from app.modules.transaction.domain.dates import MAX_DATE, MIN_DATE
+
 MAX_BYTES = 5 * 1024 * 1024
 MAX_ROWS = 3000
 SAMPLE_SIZE = 3
@@ -402,9 +404,9 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, ImportField]) -> tuple[list[
     """Every row through a valid mapping: the rows to save and the rows rejected, in file order.
 
     The date format and amount style are the best for the mapped column. A row
-    is rejected for cells beyond the header, an unreadable date, an unreadable
-    amount or an empty merchant, checked in that order. Text is cut to the
-    column sizes.
+    is rejected for cells beyond the header, an unreadable date, a date outside
+    MIN_DATE–MAX_DATE, an unreadable amount or an empty merchant, checked in that
+    order. Text is cut to the column sizes.
     """
     index = {field: parsed.columns.index(column) for column, field in mapping.items() if field != ImportField.IGNORE}
 
@@ -427,6 +429,9 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, ImportField]) -> tuple[list[
         date = parse_date(raw_date, date_format)
         if date is None:
             rejected.append(Rejection(row.number, f"unreadable date “{_shown(raw_date)}”"))
+            continue
+        if not MIN_DATE <= date <= MAX_DATE:
+            rejected.append(Rejection(row.number, f"date out of range “{_shown(raw_date)}”"))
             continue
         amount = parse_amount(raw_amount, style)
         if amount is None:

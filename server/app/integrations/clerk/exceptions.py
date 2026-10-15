@@ -33,7 +33,11 @@ class ClerkRateLimitError(ClerkServiceError):
 
 
 class ClerkAuthenticationError(ClerkServiceError):
-    """Raised when Clerk API authentication fails."""
+    """Raised when Clerk API authentication fails: the server's own secret was refused.
 
-    status_code = 401
+    502, not 401: the failure is upstream, and the web treats a persistent 401 as the
+    user's session ending.
+    """
+
+    status_code = 502
     error_code = "CLERK_AUTH_ERROR"

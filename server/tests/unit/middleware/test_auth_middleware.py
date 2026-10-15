@@ -10,6 +10,7 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from app.api.middlewares.auth import AuthMiddleware
+from app.exceptions.base import AuthUnavailableError
 
 pytestmark = pytest.mark.unit
 
@@ -22,6 +23,7 @@ def _make_app():
             {
                 "clerk_id": getattr(request.state, "clerk_id", None),
                 "user_id": getattr(request.state, "user_id", None),
+                "auth_error": repr(getattr(request.state, "auth_error", None)),
                 "state_keys": sorted(request.state._state),
             }
         )
@@ -105,4 +107,25 @@ class TestAuthMiddleware:
 
         data = response.json()
         assert data["clerk_id"] == "user_abc123"
-        assert data["state_keys"] == ["clerk_id", "user_id"]
+        assert data["state_keys"] == ["auth_error", "clerk_id", "user_id"]
+
+    @pytest.mark.asyncio
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_an_auth_outage_is_kept_on_the_request_and_still_passes_through(self, mock_verifier, app):
+        outage = AuthUnavailableError("jwks down")
+        mock_verifier.verify_token.side_effect = outage
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/test", headers={"Authorization": "Bearer t"})
+
+        data = response.json()
+        assert response.status_code == 200
+        assert data["clerk_id"] is None
+        assert data["auth_error"] == repr(outage)
+
+    @pytest.mark.asyncio
+    async def test_auth_error_defaults_to_none(self, app):
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/test")
+
+        assert response.json()["auth_error"] == "None"

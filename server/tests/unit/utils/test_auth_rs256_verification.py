@@ -12,13 +12,14 @@ These sign and verify with a real RSA key, so pyjwt's RSAAlgorithm and the
 """
 
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 
 from app.core.config import settings
+from app.exceptions.base import AuthUnavailableError
 from app.utils.auth import ClerkJWTVerifier
 
 pytestmark = pytest.mark.unit
@@ -101,3 +102,67 @@ def test_an_expired_token_is_rejected_through_the_real_path(keypair):
     expired = _sign(private, exp=int(time.time()) - 60)
 
     assert _verifier_serving(public).verify_token(expired) is None
+
+
+def test_an_unreachable_jwks_is_an_outage_not_a_bad_token(keypair):
+    """The server failing to reach Clerk says nothing about the caller's credentials."""
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = pyjwt.PyJWKClientConnectionError("no route")
+
+    with pytest.raises(AuthUnavailableError):
+        verifier.verify_token(_sign(private))
+
+
+def test_an_unexpected_failure_is_an_outage_not_a_bad_token(keypair):
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = RuntimeError("boom")
+
+    with pytest.raises(AuthUnavailableError):
+        verifier.verify_token(_sign(private))
+
+
+def test_an_unknown_kid_is_still_a_bad_token(keypair):
+    """PyJWKClientError (not the connection subclass) means the token names a key Clerk does not have."""
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = pyjwt.PyJWKClientError("unable to find a signing key")
+
+    assert verifier.verify_token(_sign(private)) is None
+
+
+@pytest.mark.parametrize("issuer", ["change-me", ""])
+def test_an_issuer_that_is_not_a_url_is_an_outage_not_a_bad_token(keypair, monkeypatch, issuer):
+    """PyJWKClient refuses a JWKS URL without http(s) when it is built: our configuration, not the token."""
+    private, _ = keypair
+    monkeypatch.setattr(settings.auth, "ISSUER", issuer)
+
+    with pytest.raises(AuthUnavailableError):
+        ClerkJWTVerifier().verify_token(_sign(private))
+
+
+def test_a_token_minted_a_moment_ahead_of_our_clock_verifies(keypair):
+    """A server clock a few seconds behind Clerk's must not refuse a token Clerk just minted."""
+    private, public = keypair
+    soon = int(time.time()) + 3
+
+    assert _verifier_serving(public).verify_token(_sign(private, iat=soon, nbf=soon)) is not None
+
+
+def test_a_token_far_ahead_of_our_clock_is_still_refused(keypair):
+    private, public = keypair
+    later = int(time.time()) + 30
+
+    assert _verifier_serving(public).verify_token(_sign(private, iat=later, nbf=later)) is None
+
+
+def test_a_token_ahead_of_our_clock_is_logged_where_production_sees_it(keypair):
+    """Clock skew signs users out; its log line must survive production's INFO level (docs/setup/clerk.md)."""
+    private, public = keypair
+    later = int(time.time()) + 30
+
+    with patch("app.utils.auth.logger") as log:
+        _verifier_serving(public).verify_token(_sign(private, iat=later, nbf=later))
+
+    assert log.warning.call_args.args == ("token_not_yet_valid",)

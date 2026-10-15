@@ -71,7 +71,8 @@ How they compute, so the numbers can be checked:
   to divide by is null, not zero. A share or an average of nothing is 0, beside the zero
   total or count it comes from. Months with no transactions are zero-filled in every series.
 - A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
-  outside it is left out of every analysis.
+  outside it is left out of every analysis. The CSV import rejects such a row instead of
+  saving it; the bounds are `MIN_DATE`/`MAX_DATE` in `transaction/domain/dates.py`.
 - The sign decides; a zero amount is ignored by every sum, count and average.
 - A merchant is its stored merchant key ([`data-model/transaction.md`](../../data-model/transaction.md)
   D7), so `PAYPAL *Spotify` and `Spotify` are one; it is shown under its latest spelling.

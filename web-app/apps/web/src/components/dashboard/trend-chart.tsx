@@ -13,8 +13,8 @@ import { formatMonth } from "./month"
 import { toTrendPoints, type TrendPoint } from "./trend-points"
 
 const config: ChartConfig = {
-  income: { label: "Income", color: "var(--chart-1)" },
-  expenses: { label: "Expenses", color: "var(--chart-2)" },
+  income: { label: "Income", color: "var(--chart-income)" },
+  expenses: { label: "Expenses", color: "var(--chart-expense)" },
 }
 
 const compact = new Intl.NumberFormat(undefined, {

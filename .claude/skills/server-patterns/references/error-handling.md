@@ -38,7 +38,7 @@ except ExternalError as e:
 
 For transient failures on external calls, use `tenacity`. `LLMService._call_llm_with_retry` in
 `app/integrations/llm/service.py` is the real example, and the same file rotates through every configured model
-before raising `LLMFallbackExhaustedError`.
+before raising a typed `LLMServiceError` for the last failure.
 
 ```python
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log

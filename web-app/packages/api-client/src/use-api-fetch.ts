@@ -89,16 +89,44 @@ async function apiRequest(
   return response
 }
 
+const isUnauthorized = (error: unknown) =>
+  error instanceof ApiError && error.status === 401
+
 /**
  * The API's transport with the current session's token, read on every call.
  * For a caller that reads the body itself: the chat stream. Everything else
  * uses a generated hook, which goes through useApiFetch.
+ *
+ * A 401 is an auth event, not an error to show. The request goes once more
+ * with a token fetched fresh. The server ran no handler, so replaying even a
+ * POST is safe. A second 401 means the session is over, and signOut() ends it
+ * and loads the sign-in page. The server keeps 401 for bad credentials alone
+ * (an outage is a 503), so an outage never signs anyone out. The ApiError
+ * still reaches the caller.
  */
 export function useApiRequest(): ApiRequest {
-  const { getToken } = useAppAuth()
+  const { getToken, signOut } = useAppAuth()
   return useCallback(
-    async (url, init) => apiRequest(url, init, await getToken()),
-    [getToken],
+    async (url, init) => {
+      try {
+        return await apiRequest(url, init, await getToken())
+      } catch (error) {
+        if (!isUnauthorized(error)) throw error
+      }
+      try {
+        return await apiRequest(
+          url,
+          init,
+          await getToken({ forceRefresh: true }),
+        )
+      } catch (error) {
+        // signOut is single-flight: many requests refused at once sign out once.
+        // It navigates even when ending the session fails, so its rejection is moot.
+        if (isUnauthorized(error)) void signOut().catch(() => {})
+        throw error
+      }
+    },
+    [getToken, signOut],
   )
 }
 
