@@ -136,23 +136,26 @@ class LLMService:
         No client is constructed here: `llm_service` below is a module-level
         singleton, so anything built in this method runs at import. `get_llm()`
         resolves the client on first use instead.
+
+        `_default_index` is set here and never moves: a call keeps its fallback
+        position in its own locals, since `llm_service` is shared by every request.
         """
         self._llm: Optional[BaseChatModel] = None
         self._tools: Optional[List] = None
-        self._current_model_index: int = 0
+        self._default_index: int = 0
 
         all_names = LLMRegistry.get_all_names()
         try:
-            self._current_model_index = all_names.index(settings.llm.DEFAULT_LLM_MODEL)
+            self._default_index = all_names.index(settings.llm.DEFAULT_LLM_MODEL)
             logger.info(
                 "llm_service_initialized",
                 default_model=settings.llm.DEFAULT_LLM_MODEL,
-                model_index=self._current_model_index,
+                model_index=self._default_index,
                 total_models=len(all_names),
                 environment=settings.ENVIRONMENT.value,
             )
         except (ValueError, Exception) as e:
-            self._current_model_index = 0
+            self._default_index = 0
             logger.warning(
                 "default_model_not_found_using_first",
                 requested=settings.llm.DEFAULT_LLM_MODEL,
@@ -167,40 +170,16 @@ class LLMService:
         service, not to whichever client it holds: assigning a bare registry
         client leaves the agent toolless after the first fallback rotation, and
         silently, since the graph routes on `tool_calls` and simply sees none.
-        Resolving from the registry rather than from `self._llm` is what makes
-        that correct for a *switch* — binding onto the current client would bind
-        onto the model being left.
+        Resolving from the registry rather than from a held client is what makes
+        that correct for `_next`, which moves to another model.
         """
         llm = LLMRegistry.get(model_name, **kwargs)
         return llm.bind_tools(self._tools) if self._tools else llm
 
-    def _get_next_model_index(self) -> int:
-        """The next model index, wrapping to 0 at the end of the registry."""
-        total_models = len(LLMRegistry.LLMS)
-        next_index = (self._current_model_index + 1) % total_models
-        return next_index
-
-    def _switch_to_next_model(self) -> bool:
-        """Switch to the next model in the registry. False if that failed."""
-        try:
-            next_index = self._get_next_model_index()
-            next_model_entry = LLMRegistry.get_model_at_index(next_index)
-
-            logger.warning(
-                "switching_to_next_model",
-                from_index=self._current_model_index,
-                to_index=next_index,
-                to_model=next_model_entry["name"],
-            )
-
-            self._current_model_index = next_index
-            self._llm = self._resolve(next_model_entry["name"])
-
-            logger.info("model_switched", new_model=next_model_entry["name"], new_index=next_index)
-            return True
-        except Exception as e:
-            logger.error("model_switch_failed", error=str(e))
-            return False
+    def _next(self, index: int) -> tuple[int, BaseChatModel]:
+        """The model after `index` in the registry, wrapping to 0 at the end, with its client resolved."""
+        next_index = (index + 1) % len(LLMRegistry.LLMS)
+        return next_index, self._resolve(LLMRegistry.get_model_at_index(next_index)["name"])
 
     @retry(
         stop=stop_after_attempt(settings.llm.MAX_LLM_CALL_RETRIES),
@@ -210,13 +189,9 @@ class LLMService:
         reraise=True,
     )
     async def _call_llm_with_retry(
-        self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
+        self, llm: BaseChatModel, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
     ) -> BaseMessage:
-        """Call the LLM, retrying per the decorator. Raises OpenAIError if all fail."""
-        llm = self.get_llm()
-        if not llm:
-            raise RuntimeError("llm not initialized")
-
+        """Call `llm`, retrying per the decorator. Raises OpenAIError if all fail."""
         try:
             response = await llm.ainvoke(messages, config=config)
             logger.debug("llm_call_successful", message_count=len(messages))
@@ -254,44 +229,31 @@ class LLMService:
             LLMFallbackExhaustedError: Every model failed after retries.
         """
         if not model_name:
-            return await self._call_with_fallback(messages, config)
+            return await self._call_with_fallback(messages, config, self._default_index, self.get_llm())
 
-        # Resolved before anything is saved or assigned, so an unknown model
-        # raises without having touched the service's state.
         try:
             pinned = self._resolve(model_name, **model_kwargs)
         except ValueError as e:
             logger.error("requested_model_not_found", model_name=model_name, error=str(e))
             raise
 
-        # Pinned for this call only. `llm_service` is a singleton shared by
-        # every request, so an override left in place would retarget everyone
-        # else's traffic until restart. The restore also discards any fallback
-        # rotation from inside the pinned call — the pin was scoped, so its
-        # consequences are too.
-        saved_llm, saved_index = self._llm, self._current_model_index
-        self._llm = pinned
-        all_names = LLMRegistry.get_all_names()
-        if model_name in all_names:
-            self._current_model_index = all_names.index(model_name)
+        # The pin lives in this call's locals, never on the service: `llm_service` is a
+        # singleton shared by every request, and a pin set on it would retarget their calls.
         logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
-
-        try:
-            return await self._call_with_fallback(messages, config)
-        finally:
-            self._llm, self._current_model_index = saved_llm, saved_index
+        return await self._call_with_fallback(messages, config, LLMRegistry.get_all_names().index(model_name), pinned)
 
     async def _call_with_fallback(
-        self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
+        self,
+        messages: List[BaseMessage],
+        config: Optional[RunnableConfig],
+        start_index: int,
+        start_llm: BaseChatModel,
     ) -> BaseMessage:
-        """Call the current model, rotating through the registry on failure.
+        """Call the model at `start_index`, rotating through the registry on failure.
 
-        Args:
-            messages: List of messages to send to the LLM
-            config: Tracing config passed through to the model call
-
-        Returns:
-            BaseMessage response from the LLM
+        The position is in locals. Calls run at once on one service, so a position kept
+        on the service would be moved by every call's failures, and a call could use up
+        its attempts without reaching a healthy model.
 
         Raises:
             LLMRateLimitError: If every model rate-limits
@@ -300,19 +262,17 @@ class LLMService:
             LLMFallbackExhaustedError: If the rotation ends without a response
         """
         total_models = len(LLMRegistry.LLMS)
+        index, llm = start_index, start_llm
         models_tried = 0
-        starting_index = self._current_model_index
         last_error = None
 
         while models_tried < total_models:
+            current_model_name = LLMRegistry.LLMS[index]["name"]
             try:
-                response = await self._call_llm_with_retry(messages, config)
-                return response
+                return await self._call_llm_with_retry(llm, messages, config)
             except RateLimitError as e:
                 last_error = e
                 models_tried += 1
-                current_model_name = LLMRegistry.LLMS[self._current_model_index]["name"]
-
                 logger.error(
                     "llm_rate_limit_after_retries",
                     model=current_model_name,
@@ -320,22 +280,15 @@ class LLMService:
                     total_models=total_models,
                     error=str(e),
                 )
-
                 if models_tried >= total_models:
                     raise LLMRateLimitError(
                         f"Rate limit exceeded on all {total_models} models",
                         models_tried=models_tried,
                         last_model=current_model_name,
                     ) from e
-
-                if not self._switch_to_next_model():
-                    break
-
             except APITimeoutError as e:
                 last_error = e
                 models_tried += 1
-                current_model_name = LLMRegistry.LLMS[self._current_model_index]["name"]
-
                 logger.error(
                     "llm_timeout_after_retries",
                     model=current_model_name,
@@ -343,22 +296,15 @@ class LLMService:
                     total_models=total_models,
                     error=str(e),
                 )
-
                 if models_tried >= total_models:
                     raise LLMTimeoutError(
                         f"Timeout on all {total_models} models",
                         models_tried=models_tried,
                         last_model=current_model_name,
                     ) from e
-
-                if not self._switch_to_next_model():
-                    break
-
             except OpenAIError as e:
                 last_error = e
                 models_tried += 1
-
-                current_model_name = LLMRegistry.LLMS[self._current_model_index]["name"]
                 logger.error(
                     "llm_call_failed_after_retries",
                     model=current_model_name,
@@ -366,12 +312,11 @@ class LLMService:
                     total_models=total_models,
                     error=str(e),
                 )
-
                 if models_tried >= total_models:
                     logger.error(
                         "all_models_failed",
                         models_tried=models_tried,
-                        starting_model=LLMRegistry.LLMS[starting_index]["name"],
+                        starting_model=LLMRegistry.LLMS[start_index]["name"],
                     )
                     raise LLMAPIError(
                         f"LLM API error on all {total_models} models: {str(e)}",
@@ -380,33 +325,42 @@ class LLMService:
                         error_type=type(e).__name__,
                     ) from e
 
-                if not self._switch_to_next_model():
-                    logger.error("failed_to_switch_to_next_model")
-                    break
+            try:
+                next_index, llm = self._next(index)
+            except Exception as e:
+                logger.error("model_switch_failed", error=str(e))
+                break
+            logger.warning(
+                "switching_to_next_model",
+                from_index=index,
+                to_index=next_index,
+                to_model=LLMRegistry.LLMS[next_index]["name"],
+            )
+            index = next_index
 
         # Only reachable when a switch failed mid-rotation; the exhaustion cases
         # above raise their own typed error.
         raise LLMFallbackExhaustedError(
             f"All {total_models} models failed after retries. Last error: {str(last_error)}",
             models_tried=models_tried,
-            starting_model=LLMRegistry.LLMS[starting_index]["name"],
+            starting_model=LLMRegistry.LLMS[start_index]["name"],
             last_error=str(last_error) if last_error else None,
         )
 
     def get_llm(self) -> Optional[BaseChatModel]:
-        """Get the current LLM instance, building it on first use."""
+        """The default model's client, building it on first use."""
         if self._llm is None:
-            entry = LLMRegistry.get_model_at_index(self._current_model_index)
+            entry = LLMRegistry.get_model_at_index(self._default_index)
             self._llm = self._resolve(entry["name"])
         return self._llm
 
     def current_model_name(self) -> str:
-        """The model this service is currently pointed at.
+        """The default model: where every call that pins none starts.
 
         Ask here, not the client: `get_name()` returns the class name, and
         `model_name` is absent from a tool-bound client's own attributes.
         """
-        return LLMRegistry.get_model_at_index(self._current_model_index)["name"]
+        return LLMRegistry.get_model_at_index(self._default_index)["name"]
 
     def bind_tools(self, tools: List) -> "LLMService":
         """Record tools to bind on every client this service resolves.

@@ -17,12 +17,11 @@ _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$")
 
 
 def structured_llm() -> LLMService:
-    """A service of its own for one import's calls.
+    """A service for one import's calls.
 
     Tool-less: the chatbot's `llm_service` has tools bound, and an answer here
-    must never be a tool call. Its own: LLMService keeps its fallback model on
-    itself, so a shared one would let one import's failures move every other
-    import's model. Builds no client until the first call, so it needs no API key.
+    must never be a tool call. Builds no client until the first call, so it
+    needs no API key.
     """
     return LLMService()
 

@@ -127,22 +127,3 @@ async def test_the_model_sees_amounts_as_decimals_and_the_banks_category():
         {"id": 0, "merchant": "KIOSK 24", "amount": "-4.50", "description": "Snacks", "bank_category": "Food"}
     ]
     assert "- shopping: Shopping" in seen["system"]
-
-
-async def test_each_import_rotates_its_own_model_fallback():
-    """LLMService keeps its fallback model on itself: one import's batches share one, imports never do."""
-    services = []
-
-    async def fake(service, system, user, shape, config):
-        services.append(service)
-        return shape.model_validate([])
-
-    merchants = [merchant(f"shop {i}") for i in range(BATCH_SIZE + 1)]
-    with patch("app.agents.transaction_labeler.labeler.ask_json", fake):
-        await label(merchants, CATEGORIES, **IDS)
-        await label(merchants, CATEGORIES, **IDS)
-
-    first, second = services[:2], services[2:]
-    assert len(services) == 4
-    assert first[0] is first[1] and second[0] is second[1]
-    assert first[0] is not second[0]
