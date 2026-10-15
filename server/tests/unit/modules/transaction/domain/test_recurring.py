@@ -25,19 +25,40 @@ def series(gaps: list[int], amount: str = "-9.99", source: str = DETECTED) -> li
 
 
 def verdicts(rows: list[RecurringRow]) -> list[bool]:
+    """The verdict of every detected row; a detected row with no verdict raises KeyError."""
     result = detect_recurring(rows)
-    return [result[r.id] for r in rows if r.id in result]
+    return [result[r.id] for r in rows if r.source == DETECTED]
 
 
 @pytest.mark.parametrize(
     ("gaps", "expected"),
     [
         ([7, 7], True),  # weekly
+        ([6, 6], True),  # weekly, lower edge
+        ([8, 8], True),  # weekly, upper edge
+        ([5, 5], False),  # just under weekly
+        ([9, 9], False),  # just over weekly
+        ([12, 12], True),  # weekly, one skipped period, lower edge
+        ([16, 16], True),  # weekly, one skipped period, upper edge
+        ([11, 11], False),  # just under weekly, one skipped period
+        ([17, 17], False),  # just over weekly, one skipped period
         ([30, 31], True),  # monthly
         ([26, 35], True),  # monthly, both edges
         ([25, 25], False),  # under monthly, over weekly
         ([36, 36], False),  # over monthly
+        ([52, 52], True),  # monthly, one skipped period, lower edge
+        ([70, 70], True),  # monthly, one skipped period, upper edge
+        ([51, 51], False),  # just under monthly, one skipped period
+        ([71, 71], False),  # just over monthly, one skipped period
+        ([84, 84], True),  # quarterly, lower edge
+        ([98, 98], True),  # quarterly, upper edge
+        ([83, 83], False),  # just under quarterly
+        ([99, 99], False),  # just over quarterly
         ([91, 91], True),  # quarterly
+        ([350, 350], True),  # yearly, lower edge
+        ([380, 380], True),  # yearly, upper edge
+        ([349, 349], False),  # just under yearly
+        ([381, 381], False),  # just over yearly
         ([365, 366], True),  # yearly, three rows
         ([365], False),  # yearly needs three rows
         ([30], False),  # two rows are never a series
@@ -49,6 +70,27 @@ def test_cadences(gaps, expected):
 
 def test_one_skipped_period_still_fits():
     assert set(verdicts(series([30, 61, 30, 30]))) == {True}
+
+
+def test_seeds_do_not_drift():
+    """Clusters are anchored on fixed seeds, so a chain of near amounts does not pull its own ends together.
+
+    10.00 -> 11.40 -> 12.80 each sit within the band of the next, but 12.80 is the most
+    frequent amount, so it seeds the cluster and 11.40 joins it. 10.00 is 2.80 from that seed
+    and stays alone. A running-median clusterer anchors on 10.00, drifts to 10.70 with 11.40,
+    rejects 12.80 and marks every row False, which this test catches.
+    """
+    rows = [
+        RecurringRow(uuid7(), START, Decimal("-10.00"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=30), Decimal("-11.40"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=60), Decimal("-12.80"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=90), Decimal("-12.80"), DETECTED),
+    ]
+    lone, drifted, *anchored = rows
+    result = detect_recurring(rows)
+    assert result[lone.id] is False
+    assert result[drifted.id] is True
+    assert [result[r.id] for r in anchored] == [True, True]
 
 
 def test_three_quarters_of_the_gaps_must_fit():
