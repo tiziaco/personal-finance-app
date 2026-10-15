@@ -43,3 +43,9 @@ def test_the_users_exclusions_are_gone_and_db_stays():
 @pytest.mark.parametrize("key", ["deutsche bank", "comdirect", "ing diba", "sparkasse berlin", "n26"])
 def test_bank_names_are_not_matched(key):
     assert match_known(key) is None
+
+
+@pytest.mark.parametrize("key", ["renate mueller", "paloma garcia", "sage", "total", "tier und natur e v"])
+def test_first_names_and_common_words_are_not_matched(key):
+    """A transfer to Renate is not a bar, and "Total" is not always the petrol station."""
+    assert match_known(key) is None

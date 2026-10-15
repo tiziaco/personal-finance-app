@@ -5,10 +5,14 @@ exactly; tests/unit/agents/transaction_labeler/test_known_merchants.py holds
 them to that. Values are category slugs.
 """
 
-# Generic or bank names that mislabel at 0.95 (user decision, 15 Oct 2026). Removed deliberately; "db" stays.
+# Generic or bank names, first names and common words that mislabel at 0.95 (user decisions, 15 Oct 2026).
+# Removed deliberately; "db" stays.
 EXCLUDED = frozenset(
-    {"bank", "sparkasse", "ing", "n26", "gas", "uni", "sky", "spa", "gym", "sos", "deutsche bank", "comdirect"}
-)
+    {
+        "bank", "sparkasse", "ing", "n26", "gas", "uni", "sky", "spa", "gym", "sos", "deutsche bank", "comdirect",
+        "renate", "paloma", "sage", "total", "tier",
+    }
+)  # fmt: skip
 
 KNOWN_MERCHANTS: dict[str, str] = {
     "netflix": "leisure_entertainment",
@@ -41,14 +45,12 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "taxi": "transportation",
     "uber": "transportation",
     "bolt": "transportation",
-    "tier": "transportation",
     "voi": "transportation",
     "lyft": "transportation",
     "shell": "transportation",
     "aral": "transportation",
     "esso": "transportation",
     "bp": "transportation",
-    "total": "transportation",
     "ev charging": "transportation",
     "mc donald": "bars_restaurants",
     "mcdonald s": "bars_restaurants",
@@ -59,9 +61,6 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "dominos": "bars_restaurants",
     "rueya": "bars_restaurants",
     "klunkerkranich": "bars_restaurants",
-    "renate": "bars_restaurants",
-    "sage": "bars_restaurants",
-    "paloma": "bars_restaurants",
     "amazon": "shopping",
     "amzn mktp": "shopping",
     "zalando": "shopping",
