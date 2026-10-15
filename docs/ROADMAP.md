@@ -43,8 +43,8 @@ here when someone picks it up.
 
 | Wave | Steps, in parallel | Starts when |
 |---|---|---|
-| 1 | 2 Transactions ∥ 3 Chat screen | now |
-| 2 | 4 CSV import ∥ 5a Analytics dashboard | 2 has merged |
+| 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
+| 2 | 4 CSV import ∥ 5a Analytics dashboard | now (2 has merged) |
 | 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | 5a has merged |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
