@@ -25,7 +25,6 @@ export function DeleteTransactionsDialog({
   onOpenChange: (open: boolean) => void
   onDeleted?: () => void
 }) {
-  // The refresh rides on the hook, so it runs even if the dialog is gone by then.
   const { mutate, isPending, isSuccess } = useBatchDeleteTransactions(
     useRefreshTransactionsOnSuccess(),
   )

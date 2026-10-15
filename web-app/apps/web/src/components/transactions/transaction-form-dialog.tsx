@@ -124,7 +124,6 @@ function TransactionForm({
   onClose: () => void
 }) {
   const { categories } = useCategories()
-  // The refresh rides on the hooks, so it runs even if the dialog is gone by then.
   const refresh = useRefreshTransactionsOnSuccess()
   // The add dialog explains a duplicate inline, so QueryProvider must not toast it.
   const create = useCreateTransaction({

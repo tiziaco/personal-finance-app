@@ -5,7 +5,7 @@ deeper (docs/architecture/server.md, R1).
 """
 
 from app.modules.transaction.dependencies import UserTransaction, get_user_transaction
-from app.modules.transaction.exceptions import (  # noqa: I001
+from app.modules.transaction.exceptions import (
     DuplicateTransactionError,
     TransactionNotFoundError,
 )

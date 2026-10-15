@@ -34,12 +34,11 @@ export function DataTableBulkBar({
     measure()
     window.addEventListener("resize", measure)
     // The sidebar collapsing moves and resizes the box without resizing the window.
-    const observer =
-      typeof ResizeObserver === "undefined" ? null : new ResizeObserver(measure)
-    observer?.observe(box)
+    const observer = new ResizeObserver(measure)
+    observer.observe(box)
     return () => {
       window.removeEventListener("resize", measure)
-      observer?.disconnect()
+      observer.disconnect()
     }
   }, [])
 

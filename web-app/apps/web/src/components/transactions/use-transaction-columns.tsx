@@ -8,7 +8,6 @@ import type {
   CategoryResponse,
   TransactionResponse,
 } from "@app/api-client/types"
-import { cn } from "@app/core/lib/utils"
 import { Button } from "@app/ui/button"
 import {
   DropdownMenu,
@@ -79,11 +78,11 @@ export function useTransactionColumns(
           const c = row.original.confidence
           return (
             <span
-              className={cn(
+              className={
                 isLowConfidence(c)
                   ? "text-amber-600 dark:text-amber-400"
-                  : "text-muted-foreground",
-              )}
+                  : "text-muted-foreground"
+              }
             >
               {`${Math.round(c * 100)}%`}
             </span>

@@ -47,10 +47,8 @@ type OpenDialog =
 export function TransactionsTable() {
   const state = useTransactionsTableState()
   const { categories, label } = useCategories()
-  // Dialog state, not list state.
   const [dialog, setDialog] = useState<OpenDialog | null>(null)
   const closeDialog = (open: boolean) => !open && setDialog(null)
-  // The refresh rides on the hook, so it runs even if the chip's menu is gone.
   const { mutate: updateTransaction } = useUpdateTransaction(
     useRefreshTransactionsOnSuccess(),
   )

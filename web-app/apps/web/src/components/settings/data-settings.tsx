@@ -23,7 +23,6 @@ export function DataSettings() {
   const [open, setOpen] = useState(false)
   // Active rows only; deleted ones are removed too, so the button is never disabled at 0.
   const total = useListTransactions({ limit: 1 }).data?.total
-  // The refresh rides on the hook, so it runs even if Settings closed by then.
   const deleteAll = useDeleteAllTransactions(useRefreshTransactionsOnSuccess())
   const description = total
     ? `Permanently deletes all ${total} transactions, and any you deleted earlier. This cannot be undone.`

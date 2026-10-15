@@ -32,7 +32,6 @@ export function BulkCategoryDialog({
 }) {
   const { categories } = useCategories()
   const [category, setCategory] = useState<Category | "">("")
-  // The refresh rides on the hook, so it runs even if the dialog is gone by then.
   const { mutate, isPending, isSuccess } = useBatchUpdateTransactionCategory(
     useRefreshTransactionsOnSuccess(),
   )
