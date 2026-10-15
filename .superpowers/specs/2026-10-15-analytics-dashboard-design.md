@@ -239,7 +239,7 @@ colours wherever they appear.
 ## 6. Ownership check
 
 Touched: `app/modules/analytics/**`; `transaction/{schemas,repository,service,__init__}.py`
-and tests; `app/api/v1/api.py`; `app/main.py` only if module registration requires it;
+and tests; `app/api/v1/api.py`; `app/main.py` (its module import, checked by `test_module_contracts`);
 `server/pyproject.toml` (contracts); `server/openapi.json` and the generated client;
 `(dashboard)/home/**`; `components/dashboard/**`; `packages/ui/src/primitives/chart.tsx`;
 `packages/ui/src/styles/globals.css` (chart tokens); `packages/ui/package.json`;
