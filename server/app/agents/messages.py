@@ -1,6 +1,5 @@
 """The chat message exchanged with an agent — the shape every agent's history uses."""
 
-import re
 from typing import (
     Literal,
 )
@@ -8,12 +7,16 @@ from typing import (
 from pydantic import (
     BaseModel,
     Field,
-    field_validator,
 )
 
 
 class Message(BaseModel):
-    """Message model for chat endpoint.
+    """One message in an agent's history.
+
+    Output shape only. The rules on what a user may send (length, script tags,
+    null bytes) live on `ChatRequest`: applied here they also judged the
+    assistant's replies, so a long answer, or one quoting `<script>` in a code
+    block, turned the history route into a 500.
 
     Attributes:
         role: The role of the message sender (user, assistant or system).
@@ -23,28 +26,4 @@ class Message(BaseModel):
     model_config = {"extra": "ignore"}
 
     role: Literal["user", "assistant", "system"] = Field(..., description="The role of the message sender")
-    content: str = Field(..., description="The content of the message", min_length=1, max_length=3000)
-
-    @field_validator("content")
-    @classmethod
-    def validate_content(cls, v: str) -> str:
-        """Validate the message content.
-
-        Args:
-            v: The content to validate
-
-        Returns:
-            str: The validated content
-
-        Raises:
-            ValueError: If the content contains disallowed patterns
-        """
-        # Check for potentially harmful content
-        if re.search(r"<script.*?>.*?</script>", v, re.IGNORECASE | re.DOTALL):
-            raise ValueError("Content contains potentially harmful script tags")
-
-        # Check for null bytes
-        if "\0" in v:
-            raise ValueError("Content contains null bytes")
-
-        return v
+    content: str = Field(..., description="The content of the message", min_length=1)

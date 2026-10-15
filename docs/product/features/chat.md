@@ -1,10 +1,10 @@
 # Chat
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 12 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
 **Scope:** the assistant the user can talk to — conversations, messages, memory. Legacy
-v1.0 shipped the **backend** only: it had no chat screen. The port rebuilds the backend
-(already present in this repo as the `conversation` module and its agent) and gives the
-assistant a screen (roadmap step 3; decided 13 Oct 2026) and finance tools (step 7).
+v1.0 shipped the **backend** only: it had no chat screen. The port rebuilt the backend
+(the `conversation` module and its agent) and gave the assistant a screen (shipped in
+roadmap step 3); finance tools are step 7.
 **Data model:** [`../../data-model/conversation.md`](../../data-model/conversation.md)
 (conversations only; the finance part is pending, step 7).
 **Related:** [`account.md`](./account.md) (erasure) · [`insights.md`](./insights.md) ·
@@ -18,15 +18,24 @@ Anyone who would rather ask than browse: "how much did I spend on food last mont
 assistant is meant to answer from the user's own transactions and to remember what the user
 has told it.
 
-## 2. What the user can do (v1.0 API)
+## 2. What the user can do
 
-- **Start a conversation**, **rename** it, **delete** it, and **list** their conversations.
-- **Send a message** and get the reply in one piece, or **stream** it as it is written.
-- **Read the history** of a conversation, or **clear** it.
+- **Start a conversation** from Chat in the sidebar. The reply streams in as it is
+  written, and Markdown is rendered.
+- **Stop** a reply. A stopped reply stays on screen, marked "Stopped", until the next send
+  or until the user leaves, and is not saved: reopening the conversation shows the
+  question with no answer.
+- **Find a conversation again.** Conversations are listed newest first, under a title the
+  assistant writes after the first reply. **Rename** and **delete** one at a time.
+- **Read the history** of a conversation, or **clear** it (API only).
+- **Send a message** over the API and get the reply in one piece, or **stream** it. The
+  stream carries only the model's text; tool results such as web search are not streamed.
 - **Be remembered.** The assistant keeps long-term memory of facts the user has told it
   and reads it back in later conversations.
 
-A message is 1 to 3,000 characters and may not contain script tags.
+A message is 1 to 3,000 characters and may not contain script tags or null bytes. These
+rules sit on the request, so a bad input is a 422; reading the history never fails on the
+length or content of a reply.
 
 ## 3. The fields
 
@@ -42,19 +51,36 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   recurring, trends, behaviour, anomalies, merchants, stability) exists in the legacy code,
   but was never given to the assistant. A user asking about their own spending got a
   generic answer.
-- **No screen.** The legacy settings dialog had a "Delete all chats" button that did
-  nothing, and a "Memory usage" figure that was always 0 MB.
 - **A conversation is erased with the account**, with its history and the long-term memory;
   see [`account.md`](./account.md).
-- **A client that leaves mid-stream** does not stop the model call
-  ([`../../TODO.md`](../../TODO.md), **Server — the chat stream ignores a client
-  disconnect**).
+- **A reply that fails mid-stream** shows "The assistant couldn't reply. Try again."
+  Server text is never shown.
+- **Leaving a conversation mid-reply stops the model call.** The stream route returns
+  sse-starlette's `EventSourceResponse`, which listens for the client disconnect at every
+  ASGI spec version and cancels the generator, so the model call stops. (Starlette's own
+  `StreamingResponse` stops listening at ASGI spec 2.4; uvicorn reports 2.3, so the earlier
+  route was cancelled in practice too. A test pins the behaviour at 2.4.) The frames are
+  unchanged, plus periodic `: ping` comments.
+- **Stopping a reply while its web search runs leaves the conversation usable.** The
+  model's tool-call message is checkpointed before the tool runs, so a stop there leaves
+  a call with no result, which providers reject with a 400 on every later turn.
+  `drop_unanswered_tool_calls` (`app/agents/graph.py`) removes such a call, keeping any
+  text written beside it, before every model call.
+- **Every LLM call goes through OpenRouter** (`OPENROUTER_API_KEY`) — the agent, titles and
+  memory. `LLM_BASE_URL` defaults to OpenRouter and model names are OpenRouter ids
+  (`openai/gpt-5-mini`); `server/.env.example` is the reference. An id without its
+  provider prefix (`gpt-5-mini`) fails at startup, so an env file written for the OpenAI
+  API cannot run on a silent fallback model. With the key unset, mem0 is given a
+  placeholder rather than an empty key, which it would replace with `OPENAI_API_KEY` from
+  the environment and send to OpenRouter: memory search and writes then fail and are
+  logged, and erasure, which makes no model call, still deletes the user's memories.
 - Chat endpoints are rate limited per user.
 
 ## 5. Not built
 
-A chat page; the assistant reading the user's transactions; file or image input; voice;
-sharing a conversation.
+The assistant reading the user's transactions; file or image input; voice; sharing a
+conversation; clearing history from the screen and suggested prompts (both deferred by
+decision on 13 Oct 2026).
 
 ## 6. Open questions
 

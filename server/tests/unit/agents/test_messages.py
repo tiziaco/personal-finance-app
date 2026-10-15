@@ -32,21 +32,15 @@ class TestMessage:
         with pytest.raises(ValidationError):
             Message(role="user", content="")
 
-    def test_script_tag_rejected(self):
-        with pytest.raises(ValidationError, match="script"):
-            Message(role="user", content="<script>alert('xss')</script>")
+    def test_long_assistant_reply_accepted(self):
+        """History carries whole replies, and a reply has no 3,000-character cap."""
+        msg = Message(role="assistant", content="a" * 10_000)
+        assert len(msg.content) == 10_000
 
-    def test_null_bytes_rejected(self):
-        with pytest.raises(ValidationError, match="null bytes"):
-            Message(role="user", content="hello\0world")
-
-    def test_max_length_boundary(self):
-        msg = Message(role="user", content="a" * 3000)
-        assert len(msg.content) == 3000
-
-    def test_over_max_length_rejected(self):
-        with pytest.raises(ValidationError):
-            Message(role="user", content="a" * 3001)
+    def test_reply_quoting_a_script_tag_accepted(self):
+        """A reply may quote markup in a code block; input rules apply to ChatRequest, not here."""
+        msg = Message(role="assistant", content="```html\n<script>alert(1)</script>\n```")
+        assert "<script>" in msg.content
 
     def test_extra_fields_ignored(self):
         msg = Message(role="user", content="hello", extra_field="ignored")

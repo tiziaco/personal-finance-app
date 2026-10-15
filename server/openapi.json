@@ -275,11 +275,10 @@
         "type": "object"
       },
       "Message": {
-        "description": "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
+        "description": "One message in an agent's history.\n\nOutput shape only. The rules on what a user may send (length, script tags,\nnull bytes) live on `ChatRequest`: applied here they also judged the\nassistant's replies, so a long answer, or one quoting `<script>` in a code\nblock, turned the history route into a 500.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
         "properties": {
           "content": {
             "description": "The content of the message",
-            "maxLength": 3000,
             "minLength": 1,
             "title": "Content",
             "type": "string"
@@ -923,6 +922,55 @@
           }
         ],
         "summary": "Rename a chat conversation",
+        "tags": [
+          "conversation"
+        ]
+      }
+    },
+    "/api/v1/conversation/conversation/{conversation_id}/title": {
+      "post": {
+        "description": "Name an untitled conversation from its first exchange. A conversation that already has a name, or has no reply yet, is returned unchanged.",
+        "operationId": "generateConversationTitle",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "conversation_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Conversation Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConversationResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Generate a conversation title",
         "tags": [
           "conversation"
         ]

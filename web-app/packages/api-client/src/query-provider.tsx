@@ -8,43 +8,10 @@ import {
 } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { useState } from "react"
-import { toast } from "sonner"
 import { ApiError } from "./errors"
 import { isDevelopment } from "@app/core/lib/env"
-import { messages } from "@app/core/constants/messages"
-
-/**
- * Map an error to a toast.
- *
- * SECURITY: status maps to curated copy. Never surface err.message or the
- * response body — server payloads may contain stack traces or internal route
- * names.
- */
-function toastForError(error: unknown): void {
-  if (error instanceof ApiError) {
-    switch (error.status) {
-      case 401:
-        toast.error(messages.toasts.sessionExpired)
-        return
-      case 403:
-        toast.error(messages.toasts.forbidden)
-        return
-      case 404:
-        toast.error(messages.toasts.notFound)
-        return
-      case 409:
-        toast.error(messages.toasts.conflictError)
-        return
-      case 422:
-        toast.error(messages.toasts.validationError)
-        return
-      default:
-        toast.error(messages.toasts.genericError)
-        return
-    }
-  }
-  toast.error(messages.toasts.genericError)
-}
+import { isSilenced } from "./query-meta"
+import { toastForError } from "./toast-for-error"
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -55,14 +22,20 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             // onError fires for background refetches too. A polling query that
             // fails every 30s would otherwise toast every 30s, behind data the
             // user can already see. Only a query that has never resolved
-            // toasts, and a query can opt out entirely.
-            if (query.meta?.silentError === true) return
+            // toasts, unless its meta silences the error.
+            if (isSilenced(query.meta, error)) return
             if (query.state.data !== undefined) return
             toastForError(error)
           },
         }),
-        // Mutations always toast: the user just acted and is waiting for a result.
-        mutationCache: new MutationCache({ onError: toastForError }),
+        // Mutations toast: the user just acted and is waiting for a result.
+        // One the app fires on its own (a generated title) opts out.
+        mutationCache: new MutationCache({
+          onError: (error, _variables, _context, mutation) => {
+            if (isSilenced(mutation.meta, error)) return
+            toastForError(error)
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,

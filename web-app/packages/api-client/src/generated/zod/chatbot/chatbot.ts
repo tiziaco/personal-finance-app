@@ -29,17 +29,11 @@ export const SendChatMessageBody = zod
     "Request model for chat endpoint.\n\nAttributes:\n    message: The user's message to send.",
   )
 
-export const sendChatMessageResponseMessageContentMax = 3000
-
 export const SendChatMessageResponse = zod
   .object({
     message: zod
       .object({
-        content: zod
-          .string()
-          .min(1)
-          .max(sendChatMessageResponseMessageContentMax)
-          .describe("The content of the message"),
+        content: zod.string().min(1).describe("The content of the message"),
         role: zod
           .enum(["user", "assistant", "system"])
           .describe("The role of the message sender"),
@@ -68,25 +62,19 @@ export const ListChatMessagesParams = zod.object({
   conversation_id: zod.uuid(),
 })
 
-export const listChatMessagesResponseMessagesItemContentMax = 3000
-
 export const ListChatMessagesResponse = zod
   .object({
     messages: zod
       .array(
         zod
           .object({
-            content: zod
-              .string()
-              .min(1)
-              .max(listChatMessagesResponseMessagesItemContentMax)
-              .describe("The content of the message"),
+            content: zod.string().min(1).describe("The content of the message"),
             role: zod
               .enum(["user", "assistant", "system"])
               .describe("The role of the message sender"),
           })
           .describe(
-            "Message model for chat endpoint.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
+            "One message in an agent's history.\n\nOutput shape only. The rules on what a user may send (length, script tags,\nnull bytes) live on `ChatRequest`: applied here they also judged the\nassistant's replies, so a long answer, or one quoting `<script>` in a code\nblock, turned the history route into a 500.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
           ),
       )
       .describe("List of all messages in the conversation"),

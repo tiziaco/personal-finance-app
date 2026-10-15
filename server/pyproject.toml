@@ -47,6 +47,7 @@ dependencies = [
     # Import only uuid_utils.compat.uuid7: it returns a stdlib uuid.UUID. The bare
     # uuid_utils.uuid7 returns a Rust type SQLAlchemy and asyncpg do not bind.
     "uuid-utils>=0.17.0",
+    "sse-starlette>=3.5.0",
 ]
 
 [project.optional-dependencies]

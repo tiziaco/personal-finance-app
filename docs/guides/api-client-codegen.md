@@ -544,49 +544,36 @@ context on every call rather than once at module load. No provider, no module-le
 client, no "call this before you use anything" ordering requirement.
 
 ```ts
+"use client"
+
 import { useCallback } from "react"
-import { useAppAuth } from "@acme/auth"
+import { useAppAuth } from "@app/auth"
 
-/**
- * The single error type the application layer needs to know about.
- *
- * `requestId` is the server's correlation id, read from the X-Request-ID
- * response header. FastAPI's CorrelationIdMiddleware stamps every request and
- * binds the id to the server's structured logs, so a client-side failure stays
- * traceable to a server log line without the response body ever being shown to
- * a user.
- */
-export class ApiError extends Error {
-  readonly status: number
-  readonly body: unknown
-  readonly requestId: string | null
-
-  constructor(message: string, status: number, body: unknown, requestId: string | null) {
-    super(message)
-    this.name = "ApiError"
-    this.status = status
-    this.body = body
-    this.requestId = requestId
-  }
-}
+import { ApiError } from "./errors"
 
 /**
  * The error type orval wires into every generated hook's `TError`.
  *
- * orval scans this file's text for the literal `export type ErrorType` and,
+ * orval looks for the literal text `export type ErrorType` in this file and,
  * finding it, emits `ErrorType<...>` in place of the error type it would
- * otherwise derive from the spec's declared error response. Without this,
- * every hook advertises an error it cannot produce (e.g. a 422's declared
- * validation-error schema), while the mutator below only ever throws
- * `ApiError`. The body generic is accepted and ignored on purpose — nothing
- * validates the thrown error's body against a declared schema, so typing it
- * more precisely would just relocate the lie rather than remove it.
+ * otherwise derive from the spec's declared error response. Without it every
+ * hook advertises an error it cannot produce — `useGetMe().error` typed as
+ * HTTPValidationError, `useGetReadiness().error` as ReadinessResponse — while
+ * the mutator below only ever throws ApiError.
+ *
+ * The body parameter is accepted and deliberately ignored. Nothing validates
+ * the payload against the declared error schema, so `ApiError.body` stays
+ * `unknown`: narrowing it here would relocate the lie rather than remove it.
  */
 export type ErrorType<_Body = unknown> = ApiError
 
 function resolveBaseUrl(): string {
   const url = process.env.NEXT_PUBLIC_API_URL
-  if (!url) throw new Error("@acme/api-client: NEXT_PUBLIC_API_URL is not set")
+  if (!url) {
+    throw new Error("@app/api-client: NEXT_PUBLIC_API_URL is not set")
+  }
+  // Generated routes always start with "/", so a configured value ending in one
+  // would produce "//api/v1/...", which presents as a confusing 404.
   return url.replace(/\/+$/, "")
 }
 
@@ -600,56 +587,96 @@ async function parseErrorBody(response: Response): Promise<unknown> {
   }
 }
 
-export function useApiFetch() {
+/** A request through the API's transport, with the session's token bound. */
+export type ApiRequest = (url: string, init?: RequestInit) => Promise<Response>
+
+/**
+ * One request to the API: the base URL, the bearer token, a JSON content type
+ * for a plain body, and an ApiError for any non-2xx. The response comes back
+ * unread, so a streamed body can be consumed as it arrives.
+ */
+async function apiRequest(
+  url: string,
+  init: RequestInit | undefined,
+  token: string | null,
+): Promise<Response> {
+  const fullUrl = /^https?:\/\//i.test(url) ? url : `${resolveBaseUrl()}${url}`
+  const headers = new Headers(init?.headers)
+
+  if (token && !headers.has("authorization")) {
+    headers.set("Authorization", `Bearer ${token}`)
+  }
+
+  // Only set a JSON content type for plain bodies. Never for FormData — the
+  // browser must set its own multipart boundary — nor for Blob or ArrayBuffer.
+  const body = init?.body
+  if (
+    body != null &&
+    !headers.has("content-type") &&
+    !(body instanceof FormData) &&
+    !(body instanceof Blob) &&
+    !(body instanceof ArrayBuffer)
+  ) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const response = await fetch(fullUrl, { ...init, headers })
+  if (!response.ok) {
+    // Deliberately not response.statusText: the reason phrase is server-supplied
+    // text, and server error text must never reach the UI. status, body and
+    // requestId still carry everything needed to debug.
+    throw new ApiError(
+      `HTTP ${response.status}`,
+      response.status,
+      await parseErrorBody(response),
+      response.headers.get("x-request-id"),
+    )
+  }
+  return response
+}
+
+/**
+ * The API's transport with the current session's token, read on every call.
+ * For a caller that reads the body itself: the chat stream. Everything else
+ * uses a generated hook, which goes through useApiFetch.
+ */
+export function useApiRequest(): ApiRequest {
   const { getToken } = useAppAuth()
+  return useCallback(
+    async (url, init) => apiRequest(url, init, await getToken()),
+    [getToken],
+  )
+}
+
+/**
+ * The mutator every generated endpoint routes through.
+ *
+ * It is a hook, not a module-level singleton, and that is deliberate. A
+ * module-scope client would be shared across concurrent requests in a Next.js
+ * server process — one tenant's token serving another tenant's request — and
+ * would freeze the first render's getToken closure. As a hook it reads the
+ * current token on every call, needs no provider of its own, and makes the
+ * provider ordering in the root layout irrelevant.
+ *
+ * orval recognises the `use` prefix and calls this inside each generated hook.
+ */
+export function useApiFetch() {
+  const request = useApiRequest()
 
   return useCallback(
     async <T>(url: string, init?: RequestInit): Promise<T> => {
-      const fullUrl = /^https?:\/\//i.test(url) ? url : `${resolveBaseUrl()}${url}`
-      const headers = new Headers(init?.headers)
-
-      const token = await getToken()
-      if (token && !headers.has("authorization")) {
-        headers.set("Authorization", `Bearer ${token}`)
-      }
-
-      // Only set JSON content-type for plain bodies — never for FormData
-      // (the browser must set its own multipart boundary), Blob, or ArrayBuffer.
-      const body = init?.body
-      if (
-        body != null &&
-        !headers.has("content-type") &&
-        !(body instanceof FormData) &&
-        !(body instanceof Blob) &&
-        !(body instanceof ArrayBuffer)
-      ) {
-        headers.set("Content-Type", "application/json")
-      }
-
-      const response = await fetch(fullUrl, { ...init, headers })
-      const requestId = response.headers.get("x-request-id")
-
-      if (!response.ok) {
-        // Deliberately not response.statusText: the reason phrase is
-        // server-supplied text, and server error text must never reach the UI.
-        // status, body and requestId still carry everything needed to debug.
-        throw new ApiError(
-          `HTTP ${response.status}`,
-          response.status,
-          await parseErrorBody(response),
-          requestId,
-        )
-      }
+      const response = await request(url, init)
 
       if (response.status === 204) return undefined as T
       if (response.headers.get("content-length") === "0") return undefined as T
 
       const contentType = response.headers.get("content-type") ?? ""
-      if (contentType.includes("application/json")) return (await response.json()) as T
+      if (contentType.includes("application/json"))
+        return (await response.json()) as T
 
       return (await response.text()) as unknown as T
     },
-    [getToken],
+    [request],
   )
 }
 ```
@@ -665,6 +692,10 @@ Responsibilities, in order:
    reason phrase is text the server chose, and §6.4 maps a *status* to curated copy
    precisely so no server-authored string can be rendered.
 5. Return `undefined` for 204 / zero-length; parse JSON; fall back to text.
+
+Steps 1–4 are `apiRequest`, which hands back the response unread; `useApiRequest` binds it
+to the session's token for the one caller that reads the body itself, the chat stream.
+Step 5 is `useApiFetch`'s own.
 
 **Trade-off.** Because `useApiFetch` is a hook, everything orval generates against this
 mutator — including the bare fetcher (§4.3's `useXHook`) — can only be called from
@@ -809,14 +840,20 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             // onError fires for background refetches too. A poll that fails
             // every 30s would otherwise toast every 30s behind data the user
             // can already see — only a query that has never resolved toasts,
-            // and any query can opt out entirely via its own `meta`.
-            if (query.meta?.silentError === true) return
+            // and any query can opt out via its own `meta` (see isSilenced).
+            if (isSilenced(query.meta, err)) return
             if (query.state.data !== undefined) return
             mapErrorToToast(err)
           },
         }),
-        // Mutations always toast: the user just acted and is waiting for a result.
-        mutationCache: new MutationCache({ onError: mapErrorToToast }),
+        // Mutations toast: the user just acted and is waiting for a result.
+        // One the app fires on its own opts out the same way.
+        mutationCache: new MutationCache({
+          onError: (err, _vars, _ctx, mutation) => {
+            if (isSilenced(mutation.meta, err)) return
+            mapErrorToToast(err)
+          },
+        }),
         defaultOptions: {
           queries: {
             staleTime: 60 * 1000,
@@ -850,9 +887,11 @@ Consequences to design around:
 - **Query error toasts are gated on first load.** `onError` fires for background
   refetches too, not just the initial fetch — a polling query that fails repeatedly
   would otherwise toast on every failed poll, behind data the user can already see and
-  trust. Toast only when `query.state.data === undefined`; a query can also opt out
-  entirely with `meta: { silentError: true }`, for a widget that already renders its own
-  degraded/offline state.
+  trust. Toast only when `query.state.data === undefined`. A query or mutation opts out
+  with `meta.silentError`: `true` for every error (a widget that already renders its own
+  degraded/offline state), or a predicate for the errors it shows another way (the chat
+  page renders a 404 as its not-found screen). `src/query-meta.ts` types `meta` for every
+  hook through TanStack's `Register` and holds `isSilenced`.
 - **4xx is not retried.** A validation error or a 404 will not change on retry; `retry`
   becomes a predicate so only 5xx spends a second request.
 - **Keep the devtools**, gated on environment. They cost nothing once gated behind a

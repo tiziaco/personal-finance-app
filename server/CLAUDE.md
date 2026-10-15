@@ -224,10 +224,10 @@ Pydantic nested models in `app/core/config.py`.
 
 ```python
 # ✅ Correct — unpack SecretStr
-api_key = settings.llm.OPENAI_API_KEY.get_secret_value()
+api_key = settings.llm.OPENROUTER_API_KEY.get_secret_value()
 
 # ❌ Wrong — returns SecretStr object, not the string
-api_key = settings.llm.OPENAI_API_KEY
+api_key = settings.llm.OPENROUTER_API_KEY
 ```
 
 ---

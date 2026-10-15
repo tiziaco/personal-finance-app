@@ -1,8 +1,10 @@
 """Integration tests for conversation CRUD API endpoints."""
 
 import uuid
+from unittest.mock import AsyncMock
 
 import pytest
+from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
 from app.modules.conversation.models import Conversation
@@ -206,4 +208,87 @@ class TestDeleteConversation:
         await db_session.flush()
 
         response = await authenticated_client_with_agent.delete(f"/api/v1/conversation/conversation/{other_conv.id}")
+        assert response.status_code == 404
+
+
+@pytest.fixture
+async def untitled_conversation(db_session, test_user):
+    conv = Conversation(user_id=test_user.id, name="")
+    db_session.add(conv)
+    await db_session.flush()
+    await db_session.refresh(conv)
+    return conv
+
+
+class TestGenerateConversationTitle:
+    """Tests for POST /api/v1/conversation/conversation/{id}/title"""
+
+    def _url(self, conversation_id):
+        return f"/api/v1/conversation/conversation/{conversation_id}/title"
+
+    async def test_unauthenticated_returns_401(self, client, untitled_conversation):
+        response = await client.post(self._url(untitled_conversation.id))
+        assert response.status_code == 401
+
+    async def test_untitled_conversation_gets_a_title(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+    ):
+        mock_agent.title_for = AsyncMock(return_value="Grocery budget")
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == "Grocery budget"
+        mock_agent.title_for.assert_awaited_once_with(untitled_conversation.id, untitled_conversation.user_id)
+
+    async def test_named_conversation_is_unchanged(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+    ):
+        untitled_conversation.name = "My name"
+        await db_session.flush()
+        mock_agent.title_for = AsyncMock(return_value="Other")
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.json()["name"] == "My name"
+        mock_agent.title_for.assert_not_awaited()
+
+    async def test_rename_during_the_model_call_wins(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+    ):
+        # A rename lands while the model is still writing the title: the title
+        # must not overwrite it, and the route answers with the user's name.
+        # synchronize_session=False leaves the route's loaded row stale, as a
+        # rename committed by another request would.
+        async def rename_then_title(*_):
+            await db_session.execute(
+                update(Conversation)
+                .where(Conversation.id == untitled_conversation.id)
+                .values(name="User rename")
+                .execution_options(synchronize_session=False)
+            )
+            return "Generated"
+
+        mock_agent.title_for = AsyncMock(side_effect=rename_then_title)
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == "User rename"
+
+    async def test_no_title_leaves_the_conversation_unchanged(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+    ):
+        # The agent answers None for no reply yet or a failed model call
+        # (unit-tested on ChatbotAgent.title_for); the route still answers 200.
+        mock_agent.title_for = AsyncMock(return_value=None)
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert response.status_code == 200
+        assert response.json()["name"] == ""
+
+    async def test_other_users_conversation_returns_404(self, db_session, authenticated_client_with_agent):
+        from app.modules.account.models import User
+
+        other = User(clerk_id="clerk_title_other", email="title_other@example.com")
+        db_session.add(other)
+        await db_session.flush()
+        conv = Conversation(user_id=other.id, name="")
+        db_session.add(conv)
+        await db_session.flush()
+
+        response = await authenticated_client_with_agent.post(self._url(conv.id))
         assert response.status_code == 404

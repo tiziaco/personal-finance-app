@@ -12,6 +12,7 @@ from typing import (
 )
 
 from langchain_core.messages import (
+    AIMessage,
     BaseMessage,
     convert_to_openai_messages,
 )
@@ -28,6 +29,9 @@ from app.agents.shared.memory import (
 )
 from app.agents.shared.observability import create_graph_config
 from app.core.logging import logger
+
+# Between two of a turn's assistant messages, in the stream and in the history alike.
+_TURN_MESSAGE_SEPARATOR = "\n\n"
 
 
 class BaseAgent(ABC):
@@ -98,16 +102,26 @@ class BaseAgent(ABC):
         relevant_memory = (await get_relevant_memory(user_id, messages[-1].content)) or "No relevant memory found."
 
         try:
+            # The message the last text came from. A turn can hold several (text
+            # written before a tool call, then the answer); the history joins
+            # them with a blank line, and so does the stream.
+            last_message_id: Optional[str] = None
             async for token, _ in self._graph.astream(
                 {"messages": dump_messages(messages), "long_term_memory": relevant_memory},
                 config=config,
                 stream_mode="messages",
             ):
-                try:
-                    yield token.content
-                except Exception as token_error:
-                    logger.exception("error_processing_token", error=str(token_error), conversation_id=conversation_id)
-                    continue  # one bad token must not end the stream
+                # stream_mode="messages" emits every message a node produces,
+                # tool results included. Only the model's own text is the reply.
+                if not isinstance(token, AIMessage):
+                    continue
+                text = token.text
+                if not text:
+                    continue
+                if last_message_id is not None and token.id != last_message_id:
+                    yield _TURN_MESSAGE_SEPARATOR
+                last_message_id = token.id
+                yield text
 
             state: StateSnapshot = await self._graph.aget_state(config=config)
             if state.values and "messages" in state.values:
@@ -131,13 +145,24 @@ class BaseAgent(ABC):
         return self._process_messages(state.values["messages"]) if state.values else []
 
     def _process_messages(self, messages: list[BaseMessage]) -> list[Message]:
-        """Convert LangChain messages to Message, keeping only user and assistant."""
+        """Convert LangChain messages to Message, keeping only user and assistant.
+
+        A turn's assistant messages (text written before a tool call, then the
+        answer) become one, joined as get_stream_response streamed them.
+        """
         openai_style_messages = convert_to_openai_messages(messages)
-        return [
-            Message(role=message["role"], content=str(message["content"]))
-            for message in openai_style_messages
-            if message["role"] in ["assistant", "user"] and message["content"]
-        ]
+        processed: list[Message] = []
+        for message in openai_style_messages:
+            if message["role"] not in ["assistant", "user"] or not message["content"]:
+                continue
+            content = str(message["content"])
+            if message["role"] == "assistant" and processed and processed[-1].role == "assistant":
+                processed[-1] = Message(
+                    role="assistant", content=processed[-1].content + _TURN_MESSAGE_SEPARATOR + content
+                )
+            else:
+                processed.append(Message(role=message["role"], content=content))
+        return processed
 
     def _get_last_response(self, messages: list[BaseMessage]) -> Message:
         """The last assistant message, or an empty one if there is none."""

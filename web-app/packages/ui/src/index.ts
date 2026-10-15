@@ -140,3 +140,17 @@ export {
 } from "./primitives/sidebar"
 export { Toaster } from "./primitives/sonner"
 export { ThemeProvider } from "./primitives/theme-provider"
+export {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogMedia,
+  AlertDialogOverlay,
+  AlertDialogPortal,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "./primitives/alert-dialog"

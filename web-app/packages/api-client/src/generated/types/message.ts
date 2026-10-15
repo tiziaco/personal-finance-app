@@ -8,7 +8,12 @@
 import type { MessageRole } from "./messageRole"
 
 /**
- * Message model for chat endpoint.
+ * One message in an agent's history.
+ *
+ * Output shape only. The rules on what a user may send (length, script tags,
+ * null bytes) live on `ChatRequest`: applied here they also judged the
+ * assistant's replies, so a long answer, or one quoting `<script>` in a code
+ * block, turned the history route into a 500.
  *
  * Attributes:
  *     role: The role of the message sender (user, assistant or system).
@@ -18,7 +23,6 @@ export interface Message {
   /**
    * The content of the message
    * @minLength 1
-   * @maxLength 3000
    */
   content: string
   /** The role of the message sender */
