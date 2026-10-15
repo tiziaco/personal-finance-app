@@ -130,6 +130,8 @@ app/modules/transactions/
 On every rung the root stays the only import surface and R1–R9 hold. A module on the second
 rung beside one that is all files is an expected state.
 
+**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it. The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it.
+
 Settings live in `app/core/config.py`; a module with settings of its own gets a nested model
 there named for it, so `settings.<module>.X` reads like the rest. Every route keeps an
 explicit tag and `operation_id`, because a tag becomes a folder in the generated web client.
@@ -342,7 +344,7 @@ request**).
 | Event | Published by | Payload | Subscribers | Why inline |
 | :---- | :---- | :---- | :---- | :---- |
 | `account.USER_SYNCED` | JIT provisioning; the `user.created` webhook handler | `user_id`, `metadata` (Clerk public metadata — merged from the API on JIT, the webhook's own on the webhook path) | none yet — the hook for seeding a new user's data on first sign-up | the seeding it is for runs in the request that provisions the user |
-| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `transaction` — hard-deletes every transaction the user owns | the subscriber's identifiers are what `anonymize_user()` destroys |
+| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `transaction` — hard-deletes every transaction the user owns; `transaction.imports` — hard-deletes the user's mapping profiles and held upload | the subscriber's identifiers are what `anonymize_user()` destroys |
 
 `erase_user` logs `subscriber_count`: zero means the modules were never imported. Memory
 deletion during erasure is a direct call — `agents/` is an adapter, below every module.

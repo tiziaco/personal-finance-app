@@ -50,6 +50,15 @@ unacceptable. The shape, decided so a fork does not re-decide it:
 
 Reasoning: `docs/architecture/server.md` §8.
 
+## Server — no request-body size limit ahead of FastAPI
+
+Starlette spools a multipart body to disk in full before auth, the rate limiter or the route
+run. The import's 5 MB check bounds only what the route reads into memory, and an
+unauthenticated multi-GB upload is accepted onto disk before its 401.
+
+**Fix:** an ASGI middleware that rejects on `Content-Length` and counts streamed bytes, or a
+body limit at the proxy (`docker-compose.prod.yml` sets none). **Found:** step 4.
+
 ## Server — row-level security
 
 Ownership is enforced in the query layer: every user-owned repository method filters by
@@ -69,7 +78,8 @@ the route. The pool connection sits idle in transaction for that long. Fine at o
 traffic; under concurrent chats it starves other requests of connections. The fix is to
 read what the call needs, release the session before the model call, and write with a
 short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent load.
+must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
+(`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
 
 ## Web — tests the suite does not have yet
 
@@ -86,13 +96,6 @@ must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
-## Web — the transactions empty state, with CSV import (roadmap step 4)
-
-With no transactions the page offers **Add a transaction**. When CSV upload ships, the
-prompt becomes **Upload a CSV** (`transactions.md` §2).
-
-**Unblocks:** nothing; it lands with step 4.
-
 ## Web — legacy's theme
 
 Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
@@ -104,19 +107,6 @@ calendar date-range picker is out too; the date filter uses the shared single-da
 data on 14 Oct 2026.
 
 **Unblocks:** nothing; the app is usable with the template's theme.
-
-## Port — carry into backend modules
-
-Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
-when it rebuilds each module. One line each, pointing at the legacy file, and the roadmap
-step that owns it.
-
-- **Services returning `None` on a miss** (step 4) — `CSVMappingService.get_session` returns
-  `None` and the route checks; raise a not-found error in the service instead.
-  `server/app/services/csv_mapping/service.py`.
-- **Direct `ChatOpenAI` use** (step 4) — the CSV column-mapping proposal builds its own client,
-  bypassing the LLM service's retries, model fallback and error translation. Go through
-  the LLM service. `server/app/api/v1/transactions.py` (`_propose_column_mapping`).
 
 ## Cutover (roadmap step 8)
 

@@ -1,6 +1,6 @@
 # Categorisation
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 15 Oct 2026
 **Scope:** how each transaction gets a category, and how the user overrules it. Legacy v1.0
 shipped this; the port rebuilds it (correcting a category in roadmap step 2,
 Transactions; the labelling agent in step 4, CSV import).
@@ -37,17 +37,22 @@ Media & Electronics · Savings & Investments · Travel & Holidays · Miscellaneo
 ## 4. Rules and edge cases
 
 - **How it works, in product terms.** The labeller recognises well-known merchants, asks an
-  LLM to categorise the rest in batches, and checks the answers against the list. A
-  merchant the LLM does not answer for is filed under Miscellaneous with a confidence of
-  0.3.
+  LLM to categorise the rest in batches, and checks the answers against the list. Known
+  merchants get a confidence of 0.95, so 1 stays "you chose it". A merchant the LLM does not
+  answer for is filed under Miscellaneous with a confidence of 0.3.
+- **A failure is reported, not hidden.** If some batches fail, their rows are filed under
+  Miscellaneous at 0.3 and the import says how many. If all fail, nothing is saved and the
+  upload is kept, so the user can try again.
+- **The labeller does not decide "recurring".** A deterministic rule does, from the
+  merchant's history ([`transaction.md`](../../data-model/transaction.md) D6).
 - **Every transaction carries a confidence**, 0 to 1. Anything the user entered or edited
   by hand is 1. The transactions table shows it as a percentage, in a warning colour below
   70%.
 - **The user's corrections are not learned.** The labeller was built to take a user's
   category preferences, but v1.0 never passes any; the same merchant is categorised afresh
   in every import.
-- **Prompts are versioned** (v1 and v2 exist; v2 is used), so a change in wording can be
-  compared.
+- **Prompts are versioned.** There is one, v2, recorded on every trace, so a change in
+  wording can be compared.
 
 ## 5. Not built
 
