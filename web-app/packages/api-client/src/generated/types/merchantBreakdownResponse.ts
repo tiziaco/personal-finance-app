@@ -9,7 +9,7 @@ import type { MerchantConcentrationResponse } from "./merchantConcentrationRespo
 import type { MerchantSpendResponse } from "./merchantSpendResponse"
 
 /**
- * One merchant breakdown entry or result.
+ * Spend by merchant over the range: the top by spend and by frequency, and the concentration.
  */
 export interface MerchantBreakdownResponse {
   concentration: MerchantConcentrationResponse

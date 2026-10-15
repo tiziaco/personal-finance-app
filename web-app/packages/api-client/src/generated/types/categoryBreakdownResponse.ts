@@ -9,7 +9,7 @@ import type { CategorySpendResponse } from "./categorySpendResponse"
 import type { CategoryTrendResponse } from "./categoryTrendResponse"
 
 /**
- * One category breakdown entry or result.
+ * Spend by category over the range: the biggest, most frequent, fastest growing and declining.
  */
 export interface CategoryBreakdownResponse {
   by_frequency: CategorySpendResponse[]

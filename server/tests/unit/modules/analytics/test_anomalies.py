@@ -1,6 +1,7 @@
 """Anomalies: single expenses far above their trailing window, and categories spiking lately."""
 
 import datetime as dt
+import random
 from decimal import Decimal
 
 import pytest
@@ -69,3 +70,43 @@ def test_empty_input():
     result = find_anomalies([])
     assert result.outliers == () and result.spikes == ()
     assert result.spike_window_start is None
+
+
+def test_an_expense_near_the_earliest_date_does_not_overflow():
+    result = find_anomalies([row("0001-01-02", "-10.00"), row("0001-01-03", "-5.00")])
+    assert result.outliers == ()
+    assert result.spike_window_start == dt.date.min
+
+
+def _brute_force_outliers(rows, std_threshold, window_days):
+    """The straightforward O(n²) reading of the rule, to pin the bisect version against."""
+    from statistics import mean, pstdev
+
+    spent = sorted((r for r in rows if r.amount < 0), key=lambda r: r.date)
+    found = []
+    for current in spent:
+        start = current.date - dt.timedelta(days=window_days)
+        window = [-r.amount for r in spent if start <= r.date < current.date]
+        if len(window) < 5 or pstdev(window) == 0:
+            continue
+        z = float((-current.amount - mean(window)) / pstdev(window))
+        if z > std_threshold:
+            found.append((current.date, current.merchant, round(z, 2)))
+    return sorted(found, key=lambda t: (-t[2], t[0]))[:20]
+
+
+@pytest.mark.parametrize("window_days", [7, 30, 90])
+def test_outliers_match_a_brute_force_reference_over_two_years(window_days):
+    rng = random.Random(42)
+    first = dt.date(2024, 1, 1)
+    rows = [
+        row(
+            (first + dt.timedelta(days=rng.randrange(730))).isoformat(),
+            f"-{rng.choice([rng.randint(5, 40), rng.randint(200, 900)])}.00",
+            merchant=f"m{i}",
+        )
+        for i in range(5000)
+    ]
+    expected = _brute_force_outliers(rows, 2.5, window_days)
+    got = [(o.date, o.merchant, o.z_score) for o in find_anomalies(rows, 2.5, window_days).outliers]
+    assert expected and got == expected

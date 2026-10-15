@@ -11,7 +11,7 @@ import type { WeekdaySpendResponse } from "./weekdaySpendResponse"
 import type { WeekPartResponse } from "./weekPartResponse"
 
 /**
- * One behaviour entry or result.
+ * Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability.
  */
 export interface BehaviourResponse {
   by_weekday: WeekdaySpendResponse[]

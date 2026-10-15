@@ -7,7 +7,7 @@
  */
 
 /**
- * One month of year entry or result.
+ * Average spend for one calendar month of the year, with an index against the average month.
  */
 export interface MonthOfYearResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

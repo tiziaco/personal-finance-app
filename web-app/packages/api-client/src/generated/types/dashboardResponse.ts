@@ -9,7 +9,7 @@ import type { CategorySliceResponse } from "./categorySliceResponse"
 import type { TrendPointResponse } from "./trendPointResponse"
 
 /**
- * The home page's figures for the latest month with an active transaction.
+ * The home page's figures for the reference month: the latest month with a transaction, up to this month.
  */
 export interface DashboardResponse {
   /**
@@ -32,7 +32,7 @@ export interface DashboardResponse {
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   recurring_spent: string
-  /** YYYY-MM; null for a user with no transactions */
+  /** YYYY-MM: latest month with a transaction up to this month; null with no transactions */
   reference_month: string | null
   spending_by_category: CategorySliceResponse[]
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

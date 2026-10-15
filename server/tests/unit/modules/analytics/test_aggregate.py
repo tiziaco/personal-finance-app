@@ -96,3 +96,7 @@ def test_cv_is_population_stdev_over_mean():
     assert cv([Decimal("50"), Decimal("120")]) == 0.4118
     assert cv([Decimal("5")]) is None
     assert cv([Decimal("0"), Decimal("0")]) is None
+
+
+def test_month_range_ending_in_december_9999_does_not_step_past_it():
+    assert month_range(D(9999, 11, 1), D(9999, 12, 31)) == [D(9999, 11, 1), D(9999, 12, 1)]

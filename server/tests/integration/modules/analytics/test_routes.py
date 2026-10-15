@@ -27,6 +27,14 @@ async def test_an_inverted_range_is_422(authenticated_client, route):
     assert response.json()["error"] == "INVALID_DATE_RANGE"
 
 
+@pytest.mark.parametrize("route", ROUTES[1:])
+@pytest.mark.parametrize("params", [{"date_to": "9999-12-31"}, {"date_from": "0001-01-01"}])
+async def test_a_date_outside_1900_2100_is_422(authenticated_client, route, params):
+    response = await authenticated_client.get(f"{BASE}/{route}", params=params)
+    assert response.status_code == 422
+    assert response.json()["error"] == "INVALID_DATE_RANGE"
+
+
 async def test_empty_dashboard(authenticated_client):
     body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
     assert body == {

@@ -7,7 +7,7 @@
  */
 
 /**
- * One hidden subscription entry or result.
+ * A merchant charged like a subscription, about monthly, without being flagged recurring.
  */
 export interface HiddenSubscriptionResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

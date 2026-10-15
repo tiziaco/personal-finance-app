@@ -77,6 +77,7 @@ def month_key(month: dt.date) -> str:
 def add_months(month: dt.date, n: int) -> dt.date:
     """The first day of the month n months from month's (n may be negative)."""
     index = month.year * 12 + month.month - 1 + n
+    index = max(dt.date.min.year * 12, min(index, dt.date.max.year * 12 + 11))  # stay inside years 1..9999
     return dt.date(index // 12, index % 12 + 1, 1)
 
 
@@ -86,6 +87,8 @@ def month_range(first: dt.date, last: dt.date) -> list[dt.date]:
     current, end = month_start(first), month_start(last)
     while current <= end:
         months.append(current)
+        if current == end:  # stepping past the last month could leave the calendar (December 9999)
+            break
         current = add_months(current, 1)
     return months
 

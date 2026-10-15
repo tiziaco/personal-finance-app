@@ -71,7 +71,9 @@ export const GetAnomaliesResponse = zod
             .regex(getAnomaliesResponseOutliersItemWindowMeanRegExp),
           z_score: zod.number(),
         })
-        .describe("One outlier entry or result."),
+        .describe(
+          "One expense far above the expenses of its trailing window, with its z-score and the window's mean.",
+        ),
     ),
     spike_window_end: zod.union([zod.iso.date(), zod.null()]),
     spike_window_start: zod.union([zod.iso.date(), zod.null()]),
@@ -87,12 +89,16 @@ export const GetAnomaliesResponse = zod
             .regex(getAnomaliesResponseSpikesItemRecentTotalRegExp),
           spike_pct: zod.number(),
         })
-        .describe("One category spike entry or result."),
+        .describe(
+          "One category whose last 30 days spend well above its average 30 days over the rest of the range.",
+        ),
     ),
     std_threshold: zod.number(),
     window_days: zod.int(),
   })
-  .describe("One anomalies entry or result.")
+  .describe(
+    "Outlier expenses and category spikes over the range, with the thresholds used.",
+  )
 
 /**
  * By weekday, weekday against weekend, by calendar month, and how steady each category is.
@@ -147,7 +153,9 @@ export const GetBehaviourResponse = zod
             .regex(getBehaviourResponseByWeekdayItemTotalRegExp),
           weekday: zod.int().describe("0 is Monday"),
         })
-        .describe("One weekday spend entry or result."),
+        .describe(
+          "One weekday's spend in the range: total, count, average and share of all expenses.",
+        ),
     ),
     expense_change_pct: zod
       .union([zod.number(), zod.null()])
@@ -166,7 +174,9 @@ export const GetBehaviourResponse = zod
             ),
           month: zod.int().describe("1 is January"),
         })
-        .describe("One month of year entry or result."),
+        .describe(
+          "Average spend for one calendar month of the year, with an index against the average month.",
+        ),
     ),
     stability: zod.array(
       zod
@@ -176,7 +186,9 @@ export const GetBehaviourResponse = zod
           cv: zod.number(),
           stability: zod.enum(["stable", "moderate", "volatile"]),
         })
-        .describe("One category stability entry or result."),
+        .describe(
+          "How steady one category's expense amounts are, from their coefficient of variation.",
+        ),
     ),
     stable_share_pct: zod.number(),
     volatile_share_pct: zod.number(),
@@ -186,17 +198,23 @@ export const GetBehaviourResponse = zod
         per_day: zod.string().regex(getBehaviourResponseWeekdayPerDayRegExp),
         total: zod.string().regex(getBehaviourResponseWeekdayTotalRegExp),
       })
-      .describe("One week part entry or result."),
+      .describe(
+        "Spend on weekdays or on weekends in the range: calendar days, total and spend per day.",
+      ),
     weekend: zod
       .object({
         days: zod.int().describe("Calendar days of this kind in the range"),
         per_day: zod.string().regex(getBehaviourResponseWeekendPerDayRegExp),
         total: zod.string().regex(getBehaviourResponseWeekendTotalRegExp),
       })
-      .describe("One week part entry or result."),
+      .describe(
+        "Spend on weekdays or on weekends in the range: calendar days, total and spend per day.",
+      ),
     weekend_bias_pct: zod.union([zod.number(), zod.null()]),
   })
-  .describe("One behaviour entry or result.")
+  .describe(
+    "Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability.",
+  )
 
 /**
  * Categories ranked by spend and by count, and the fastest growing and declining.
@@ -257,7 +275,9 @@ export const GetCategoryBreakdownResponse = zod
             .string()
             .regex(getCategoryBreakdownResponseByFrequencyItemTotalRegExp),
         })
-        .describe("One category spend entry or result."),
+        .describe(
+          "One category's spend in the range: total, count, average and share of all expenses.",
+        ),
     ),
     top_categories: zod.array(
       zod
@@ -272,7 +292,9 @@ export const GetCategoryBreakdownResponse = zod
             .string()
             .regex(getCategoryBreakdownResponseTopCategoriesItemTotalRegExp),
         })
-        .describe("One category spend entry or result."),
+        .describe(
+          "One category's spend in the range: total, count, average and share of all expenses.",
+        ),
     ),
     top_declining: zod.array(
       zod
@@ -293,7 +315,9 @@ export const GetCategoryBreakdownResponse = zod
               getCategoryBreakdownResponseTopDecliningItemLastMonthTotalRegExp,
             ),
         })
-        .describe("One category trend entry or result."),
+        .describe(
+          "How one category's monthly spend moved between the first and last month of the range, and how steady it was.",
+        ),
     ),
     top_growing: zod.array(
       zod
@@ -314,13 +338,17 @@ export const GetCategoryBreakdownResponse = zod
               getCategoryBreakdownResponseTopGrowingItemLastMonthTotalRegExp,
             ),
         })
-        .describe("One category trend entry or result."),
+        .describe(
+          "How one category's monthly spend moved between the first and last month of the range, and how steady it was.",
+        ),
     ),
     total_expenses: zod
       .string()
       .regex(getCategoryBreakdownResponseTotalExpensesRegExp),
   })
-  .describe("One category breakdown entry or result.")
+  .describe(
+    "Spend by category over the range: the biggest, most frequent, fastest growing and declining.",
+  )
 
 /**
  * Figures for the latest month holding an active transaction, and the six months up to it.
@@ -368,7 +396,9 @@ export const GetDashboardResponse = zod
               .regex(getDashboardResponseMonthlyTrendItemIncomeRegExp),
             month: zod.string().describe("YYYY-MM"),
           })
-          .describe("One trend point entry or result."),
+          .describe(
+            "One month of the dashboard's trend chart: income and expenses.",
+          ),
       )
       .describe("The six months ending at the reference month"),
     net_balance: zod
@@ -382,7 +412,9 @@ export const GetDashboardResponse = zod
       .describe("Expenses flagged recurring in the reference month"),
     reference_month: zod
       .union([zod.string(), zod.null()])
-      .describe("YYYY-MM; null for a user with no transactions"),
+      .describe(
+        "YYYY-MM: latest month with a transaction up to this month; null with no transactions",
+      ),
     spending_by_category: zod.array(
       zod
         .object({
@@ -397,12 +429,14 @@ export const GetDashboardResponse = zod
             ),
           share_pct: zod.number().describe("Share of the month's spend, 0–100"),
         })
-        .describe("One category slice entry or result."),
+        .describe(
+          "One slice of the dashboard's spending chart: a category (or the rest) with its spend and share.",
+        ),
     ),
     total_spent: zod.string().regex(getDashboardResponseTotalSpentRegExp),
   })
   .describe(
-    "The home page's figures for the latest month with an active transaction.",
+    "The home page's figures for the reference month: the latest month with a transaction, up to this month.",
   )
 
 /**
@@ -454,7 +488,9 @@ export const GetMerchantBreakdownResponse = zod
         top_5_share_pct: zod.number(),
         unique_merchants: zod.int(),
       })
-      .describe("One merchant concentration entry or result."),
+      .describe(
+        "How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band.",
+      ),
     top_by_frequency: zod.array(
       zod
         .object({
@@ -470,7 +506,9 @@ export const GetMerchantBreakdownResponse = zod
             .string()
             .regex(getMerchantBreakdownResponseTopByFrequencyItemTotalRegExp),
         })
-        .describe("One merchant spend entry or result."),
+        .describe(
+          "One merchant's spend in the range: total, count, average, first and last date, and share.",
+        ),
     ),
     top_by_spend: zod.array(
       zod
@@ -487,13 +525,17 @@ export const GetMerchantBreakdownResponse = zod
             .string()
             .regex(getMerchantBreakdownResponseTopBySpendItemTotalRegExp),
         })
-        .describe("One merchant spend entry or result."),
+        .describe(
+          "One merchant's spend in the range: total, count, average, first and last date, and share.",
+        ),
     ),
     total_expenses: zod
       .string()
       .regex(getMerchantBreakdownResponseTotalExpensesRegExp),
   })
-  .describe("One merchant breakdown entry or result.")
+  .describe(
+    "Spend by merchant over the range: the top by spend and by frequency, and the concentration.",
+  )
 
 /**
  * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges.
@@ -545,7 +587,9 @@ export const GetRecurringResponse = zod
           merchant: zod.string(),
           months_active: zod.int(),
         })
-        .describe("One hidden subscription entry or result."),
+        .describe(
+          "A merchant charged like a subscription, about monthly, without being flagged recurring.",
+        ),
     ),
     merchants: zod.array(
       zod
@@ -561,7 +605,9 @@ export const GetRecurringResponse = zod
             .describe("Median charge × charges per month charged"),
           months_charged: zod.int(),
         })
-        .describe("One recurring merchant entry or result."),
+        .describe(
+          "One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost.",
+        ),
     ),
     monthly_recurring_cost: zod
       .string()
@@ -572,7 +618,9 @@ export const GetRecurringResponse = zod
       .regex(getRecurringResponseRecurringTotalRegExp),
     total_expenses: zod.string().regex(getRecurringResponseTotalExpensesRegExp),
   })
-  .describe("One recurring entry or result.")
+  .describe(
+    "Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions.",
+  )
 
 /**
  * Totals, averages and a zero-filled per-month series. Bounds are inclusive and optional.
@@ -658,11 +706,15 @@ export const GetSpendingResponse = zod
           month: zod.string(),
           net: zod.string().regex(getSpendingResponseMonthsItemNetRegExp),
         })
-        .describe("One month flow entry or result."),
+        .describe(
+          "One month's income, expenses and net, with the change in expenses against the month before.",
+        ),
     ),
     net: zod.string().regex(getSpendingResponseNetRegExp),
     total_expenses: zod.string().regex(getSpendingResponseTotalExpensesRegExp),
     total_income: zod.string().regex(getSpendingResponseTotalIncomeRegExp),
     transaction_count: zod.int(),
   })
-  .describe("One spending entry or result.")
+  .describe(
+    "Income, expenses and net over the range, with monthly averages, burn rate and a monthly series.",
+  )

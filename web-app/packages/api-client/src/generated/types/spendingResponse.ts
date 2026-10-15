@@ -8,7 +8,7 @@
 import type { MonthFlowResponse } from "./monthFlowResponse"
 
 /**
- * One spending entry or result.
+ * Income, expenses and net over the range, with monthly averages, burn rate and a monthly series.
  */
 export interface SpendingResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

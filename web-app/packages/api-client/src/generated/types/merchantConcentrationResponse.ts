@@ -8,7 +8,7 @@
 import type { MerchantConcentrationResponseRisk } from "./merchantConcentrationResponseRisk"
 
 /**
- * One merchant concentration entry or result.
+ * How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band.
  */
 export interface MerchantConcentrationResponse {
   /** Σ(share %)² over every merchant, 0–10000 */

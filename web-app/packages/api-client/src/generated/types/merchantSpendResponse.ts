@@ -7,7 +7,7 @@
  */
 
 /**
- * One merchant spend entry or result.
+ * One merchant's spend in the range: total, count, average, first and last date, and share.
  */
 export interface MerchantSpendResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

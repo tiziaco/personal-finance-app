@@ -7,7 +7,7 @@
  */
 
 /**
- * One recurring merchant entry or result.
+ * One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost.
  */
 export interface RecurringMerchantResponse {
   charges: number

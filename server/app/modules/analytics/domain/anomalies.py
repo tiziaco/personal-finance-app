@@ -1,6 +1,7 @@
 """Anomalies: expenses far above their trailing window, and categories spending more than usual lately."""
 
 import datetime as dt
+from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -49,13 +50,24 @@ class Anomalies:
     spike_window_end: Optional[dt.date]
 
 
+def _days_before(day: dt.date, days: int) -> dt.date:
+    """The day `days` days earlier, stopping at the earliest date the calendar holds."""
+    try:
+        return day - dt.timedelta(days=days)
+    except OverflowError:
+        return dt.date.min
+
+
 def _outliers(spent: Sequence[Row], std_threshold: float, window_days: int) -> list[Outlier]:
     """Each expense against the expenses of the window_days days before its own day."""
     ordered = sorted(spent, key=lambda r: r.date)
+    dates = [r.date for r in ordered]
+    amounts = [spend(r) for r in ordered]
     found: list[Outlier] = []
     for current in ordered:
-        start = current.date - dt.timedelta(days=window_days)
-        window = [spend(r) for r in ordered if start <= r.date < current.date]
+        low = bisect_left(dates, _days_before(current.date, window_days))
+        high = bisect_left(dates, current.date)
+        window = amounts[low:high]
         if len(window) < MIN_WINDOW_EXPENSES:
             continue
         spread = pstdev(window)
@@ -75,7 +87,7 @@ def _outliers(spent: Sequence[Row], std_threshold: float, window_days: int) -> l
 
 def _spikes(spent: Sequence[Row], start: dt.date, end: dt.date) -> list[CategorySpike]:
     """The last 30 days per category against its average 30 days over the rest of the range."""
-    recent_start = end - dt.timedelta(days=SPIKE_DAYS - 1)
+    recent_start = _days_before(end, SPIKE_DAYS - 1)
     baseline_days = (recent_start - start).days
     if baseline_days < SPIKE_DAYS:
         return []
@@ -108,6 +120,6 @@ def find_anomalies(
         window_days=window_days,
         outliers=tuple(_outliers(spent, std_threshold, window_days)),
         spikes=tuple(spikes),
-        spike_window_start=covered[1] - dt.timedelta(days=SPIKE_DAYS - 1) if covered else None,
+        spike_window_start=_days_before(covered[1], SPIKE_DAYS - 1) if covered else None,
         spike_window_end=covered[1] if covered else None,
     )

@@ -22,7 +22,7 @@ class DateRange(BaseModel):
 
 
 class CategorySliceResponse(_Out):
-    """One category slice entry or result."""
+    """One slice of the dashboard's spending chart: a category (or the rest) with its spend and share."""
 
     category: Optional[str] = Field(..., description="The category slug; null is every category past the top five")
     amount: Decimal = Field(..., description="Spend in the reference month")
@@ -30,7 +30,7 @@ class CategorySliceResponse(_Out):
 
 
 class TrendPointResponse(_Out):
-    """One trend point entry or result."""
+    """One month of the dashboard's trend chart: income and expenses."""
 
     month: str = Field(..., description="YYYY-MM")
     income: Decimal
@@ -38,9 +38,11 @@ class TrendPointResponse(_Out):
 
 
 class DashboardResponse(_Out):
-    """The home page's figures for the latest month with an active transaction."""
+    """The home page's figures for the reference month: the latest month with a transaction, up to this month."""
 
-    reference_month: Optional[str] = Field(..., description="YYYY-MM; null for a user with no transactions")
+    reference_month: Optional[str] = Field(
+        ..., description="YYYY-MM: latest month with a transaction up to this month; null with no transactions"
+    )
     total_spent: Decimal
     recurring_spent: Decimal = Field(..., description="Expenses flagged recurring in the reference month")
     recurring_count: int
@@ -55,7 +57,7 @@ class DashboardResponse(_Out):
 
 
 class MonthFlowResponse(_Out):
-    """One month flow entry or result."""
+    """One month's income, expenses and net, with the change in expenses against the month before."""
 
     month: str
     income: Decimal
@@ -65,7 +67,7 @@ class MonthFlowResponse(_Out):
 
 
 class SpendingResponse(_Out):
-    """One spending entry or result."""
+    """Income, expenses and net over the range, with monthly averages, burn rate and a monthly series."""
 
     date_from: Optional[dt.date] = Field(..., description="The first day covered")
     date_to: Optional[dt.date] = Field(..., description="The last day covered")
@@ -85,7 +87,7 @@ class SpendingResponse(_Out):
 
 
 class CategorySpendResponse(_Out):
-    """One category spend entry or result."""
+    """One category's spend in the range: total, count, average and share of all expenses."""
 
     category: str
     total: Decimal
@@ -95,7 +97,7 @@ class CategorySpendResponse(_Out):
 
 
 class CategoryTrendResponse(_Out):
-    """One category trend entry or result."""
+    """How one category's monthly spend moved between the first and last month of the range, and how steady it was."""
 
     category: str
     first_month_total: Decimal
@@ -105,7 +107,7 @@ class CategoryTrendResponse(_Out):
 
 
 class CategoryBreakdownResponse(_Out):
-    """One category breakdown entry or result."""
+    """Spend by category over the range: the biggest, most frequent, fastest growing and declining."""
 
     total_expenses: Decimal
     top_categories: List[CategorySpendResponse]
@@ -118,7 +120,7 @@ class CategoryBreakdownResponse(_Out):
 
 
 class MerchantSpendResponse(_Out):
-    """One merchant spend entry or result."""
+    """One merchant's spend in the range: total, count, average, first and last date, and share."""
 
     merchant: str
     total: Decimal
@@ -130,7 +132,7 @@ class MerchantSpendResponse(_Out):
 
 
 class MerchantConcentrationResponse(_Out):
-    """One merchant concentration entry or result."""
+    """How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band."""
 
     top_5_share_pct: float
     top_10_share_pct: float
@@ -140,7 +142,7 @@ class MerchantConcentrationResponse(_Out):
 
 
 class MerchantBreakdownResponse(_Out):
-    """One merchant breakdown entry or result."""
+    """Spend by merchant over the range: the top by spend and by frequency, and the concentration."""
 
     total_expenses: Decimal
     top_by_spend: List[MerchantSpendResponse]
@@ -152,7 +154,7 @@ class MerchantBreakdownResponse(_Out):
 
 
 class RecurringMerchantResponse(_Out):
-    """One recurring merchant entry or result."""
+    """One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost."""
 
     merchant: str
     charges: int
@@ -162,7 +164,7 @@ class RecurringMerchantResponse(_Out):
 
 
 class HiddenSubscriptionResponse(_Out):
-    """One hidden subscription entry or result."""
+    """A merchant charged like a subscription, about monthly, without being flagged recurring."""
 
     merchant: str
     charges: int
@@ -172,7 +174,7 @@ class HiddenSubscriptionResponse(_Out):
 
 
 class RecurringResponse(_Out):
-    """One recurring entry or result."""
+    """Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions."""
 
     total_expenses: Decimal
     recurring_total: Decimal
@@ -188,7 +190,7 @@ class RecurringResponse(_Out):
 
 
 class WeekdaySpendResponse(_Out):
-    """One weekday spend entry or result."""
+    """One weekday's spend in the range: total, count, average and share of all expenses."""
 
     weekday: int = Field(..., description="0 is Monday")
     name: str
@@ -199,7 +201,7 @@ class WeekdaySpendResponse(_Out):
 
 
 class WeekPartResponse(_Out):
-    """One week part entry or result."""
+    """Spend on weekdays or on weekends in the range: calendar days, total and spend per day."""
 
     days: int = Field(..., description="Calendar days of this kind in the range")
     total: Decimal
@@ -207,7 +209,7 @@ class WeekPartResponse(_Out):
 
 
 class MonthOfYearResponse(_Out):
-    """One month of year entry or result."""
+    """Average spend for one calendar month of the year, with an index against the average month."""
 
     month: int = Field(..., description="1 is January")
     average_spend: Decimal
@@ -215,7 +217,7 @@ class MonthOfYearResponse(_Out):
 
 
 class CategoryStabilityResponse(_Out):
-    """One category stability entry or result."""
+    """How steady one category's expense amounts are, from their coefficient of variation."""
 
     category: str
     count: int
@@ -224,7 +226,7 @@ class CategoryStabilityResponse(_Out):
 
 
 class BehaviourResponse(_Out):
-    """One behaviour entry or result."""
+    """Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability."""
 
     by_weekday: List[WeekdaySpendResponse]
     weekday: WeekPartResponse
@@ -242,7 +244,7 @@ class BehaviourResponse(_Out):
 
 
 class OutlierResponse(_Out):
-    """One outlier entry or result."""
+    """One expense far above the expenses of its trailing window, with its z-score and the window's mean."""
 
     date: dt.date
     merchant: str
@@ -253,7 +255,7 @@ class OutlierResponse(_Out):
 
 
 class CategorySpikeResponse(_Out):
-    """One category spike entry or result."""
+    """One category whose last 30 days spend well above its average 30 days over the rest of the range."""
 
     category: str
     recent_total: Decimal
@@ -262,7 +264,7 @@ class CategorySpikeResponse(_Out):
 
 
 class AnomaliesResponse(_Out):
-    """One anomalies entry or result."""
+    """Outlier expenses and category spikes over the range, with the thresholds used."""
 
     std_threshold: float
     window_days: int

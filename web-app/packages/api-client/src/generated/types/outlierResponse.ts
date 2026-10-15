@@ -7,7 +7,7 @@
  */
 
 /**
- * One outlier entry or result.
+ * One expense far above the expenses of its trailing window, with its z-score and the window's mean.
  */
 export interface OutlierResponse {
   /**

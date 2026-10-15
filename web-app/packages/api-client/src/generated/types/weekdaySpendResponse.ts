@@ -7,7 +7,7 @@
  */
 
 /**
- * One weekday spend entry or result.
+ * One weekday's spend in the range: total, count, average and share of all expenses.
  */
 export interface WeekdaySpendResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

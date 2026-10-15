@@ -1,5 +1,6 @@
 """The home page's figures: the latest month with data, its cards, its categories, and the trend to it."""
 
+import datetime as dt
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal
@@ -71,11 +72,24 @@ def _slices(month_rows: Sequence[Row], total: Decimal) -> tuple[CategorySlice, .
     return tuple(slices)
 
 
-def build_dashboard(rows: Sequence[Row]) -> Dashboard:
-    """Everything the home page draws. The reference month is the latest month holding a transaction."""
+def _reference_month(rows: Sequence[Row], today: dt.date) -> dt.date:
+    """The latest month holding a transaction, up to today's month; the overall latest if all are later."""
+    current = month_start(today)
+    months = {month_start(r.date) for r in rows}
+    reached = [m for m in months if m <= current]
+    return max(reached) if reached else max(months)
+
+
+def build_dashboard(rows: Sequence[Row], *, today: dt.date) -> Dashboard:
+    """Everything the home page draws.
+
+    The reference month is the latest month holding a transaction that is no later than today's
+    month, so one future-dated row cannot take the page over. When every row is in the future it
+    is the overall latest month.
+    """
     if not rows:
         return EMPTY
-    reference = month_start(max(r.date for r in rows))
+    reference = _reference_month(rows, today)
     first = month_start(min(r.date for r in rows))
     month_rows = [r for r in rows if month_start(r.date) == reference]
     spent = expenses(month_rows)

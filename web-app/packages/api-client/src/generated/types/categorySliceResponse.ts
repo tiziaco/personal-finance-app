@@ -7,7 +7,7 @@
  */
 
 /**
- * One category slice entry or result.
+ * One slice of the dashboard's spending chart: a category (or the rest) with its spend and share.
  */
 export interface CategorySliceResponse {
   /**

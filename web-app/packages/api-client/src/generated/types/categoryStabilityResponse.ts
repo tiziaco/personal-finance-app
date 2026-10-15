@@ -8,7 +8,7 @@
 import type { CategoryStabilityResponseStability } from "./categoryStabilityResponseStability"
 
 /**
- * One category stability entry or result.
+ * How steady one category's expense amounts are, from their coefficient of variation.
  */
 export interface CategoryStabilityResponse {
   category: string

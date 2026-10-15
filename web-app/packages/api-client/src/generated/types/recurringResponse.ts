@@ -9,7 +9,7 @@ import type { HiddenSubscriptionResponse } from "./hiddenSubscriptionResponse"
 import type { RecurringMerchantResponse } from "./recurringMerchantResponse"
 
 /**
- * One recurring entry or result.
+ * Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions.
  */
 export interface RecurringResponse {
   amount_share_pct: number

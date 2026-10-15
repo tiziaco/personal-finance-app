@@ -7,7 +7,7 @@
  */
 
 /**
- * One category spend entry or result.
+ * One category's spend in the range: total, count, average and share of all expenses.
  */
 export interface CategorySpendResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

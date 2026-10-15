@@ -7,7 +7,7 @@
  */
 
 /**
- * One trend point entry or result.
+ * One month of the dashboard's trend chart: income and expenses.
  */
 export interface TrendPointResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

@@ -7,7 +7,7 @@
  */
 
 /**
- * One category spike entry or result.
+ * One category whose last 30 days spend well above its average 30 days over the rest of the range.
  */
 export interface CategorySpikeResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

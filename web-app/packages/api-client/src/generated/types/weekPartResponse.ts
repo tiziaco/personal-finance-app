@@ -7,7 +7,7 @@
  */
 
 /**
- * One week part entry or result.
+ * Spend on weekdays or on weekends in the range: calendar days, total and spend per day.
  */
 export interface WeekPartResponse {
   /** Calendar days of this kind in the range */

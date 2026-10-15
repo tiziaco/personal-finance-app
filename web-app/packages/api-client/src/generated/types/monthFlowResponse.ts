@@ -7,7 +7,7 @@
  */
 
 /**
- * One month flow entry or result.
+ * One month's income, expenses and net, with the change in expenses against the month before.
  */
 export interface MonthFlowResponse {
   /** Against the month before; null after a zero month */

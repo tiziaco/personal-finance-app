@@ -7,7 +7,7 @@
  */
 
 /**
- * One category trend entry or result.
+ * How one category's monthly spend moved between the first and last month of the range, and how steady it was.
  */
 export interface CategoryTrendResponse {
   category: string

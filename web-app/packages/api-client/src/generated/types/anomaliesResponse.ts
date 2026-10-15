@@ -9,7 +9,7 @@ import type { CategorySpikeResponse } from "./categorySpikeResponse"
 import type { OutlierResponse } from "./outlierResponse"
 
 /**
- * One anomalies entry or result.
+ * Outlier expenses and category spikes over the range, with the thresholds used.
  */
 export interface AnomaliesResponse {
   outliers: OutlierResponse[]
