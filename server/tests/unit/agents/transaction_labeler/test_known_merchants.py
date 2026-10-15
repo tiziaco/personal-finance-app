@@ -40,6 +40,6 @@ def test_the_users_exclusions_are_gone_and_db_stays():
     assert "db" in KNOWN_MERCHANTS
 
 
-@pytest.mark.parametrize("key", ["ing diba", "sparkasse berlin", "n26"])
+@pytest.mark.parametrize("key", ["deutsche bank", "comdirect", "ing diba", "sparkasse berlin", "n26"])
 def test_bank_names_are_not_matched(key):
     assert match_known(key) is None

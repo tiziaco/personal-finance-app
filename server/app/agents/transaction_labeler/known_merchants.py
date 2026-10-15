@@ -6,7 +6,9 @@ them to that. Values are category slugs.
 """
 
 # Generic or bank names that mislabel at 0.95 (user decision, 15 Oct 2026). Removed deliberately; "db" stays.
-EXCLUDED = frozenset({"bank", "sparkasse", "ing", "n26", "gas", "uni", "sky", "spa", "gym", "sos"})
+EXCLUDED = frozenset(
+    {"bank", "sparkasse", "ing", "n26", "gas", "uni", "sky", "spa", "gym", "sos", "deutsche bank", "comdirect"}
+)
 
 KNOWN_MERCHANTS: dict[str, str] = {
     "netflix": "leisure_entertainment",
@@ -116,8 +118,6 @@ KNOWN_MERCHANTS: dict[str, str] = {
     "debeka": "insurances",
     "ergo": "insurances",
     "versicherung": "insurances",
-    "deutsche bank": "insurances",
-    "comdirect": "insurances",
     "aok": "insurances",
     "feather": "insurances",
     "vhs": "education",
