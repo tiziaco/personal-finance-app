@@ -1,13 +1,13 @@
 """Transaction service."""
 
 import datetime as dt
-import hashlib
 import uuid
 from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.modules.transaction.domain import fingerprint
 from app.modules.transaction.exceptions import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.repository import transaction_repository
@@ -21,26 +21,8 @@ from app.modules.transaction.schemas import (
     TransactionUpdate,
 )
 
-_CENT = Decimal("0.01")
-
 # A category the user picked or confirmed by hand is certain (docs/data-model/transaction.md).
 MANUAL_CONFIDENCE = 1.0
-
-
-def fingerprint(user_id: uuid.UUID, date: dt.date, merchant: str, amount: Decimal, description: Optional[str]) -> str:
-    """sha256 of user|date|merchant|amount|description — the duplicate key (docs/data-model/transaction.md).
-
-    Merchant and description are stripped and casefolded; the amount is the
-    Decimal at two places, never a float, and -0.00 is 0.00. Step 4's import
-    uses the same function, so the two can never disagree.
-    """
-    cents = amount.quantize(_CENT)
-    if cents == 0:
-        cents = Decimal("0.00")
-    raw = (
-        f"{user_id}|{date:%Y-%m-%d}|{merchant.strip().casefold()}|{cents:.2f}|{(description or '').strip().casefold()}"
-    )
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 class TransactionService:

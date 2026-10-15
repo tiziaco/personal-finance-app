@@ -7,7 +7,7 @@ from decimal import Decimal
 
 import pytest
 
-from app.modules.transaction.service import fingerprint
+from app.modules.transaction.domain import fingerprint
 
 pytestmark = pytest.mark.unit
 

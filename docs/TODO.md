@@ -31,13 +31,6 @@ Two findings do not wait on that decision and are small on their own:
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
 
-## Server — the R9 import-linter contract
-
-The rule that a `domain` slot imports no ORM and no framework has no contract yet,
-because no module has a `domain` slot. **Unblocks:** nothing until then; it lands with the
-first one, as one `forbidden` contract: `app.modules.*.domain` may not import `sqlmodel`,
-`sqlalchemy` or `fastapi`. Reasoning: `docs/architecture/server.md` §3.
-
 ## Server — events beyond the request
 
 Every entry point is a request, deferred handlers run in-process, and a deferred handler

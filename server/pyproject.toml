@@ -155,6 +155,8 @@ convention = "google"
 root_package = "app"
 # R4 lets a module type-hint another's model under TYPE_CHECKING.
 exclude_type_checking_imports = true
+# A forbidden contract may name third-party packages (R9) only with this.
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "R2: layers import downward only"
@@ -205,3 +207,9 @@ type = "forbidden"
 source_modules = ["app.modules.transaction"]
 forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R9: a domain slot imports neither the ORM nor the framework"
+type = "forbidden"
+source_modules = ["app.modules.*.domain"]
+forbidden_modules = ["sqlmodel", "sqlalchemy", "fastapi"]
