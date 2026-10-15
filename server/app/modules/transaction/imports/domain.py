@@ -71,10 +71,14 @@ class MappingProblem:
 
 @dataclass(frozen=True)
 class CsvRow:
-    """A data line: its line number in the file and its cells, stripped, one per column."""
+    """A data line: its line number in the file and its cells, stripped, one per column.
+
+    wide is True when the line has cells beyond the header that are not all empty; read_rows rejects it.
+    """
 
     number: int
     cells: list[str]
+    wide: bool = False
 
 
 @dataclass(frozen=True)
@@ -147,27 +151,45 @@ def sniff_delimiter(text: str) -> str:
     return best
 
 
+def _width(row: list[str]) -> int:
+    """A line's width, not counting one trailing empty field (a delimiter that ends the line)."""
+    return len(row) - 1 if len(row) > 1 and not row[-1] else len(row)
+
+
 def parse(text: str) -> ParsedCsv:
     """Read a file into a header and rows, or raise CsvFormatError.
 
     Lines above the header (a bank's account summary) are skipped: the header is
-    the first line with as many fields as most lines have. Blank lines are
-    skipped; short rows are padded. A trailing column with no name and no
-    values — a delimiter ending every line — is dropped.
+    the first line whose width is the file's usual width. A line counts both as
+    its width and as its width less a trailing empty field, so a header with no
+    trailing delimiter still matches rows that end in one. Blank lines are
+    skipped; short rows are padded; cells beyond the header are kept out of
+    `cells` and flagged on the row. A trailing column with no name and no
+    values — a delimiter ending every line — is dropped. A file the csv module
+    cannot read is malformed.
     """
-    reader = csv.reader(io.StringIO(text), delimiter=sniff_delimiter(text))
-    records = [(reader.line_num, row) for row in reader if any(c.strip() for c in row)]
+    try:
+        reader = csv.reader(io.StringIO(text, newline=""), delimiter=sniff_delimiter(text))
+        records = [(reader.line_num, [c.strip() for c in row]) for row in reader if any(c.strip() for c in row)]
+    except csv.Error as error:
+        raise CsvFormatError("malformed", "The file isn't a well-formed CSV.") from error
     if not records:
         raise CsvFormatError("empty", "The file is empty.")
-    width = Counter(len(row) for _, row in records).most_common(1)[0][0]
+    counts: Counter[int] = Counter()
+    for _, row in records:
+        counts[len(row)] += 1
+        counts[_width(row)] += 1
+    width = counts.most_common(1)[0][0]
     if width < 2:
         raise CsvFormatError("no_header", "The file needs a header row and at least two columns.")
-    start = next(i for i, (_, row) in enumerate(records) if len(row) == width)
-    header = [c.strip() for c in records[start][1]]
-    rows = [CsvRow(n, [c.strip() for c in (row + [""] * width)[:width]]) for n, row in records[start + 1 :]]
+    start = next((i for i, (_, row) in enumerate(records) if _width(row) == width), None)
+    if start is None:
+        start = next(i for i, (_, row) in enumerate(records) if len(row) == width)
+    header = records[start][1][:width]
+    rows = [CsvRow(n, (row + [""] * width)[:width], wide=any(row[width:])) for n, row in records[start + 1 :]]
     if not header[-1] and all(not r.cells[-1] for r in rows):
         header.pop()
-        rows = [CsvRow(r.number, r.cells[:-1]) for r in rows]
+        rows = [CsvRow(r.number, r.cells[:-1], r.wide) for r in rows]
     if any(not name for name in header):
         raise CsvFormatError("unnamed_column", "Every column needs a name in the header row.")
     folded = [name.casefold() for name in header]
@@ -334,8 +356,9 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, str]) -> tuple[list[ImportRo
     """Every row through a valid mapping: the rows to save and the rows rejected, in file order.
 
     The date format and amount style are the best for the mapped column. A row
-    is rejected for an unreadable date, an unreadable amount or an empty
-    merchant, checked in that order. Text is cut to the column sizes.
+    is rejected for cells beyond the header, an unreadable date, an unreadable
+    amount or an empty merchant, checked in that order. Text is cut to the
+    column sizes.
     """
     index = {field: parsed.columns.index(column) for column, field in mapping.items() if field != IGNORE}
 
@@ -347,6 +370,9 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, str]) -> tuple[list[ImportRo
     rows: list[ImportRow] = []
     rejected: list[Rejection] = []
     for row in parsed.rows:
+        if row.wide:
+            rejected.append(Rejection(row.number, "more cells than the header"))
+            continue
         raw_date, raw_amount, merchant = cell(row, "date"), cell(row, "amount"), cell(row, "merchant")
         date = parse_date(raw_date, date_format)
         if date is None:

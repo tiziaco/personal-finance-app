@@ -44,7 +44,7 @@ GERMAN_MAPPING = {
 class TestDecode:
     def test_utf8_and_its_bom(self):
         assert decode("Späti".encode()) == "Späti"
-        assert decode("﻿Date".encode()) == "Date"
+        assert decode("\ufeffDate".encode()) == "Date"
 
     def test_windows_1252_when_not_utf8(self):
         assert decode("Empfänger".encode("cp1252")) == "Empfänger"
@@ -73,6 +73,21 @@ class TestParse:
         assert parsed.columns == ["Datum", "Empfaenger", "Betrag"]
         assert [r.number for r in parsed.rows] == [5, 7]
         assert parsed.rows[0].cells == ["15.01.2026", "REWE", "-3,00"]
+
+    def test_cr_only_line_endings(self):
+        parsed = parse("d,m,a\r2026-01-01,Foo,1\r")
+        assert parsed.columns == ["d", "m", "a"]
+        assert [(r.number, r.cells) for r in parsed.rows] == [(2, ["2026-01-01", "Foo", "1"])]
+
+    def test_an_unbalanced_quote_is_a_malformed_file(self):
+        with pytest.raises(CsvFormatError) as caught:
+            parse('a,b\n1,"' + "x" * 140_000 + "\n")
+        assert caught.value.reason == "malformed"
+
+    def test_a_header_without_a_trailing_delimiter_beats_rows_with_one(self):
+        parsed = parse("Datum;Empfaenger;Betrag\n15.01.2026;REWE;-3,00;\n16.01.2026;Lidl;-4,00;\n")
+        assert parsed.columns == ["Datum", "Empfaenger", "Betrag"]
+        assert [r.number for r in parsed.rows] == [2, 3]
 
     def test_short_rows_are_padded(self):
         assert parse("a,b,c\n1,2\n1,2,3\n").rows[0].cells == ["1", "2", ""]
@@ -231,6 +246,12 @@ class TestReadRows:
             {"d": "date", "m": "merchant", "a": "amount", "r": "recurring"},
         )
         assert [r.is_recurring for r in rows] == [True, None]
+
+    def test_a_row_wider_than_the_header_is_rejected_not_cut(self):
+        text = "d,a,m,desc\n2026-01-01,-12.00,Foo, Inc,desc\n2026-01-02,-1.00,Bar,x,\n2026-01-03,-2.00,Baz,y\n"
+        rows, rejected = read_rows(parse(text), {"d": "date", "a": "amount", "m": "merchant", "desc": "description"})
+        assert [(r.number, r.merchant) for r in rows] == [(3, "Bar"), (4, "Baz")]
+        assert [(r.number, r.reason) for r in rejected] == [(2, "more cells than the header")]
 
     def test_long_text_is_cut_to_the_column_sizes(self):
         rows, _ = read_rows(parse(f"d,m,a\n2026-01-01,{'m' * 300},1\n"), {"d": "date", "m": "merchant", "a": "amount"})
