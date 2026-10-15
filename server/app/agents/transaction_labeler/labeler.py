@@ -16,7 +16,7 @@ from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, RootModel
 
 from app.agents.shared.observability import create_trace_config
-from app.agents.shared.structured import ask_json, structured_llm
+from app.agents.shared.structured import ask_json, structured_llm_service
 from app.agents.transaction_labeler.known_merchants import match_known
 from app.core.logging import logger
 from app.integrations.llm import LLMService
@@ -91,12 +91,11 @@ async def label(
         user_id, upload_id, "transaction_labeler", metadata={"prompt_version": PROMPT_VERSION}
     )
     semaphore = asyncio.Semaphore(MAX_CONCURRENT_BATCHES)
-    service = structured_llm()
 
     async def run(batch: list[MerchantToLabel]) -> Optional[dict[str, Label]]:
         async with semaphore:
             try:
-                return await _label_batch(service, batch, categories, config)
+                return await _label_batch(structured_llm_service, batch, categories, config)
             except Exception as e:  # noqa: BLE001  any failure of one batch is that batch's fallback, never the import's crash
                 logger.warning("label_batch_failed", size=len(batch), error_type=type(e).__name__)
                 return None

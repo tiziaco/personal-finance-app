@@ -12,7 +12,6 @@ from openai import APIError, APITimeoutError, OpenAIError, RateLimitError
 from app.core.config import settings
 from app.integrations.llm.exceptions import (
     LLMAPIError,
-    LLMFallbackExhaustedError,
     LLMRateLimitError,
     LLMTimeoutError,
 )
@@ -187,7 +186,7 @@ class TestLLMServiceCall:
         assert service._default_index == before_index
 
     @pytest.mark.asyncio
-    async def test_pinned_model_restored_when_the_call_raises(self, messages):
+    async def test_an_escaping_error_leaves_the_service_unchanged(self, messages):
         """The pin is a local of the call, so an escaping error has nothing on the service to leave behind.
 
         A `RuntimeError` escapes `call()` mid-flight without going through the fallback ladder.
@@ -205,25 +204,52 @@ class TestLLMServiceCall:
         assert service._llm is before_llm
         assert service._default_index == before_index
 
+    @pytest.mark.asyncio
+    async def test_fallback_wraps_to_the_first_model(self, messages):
+        names = LLMRegistry.get_all_names()
+        service = LLMService()
+        fakes = {n: _FakeModel(n, [], healthy=n != names[-1]) for n in names}
 
-class TestLLMServiceNextModel:
-    """Tests for `_next`, the step of the fallback rotation."""
+        with patch.object(service, "_resolve", side_effect=lambda name, **kw: fakes[name]):
+            answer = await service.call(messages, model_name=names[-1])
 
-    def test_next_wraps_to_the_first_model(self):
-        index, _ = LLMService()._next(len(LLMRegistry.LLMS) - 1)
-        assert index == 0
+        assert answer.content == names[0]
 
-    def test_next_keeps_bound_tools(self):
-        """A fallback must not drop the tools.
+    @pytest.mark.asyncio
+    async def test_a_fallback_model_keeps_the_tools(self, messages):
+        """A fallback must not drop the tools: the graph routes on `tool_calls`, so a toolless model fails silently."""
+        service = LLMService().bind_tools([echo])
+        seen = []
 
-        The client for the next model is resolved through `_resolve`, which binds the
-        service's tools. A bare registry client would leave the agent toolless after a
-        fallback, and silently, since the graph routes on an empty `tool_calls` rather
-        than raising.
-        """
-        _, llm = LLMService().bind_tools([echo])._next(0)
-        assert isinstance(llm, RunnableBinding)
-        assert _bound_tool_names(llm) == ["echo"]
+        async def fail_first(llm, msgs, config=None):
+            seen.append(llm)
+            if len(seen) == 1:
+                raise OpenAIError("down")
+            return AIMessage(content="ok")
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=fail_first):
+            await service.call(messages)
+
+        assert isinstance(seen[1], RunnableBinding)
+        assert _bound_tool_names(seen[1]) == ["echo"]
+
+    @pytest.mark.asyncio
+    async def test_the_typed_error_follows_the_last_failure(self, messages):
+        service = LLMService()
+        calls = 0
+
+        async def rate_limit_then_api_error(llm, msgs, config=None):
+            nonlocal calls
+            calls += 1
+            if calls == 1:
+                raise RateLimitError(
+                    message="rate limited", response=MagicMock(status_code=429, headers={}), body=None
+                )
+            raise APIError(message="server error", request=MagicMock(), body=None)
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=rate_limit_then_api_error):
+            with pytest.raises(LLMAPIError):
+                await service.call(messages)
 
 
 @pytest.mark.asyncio

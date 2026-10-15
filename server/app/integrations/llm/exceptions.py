@@ -27,12 +27,6 @@ class LLMStreamingError(LLMServiceError):
     error_code = "LLM_STREAMING_ERROR"
 
 
-class LLMFallbackExhaustedError(LLMServiceError):
-    """Exception raised when all LLM fallback models are exhausted."""
-
-    error_code = "LLM_FALLBACK_EXHAUSTED"
-
-
 class LLMAPIError(LLMServiceError):
     """Exception raised for general LLM API errors."""
 

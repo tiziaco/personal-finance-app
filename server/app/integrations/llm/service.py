@@ -32,9 +32,16 @@ from app.core.config import (
 from app.core.logging import logger
 from app.integrations.llm.exceptions import (
     LLMAPIError,
-    LLMFallbackExhaustedError,
     LLMRateLimitError,
+    LLMServiceError,
     LLMTimeoutError,
+)
+
+# Once every model has failed, the error raised follows the last failure; anything not
+# listed is an LLMAPIError.
+_EXHAUSTED_AS: tuple[tuple[type[OpenAIError], type[LLMServiceError]], ...] = (
+    (RateLimitError, LLMRateLimitError),
+    (APITimeoutError, LLMTimeoutError),
 )
 
 
@@ -166,20 +173,17 @@ class LLMService:
     def _resolve(self, model_name: str, **kwargs) -> BaseChatModel:
         """Build the client for `model_name` with the registered tools bound.
 
+        Every client the service calls is built here.
+
         Every assignment to `_llm` must go through here. Tools belong to the
         service, not to whichever client it holds: assigning a bare registry
         client leaves the agent toolless after the first fallback rotation, and
         silently, since the graph routes on `tool_calls` and simply sees none.
         Resolving from the registry rather than from a held client is what makes
-        that correct for `_next`, which moves to another model.
+        that correct for a fallback, which moves to another model.
         """
         llm = LLMRegistry.get(model_name, **kwargs)
         return llm.bind_tools(self._tools) if self._tools else llm
-
-    def _next(self, index: int) -> tuple[int, BaseChatModel]:
-        """The model after `index` in the registry, wrapping to 0 at the end, with its client resolved."""
-        next_index = (index + 1) % len(LLMRegistry.LLMS)
-        return next_index, self._resolve(LLMRegistry.get_model_at_index(next_index)["name"])
 
     @retry(
         stop=stop_after_attempt(settings.llm.MAX_LLM_CALL_RETRIES),
@@ -226,7 +230,7 @@ class LLMService:
 
         Raises:
             ValueError: `model_name` is not in the registry.
-            LLMFallbackExhaustedError: Every model failed after retries.
+            LLMServiceError: every model failed after retries (see _call_with_fallback).
         """
         if not model_name:
             return await self._call_with_fallback(messages, config, self._default_index, self.get_llm())
@@ -249,103 +253,42 @@ class LLMService:
         start_index: int,
         start_llm: BaseChatModel,
     ) -> BaseMessage:
-        """Call the model at `start_index`, rotating through the registry on failure.
+        """Call the model at `start_index`, then each next one in the registry, wrapping, until one answers.
 
         The position is in locals. Calls run at once on one service, so a position kept
         on the service would be moved by every call's failures, and a call could use up
         its attempts without reaching a healthy model.
 
         Raises:
-            LLMRateLimitError: If every model rate-limits
-            LLMTimeoutError: If every model times out
-            LLMAPIError: If every model returns an API error
-            LLMFallbackExhaustedError: If the rotation ends without a response
+            LLMRateLimitError: every model failed, the last with a rate limit
+            LLMTimeoutError: every model failed, the last with a timeout
+            LLMAPIError: every model failed, the last with any other error
         """
-        total_models = len(LLMRegistry.LLMS)
-        index, llm = start_index, start_llm
-        models_tried = 0
-        last_error = None
-
-        while models_tried < total_models:
-            current_model_name = LLMRegistry.LLMS[index]["name"]
+        names = LLMRegistry.get_all_names()
+        last_error: Optional[OpenAIError] = None
+        for offset in range(len(names)):
+            index = (start_index + offset) % len(names)
+            llm = start_llm if offset == 0 else self._resolve(names[index])
             try:
                 return await self._call_llm_with_retry(llm, messages, config)
-            except RateLimitError as e:
-                last_error = e
-                models_tried += 1
-                logger.error(
-                    "llm_rate_limit_after_retries",
-                    model=current_model_name,
-                    models_tried=models_tried,
-                    total_models=total_models,
-                    error=str(e),
-                )
-                if models_tried >= total_models:
-                    raise LLMRateLimitError(
-                        f"Rate limit exceeded on all {total_models} models",
-                        models_tried=models_tried,
-                        last_model=current_model_name,
-                    ) from e
-            except APITimeoutError as e:
-                last_error = e
-                models_tried += 1
-                logger.error(
-                    "llm_timeout_after_retries",
-                    model=current_model_name,
-                    models_tried=models_tried,
-                    total_models=total_models,
-                    error=str(e),
-                )
-                if models_tried >= total_models:
-                    raise LLMTimeoutError(
-                        f"Timeout on all {total_models} models",
-                        models_tried=models_tried,
-                        last_model=current_model_name,
-                    ) from e
             except OpenAIError as e:
                 last_error = e
-                models_tried += 1
                 logger.error(
-                    "llm_call_failed_after_retries",
-                    model=current_model_name,
-                    models_tried=models_tried,
-                    total_models=total_models,
+                    "llm_model_failed_after_retries",
+                    model=names[index],
+                    models_tried=offset + 1,
+                    total_models=len(names),
+                    error_type=type(e).__name__,
                     error=str(e),
                 )
-                if models_tried >= total_models:
-                    logger.error(
-                        "all_models_failed",
-                        models_tried=models_tried,
-                        starting_model=LLMRegistry.LLMS[start_index]["name"],
-                    )
-                    raise LLMAPIError(
-                        f"LLM API error on all {total_models} models: {str(e)}",
-                        models_tried=models_tried,
-                        last_model=current_model_name,
-                        error_type=type(e).__name__,
-                    ) from e
 
-            try:
-                next_index, llm = self._next(index)
-            except Exception as e:
-                logger.error("model_switch_failed", error=str(e))
-                break
-            logger.warning(
-                "switching_to_next_model",
-                from_index=index,
-                to_index=next_index,
-                to_model=LLMRegistry.LLMS[next_index]["name"],
-            )
-            index = next_index
-
-        # Only reachable when a switch failed mid-rotation; the exhaustion cases
-        # above raise their own typed error.
-        raise LLMFallbackExhaustedError(
-            f"All {total_models} models failed after retries. Last error: {str(last_error)}",
-            models_tried=models_tried,
-            starting_model=LLMRegistry.LLMS[start_index]["name"],
-            last_error=str(last_error) if last_error else None,
-        )
+        error = next((typed for raw, typed in _EXHAUSTED_AS if isinstance(last_error, raw)), LLMAPIError)
+        raise error(
+            f"All {len(names)} models failed; the last with {type(last_error).__name__}",
+            models_tried=len(names),
+            starting_model=names[start_index],
+            error_type=type(last_error).__name__,
+        ) from last_error
 
     def get_llm(self) -> BaseChatModel:
         """The default model's client, building it on first use."""
