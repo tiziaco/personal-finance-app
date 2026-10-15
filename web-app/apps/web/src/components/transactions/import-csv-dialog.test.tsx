@@ -84,6 +84,7 @@ function renderDialog(open = true) {
   )
   return {
     onOpenChange,
+    unmount: view.unmount,
     rerender: (next: boolean) =>
       view.rerender(
         <ImportCsvDialog open={next} onOpenChange={onOpenChange} />,
@@ -191,6 +192,81 @@ describe("ImportCsvDialog", () => {
       options as unknown as { action: { onClick: () => void } }
     ).action.onClick()
     expect(onOpenChange).toHaveBeenCalledWith(true)
+  })
+
+  it("reports after the page is left: counts-only toast, and failures are not silenced", async () => {
+    const { unmount } = renderDialog()
+    await reachReview()
+    await user.click(screen.getByRole("button", { name: "Import 2 rows" }))
+    const options = confirmOptions()
+    unmount()
+    await act(() =>
+      (options.onSuccess as unknown as (d: ImportResult) => Promise<void>)(
+        result,
+      ),
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      "Imported 412 · 3 duplicates skipped · 1 rejected",
+      undefined,
+    )
+    expect(
+      (options.meta!.silentError as (e: unknown) => boolean)(
+        new ApiError("HTTP 503", 503, {}, null),
+      ),
+    ).toBe(false)
+  })
+
+  it("formats toast counts alike and uses the singular", async () => {
+    const { rerender } = renderDialog()
+    rerender(false)
+    await act(() =>
+      succeed({
+        imported: 5,
+        skipped_duplicates: 1,
+        uncategorised: 0,
+        rejected: [],
+      }),
+    )
+    expect(vi.mocked(toast.success).mock.calls[0][0]).toBe(
+      "Imported 5 · 1 duplicate skipped · 0 rejected",
+    )
+    await act(() =>
+      succeed({
+        imported: 5000,
+        skipped_duplicates: 1204,
+        uncategorised: 0,
+        rejected: [],
+      }),
+    )
+    expect(vi.mocked(toast.success).mock.calls[1][0]).toBe(
+      "Imported 5,000 · 1,204 duplicates skipped · 0 rejected",
+    )
+  })
+
+  it("says the import carries on if closed", async () => {
+    renderDialog()
+    await reachReview()
+    await user.click(screen.getByRole("button", { name: "Import 2 rows" }))
+    expect(
+      screen.getByText("You can close this; the import carries on."),
+    ).toBeInTheDocument()
+  })
+
+  it("sends one confirm for a double click", async () => {
+    renderDialog()
+    await reachReview()
+    await user.dblClick(screen.getByRole("button", { name: "Import 2 rows" }))
+    expect(confirmMutate).toHaveBeenCalledTimes(1)
+  })
+
+  it("reopens on the result after a success while closed", async () => {
+    const { rerender } = renderDialog()
+    await reachReview()
+    await user.click(screen.getByRole("button", { name: "Import 2 rows" }))
+    rerender(false)
+    await act(() => succeed(result))
+    rerender(true)
+    expect(screen.getByText("412")).toBeInTheDocument()
   })
 
   it("a failure after closing is left to QueryProvider's toast", async () => {

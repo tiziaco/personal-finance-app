@@ -44,8 +44,9 @@ const DESCRIPTIONS: Record<Step["name"], string> = {
   result: "Your import is done.",
 }
 
+const n = (v: number) => v.toLocaleString("en-GB")
 const summary = (r: ImportResult) =>
-  `Imported ${r.imported.toLocaleString("en-GB")} · ${r.skipped_duplicates} duplicates skipped · ${r.rejected.length} rejected`
+  `Imported ${n(r.imported)} · ${n(r.skipped_duplicates)} ${r.skipped_duplicates === 1 ? "duplicate" : "duplicates"} skipped · ${n(r.rejected.length)} rejected`
 
 /**
  * Upload → review → import → result. Mounted for as long as the table is, so
@@ -70,6 +71,8 @@ export function ImportCsvDialog({
     mountedRef.current = true
     return () => {
       mountedRef.current = false
+      // Off the page: no dialog to show inline errors in, and no View details to offer.
+      openRef.current = false
     }
   }, [])
   const invalidate = useInvalidateTransactions()
@@ -184,7 +187,7 @@ export function ImportCsvDialog({
               {step.preview.row_count.toLocaleString("en-GB")} rows…
             </p>
             <p className="text-sm text-muted-foreground">
-              You can close this window; the import carries on.
+              You can close this; the import carries on.
             </p>
           </div>
         )}
