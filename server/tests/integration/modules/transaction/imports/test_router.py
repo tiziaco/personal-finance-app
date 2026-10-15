@@ -7,6 +7,7 @@ import pytest
 from sqlmodel import select
 
 from app.core.limiter import limiter
+from app.main import app
 from app.modules.transaction.imports.domain import column_key
 from app.modules.transaction.imports.models import HeldUpload, MappingProfile
 
@@ -68,9 +69,15 @@ class TestUpload:
         assert response.status_code == 201
         assert response.json()["columns"][1]["name"] == "Empfänger"
 
-    async def test_the_agent_failing_leaves_every_column_to_the_user(self, authenticated_client, propose):
+    async def test_the_agent_failing_leaves_every_column_to_the_user(
+        self, authenticated_client, propose, db_session, test_user
+    ):
         propose.return_value = None
         body = (await upload(authenticated_client, GERMAN)).json()
+        held = (
+            (await db_session.execute(select(HeldUpload.id).where(HeldUpload.user_id == test_user.id))).scalars().all()
+        )
+        assert held == [uuid.UUID(body["upload_id"])]
         assert body["mapping_source"] == "none"
         assert {c["proposed_field"] for c in body["columns"]} == {"ignore"}
 
@@ -105,6 +112,14 @@ class TestUpload:
             (await db_session.execute(select(HeldUpload.id).where(HeldUpload.user_id == test_user.id))).scalars().all()
         )
         assert held == [uuid.UUID(second["upload_id"])]
+
+    async def test_the_eleventh_upload_in_a_minute_is_429(self, authenticated_client, propose, monkeypatch):
+        monkeypatch.setattr(
+            app.state, "limiter", limiter, raising=False
+        )  # the lifespan sets it; tests skip the lifespan
+        for _ in range(10):
+            assert (await upload(authenticated_client, GERMAN)).status_code == 201
+        assert (await upload(authenticated_client, GERMAN)).status_code == 429
 
     async def test_a_remembered_mapping_matches_headers_by_case_and_spacing(
         self, authenticated_client, propose, db_session, test_user

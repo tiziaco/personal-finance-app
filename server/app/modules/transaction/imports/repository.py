@@ -1,10 +1,11 @@
 """The import's repository: held uploads and remembered mappings, each query scoped by user_id."""
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Optional
 
 from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -20,9 +21,25 @@ class ImportRepository:
         session: AsyncSession, user_id: uuid.UUID, content: str, expires_at: datetime
     ) -> HeldUpload:
         """Hold a new upload for this user, replacing any held before: one per user (D9)."""
-        await session.execute(delete(HeldUpload).where(HeldUpload.user_id == user_id))
-        upload = HeldUpload(user_id=user_id, content=content, expires_at=expires_at)
-        session.add(upload)
+        now = datetime.now(UTC)
+        statement = (
+            insert(HeldUpload)
+            .values(
+                id=uuid.uuid4(),
+                user_id=user_id,
+                content=content,
+                expires_at=expires_at,
+                created_at=now,
+                updated_at=now,
+            )
+            .on_conflict_do_update(
+                constraint="uq_csv_upload_user_id",
+                # A new id each time: a confirm against the replaced upload's id is a 404.
+                set_={"id": uuid.uuid4(), "content": content, "expires_at": expires_at, "updated_at": now},
+            )
+            .returning(HeldUpload)
+        )
+        upload = (await session.execute(statement)).scalar_one()
         await session.flush()
         logger.info("csv_upload_held", user_id=user_id, upload_id=upload.id)
         return upload
