@@ -12,6 +12,8 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
   --color-sidebar: var(--sidebar);
+  --color-chart-income: var(--chart-income);
+  --color-chart-expense: var(--chart-expense);
   --color-chart-6: var(--chart-6);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -68,6 +70,9 @@
   --chart-4: #eda100;
   --chart-5: #e87ba4;
   --chart-6: #898781;
+  /* Income and expenses, wherever they appear: a pair no category slot uses (dataviz-validated). */
+  --chart-income: #008300;
+  --chart-expense: #6250d6;
   --radius: 0.625rem;
   --sidebar: oklch(0.987 0.002 197.1);
   --sidebar-foreground: oklch(0.148 0.004 228.8);
@@ -104,6 +109,8 @@
   --chart-4: #c98500;
   --chart-5: #d55181;
   --chart-6: #898781;
+  --chart-income: #008300;
+  --chart-expense: #9085e9;
   --sidebar: oklch(0.218 0.008 223.9);
   --sidebar-foreground: oklch(0.987 0.002 197.1);
   --sidebar-primary: oklch(0.623 0.214 259.815);
