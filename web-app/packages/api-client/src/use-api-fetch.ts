@@ -101,8 +101,8 @@ const isUnauthorized = (error: unknown) =>
  * with a token fetched fresh. The server ran no handler, so replaying even a
  * POST is safe. A second 401 means the session is over, and signOut() ends it
  * and loads the sign-in page. The server keeps 401 for bad credentials alone
- * (an outage is a 503), so an outage never signs anyone out. A forced token
- * refresh does not wait for a session: the first call already did. The ApiError still reaches the caller.
+ * (an outage is a 503), so an outage never signs anyone out. The ApiError
+ * still reaches the caller.
  */
 export function useApiRequest(): ApiRequest {
   const { getToken, signOut } = useAppAuth()

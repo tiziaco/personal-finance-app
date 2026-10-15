@@ -235,9 +235,26 @@ describe("getToken", () => {
     }
   })
 
-  it("reports whether Clerk has a session", () => {
-    expect(renderAuth().current.isSignedIn).toBe(true)
-    clerk.isSignedIn = undefined
-    expect(renderAuth().current.isSignedIn).toBe(false)
+  // Signed out from another tab, then signed in again without a document load.
+  it("waits again once the session has ended", async () => {
+    const { result, rerender } = renderAuthHook()
+    clerk.isSignedIn = false
+    rerender()
+    clerk.getToken.mockResolvedValue(null)
+
+    let token: string | null | undefined
+    const pending = result.current.getToken().then((t) => (token = t))
+    await flush()
+    expect(token).toBeUndefined()
+
+    clerk.isSignedIn = true
+    clerk.getToken.mockResolvedValue("again")
+    rerender()
+    await pending
+    expect(token).toBe("again")
+  })
+
+  it("exposes no session flag: getToken is the only way to the session", () => {
+    expect(renderAuth().current).not.toHaveProperty("isSignedIn")
   })
 })

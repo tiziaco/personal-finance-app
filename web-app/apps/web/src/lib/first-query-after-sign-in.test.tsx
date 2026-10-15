@@ -5,19 +5,19 @@ import { useApiFetch } from "@app/api-client"
 import { QueryProvider } from "@app/api-client/query-provider"
 import { AuthProvider } from "@app/auth"
 
-// BUGS.md, "The first page load after sign-in fires its queries without a token".
+// The sign-in race (docs/architecture/authentication.md §2): the first page after sign-in.
 // The real AuthProvider, QueryProvider and mutator; only Clerk is mocked, in the
 // state it is in straight after sign-in: loaded, with no session installed yet.
 const clerk = vi.hoisted(() => ({
   isSignedIn: false,
-  token: null as string | null,
+  getToken: vi.fn(async (): Promise<string | null> => null),
 }))
 
 vi.mock("@clerk/nextjs", () => ({
   useAuth: () => ({
     isLoaded: true,
     isSignedIn: clerk.isSignedIn,
-    getToken: async () => clerk.token,
+    getToken: clerk.getToken,
     signOut: async () => {},
   }),
   useUser: () => ({ user: null }),
@@ -44,7 +44,8 @@ function App() {
 
 beforeEach(() => {
   clerk.isSignedIn = false
-  clerk.token = null
+  clerk.getToken.mockClear()
+  clerk.getToken.mockResolvedValue(null)
   process.env.NEXT_PUBLIC_API_URL = "http://localhost:8100"
   vi.stubGlobal(
     "fetch",
@@ -64,11 +65,13 @@ afterEach(() => {
 
 it("holds the first query until the session is active, then sends it with the token", async () => {
   const { rerender } = render(<App />)
-  await new Promise((resolve) => setTimeout(resolve, 20))
+  // The query has asked for a token and is waiting for the session.
+  await vi.waitFor(() => expect(clerk.getToken).toHaveBeenCalled())
+  await new Promise((resolve) => setTimeout(resolve, 0))
   expect(globalThis.fetch).not.toHaveBeenCalled()
 
   clerk.isSignedIn = true
-  clerk.token = "jwt-after-sign-in"
+  clerk.getToken.mockResolvedValue("jwt-after-sign-in")
   rerender(<App />)
 
   await screen.findByText("u1")
