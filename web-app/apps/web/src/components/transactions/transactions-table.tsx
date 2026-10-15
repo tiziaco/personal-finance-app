@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState } from "react"
-import { PlusIcon, Trash2 } from "lucide-react"
+import { PlusIcon, Trash2, UploadIcon } from "lucide-react"
 import { keepPreviousData } from "@tanstack/react-query"
 import {
   useListTransactions,
@@ -25,6 +25,7 @@ import { TransactionCard } from "./transaction-card"
 import { TransactionsSortControl } from "./transactions-sort-control"
 import { BulkCategoryDialog } from "./bulk-category-dialog"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
+import { ImportCsvDialog } from "./import-csv-dialog"
 import { TransactionFormDialog } from "./transaction-form-dialog"
 import {
   EMPTY_TRANSACTIONS_FILTERS,
@@ -48,6 +49,8 @@ export function TransactionsTable() {
   const state = useTransactionsTableState()
   const { categories, label } = useCategories()
   const [dialog, setDialog] = useState<OpenDialog | null>(null)
+  // The import dialog is not in OpenDialog: it stays mounted so an import survives closing it.
+  const [importing, setImporting] = useState(false)
   const closeDialog = (open: boolean) => !open && setDialog(null)
   const { mutate: updateTransaction } = useUpdateTransaction(
     useRefreshTransactionsOnSuccess(),
@@ -104,13 +107,21 @@ export function TransactionsTable() {
   ) : (
     <div className="space-y-2">
       <p>No transactions yet.</p>
-      <Button
-        variant="outline"
-        size="sm"
-        onClick={() => setDialog({ kind: "add" })}
-      >
-        Add a transaction
+      <Button size="sm" onClick={() => setImporting(true)}>
+        <UploadIcon />
+        Upload a CSV
       </Button>
+      <p className="text-sm">
+        or{" "}
+        <Button
+          variant="link"
+          size="sm"
+          className="h-auto p-0"
+          onClick={() => setDialog({ kind: "add" })}
+        >
+          add a transaction
+        </Button>
+      </p>
     </div>
   )
 
@@ -118,10 +129,16 @@ export function TransactionsTable() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Transactions</h1>
-        <Button onClick={() => setDialog({ kind: "add" })}>
-          <PlusIcon />
-          Add transaction
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setImporting(true)}>
+            <UploadIcon />
+            Import CSV
+          </Button>
+          <Button onClick={() => setDialog({ kind: "add" })}>
+            <PlusIcon />
+            Add transaction
+          </Button>
+        </div>
       </div>
       <ServerDataTable<TransactionResponse, unknown>
         columns={columns}
@@ -202,6 +219,7 @@ export function TransactionsTable() {
           />
         }
       />
+      <ImportCsvDialog open={importing} onOpenChange={setImporting} />
       {dialog?.kind === "add" && (
         <TransactionFormDialog mode="add" open onOpenChange={closeDialog} />
       )}

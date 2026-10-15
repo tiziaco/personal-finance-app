@@ -58,6 +58,7 @@ export function ImportDropZone({
           type="file"
           accept=".csv,text/csv"
           aria-label="CSV file"
+          disabled={pending}
           className="sr-only"
           onChange={(event) => {
             const file = event.target.files?.[0]
