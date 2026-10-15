@@ -100,6 +100,11 @@ class ClerkJWTVerifier:
         except jwt.ExpiredSignatureError:
             logger.debug("token_expired")
             return None
+        except jwt.ImmatureSignatureError as e:
+            # iat/nbf ahead of our clock by more than CLOCK_SKEW_SECONDS. A warning, not debug:
+            # the user is signed out, and the cause is our clock, so production must see it.
+            logger.warning("token_not_yet_valid", error=str(e))
+            return None
         except jwt.InvalidTokenError as e:
             logger.debug("token_verification_failed", error=str(e))
             return None

@@ -251,6 +251,21 @@ class TestLLMServiceCall:
             with pytest.raises(LLMAPIError):
                 await service.call(messages)
 
+    @pytest.mark.asyncio
+    async def test_the_exhausted_error_leaves_the_handlers_error_type_alone(self, messages):
+        """The handler logs `error_type` as the exception's class; a context key of that name would replace it."""
+        service = LLMService()
+
+        async def rate_limited(llm, msgs, config=None):
+            raise RateLimitError(message="rate limited", response=MagicMock(status_code=429, headers={}), body=None)
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=rate_limited):
+            with pytest.raises(LLMRateLimitError) as caught:
+                await service.call(messages)
+
+        assert "error_type" not in caught.value.context
+        assert caught.value.context["last_error_type"] == "RateLimitError"
+
 
 @pytest.mark.asyncio
 async def test_call_passes_the_config_to_the_model(messages):

@@ -100,7 +100,7 @@ per call (15 Oct 2026).
 ## Server — every LLM call starts at the default model
 
 Each call walks the registry from the default model, so while the default is down every
-chat turn and labelling batch spends its retries there first (three attempts, 2 s and 4 s
+chat turn and labelling batch spends its retries there first (three attempts, about 2 s
 apart) before falling back. It is the cost of keeping the position per call, which
 concurrent calls need (15 Oct 2026). If it matters, keep a short-lived "last model that
 answered" hint on the service and start unpinned calls there.

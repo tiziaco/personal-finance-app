@@ -12,7 +12,7 @@ These sign and verify with a real RSA key, so pyjwt's RSAAlgorithm and the
 """
 
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import jwt as pyjwt
 import pytest
@@ -155,3 +155,14 @@ def test_a_token_far_ahead_of_our_clock_is_still_refused(keypair):
     later = int(time.time()) + 30
 
     assert _verifier_serving(public).verify_token(_sign(private, iat=later, nbf=later)) is None
+
+
+def test_a_token_ahead_of_our_clock_is_logged_where_production_sees_it(keypair):
+    """Clock skew signs users out; its log line must survive production's INFO level (docs/setup/clerk.md)."""
+    private, public = keypair
+    later = int(time.time()) + 30
+
+    with patch("app.utils.auth.logger") as log:
+        _verifier_serving(public).verify_token(_sign(private, iat=later, nbf=later))
+
+    assert log.warning.call_args.args == ("token_not_yet_valid",)

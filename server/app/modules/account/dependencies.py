@@ -42,7 +42,7 @@ def get_clerk_id(request: Request) -> str:
     if clerk_id:
         return clerk_id
     auth_error = getattr(request.state, "auth_error", None)
-    if auth_error:
+    if auth_error is not None:
         raise auth_error
     logger.error("clerk_id_not_in_request_state")
     raise AuthenticationError("Authentication required")

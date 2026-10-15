@@ -269,7 +269,7 @@ hand, from the same file:
 |---|---|
 | You sign in, land on the dashboard, get a "session expired" toast and are sent back to `/sign-in`, every time (the server log shows 401 from the API) | The web origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
 | Every request fails with 503 `AUTH_UNAVAILABLE`, and you are not signed out | The server cannot check tokens. Server log `token_jwks_client_invalid`: `CLERK_ISSUER` is not an `https://` URL (§3). Server log `token_jwks_unreachable`: Clerk's JWKS endpoint cannot be reached (network, or a well-formed but wrong issuer). |
-| You sign in and are sent straight back to `/sign-in`; the server log shows `token_verification_failed` with "The token is not yet valid" | The API host's clock is more than 5 s behind Clerk's. Resync it (Docker Desktop: restart it after the laptop has slept). |
+| You sign in and are sent straight back to `/sign-in`; the server log shows `token_not_yet_valid` | The API host's clock is more than 5 s behind Clerk's. Resync it (Docker Desktop: restart it after the laptop has slept). |
 | Server won't start, `SettingsError` on `ALLOWED_ORIGINS` | Not a JSON array (§4). |
 | Browser CORS error on every request | Same as the 401 row — one setting, two symptoms (§4). |
 | Works locally, not in staging/production | `ALLOWED_ORIGINS` is per-environment; each `server/.env.<env>` needs its own origins. |

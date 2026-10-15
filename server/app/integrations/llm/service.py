@@ -287,7 +287,7 @@ class LLMService:
             f"All {len(names)} models failed; the last with {type(last_error).__name__}",
             models_tried=len(names),
             starting_model=names[start_index],
-            error_type=type(last_error).__name__,
+            last_error_type=type(last_error).__name__,
         ) from last_error
 
     def get_llm(self) -> BaseChatModel:
