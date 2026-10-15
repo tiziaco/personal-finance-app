@@ -92,7 +92,7 @@ class TransactionUpdate(BaseModel):
 
 
 class TransactionImport(BaseModel):
-    """A row written by the seed (and by step 4's import): confidence and original category are its own."""
+    """A row written by the import and the seed: confidence and original category are its own."""
 
     date: dt.date
     merchant: Merchant
@@ -100,7 +100,9 @@ class TransactionImport(BaseModel):
     description: Optional[Description] = None
     category: Category
     confidence: float = Field(..., ge=0, le=1)
-    is_recurring: bool = False
+    is_recurring: Optional[bool] = Field(
+        None, description="The importer's own value, kept as the user's; None lets the recurring rule decide"
+    )
     original_category: Optional[Annotated[str, StringConstraints(max_length=255)]] = None
 
     _description = field_validator("description")(_blank_to_none)

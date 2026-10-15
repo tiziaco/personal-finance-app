@@ -4,11 +4,12 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any, Optional
 
-from sqlalchemy import delete, func, update
+from sqlalchemy import Row, delete, func, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.logging import logger
+from app.modules.transaction.domain import DETECTED
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.schemas import TransactionFilters, TransactionOrdering
 
@@ -164,6 +165,70 @@ class TransactionRepository:
         changed = list((await session.execute(statement)).scalars().all())
         logger.info("transactions_soft_deleted", user_id=user_id, count=len(changed))
         return changed
+
+    @staticmethod
+    async def refresh(session: AsyncSession, transaction: Transaction) -> Transaction:
+        """Reload a transaction's columns, after a statement that bypassed the ORM changed them."""
+        await session.refresh(transaction)
+        return transaction
+
+    @staticmethod
+    async def count_active_by_fingerprints(
+        session: AsyncSession, user_id: uuid.UUID, fingerprints: list[str]
+    ) -> dict[str, int]:
+        """How many active rows this user holds per fingerprint, for those that occur at all."""
+        if not fingerprints:
+            return {}
+        statement = (
+            select(Transaction.fingerprint, func.count())
+            .where(
+                Transaction.user_id == user_id,
+                Transaction.fingerprint.in_(set(fingerprints)),
+                Transaction.deleted_at.is_(None),
+            )
+            .group_by(Transaction.fingerprint)
+        )
+        return {fingerprint: count for fingerprint, count in (await session.execute(statement)).all()}
+
+    @staticmethod
+    async def merchant_keys_for_ids(session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> set[str]:
+        """The merchant keys of this user's active rows among `ids`."""
+        statement = select(Transaction.merchant_key).where(
+            Transaction.id.in_(ids), Transaction.user_id == user_id, Transaction.deleted_at.is_(None)
+        )
+        return set((await session.execute(statement)).scalars().all())
+
+    @staticmethod
+    async def recurring_rows_for_keys(session: AsyncSession, user_id: uuid.UUID, keys: set[str]) -> list[Row]:
+        """id, merchant_key, date, amount, is_recurring and recurring_source of this user's active rows for these merchant keys."""
+        statement = select(
+            Transaction.id,
+            Transaction.merchant_key,
+            Transaction.date,
+            Transaction.amount,
+            Transaction.is_recurring,
+            Transaction.recurring_source,
+        ).where(Transaction.user_id == user_id, Transaction.merchant_key.in_(keys), Transaction.deleted_at.is_(None))
+        return list((await session.execute(statement)).all())
+
+    @staticmethod
+    async def set_recurring_for_ids(
+        session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID], value: bool
+    ) -> int:
+        """Set is_recurring on this user's `detected` rows among `ids` in one UPDATE; a `user` row is never touched."""
+        if not ids:
+            return 0
+        statement = (
+            update(Transaction)
+            .where(
+                Transaction.id.in_(ids),
+                Transaction.user_id == user_id,
+                Transaction.recurring_source == DETECTED,
+            )
+            .values(is_recurring=value, updated_at=datetime.now(UTC))
+        )
+        result = await session.execute(statement)
+        return result.rowcount
 
     @staticmethod
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:

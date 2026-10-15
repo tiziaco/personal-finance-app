@@ -7,7 +7,14 @@ from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.modules.transaction.domain import fingerprint
+from app.modules.transaction.domain import (
+    DETECTED,
+    USER,
+    RecurringRow,
+    detect_recurring,
+    fingerprint,
+    normalise_merchant,
+)
 from app.modules.transaction.exceptions import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.repository import transaction_repository
@@ -41,8 +48,29 @@ class TransactionService:
         return await transaction_repository.get_active_for_user(session, user_id, transaction_id)
 
     @staticmethod
+    async def _refresh_recurring(session: AsyncSession, user_id: uuid.UUID, keys: set[str]) -> None:
+        """Re-judge every active row of these merchants; only `detected` rows change (docs/data-model/transaction.md, D6)."""
+        if not keys:
+            return
+        rows = await transaction_repository.recurring_rows_for_keys(session, user_id, keys)
+        current = {row.id: row.is_recurring for row in rows}
+        by_key: dict[str, list[RecurringRow]] = {}
+        for r in rows:
+            by_key.setdefault(r.merchant_key, []).append(RecurringRow(r.id, r.date, r.amount, r.recurring_source))
+        verdict: dict[uuid.UUID, bool] = {}
+        for series in by_key.values():  # one merchant at a time: the rule judges a single key's rows
+            verdict |= detect_recurring(series)
+        now_true = [i for i, recurring in verdict.items() if recurring and not current[i]]
+        now_false = [i for i, recurring in verdict.items() if not recurring and current[i]]
+        await transaction_repository.set_recurring_for_ids(session, user_id, now_true, True)
+        await transaction_repository.set_recurring_for_ids(session, user_id, now_false, False)
+
+    @staticmethod
     async def create(session: AsyncSession, user_id: uuid.UUID, body: TransactionCreate) -> Transaction:
-        """Add a transaction by hand. Raises DuplicateTransactionError on an active twin, unless allowed."""
+        """Add a transaction by hand. Raises DuplicateTransactionError on an active twin, unless allowed.
+
+        A ticked Recurring box is the user's; an unticked one is left to the rule.
+        """
         key = fingerprint(user_id, body.date, body.merchant, body.amount, body.description)
         if not body.allow_duplicate:
             existing = await transaction_repository.find_active_by_fingerprint(session, user_id, key)
@@ -62,13 +90,21 @@ class TransactionService:
             category=body.category,
             confidence=MANUAL_CONFIDENCE,
             is_recurring=body.is_recurring,
+            recurring_source=USER if body.is_recurring else DETECTED,
             fingerprint=key,
+            merchant_key=normalise_merchant(body.merchant),
         )
-        return await transaction_repository.add(session, transaction)
+        transaction = await transaction_repository.add(session, transaction)
+        await TransactionService._refresh_recurring(session, user_id, {transaction.merchant_key})
+        return await transaction_repository.refresh(session, transaction)
 
     @staticmethod
     async def update(session: AsyncSession, transaction: Transaction, body: TransactionUpdate) -> Transaction:
-        """Apply a partial edit. An empty edit changes nothing; any edit sets confidence to 1."""
+        """Apply a partial edit. An empty edit changes nothing; any edit sets confidence to 1.
+
+        An edit that sends is_recurring makes it the user's. The rule re-runs for
+        the merchant before and after the edit.
+        """
         changes = body.model_dump(exclude_unset=True)
         if not changes:
             return transaction
@@ -76,28 +112,52 @@ class TransactionService:
             name: changes.get(name, getattr(transaction, name))
             for name in ("date", "merchant", "amount", "description")
         }
-        key = fingerprint(transaction.user_id, **merged)
-        return await transaction_repository.update(
-            session, transaction, {**changes, "confidence": MANUAL_CONFIDENCE, "fingerprint": key}
-        )
+        old_key = transaction.merchant_key
+        values = {
+            **changes,
+            "confidence": MANUAL_CONFIDENCE,
+            "fingerprint": fingerprint(transaction.user_id, **merged),
+            "merchant_key": normalise_merchant(merged["merchant"]),
+        }
+        if "is_recurring" in changes:
+            values["recurring_source"] = USER
+        updated = await transaction_repository.update(session, transaction, values)
+        await TransactionService._refresh_recurring(session, updated.user_id, {old_key, updated.merchant_key})
+        return await transaction_repository.refresh(session, updated)
 
     @staticmethod
     async def soft_delete(session: AsyncSession, transaction: Transaction) -> None:
-        """Hide one transaction from every list; the row stays."""
+        """Hide one transaction from every list; the row stays. Its merchant is re-judged."""
         await transaction_repository.soft_delete(session, transaction)
+        await TransactionService._refresh_recurring(session, transaction.user_id, {transaction.merchant_key})
+
+    @staticmethod
+    async def count_active_by_fingerprints(
+        session: AsyncSession, user_id: uuid.UUID, fingerprints: list[str]
+    ) -> dict[str, int]:
+        """The user's active rows per fingerprint: the import's duplicate check."""
+        return await transaction_repository.count_active_by_fingerprints(session, user_id, fingerprints)
 
     @staticmethod
     async def import_many(session: AsyncSession, user_id: uuid.UUID, rows: list[TransactionImport]) -> int:
-        """Insert rows that carry their own confidence and original category (the seed; step 4's import)."""
+        """Insert rows that carry their own confidence and original category (the import; the seed).
+
+        A row's own is_recurring is the user's; None leaves it to the rule, which re-runs for every merchant.
+        """
         transactions = [
             Transaction(
                 user_id=user_id,
                 fingerprint=fingerprint(user_id, row.date, row.merchant, row.amount, row.description),
-                **row.model_dump(),
+                merchant_key=normalise_merchant(row.merchant),
+                recurring_source=DETECTED if row.is_recurring is None else USER,
+                is_recurring=bool(row.is_recurring),
+                **row.model_dump(exclude={"is_recurring"}),
             )
             for row in rows
         ]
-        return await transaction_repository.add_many(session, user_id, transactions)
+        count = await transaction_repository.add_many(session, user_id, transactions)
+        await TransactionService._refresh_recurring(session, user_id, {t.merchant_key for t in transactions})
+        return count
 
     @staticmethod
     def _require_all(ids: list[uuid.UUID], changed: list[uuid.UUID]) -> None:
@@ -117,9 +177,11 @@ class TransactionService:
 
     @staticmethod
     async def batch_soft_delete(session: AsyncSession, user_id: uuid.UUID, ids: list[uuid.UUID]) -> int:
-        """Soft-delete up to 100 transactions, all or none."""
+        """Soft-delete up to 100 transactions, all or none. Their merchants are re-judged."""
+        keys = await transaction_repository.merchant_keys_for_ids(session, user_id, ids)
         changed = await transaction_repository.soft_delete_ids(session, user_id, ids)
         TransactionService._require_all(ids, changed)
+        await TransactionService._refresh_recurring(session, user_id, keys)
         return len(changed)
 
     @staticmethod
