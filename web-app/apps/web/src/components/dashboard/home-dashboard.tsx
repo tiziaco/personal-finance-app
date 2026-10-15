@@ -31,13 +31,16 @@ export function HomeDashboard() {
   return (
     <div className="space-y-6">
       <WelcomeHeader referenceMonth={data?.reference_month} />
-      {query.isError ? (
-        <SectionError
-          what="your overview"
-          onRetry={() => void query.refetch()}
-        />
-      ) : !data ? (
-        <DashboardSkeleton />
+      {/* A failed background refetch keeps its data: the error replaces only an empty section. */}
+      {!data ? (
+        query.isError ? (
+          <SectionError
+            what="your overview"
+            onRetry={() => void query.refetch()}
+          />
+        ) : (
+          <DashboardSkeleton />
+        )
       ) : (
         <>
           <SummaryCards dashboard={data} />

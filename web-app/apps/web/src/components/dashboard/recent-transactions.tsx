@@ -32,7 +32,8 @@ export function RecentTransactions() {
   })
   const { label } = useCategories()
 
-  if (query.isError) {
+  // A failed background refetch keeps its data: the error replaces only an empty list.
+  if (query.isError && !query.data) {
     return (
       <SectionError
         what="recent transactions"

@@ -147,6 +147,23 @@ describe("HomeDashboard", () => {
     expect(recentRefetch).toHaveBeenCalled()
   })
 
+  it("a failed background refetch keeps the cards and offers no retry", () => {
+    dashboard({ isError: true, data: DATA })
+    recent({
+      isError: true,
+      data: { items: [TXN], total: 1, offset: 0, limit: 10 },
+    })
+    render(<HomeDashboard />)
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Couldn't load/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Retry" }),
+    ).not.toBeInTheDocument()
+    expect(screen.getAllByText("REWE").length).toBeGreaterThan(0)
+  })
+
   it("shows skeletons, never nothing, while loading", () => {
     dashboard({ isPending: true })
     recent({ isPending: true })
