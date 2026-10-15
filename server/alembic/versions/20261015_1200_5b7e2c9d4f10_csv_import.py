@@ -37,6 +37,8 @@ def upgrade() -> None:
         ),
     )
     op.alter_column("transaction", "recurring_source", server_default=None)
+    # Before this revision only a ticked box or the seed set is_recurring: both the user's (D6).
+    op.execute("UPDATE \"transaction\" SET recurring_source = 'user' WHERE is_recurring")
     conn = op.get_bind()
     for merchant in conn.execute(sa.text('SELECT DISTINCT merchant FROM "transaction"')).scalars().all():
         conn.execute(

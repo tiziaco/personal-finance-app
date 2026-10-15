@@ -178,8 +178,9 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
 
   Only a ticked Recurring box on a manual add is a `user` assertion; unticked is `detected`. In
   an import, a mapped recurring column is the user's assertion; a blank cell lets the rule
-  decide. The seed script passes a bool, so its rows are `user`. The migration set existing rows
-  to `detected`; their `is_recurring` values stand until the rule next runs for their merchant.
+  decide. The seed script passes a bool, so its rows are `user`. The migration followed the same
+  rule for rows that already existed: a recurring one became `user`, since only a ticked box or
+  the seed could have set it, and every other row `detected`.
 - **D7 — `merchant_key`, a stored normalised merchant (15 Oct 2026).** The rule needs "the same
   merchant" to mean more than equal text, since a bank prints `PAYPAL *NETFLIX 4029357733` one
   month and `NETFLIX.COM` the next. `normalise_merchant` (in `domain/merchant.py`) runs, in
