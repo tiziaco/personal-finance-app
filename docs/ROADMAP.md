@@ -28,6 +28,7 @@ Links are relative to `docs/`.
 | **3 Chat screen** — the conversations UI on the existing `conversation` module; stops the stream on a client disconnect (WS7); moves the LLM provider to OpenRouter | complete — [PR #11](https://github.com/tiziaco/personal-finance-app/pull/11) into `template-base`; reaches `main` at Cutover | `feat/chat-screen` | [`chat.md`](./product/features/chat.md), [`data-model/conversation.md`](./data-model/conversation.md) |
 | **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler; the recurring-detection rule that sets `is_recurring` | complete — [PR #14](https://github.com/tiziaco/personal-finance-app/pull/14) into `template-base`; reaches `main` at Cutover | `feat/csv-import` | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md), [`data-model/transaction.md`](./data-model/transaction.md) D6–D9 |
 | **5a Analytics dashboard** — the whole computation library and the home dashboard | complete — [PR #13](https://github.com/tiziaco/personal-finance-app/pull/13) into `template-base`; reaches `main` at Cutover | `feat/analytics-dashboard` | [`analytics.md`](./product/features/analytics.md) |
+| **Fixes before wave 3** — the 401 race after sign-in; `LLMService`'s shared fallback state; the import rejects dates analytics cannot read; fixed income and expense chart colours | in progress | `fix/pre-wave-3` | [`BUGS.md`](./BUGS.md) "The first page load after sign-in fires its queries without a token"; [`TODO.md`](./TODO.md) "Server — CSV import follow-ups" (the `LLMService` and date-range items) and "Web — dedicated income and expense colours" |
 | **5b Analytics page** — the four `/analytics` views | not started | — | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **6 Insights** — generation, the `/insights` page and the dashboard callout | not started | — | [`insights.md`](./product/features/insights.md). No spec yet |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money | not started | — | [`chat.md`](./product/features/chat.md). No spec yet |
@@ -44,8 +45,8 @@ here when someone picks it up.
 | Wave | Steps, in parallel | Starts when |
 |---|---|---|
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
-| 2 | 4 CSV import ∥ 5a Analytics dashboard | in progress (2 has merged) |
-| 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | 5a has merged |
+| 2 | 4 CSV import ∥ 5a Analytics dashboard | done — #13, #14 merged into `template-base` |
+| 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | the fixes before wave 3 have merged |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -70,6 +71,10 @@ not wait for 4.
   stability too, which have no screen of their own (technical; decision on 13 Oct 2026).
   Insights and the chat tools call them, so shipping them in 5a lets 5b, 6 and 7 run
   together. In 5b they would serialise 6 and 7 behind it.
+- **A round of fixes comes between waves 2 and 3** (decision on 15 Oct 2026). The 401
+  race shows on `/transactions` today, and wave 3 adds two more LLM callers, so the shared
+  `LLMService` fallback state is fixed before they arrive. The chart colours go in the same
+  change because 5b needs them.
 - **6 and 7 wait for 5a** (technical). The insights graph calls all eight library
   functions, and its callout goes on the home page 5a builds. The chat tools wrap the
   library; `app.agents` may not import a module (contract R2), so they are built in a
