@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.csv_mapping import ColumnHint, propose_mapping
 from app.agents.transaction_labeler import MerchantToLabel, label
 from app.core.logging import logger
-from app.modules.transaction.domain import fingerprint, normalise_merchant, plan_count_matched
+from app.modules.transaction.domain import normalise_merchant
 from app.modules.transaction.imports.domain import (
     ColumnProfile,
     CsvFormatError,
@@ -156,9 +156,10 @@ class ImportService:
             raise InvalidImportMappingError(problem.message, reason=problem.reason)
         rows, rejected = read_rows(parsed, mapping)
 
-        prints = [fingerprint(user_id, r.date, r.merchant, r.amount, r.description) for r in rows]
-        existing = await transaction_service.count_active_by_fingerprints(session, user_id, prints)
-        fresh = [row for row, keep in zip(rows, plan_count_matched(prints, existing), strict=True) if keep]
+        keep = await transaction_service.which_are_new(
+            session, user_id, [(r.date, r.merchant, r.amount, r.description) for r in rows]
+        )
+        fresh = [row for row, new in zip(rows, keep, strict=True) if new]
 
         await _release_connection(session)
         labelled = await label(_merchants_to_label(fresh), CATEGORIES, user_id=user_id, upload_id=upload_id)

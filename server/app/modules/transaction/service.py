@@ -14,6 +14,7 @@ from app.modules.transaction.domain import (
     detect_recurring,
     fingerprint,
     normalise_merchant,
+    plan_count_matched,
 )
 from app.modules.transaction.exceptions import DuplicateTransactionError, TransactionNotFoundError
 from app.modules.transaction.models import Transaction
@@ -133,11 +134,17 @@ class TransactionService:
         await TransactionService._refresh_recurring(session, transaction.user_id, {transaction.merchant_key})
 
     @staticmethod
-    async def count_active_by_fingerprints(
-        session: AsyncSession, user_id: uuid.UUID, fingerprints: list[str]
-    ) -> dict[str, int]:
-        """The user's active rows per fingerprint: the import's duplicate check."""
-        return await transaction_repository.count_active_by_fingerprints(session, user_id, fingerprints)
+    async def which_are_new(
+        session: AsyncSession, user_id: uuid.UUID, rows: list[tuple[dt.date, str, Decimal, Optional[str]]]
+    ) -> list[bool]:
+        """Which of a file's rows to import, each given as (date, merchant, amount, description).
+
+        Count-matched (docs/data-model/transaction.md, D3): a row the user holds k
+        times, among their active rows, keeps all but its first k copies.
+        """
+        prints = [fingerprint(user_id, *row) for row in rows]
+        existing = await transaction_repository.count_active_by_fingerprints(session, user_id, prints)
+        return plan_count_matched(prints, existing)
 
     @staticmethod
     async def import_many(session: AsyncSession, user_id: uuid.UUID, rows: list[TransactionImport]) -> int:

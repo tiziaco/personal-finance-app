@@ -264,15 +264,25 @@ class TestRecurringOnWrite:
         assert await _series(db_session, test_user.id, "kiosk") == [(True, "user")]
 
 
-class TestCountActiveByFingerprints:
-    async def test_counts_active_rows_only(self, db_session, test_user, other_user, make_transaction):
-        a = await make_transaction(test_user)
+class TestWhichAreNew:
+    async def test_count_matches_against_the_users_active_rows(
+        self, db_session, test_user, other_user, make_transaction
+    ):
+        """D3: one Späti held, two in the file, so the second is new; a deleted row and another user's do not count."""
         await make_transaction(test_user)
         gone = await make_transaction(test_user, merchant="Gone")
         await transaction_service.soft_delete(db_session, gone)
-        await make_transaction(other_user)
+        await make_transaction(other_user, merchant="Kiosk")
 
-        counts = await transaction_service.count_active_by_fingerprints(
-            db_session, test_user.id, [a.fingerprint, gone.fingerprint, "f" * 64]
+        spaeti = (dt.date(2026, 3, 3), "Späti", Decimal("-4.50"), None)
+        keep = await transaction_service.which_are_new(
+            db_session,
+            test_user.id,
+            [
+                spaeti,
+                spaeti,
+                (dt.date(2026, 3, 3), "Gone", Decimal("-4.50"), None),
+                (dt.date(2026, 3, 3), "Kiosk", Decimal("-4.50"), None),
+            ],
         )
-        assert counts == {a.fingerprint: 2}
+        assert keep == [False, True, True, True]
