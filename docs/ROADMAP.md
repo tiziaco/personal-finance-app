@@ -26,8 +26,8 @@ Links are relative to `docs/`.
 | **1 Foundation** — single-tenant B2C base | complete — [PR #9](https://github.com/tiziaco/personal-finance-app/pull/9) into `template-base`; reaches `main` at Cutover | `port/template` | [`architecture/`](./architecture/), [`setup/clerk.md`](./setup/clerk.md) |
 | **2 Transactions** — the `transaction` table and the category list; browse, filter, add, edit, delete and recategorise by hand; fixes the email-uniqueness lockout | complete — [PR #12](https://github.com/tiziaco/personal-finance-app/pull/12) into `template-base`; reaches `main` at Cutover | `feat/transactions` | [`transactions.md`](./product/features/transactions.md), [`categorisation.md`](./product/features/categorisation.md) (correcting a category), [`data-model/transaction.md`](./data-model/transaction.md), [`data-model/account.md`](./data-model/account.md) D3 (email not unique) |
 | **3 Chat screen** — the conversations UI on the existing `conversation` module; stops the stream on a client disconnect (WS7); moves the LLM provider to OpenRouter | complete — [PR #11](https://github.com/tiziaco/personal-finance-app/pull/11) into `template-base`; reaches `main` at Cutover | `feat/chat-screen` | [`chat.md`](./product/features/chat.md), [`data-model/conversation.md`](./data-model/conversation.md) |
-| **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler | not started | — | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md). No spec yet |
-| **5a Analytics dashboard** — the whole computation library and the home dashboard | not started | — | [`analytics.md`](./product/features/analytics.md). No spec yet |
+| **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler; the recurring-detection rule that sets `is_recurring` | in progress | `feat/csv-import` | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md). No spec yet |
+| **5a Analytics dashboard** — the whole computation library and the home dashboard | in progress | `feat/analytics-dashboard` | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **5b Analytics page** — the four `/analytics` views | not started | — | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **6 Insights** — generation, the `/insights` page and the dashboard callout | not started | — | [`insights.md`](./product/features/insights.md). No spec yet |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money | not started | — | [`chat.md`](./product/features/chat.md). No spec yet |
@@ -44,7 +44,7 @@ here when someone picks it up.
 | Wave | Steps, in parallel | Starts when |
 |---|---|---|
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
-| 2 | 4 CSV import ∥ 5a Analytics dashboard | now (2 has merged) |
+| 2 | 4 CSV import ∥ 5a Analytics dashboard | in progress (2 has merged) |
 | 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | 5a has merged |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
@@ -59,6 +59,11 @@ not wait for 4.
   `conversation` module and the sidebar, and needs nothing from the finance steps.
 - **CSV import includes AI categorisation** (product, 13 Oct 2026): an import arrives
   categorised. The labeler has no other caller, so as its own step it could not be demoed.
+- **Recurring detection rides in CSV import** (technical; decision on 15 Oct 2026). The
+  stored `is_recurring` flag is the one source of truth: one deterministic rule in
+  `transaction` sets it after every write, a user's edit is never overwritten, and every
+  reader (the dashboard card, insights, the chat tools) reads the flag rather than
+  detecting recurrence itself. The rule is on `transaction`'s write path, which step 4 owns.
 - **5a needs only Transactions, so it runs beside CSV import** (technical). Transactions
   added by hand, or by a seed script, are enough data.
 - **5a carries the whole computation library** — merchants, recurring, anomalies and
