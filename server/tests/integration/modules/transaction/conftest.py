@@ -7,8 +7,8 @@ import pytest
 import pytest_asyncio
 
 from app.modules.account.models import User
+from app.modules.transaction.domain import fingerprint, normalise_merchant
 from app.modules.transaction.models import Transaction
-from app.modules.transaction.service import fingerprint
 
 
 @pytest_asyncio.fixture
@@ -35,12 +35,14 @@ def make_transaction(db_session):
             "confidence": 0.8,
             "is_recurring": False,
             "original_category": None,
+            "recurring_source": "detected",
         } | overrides
         txn = Transaction(
             user_id=user.id,
             fingerprint=fingerprint(
                 user.id, fields["date"], fields["merchant"], fields["amount"], fields["description"]
             ),
+            merchant_key=normalise_merchant(fields["merchant"]),
             **fields,
         )
         db_session.add(txn)

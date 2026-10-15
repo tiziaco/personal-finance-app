@@ -212,6 +212,7 @@ class RateLimitEndpointSettings(BaseSettings):
     CHAT_STREAM: List[str] = Field(default_factory=lambda: ["20 per minute"])
     MESSAGES: List[str] = Field(default_factory=lambda: ["50 per minute"])
     TRANSACTIONS: List[str] = Field(default_factory=lambda: ["120 per minute"])
+    TRANSACTION_IMPORTS: List[str] = Field(default_factory=lambda: ["10 per minute"])
     REGISTER: List[str] = Field(default_factory=lambda: ["10 per hour"])
     LOGIN: List[str] = Field(default_factory=lambda: ["20 per minute"])
     ROOT: List[str] = Field(default_factory=lambda: ["10 per minute"])

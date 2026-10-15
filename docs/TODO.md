@@ -31,13 +31,6 @@ Two findings do not wait on that decision and are small on their own:
 - **A4 — mem0 failure is silent.** `delete_user_memory` swallows its exception, so a
   failed deletion reports success. Make it propagate, as checkpoint deletion does.
 
-## Server — the R9 import-linter contract
-
-The rule that a `domain` slot imports no ORM and no framework has no contract yet,
-because no module has a `domain` slot. **Unblocks:** nothing until then; it lands with the
-first one, as one `forbidden` contract: `app.modules.*.domain` may not import `sqlmodel`,
-`sqlalchemy` or `fastapi`. Reasoning: `docs/architecture/server.md` §3.
-
 ## Server — events beyond the request
 
 Every entry point is a request, deferred handlers run in-process, and a deferred handler
@@ -56,6 +49,15 @@ unacceptable. The shape, decided so a fork does not re-decide it:
   replacing the in-memory queue for those events.
 
 Reasoning: `docs/architecture/server.md` §8.
+
+## Server — no request-body size limit ahead of FastAPI
+
+Starlette spools a multipart body to disk in full before auth, the rate limiter or the route
+run. The import's 5 MB check bounds only what the route reads into memory, and an
+unauthenticated multi-GB upload is accepted onto disk before its 401.
+
+**Fix:** an ASGI middleware that rejects on `Content-Length` and counts streamed bytes, or a
+body limit at the proxy (`docker-compose.prod.yml` sets none). **Found:** step 4.
 
 ## Server — row-level security
 
@@ -76,7 +78,26 @@ the route. The pool connection sits idle in transaction for that long. Fine at o
 traffic; under concurrent chats it starves other requests of connections. The fix is to
 read what the call needs, release the session before the model call, and write with a
 short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent load.
+must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
+(`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
+
+## Server — CSV import follow-ups
+
+- During an LLM outage every labeller batch walks the full model fallback chain before
+  failing, so a large file takes several waves to become a 503. Stop launching batches once
+  the first wave has all failed.
+- `profile_columns` and `read_rows` are synchronous CPU work on the event loop (about 0.6 s
+  for 3,000 rows × 12 columns). Move them to `run_in_threadpool` if traffic grows.
+- A short DKB export whose preamble lines outnumber its transactions is refused as
+  `unnamed_column`, because the most common line width is the preamble's.
+- `LLMService` keeps its fallback position on itself (`_current_model_index`, `_llm`), but
+  counts each call's attempts locally. Calls running at once on one service each move the
+  shared position, so a call can use up its attempts without reaching a healthy model, and
+  the position stays wherever it ended. The import builds a service per import
+  (`structured_llm()`), which keeps one user's failures off another's; its own five batches
+  still share one. The chatbot's singleton `llm_service` has the same issue. Fix: keep the
+  model index and client in locals inside `_call_with_fallback`, starting from the service's
+  default.
 
 ## Web — tests the suite does not have yet
 
@@ -93,13 +114,6 @@ must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
-## Web — the transactions empty state, with CSV import (roadmap step 4)
-
-With no transactions the page offers **Add a transaction**. When CSV upload ships, the
-prompt becomes **Upload a CSV** (`transactions.md` §2).
-
-**Unblocks:** nothing; it lands with step 4.
-
 ## Web — legacy's theme
 
 Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
@@ -111,19 +125,6 @@ calendar date-range picker is out too; the date filter uses the shared single-da
 data on 14 Oct 2026.
 
 **Unblocks:** nothing; the app is usable with the template's theme.
-
-## Port — carry into backend modules
-
-Defects in the legacy app (`../pf-legacy/docs/TODO.md`) that the port should not repeat
-when it rebuilds each module. One line each, pointing at the legacy file, and the roadmap
-step that owns it.
-
-- **Services returning `None` on a miss** (step 4) — `CSVMappingService.get_session` returns
-  `None` and the route checks; raise a not-found error in the service instead.
-  `server/app/services/csv_mapping/service.py`.
-- **Direct `ChatOpenAI` use** (step 4) — the CSV column-mapping proposal builds its own client,
-  bypassing the LLM service's retries, model fallback and error translation. Go through
-  the LLM service. `server/app/api/v1/transactions.py` (`_propose_column_mapping`).
 
 ## Cutover (roadmap step 8)
 
@@ -157,15 +158,6 @@ cover could be answered by generated code run in an isolated sandbox with its ow
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
-
-## Server — analytics groups merchants by step 4's merchant_key
-
-After step 4 merges, `transaction` stores `merchant_key = normalise_merchant(merchant)` and step
-4's recurring rule groups by it; analytics groups by `strip().casefold()`
-(`domain/merchants.py`), so "PAYPAL *Spotify" and "Spotify" become two merchants and a recurring
-cost can double-count. Fix: add `merchant_key` to `AnalysisRow` and group by it. **Unblocks:**
-steps 6 and 7 consuming recurring and merchant analyses. Decided with step 5a's final review
-(15 Oct 2026).
 
 ## Web — dedicated income and expense colours
 

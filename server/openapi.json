@@ -255,6 +255,21 @@
         "title": "Body_renameConversation",
         "type": "object"
       },
+      "Body_uploadTransactionsCsv": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "The bank's CSV export, at most 5 MB",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadTransactionsCsv",
+        "type": "object"
+      },
       "Category": {
         "enum": [
           "income",
@@ -819,6 +834,64 @@
         "title": "Environment",
         "type": "string"
       },
+      "FileProblem": {
+        "description": "Why a file is refused: `details.reason` of a 422 INVALID_IMPORT_FILE. The web words each one.",
+        "enum": [
+          "not_csv",
+          "too_large",
+          "empty",
+          "malformed",
+          "no_header",
+          "unnamed_column",
+          "duplicate_column",
+          "no_rows",
+          "too_many_rows"
+        ],
+        "title": "FileProblem",
+        "type": "string"
+      },
+      "FileRefusal": {
+        "description": "A 422 INVALID_IMPORT_FILE. A request with no file part is a plain validation 422 instead.",
+        "properties": {
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/FileRefusalDetails"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "correlation_id",
+          "details"
+        ],
+        "title": "FileRefusal",
+        "type": "object"
+      },
+      "FileRefusalDetails": {
+        "description": "Why the file was refused.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/FileProblem",
+            "description": "A code the web words itself"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "FileRefusalDetails",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -892,6 +965,261 @@
         ],
         "title": "HiddenSubscriptionResponse",
         "type": "object"
+      },
+      "ImportColumn": {
+        "description": "One column of an uploaded file, as the review shows it.",
+        "properties": {
+          "amount_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The amount style detected in it: 1.234,56 or 1,234.56",
+            "title": "Amount Style"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The date format detected in it, such as dd.mm.yyyy",
+            "title": "Date Format"
+          },
+          "empty_rate": {
+            "description": "The share of rows where it is empty, 0 to 1",
+            "title": "Empty Rate",
+            "type": "number"
+          },
+          "name": {
+            "description": "The column's name in the file's header",
+            "title": "Name",
+            "type": "string"
+          },
+          "proposed_field": {
+            "$ref": "#/components/schemas/ImportField",
+            "description": "The field the app proposes for it"
+          }
+        },
+        "required": [
+          "name",
+          "proposed_field",
+          "empty_rate"
+        ],
+        "title": "ImportColumn",
+        "type": "object"
+      },
+      "ImportConfirm": {
+        "description": "The mapping the user confirmed. A column left out is ignored.",
+        "properties": {
+          "mapping": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ImportField"
+            },
+            "description": "Column name to field",
+            "title": "Mapping",
+            "type": "object"
+          }
+        },
+        "required": [
+          "mapping"
+        ],
+        "title": "ImportConfirm",
+        "type": "object"
+      },
+      "ImportField": {
+        "description": "What a CSV column can be mapped to. `ignore` drops the column.",
+        "enum": [
+          "date",
+          "merchant",
+          "amount",
+          "description",
+          "original_category",
+          "recurring",
+          "ignore"
+        ],
+        "title": "ImportField",
+        "type": "string"
+      },
+      "ImportPreview": {
+        "description": "An uploaded file held for 30 minutes, and its proposed mapping.",
+        "properties": {
+          "columns": {
+            "description": "Every column, in file order",
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "filename": {
+            "description": "The uploaded file's name",
+            "title": "Filename",
+            "type": "string"
+          },
+          "mapping_source": {
+            "$ref": "#/components/schemas/MappingSource",
+            "description": "remembered, proposed by AI, or none"
+          },
+          "row_count": {
+            "description": "Data rows in the file",
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sample_rows": {
+            "description": "Up to three rows, cells in column order",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Sample Rows",
+            "type": "array"
+          },
+          "upload_id": {
+            "description": "The held upload; confirm takes it",
+            "format": "uuid",
+            "title": "Upload Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_id",
+          "filename",
+          "row_count",
+          "mapping_source",
+          "columns",
+          "sample_rows"
+        ],
+        "title": "ImportPreview",
+        "type": "object"
+      },
+      "ImportRejection": {
+        "description": "A row that was not imported.",
+        "properties": {
+          "reason": {
+            "description": "Why it was left out",
+            "title": "Reason",
+            "type": "string"
+          },
+          "row": {
+            "description": "The row's line number in the file",
+            "title": "Row",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "row",
+          "reason"
+        ],
+        "title": "ImportRejection",
+        "type": "object"
+      },
+      "ImportResult": {
+        "description": "What a confirm did.",
+        "properties": {
+          "imported": {
+            "description": "Rows saved",
+            "title": "Imported",
+            "type": "integer"
+          },
+          "rejected": {
+            "description": "Rows left out, in file order",
+            "items": {
+              "$ref": "#/components/schemas/ImportRejection"
+            },
+            "title": "Rejected",
+            "type": "array"
+          },
+          "skipped_duplicates": {
+            "description": "Rows already held, skipped",
+            "title": "Skipped Duplicates",
+            "type": "integer"
+          },
+          "uncategorised": {
+            "description": "Rows saved under Miscellaneous because the labeller could not place them",
+            "title": "Uncategorised",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "imported",
+          "skipped_duplicates",
+          "uncategorised",
+          "rejected"
+        ],
+        "title": "ImportResult",
+        "type": "object"
+      },
+      "MappingIssue": {
+        "description": "Why a confirmed mapping is refused: `details.reason` of a 422 INVALID_IMPORT_MAPPING.",
+        "enum": [
+          "unknown_column",
+          "field_twice",
+          "missing_required"
+        ],
+        "title": "MappingIssue",
+        "type": "string"
+      },
+      "MappingRefusal": {
+        "description": "A 422 INVALID_IMPORT_MAPPING. A mapping naming an unknown field is a plain validation 422 instead.",
+        "properties": {
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/MappingRefusalDetails"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "correlation_id",
+          "details"
+        ],
+        "title": "MappingRefusal",
+        "type": "object"
+      },
+      "MappingRefusalDetails": {
+        "description": "Why the mapping was refused.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/MappingIssue",
+            "description": "A code the web words itself"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "MappingRefusalDetails",
+        "type": "object"
+      },
+      "MappingSource": {
+        "description": "Where a preview's mapping came from.",
+        "enum": [
+          "remembered",
+          "proposed",
+          "none"
+        ],
+        "title": "MappingSource",
+        "type": "string"
       },
       "MerchantBreakdownResponse": {
         "description": "Spend by merchant over the range: the top by spend and by frequency, and the concentration.",
@@ -3399,6 +3727,112 @@
         "summary": "List the categories",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/imports": {
+      "post": {
+        "description": "Hold a bank's CSV export for 30 minutes and propose which column is which. A file this app cannot read is 422 INVALID_IMPORT_FILE, with details.reason. A new upload replaces the one held before.",
+        "operationId": "uploadTransactionsCsv",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadTransactionsCsv"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileRefusal"
+                }
+              }
+            },
+            "description": "The file cannot be imported"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Upload a CSV",
+        "tags": [
+          "transaction-imports"
+        ]
+      }
+    },
+    "/api/v1/transactions/imports/{upload_id}/confirm": {
+      "post": {
+        "description": "Read the held file through the confirmed mapping, skip duplicates, categorise every row and save. 404 IMPORT_UPLOAD_NOT_FOUND for an expired, confirmed, replaced or another user's upload; 422 INVALID_IMPORT_MAPPING with details.reason; 503 CATEGORISATION_UNAVAILABLE keeps the upload for a retry.",
+        "operationId": "confirmTransactionsImport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "upload_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Upload Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ImportConfirm"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MappingRefusal"
+                }
+              }
+            },
+            "description": "The mapping cannot be used"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Confirm an import",
+        "tags": [
+          "transaction-imports"
         ]
       }
     },

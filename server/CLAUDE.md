@@ -234,12 +234,15 @@ api_key = settings.llm.OPENROUTER_API_KEY
 
 ## Agent Architecture
 
-All agents extend `BaseAgent` (`app/agents/base/`) and must implement `create_graph()`.
+A conversational agent extends `BaseAgent` (`app/agents/base/`) and implements `create_graph()`.
+A one-shot call whose answer must be JSON of a known shape — the CSV import's `csv_mapping` and
+`transaction_labeler` — is a plain function over `ask_json()` (`app/agents/shared/structured.py`),
+traced with `create_trace_config()`, with no graph and no checkpoint.
 
 **Shared components:**
 - `app/agents/shared/memory/` — `get_relevant_memory()`, `update_memory()`, `delete_user_memory()`
 - `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()` and its set-based `delete_conversations_checkpoints()`
-- `app/agents/shared/observability/` — `create_graph_config()` wires Langfuse callbacks
+- `app/agents/shared/observability/` — `create_graph_config()` wires Langfuse callbacks; `create_trace_config()` does it for a call outside a graph
 
 `BaseAgent` provides `get_response()`, `get_stream_response()` and `get_chat_history()` with memory and tracing built in. Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/shared/checkpointing/` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
 

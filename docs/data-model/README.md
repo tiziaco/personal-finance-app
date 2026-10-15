@@ -1,7 +1,7 @@
 # Data model
 
 **Status:** draft — each area's doc carries its own status · **Owner:** Tiziano ·
-**Last updated:** 12 Oct 2026
+**Last updated:** 15 Oct 2026
 **Scope:** what the platform stores, one doc per server module, and the conventions every
 table follows. How a feature *behaves* is in [`../product/features/`](../product/features/).
 
@@ -13,7 +13,7 @@ table follows. How a feature *behaves* is in [`../product/features/`](../product
 |---|---|---|---|---|
 | [`account.md`](./account.md) | [`account`](../product/features/account.md) | `account` | `"user"` | built |
 | [`conversation.md`](./conversation.md) | [`chat`](../product/features/chat.md) | `conversation` | `conversation` | built |
-| [`transaction.md`](./transaction.md) | [`transactions`](../product/features/transactions.md), [`categorisation`](../product/features/categorisation.md) | `transaction` | `transaction` | built |
+| [`transaction.md`](./transaction.md) | [`transactions`](../product/features/transactions.md), [`categorisation`](../product/features/categorisation.md), [`csv-import`](../product/features/csv-import.md) | `transaction` | `transaction`, `csv_mapping_profile`, `csv_upload` | built |
 
 **A feature doc is named for the product area** (`transactions.md`), **a data-model doc for
 the server module that owns its tables** (`transaction.md`). The mapping is not one-to-one: a doc
@@ -43,9 +43,11 @@ authoritative and is not is worse than none.
 
 Every table follows these. A doc lists only its own table's exceptions.
 
-- **Singular table names**, SQLModel's default — no model sets `__tablename__`. `user` is
+- **Singular table names**, SQLModel's default. `user` is
   a reserved word in PostgreSQL: unquoted, `FROM user` returns the `current_user`
-  function's row instead of erroring. Hand-written SQL writes `"user"`.
+  function's row instead of erroring. Hand-written SQL writes `"user"`. A model whose class
+  name is two words sets `__tablename__` in snake_case (`csv_upload`), since SQLModel's default
+  runs the words together.
 - **UUID v7 primary keys** in a native `uuid` column, from `UUIDPrimaryKeyMixin`
   (`server/app/models/base.py`): generated app-side with `uuid_utils.compat.uuid7()`, with
   `DEFAULT uuidv7()` as the backstop for raw SQL. `uuidv7()` needs **PostgreSQL 18**. Ids

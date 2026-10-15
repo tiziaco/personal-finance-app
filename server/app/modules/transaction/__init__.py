@@ -35,9 +35,13 @@ __all__ = [
     "TransactionResponse",
     "UserTransaction",
     "get_user_transaction",
+    "imports_router",
     "router",
     "transaction_service",
 ]
 
 # @events.on is a module-level side effect: importing the root is what subscribes.
-from app.modules.transaction import handlers  # noqa: E402
+from app.modules.transaction import handlers  # noqa: E402, F401
+
+# After the core, which it imports. Importing it also subscribes its handlers.
+from app.modules.transaction.imports import router as imports_router  # noqa: E402

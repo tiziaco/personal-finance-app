@@ -54,3 +54,14 @@ def test_herfindahl_bounds():
 
 def test_top_n():
     assert len(merchant_breakdown(ROWS, top_n=1).top_by_spend) == 1
+
+
+def test_one_merchant_key_is_one_merchant_whatever_the_bank_printed():
+    rows = [
+        row("2026-01-01", "-10.00", merchant="PAYPAL *Spotify 4029357733"),
+        row("2026-02-01", "-10.00", merchant="Spotify"),
+        row("2026-02-03", "-5.00", merchant="Spotify Fan Shop", key="spotify fan shop"),
+    ]
+    result = merchant_breakdown(rows)
+    assert [(m.merchant, m.count) for m in result.top_by_spend] == [("Spotify", 2), ("Spotify Fan Shop", 1)]
+    assert result.concentration.unique_merchants == 2

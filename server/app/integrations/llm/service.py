@@ -9,6 +9,7 @@ from typing import (
 
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import BaseMessage
+from langchain_core.runnables import RunnableConfig
 from langchain_openai import ChatOpenAI
 from openai import (
     APIError,
@@ -208,14 +209,16 @@ class LLMService:
         before_sleep=before_sleep_log(logger, "WARNING"),
         reraise=True,
     )
-    async def _call_llm_with_retry(self, messages: List[BaseMessage]) -> BaseMessage:
+    async def _call_llm_with_retry(
+        self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
+    ) -> BaseMessage:
         """Call the LLM, retrying per the decorator. Raises OpenAIError if all fail."""
         llm = self.get_llm()
         if not llm:
             raise RuntimeError("llm not initialized")
 
         try:
-            response = await llm.ainvoke(messages)
+            response = await llm.ainvoke(messages, config=config)
             logger.debug("llm_call_successful", message_count=len(messages))
             return response
         except (RateLimitError, APITimeoutError, APIError) as e:
@@ -238,16 +241,20 @@ class LLMService:
         self,
         messages: List[BaseMessage],
         model_name: Optional[str] = None,
+        config: Optional[RunnableConfig] = None,
         **model_kwargs,
     ) -> BaseMessage:
         """Call the LLM with circular fallback, on `model_name` if given.
+
+        `config` carries tracing callbacks for a call made outside a graph;
+        inside one, LangChain propagates the graph's.
 
         Raises:
             ValueError: `model_name` is not in the registry.
             LLMFallbackExhaustedError: Every model failed after retries.
         """
         if not model_name:
-            return await self._call_with_fallback(messages)
+            return await self._call_with_fallback(messages, config)
 
         # Resolved before anything is saved or assigned, so an unknown model
         # raises without having touched the service's state.
@@ -270,15 +277,18 @@ class LLMService:
         logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
 
         try:
-            return await self._call_with_fallback(messages)
+            return await self._call_with_fallback(messages, config)
         finally:
             self._llm, self._current_model_index = saved_llm, saved_index
 
-    async def _call_with_fallback(self, messages: List[BaseMessage]) -> BaseMessage:
+    async def _call_with_fallback(
+        self, messages: List[BaseMessage], config: Optional[RunnableConfig] = None
+    ) -> BaseMessage:
         """Call the current model, rotating through the registry on failure.
 
         Args:
             messages: List of messages to send to the LLM
+            config: Tracing config passed through to the model call
 
         Returns:
             BaseMessage response from the LLM
@@ -296,7 +306,7 @@ class LLMService:
 
         while models_tried < total_models:
             try:
-                response = await self._call_llm_with_retry(messages)
+                response = await self._call_llm_with_retry(messages, config)
                 return response
             except RateLimitError as e:
                 last_error = e

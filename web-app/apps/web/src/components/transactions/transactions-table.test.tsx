@@ -34,6 +34,17 @@ const mutationMocks = vi.hoisted(() => {
   }
 })
 
+vi.mock("@app/api-client/endpoints/transaction-imports", () => ({
+  useUploadTransactionsCsv: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+  useConfirmTransactionsImport: vi.fn(() => ({
+    mutate: vi.fn(),
+    isPending: false,
+  })),
+}))
+
 vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/transactions")>()),
   useListTransactions: vi.fn(),
@@ -159,10 +170,28 @@ describe("TransactionsTable", () => {
     result([])
     renderAt()
     await userEvent.click(
-      screen.getByRole("button", { name: "Add a transaction" }),
+      screen.getByRole("button", { name: "add a transaction" }),
     )
     expect(
       await screen.findByRole("heading", { name: "Add a transaction" }),
+    ).toBeInTheDocument()
+  })
+
+  it("offers Upload a CSV first in the first-run empty state", async () => {
+    result([])
+    renderAt()
+    await userEvent.click(screen.getByRole("button", { name: "Upload a CSV" }))
+    expect(
+      await screen.findByRole("heading", { name: "Import a CSV" }),
+    ).toBeInTheDocument()
+  })
+
+  it("opens the import dialog from the header", async () => {
+    result([row])
+    renderAt()
+    await userEvent.click(screen.getByRole("button", { name: "Import CSV" }))
+    expect(
+      await screen.findByRole("heading", { name: "Import a CSV" }),
     ).toBeInTheDocument()
   })
 

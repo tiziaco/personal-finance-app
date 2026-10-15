@@ -19,14 +19,15 @@ async def test_returns_plain_rows_in_date_order(db_session, test_user, make_tran
         category="household_utilities",
         is_recurring=True,
     )
-    await make_transaction(test_user, date=dt.date(2026, 1, 5), merchant="REWE", amount=Decimal("-30.00"))
+    await make_transaction(test_user, date=dt.date(2026, 1, 5), merchant="REWE Markt GmbH", amount=Decimal("-30.00"))
 
     rows = await transaction_service.list_for_analysis(db_session, test_user.id)
 
     assert rows == [
         AnalysisRow(
             date=dt.date(2026, 1, 5),
-            merchant="REWE",
+            merchant="REWE Markt GmbH",
+            merchant_key="rewe markt",
             amount=Decimal("-30.00"),
             category="food_groceries",
             is_recurring=False,
@@ -34,6 +35,7 @@ async def test_returns_plain_rows_in_date_order(db_session, test_user, make_tran
         AnalysisRow(
             date=dt.date(2026, 2, 1),
             merchant="Landlord",
+            merchant_key="landlord",
             amount=Decimal("-900.00"),
             category="household_utilities",
             is_recurring=True,
