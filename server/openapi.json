@@ -113,6 +113,21 @@
         "title": "Body_renameConversation",
         "type": "object"
       },
+      "Body_uploadTransactionsCsv": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "description": "The bank's CSV export, at most 5 MB",
+            "title": "File",
+            "type": "string"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_uploadTransactionsCsv",
+        "type": "object"
+      },
       "Category": {
         "enum": [
           "income",
@@ -411,6 +426,134 @@
         ],
         "title": "HealthResponse",
         "type": "object"
+      },
+      "ImportColumn": {
+        "description": "One column of an uploaded file, as the review shows it.",
+        "properties": {
+          "amount_style": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The amount style detected in it: 1.234,56 or 1,234.56",
+            "title": "Amount Style"
+          },
+          "date_format": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The date format detected in it, such as dd.mm.yyyy",
+            "title": "Date Format"
+          },
+          "empty_rate": {
+            "description": "The share of rows where it is empty, 0 to 1",
+            "title": "Empty Rate",
+            "type": "number"
+          },
+          "name": {
+            "description": "The column's name in the file's header",
+            "title": "Name",
+            "type": "string"
+          },
+          "proposed_field": {
+            "$ref": "#/components/schemas/ImportField",
+            "description": "The field the app proposes for it"
+          }
+        },
+        "required": [
+          "name",
+          "proposed_field",
+          "empty_rate"
+        ],
+        "title": "ImportColumn",
+        "type": "object"
+      },
+      "ImportField": {
+        "description": "What a CSV column can be mapped to. `ignore` drops the column.",
+        "enum": [
+          "date",
+          "merchant",
+          "amount",
+          "description",
+          "original_category",
+          "recurring",
+          "ignore"
+        ],
+        "title": "ImportField",
+        "type": "string"
+      },
+      "ImportPreview": {
+        "description": "An uploaded file held for 30 minutes, and its proposed mapping.",
+        "properties": {
+          "columns": {
+            "description": "Every column, in file order",
+            "items": {
+              "$ref": "#/components/schemas/ImportColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "filename": {
+            "description": "The uploaded file's name",
+            "title": "Filename",
+            "type": "string"
+          },
+          "mapping_source": {
+            "$ref": "#/components/schemas/MappingSource",
+            "description": "remembered, proposed by AI, or none"
+          },
+          "row_count": {
+            "description": "Data rows in the file",
+            "title": "Row Count",
+            "type": "integer"
+          },
+          "sample_rows": {
+            "description": "Up to three rows, cells in column order",
+            "items": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "title": "Sample Rows",
+            "type": "array"
+          },
+          "upload_id": {
+            "description": "The held upload; confirm takes it",
+            "format": "uuid",
+            "title": "Upload Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "upload_id",
+          "filename",
+          "row_count",
+          "mapping_source",
+          "columns",
+          "sample_rows"
+        ],
+        "title": "ImportPreview",
+        "type": "object"
+      },
+      "MappingSource": {
+        "description": "Where a preview's mapping came from.",
+        "enum": [
+          "remembered",
+          "proposed",
+          "none"
+        ],
+        "title": "MappingSource",
+        "type": "string"
       },
       "Message": {
         "description": "One message in an agent's history.\n\nOutput shape only. The rules on what a user may send (length, script tags,\nnull bytes) live on `ChatRequest`: applied here they also judged the\nassistant's replies, so a long answer, or one quoting `<script>` in a code\nblock, turned the history route into a 500.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
@@ -1838,6 +1981,53 @@
         "summary": "List the categories",
         "tags": [
           "transactions"
+        ]
+      }
+    },
+    "/api/v1/transactions/imports": {
+      "post": {
+        "description": "Hold a bank's CSV export for 30 minutes and propose which column is which. A file this app cannot read is 422 INVALID_IMPORT_FILE, with details.reason. A new upload replaces the one held before.",
+        "operationId": "uploadTransactionsCsv",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_uploadTransactionsCsv"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportPreview"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Upload a CSV",
+        "tags": [
+          "transaction-imports"
         ]
       }
     },
