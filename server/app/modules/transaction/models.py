@@ -8,6 +8,7 @@ from sqlalchemy import CHAR, Column, Index
 from sqlmodel import Field
 
 from app.models.base import BaseModel, SoftDeleteMixin, UserOwnedMixin, UUIDPrimaryKeyMixin
+from app.modules.transaction.domain import MAX_KEY
 
 
 class Transaction(BaseModel, UUIDPrimaryKeyMixin, UserOwnedMixin, SoftDeleteMixin, table=True):
@@ -43,4 +44,4 @@ class Transaction(BaseModel, UUIDPrimaryKeyMixin, UserOwnedMixin, SoftDeleteMixi
     is_recurring: bool = Field(default=False)
     recurring_source: str = Field(max_length=16)
     fingerprint: str = Field(sa_column=Column(CHAR(64), nullable=False))
-    merchant_key: str = Field(max_length=255)
+    merchant_key: str = Field(max_length=MAX_KEY)

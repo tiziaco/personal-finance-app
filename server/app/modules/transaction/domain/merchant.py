@@ -8,6 +8,8 @@ _UBER_PREFIX = re.compile(r"^ubr\s*\*\s*")
 _DOMAIN_SUFFIX = re.compile(r"\.(?:co\.uk|com|de|eu|it)$")
 _LEGAL_FORMS = frozenset({"gmbh", "ag", "se", "kg", "bv", "b.v", "ltd", "inc", "srl", "spa"})
 _PUNCTUATION = re.compile(r"[^\w&]|_")
+# The column's width. Folding can lengthen text (ß → ss, ﬁ → fi), so a 255-character merchant may not fit.
+MAX_KEY = 255
 
 
 def normalise_merchant(raw: str) -> str:
@@ -31,5 +33,5 @@ def normalise_merchant(raw: str) -> str:
             continue
         tokens[-1] = last
         break
-    key = " ".join(_PUNCTUATION.sub(" ", " ".join(tokens)).split())
-    return key or " ".join(folded.split())
+    key = " ".join(_PUNCTUATION.sub(" ", " ".join(tokens)).split()) or " ".join(folded.split())
+    return key[:MAX_KEY].rstrip()

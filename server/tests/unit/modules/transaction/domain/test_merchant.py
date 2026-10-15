@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.modules.transaction.domain import normalise_merchant
+from app.modules.transaction.domain import MAX_KEY, normalise_merchant
 
 pytestmark = pytest.mark.unit
 
@@ -40,3 +40,11 @@ def test_only_a_reference_number_falls_back_to_the_folded_text():
 
 def test_ubr_prefix_becomes_uber():
     assert normalise_merchant("UBR* PENDING") == "uber pending"
+
+
+@pytest.mark.parametrize("raw", ["Straße " * 36, "ﬁ" * 255, "  ß" * 85], ids=["eszett-words", "ligature", "spaced"])
+def test_a_key_never_outgrows_its_column(raw):
+    """Folding lengthens text (ß → ss, ﬁ → fi); the key still fits VARCHAR(MAX_KEY)."""
+    key = normalise_merchant(raw[:255])
+    assert len(key) <= MAX_KEY
+    assert key == key.strip()
