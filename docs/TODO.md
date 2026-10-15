@@ -90,6 +90,14 @@ must (`server/CLAUDE.md`, Code Conventions). The import routes already release i
   for 3,000 rows × 12 columns). Move them to `run_in_threadpool` if traffic grows.
 - A short DKB export whose preamble lines outnumber its transactions is refused as
   `unnamed_column`, because the most common line width is the preamble's.
+- `LLMService` keeps its fallback position on itself (`_current_model_index`, `_llm`), but
+  counts each call's attempts locally. Calls running at once on one service each move the
+  shared position, so a call can use up its attempts without reaching a healthy model, and
+  the position stays wherever it ended. The import builds a service per import
+  (`structured_llm()`), which keeps one user's failures off another's; its own five batches
+  still share one. The chatbot's singleton `llm_service` has the same issue. Fix: keep the
+  model index and client in locals inside `_call_with_fallback`, starting from the service's
+  default.
 
 ## Web — tests the suite does not have yet
 

@@ -48,7 +48,7 @@ async def propose_mapping(
     }
     try:
         answer = await ask_json(
-            structured_llm,
+            structured_llm(),
             _PROMPT,
             json.dumps(payload, ensure_ascii=False),
             _Mapping,
