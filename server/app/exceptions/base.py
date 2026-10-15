@@ -48,6 +48,17 @@ class AuthenticationError(ServiceError):
     error_code = "AUTHENTICATION_ERROR"
 
 
+class AuthUnavailableError(ServiceError):
+    """The server could not check the request's credentials (e.g. Clerk's JWKS is unreachable).
+
+    503, not 401: the web treats a persistent 401 as an ended session and signs out,
+    and an outage on our side is not that.
+    """
+
+    status_code = 503
+    error_code = "AUTH_UNAVAILABLE"
+
+
 class AuthorizationError(ServiceError):
     """Base exception for authorization/permission failures."""
 

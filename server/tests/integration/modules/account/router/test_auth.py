@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from sqlalchemy import select
 
+from app.exceptions.base import AuthUnavailableError
 from app.modules.account.models import User
 
 pytestmark = pytest.mark.integration
@@ -17,6 +18,16 @@ class TestGetMe:
         """No auth header → middleware sets clerk_id=None → get_clerk_id raises 401."""
         response = await client.get("/api/v1/auth/me")
         assert response.status_code == 401
+
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_a_jwks_outage_is_503_not_401(self, mock_verifier, client):
+        """The web signs out on a persistent 401; the server failing to reach Clerk is not an ended session."""
+        mock_verifier.verify_token.side_effect = AuthUnavailableError("jwks unreachable")
+
+        response = await client.get("/api/v1/auth/me", headers={"Authorization": "Bearer t"})
+
+        assert response.status_code == 503
+        assert response.json()["error"] == "AUTH_UNAVAILABLE"
 
     @patch("app.modules.account.dependencies.user_service.resolve_user", side_effect=RuntimeError("db down"))
     @patch("app.api.middlewares.auth.clerk_jwt_verifier")

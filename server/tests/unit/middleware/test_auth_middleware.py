@@ -106,3 +106,18 @@ class TestAuthMiddleware:
         data = response.json()
         assert data["clerk_id"] == "user_abc123"
         assert data["state_keys"] == ["clerk_id", "user_id"]
+
+    @pytest.mark.asyncio
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_an_auth_outage_flags_the_request_and_still_passes_through(self, mock_verifier, app):
+        from app.exceptions.base import AuthUnavailableError
+
+        mock_verifier.verify_token.side_effect = AuthUnavailableError("jwks down")
+
+        async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+            response = await client.get("/test", headers={"Authorization": "Bearer t"})
+
+        data = response.json()
+        assert response.status_code == 200
+        assert data["clerk_id"] is None
+        assert "auth_unavailable" in data["state_keys"]

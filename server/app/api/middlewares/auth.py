@@ -7,6 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response
 
 from app.core.logging import logger
+from app.exceptions.base import AuthUnavailableError
 from app.utils.auth import clerk_jwt_verifier
 
 
@@ -15,6 +16,8 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
     Stores the following in request.state after a valid token:
       - clerk_id  : Clerk user ID (sub claim)
+      - auth_unavailable : True only when the token could not be checked (JWKS
+        unreachable); get_clerk_id turns it into 503, not 401
 
     The middleware is permissive — it does not block requests with invalid/missing
     tokens. Route-level dependencies determine if authentication is required.
@@ -44,6 +47,10 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 else:
                     logger.debug("token_verification_failed_in_middleware", path=request.url.path)
 
+            except AuthUnavailableError as e:
+                # Permissive, like everything here: flag it, and get_clerk_id answers 503.
+                request.state.auth_unavailable = True
+                logger.error("auth_unavailable_in_middleware", error=str(e), path=request.url.path)
             except (IndexError, ValueError) as e:
                 logger.debug("token_extraction_failed", error=str(e), path=request.url.path)
         elif request.url.path not in ("/health", "/metrics"):

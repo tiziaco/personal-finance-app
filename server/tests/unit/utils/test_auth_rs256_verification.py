@@ -101,3 +101,35 @@ def test_an_expired_token_is_rejected_through_the_real_path(keypair):
     expired = _sign(private, exp=int(time.time()) - 60)
 
     assert _verifier_serving(public).verify_token(expired) is None
+
+
+def test_an_unreachable_jwks_is_an_outage_not_a_bad_token(keypair):
+    """The server failing to reach Clerk says nothing about the caller's credentials."""
+    from app.exceptions.base import AuthUnavailableError
+
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = pyjwt.PyJWKClientConnectionError("no route")
+
+    with pytest.raises(AuthUnavailableError):
+        verifier.verify_token(_sign(private))
+
+
+def test_an_unexpected_failure_is_an_outage_not_a_bad_token(keypair):
+    from app.exceptions.base import AuthUnavailableError
+
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = RuntimeError("boom")
+
+    with pytest.raises(AuthUnavailableError):
+        verifier.verify_token(_sign(private))
+
+
+def test_an_unknown_kid_is_still_a_bad_token(keypair):
+    """PyJWKClientError (not the connection subclass) means the token names a key Clerk does not have."""
+    private, public = keypair
+    verifier = _verifier_serving(public)
+    verifier._jwks_client.get_signing_key_from_jwt.side_effect = pyjwt.PyJWKClientError("unable to find a signing key")
+
+    assert verifier.verify_token(_sign(private)) is None

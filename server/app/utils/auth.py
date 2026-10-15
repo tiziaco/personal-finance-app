@@ -11,6 +11,7 @@ from jwt import PyJWKClient
 
 from app.core.config import settings
 from app.core.logging import logger
+from app.exceptions.base import AuthUnavailableError
 
 
 class ClerkJWTVerifier:
@@ -41,7 +42,11 @@ class ClerkJWTVerifier:
             token: The JWT token string.
 
         Returns:
-            The decoded payload dict if valid, None otherwise.
+            The decoded payload dict if valid, None if the credentials are bad.
+
+        Raises:
+            AuthUnavailableError: the token could not be checked (JWKS unreachable
+                or an unexpected failure) -- not the caller's fault.
         """
         if not token or not isinstance(token, str):
             logger.warning("token_invalid_format")
@@ -85,9 +90,16 @@ class ClerkJWTVerifier:
         except jwt.InvalidTokenError as e:
             logger.debug("token_verification_failed", error=str(e))
             return None
+        except jwt.PyJWKClientConnectionError as e:
+            logger.error("token_jwks_unreachable", error=str(e))
+            raise AuthUnavailableError("Could not reach the signing-key service") from e
+        except jwt.PyJWKClientError as e:
+            # No signing key for this token's kid: the token is wrong, not the service.
+            logger.debug("token_signing_key_not_found", error=str(e))
+            return None
         except Exception as e:
             logger.error("token_verification_error", error=str(e))
-            return None
+            raise AuthUnavailableError("Could not verify the token") from e
 
 
 # Singleton verifier instance

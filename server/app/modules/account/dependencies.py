@@ -13,7 +13,7 @@ from fastapi.security import OAuth2AuthorizationCodeBearer
 from app.core.config import settings
 from app.core.logging import bind_context, logger
 from app.database.dependencies import DbSession
-from app.exceptions.base import AuthenticationError
+from app.exceptions.base import AuthenticationError, AuthUnavailableError
 from app.modules.account.exceptions import UserProvisioningError
 from app.modules.account.models import User
 from app.modules.account.service import user_service
@@ -35,6 +35,8 @@ def get_clerk_id(request: Request) -> str:
     """Extract clerk_id from request.state (set by AuthMiddleware)."""
     clerk_id = getattr(request.state, "clerk_id", None)
     if not clerk_id:
+        if getattr(request.state, "auth_unavailable", False):
+            raise AuthUnavailableError("Authentication is temporarily unavailable")
         logger.error("clerk_id_not_in_request_state")
         raise AuthenticationError("Authentication required")
     return clerk_id

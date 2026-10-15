@@ -347,7 +347,7 @@ class LLMService:
             last_error=str(last_error) if last_error else None,
         )
 
-    def get_llm(self) -> Optional[BaseChatModel]:
+    def get_llm(self) -> BaseChatModel:
         """The default model's client, building it on first use."""
         if self._llm is None:
             entry = LLMRegistry.get_model_at_index(self._default_index)
