@@ -21,12 +21,16 @@ class Transaction(BaseModel, UUIDPrimaryKeyMixin, UserOwnedMixin, SoftDeleteMixi
     knows no list, so changing the list needs no migration
     (docs/data-model/transaction.md). `fingerprint` is the sha256 of
     user|date|merchant|amount|description (service.fingerprint), recomputed
-    on every edit; it is not unique.
+    on every edit; it is not unique. `merchant_key` is normalise_merchant(merchant),
+    recomputed with the fingerprint; `recurring_source` says whether `is_recurring`
+    was set by the rule (`detected`) or by the user (`user`), and the rule changes
+    only `detected` rows (docs/data-model/transaction.md, D6–D7).
     """
 
     __table_args__ = (
         Index("ix_transaction_user_id_date", "user_id", "date"),
         Index("ix_transaction_user_id_fingerprint", "user_id", "fingerprint"),
+        Index("ix_transaction_user_id_merchant_key", "user_id", "merchant_key"),
     )
 
     date: dt.date
@@ -37,4 +41,6 @@ class Transaction(BaseModel, UUIDPrimaryKeyMixin, UserOwnedMixin, SoftDeleteMixi
     category: str = Field(max_length=64)
     confidence: float
     is_recurring: bool = Field(default=False)
+    recurring_source: str = Field(max_length=16)
     fingerprint: str = Field(sa_column=Column(CHAR(64), nullable=False))
+    merchant_key: str = Field(max_length=255)

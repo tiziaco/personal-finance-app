@@ -38,4 +38,7 @@ __all__ = [
 ]
 
 # @events.on is a module-level side effect: importing the root is what subscribes.
-from app.modules.transaction import handlers  # noqa: E402
+from app.modules.transaction import (
+    handlers,  # noqa: E402
+    imports,  # noqa: E402, F401  — importing it subscribes its handlers
+)
