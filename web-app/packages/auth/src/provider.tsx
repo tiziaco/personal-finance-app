@@ -46,6 +46,8 @@ interface AuthContextValue {
    * with no session. Straight after sign-in Clerk reports no session for a moment
    * while it installs the new one, and a null then would send the request bare,
    * so a null from Clerk without a session waits for one, up to SESSION_WAIT_MS.
+   * A forceRefresh does not wait: it only follows a refusal, and the call that
+   * was refused has already waited, so Clerk's answer (token or null) is final.
    * The only sanctioned way to reach a bearer token: @app/api-client's mutator
    * consumes it, which is what keeps that package off Clerk and on this seam.
    */
@@ -132,7 +134,7 @@ export function AuthProvider({
       const ask = () =>
         clerkGetToken(forceRefresh ? { skipCache: true } : undefined)
       const token = await ask()
-      if (token) return token
+      if (token || forceRefresh) return token
       if (!signedIn.current && !(await sessionArrives(waiters.current)))
         return null
       return ask()

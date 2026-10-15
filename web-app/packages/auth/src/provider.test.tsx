@@ -173,6 +173,18 @@ describe("getToken", () => {
     expect(clerk.getToken).toHaveBeenCalledWith({ skipCache: true })
   })
 
+  // The first call already waited; a forced refresh only follows a refusal.
+  it("does not wait for a session on forceRefresh", async () => {
+    clerk.isSignedIn = false
+    clerk.getToken.mockResolvedValue(null)
+
+    await expect(
+      renderAuth().current.getToken({ forceRefresh: true }),
+    ).resolves.toBeNull()
+    expect(clerk.getToken).toHaveBeenCalledOnce()
+    expect(clerk.getToken).toHaveBeenCalledWith({ skipCache: true })
+  })
+
   // Straight after sign-in: Clerk is loaded but has not installed the session yet.
   it("waits for a session being activated, then returns its token", async () => {
     clerk.isSignedIn = false
