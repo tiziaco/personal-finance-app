@@ -155,6 +155,8 @@ convention = "google"
 root_package = "app"
 # R4 lets a module type-hint another's model under TYPE_CHECKING.
 exclude_type_checking_imports = true
+# R9 forbids third-party packages; import-linter only graphs them with this on.
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "R2: layers import downward only"
@@ -172,7 +174,8 @@ layers = [
 name = "R6: modules form a DAG — a module imports only those listed below it"
 type = "layers"
 layers = [
-    "app.modules.conversation | app.modules.transaction",
+    "app.modules.conversation | app.modules.analytics",
+    "app.modules.transaction",
     "app.modules.account",
 ]
 
@@ -189,19 +192,32 @@ layers = [
 name = "R1: account reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.account"]
-forbidden_modules = ["app.modules.conversation.*", "app.modules.transaction.*"]
+forbidden_modules = ["app.modules.analytics.*", "app.modules.conversation.*", "app.modules.transaction.*"]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R1: analytics reaches other modules only through their package roots"
+type = "forbidden"
+source_modules = ["app.modules.analytics"]
+forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*", "app.modules.transaction.*"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: conversation reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.conversation"]
-forbidden_modules = ["app.modules.account.*", "app.modules.transaction.*"]
+forbidden_modules = ["app.modules.account.*", "app.modules.analytics.*", "app.modules.transaction.*"]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: transaction reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.transaction"]
-forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*"]
+forbidden_modules = ["app.modules.account.*", "app.modules.analytics.*", "app.modules.conversation.*"]
 allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R9: a domain slot imports neither the ORM nor the framework"
+type = "forbidden"
+source_modules = ["app.modules.*.domain", "app.modules.*.*.domain"]
+forbidden_modules = ["sqlmodel", "sqlalchemy", "fastapi"]
