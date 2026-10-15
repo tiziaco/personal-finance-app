@@ -13,6 +13,7 @@ from app.modules.transaction.models import Transaction
 from app.modules.transaction.repository import transaction_repository
 from app.modules.transaction.schemas import (
     CATEGORIES,
+    AnalysisRow,
     CategoryResponse,
     TransactionCreate,
     TransactionFilters,
@@ -144,6 +145,16 @@ class TransactionService:
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:
         """Permanently remove every transaction a user owns: Settings' delete-all and erasure."""
         return await transaction_repository.delete_all_for_user(session, user_id)
+
+    @staticmethod
+    async def list_for_analysis(
+        session: AsyncSession,
+        user_id: uuid.UUID,
+        date_from: Optional[dt.date] = None,
+        date_to: Optional[dt.date] = None,
+    ) -> list[AnalysisRow]:
+        """A user's active transactions in a range, as plain rows: analytics' only read."""
+        return await transaction_repository.list_active_rows_for_analysis(session, user_id, date_from, date_to)
 
     @staticmethod
     async def list(

@@ -12,6 +12,7 @@ from app.modules.transaction.exceptions import (
 from app.modules.transaction.router import router
 from app.modules.transaction.schemas import (
     CATEGORIES,
+    AnalysisRow,
     Category,
     CategoryResponse,
     TransactionFilters,
@@ -22,6 +23,7 @@ from app.modules.transaction.schemas import (
 from app.modules.transaction.service import transaction_service
 
 __all__ = [
+    "AnalysisRow",
     "CATEGORIES",
     "Category",
     "CategoryResponse",
