@@ -260,3 +260,15 @@ class TestReadRows:
     def test_long_text_is_cut_to_the_column_sizes(self):
         rows, _ = read_rows(parse(f"d,m,a\n2026-01-01,{'m' * 300},1\n"), {"d": "date", "m": "merchant", "a": "amount"})
         assert len(rows[0].merchant) == 255
+
+    def test_a_date_analytics_cannot_read_is_rejected(self):
+        text = (
+            "d,m,a\n1899-12-31,Early,1\n1900-01-01,First,1\n2100-12-31,Last,1\n2101-01-01,Late,1\n2205-03-01,Typo,1\n"
+        )
+        rows, rejected = read_rows(parse(text), {"d": "date", "m": "merchant", "a": "amount"})
+        assert [(r.number, r.date) for r in rows] == [(3, dt.date(1900, 1, 1)), (4, dt.date(2100, 12, 31))]
+        assert [(r.number, r.reason) for r in rejected] == [
+            (2, "date out of range “1899-12-31”"),
+            (5, "date out of range “2101-01-01”"),
+            (6, "date out of range “2205-03-01”"),
+        ]

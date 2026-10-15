@@ -57,9 +57,10 @@ Date, merchant and amount must be mapped; the rest are optional.
   data rows (`no_rows`), more than 3,000 (`too_many_rows`), or a file the CSV reader cannot
   parse, an unbalanced quote for one (`malformed`). A mapping that leaves date, merchant or
   amount unmapped is refused at confirm, not at upload, so the review can still be corrected.
-- **Bad rows are skipped, not fatal.** A row with an unreadable date, an unreadable amount,
-  no merchant, or more cells than the header (trailing empty cells are fine) is left out and
-  listed by its row number — the file's own line number, so lines above the header shift it;
+- **Bad rows are skipped, not fatal.** A row with an unreadable date, a date outside 1900–2100
+  (analytics reads nothing outside it), an unreadable amount, no merchant, or more cells than
+  the header (trailing empty cells are fine) is left out and listed by its row number — the
+  file's own line number, so lines above the header shift it;
   the rest import. A date with a time keeps its date as written.
 - **Duplicates are skipped, counted.** A row is a duplicate of one the user already holds, by
   the fingerprint rule in [`transactions.md`](./transactions.md). Counting matters: two

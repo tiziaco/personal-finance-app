@@ -5,6 +5,7 @@ deeper (docs/architecture/server.md, R1).
 """
 
 from app.modules.transaction.dependencies import UserTransaction, get_user_transaction
+from app.modules.transaction.domain.dates import MAX_DATE, MIN_DATE
 from app.modules.transaction.exceptions import (
     DuplicateTransactionError,
     TransactionNotFoundError,
@@ -28,6 +29,8 @@ __all__ = [
     "Category",
     "CategoryResponse",
     "DuplicateTransactionError",
+    "MAX_DATE",
+    "MIN_DATE",
     "TransactionFilters",
     "TransactionImport",
     "TransactionListResponse",
