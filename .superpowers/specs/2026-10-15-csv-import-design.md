@@ -69,7 +69,8 @@ CREATE TABLE csv_mapping_profile (
 );
 ```
 
-`UserOwnedMixin`. Upserted by every successful confirm with the confirmed mapping. Keyed per user and
+`UserOwnedMixin`. Both new models set `__tablename__` in snake_case: SQLModel's default would be
+`csvmappingprofile`. Upserted by every successful confirm with the confirmed mapping. Keyed per user and
 column set, not per bank name: two banks with identical headers share a profile.
 
 ### 2.3 `csv_upload` — the held upload
@@ -254,7 +255,9 @@ header is row 1), `reason`.
 2. Decode UTF-8 (BOM-aware), falling back to Windows-1252.
 3. Sniff the delimiter among `,` `;` tab `|`; parse with the stdlib `csv` module.
 4. Refuse: no header; blank or duplicate header names; no data rows; more than 3,000 data rows. A
-   trailing column with no name and no values is dropped.
+   trailing column with no name and no values is dropped. Lines above the header — some banks print
+   an account summary first — are skipped: the header is the first line with as many fields as most
+   lines have. Rejected-row numbers are the file's own line numbers.
 5. Profile each column: empty rate; the best date format and its parse share; the amount style and
    its parse share.
 6. Mapping: the user's profile for this `column_key` → `remembered`. Otherwise the mapping agent
@@ -268,8 +271,9 @@ header is row 1), `reason`.
 calls, the service commits it, which ends the transaction and hands the connection back to the pool:
 no connection idles through the labelling. The read phase writes nothing of its own (the commit
 covers at most a JIT-provisioned user). The write phase then runs in a new transaction on the same
-session, and `DbSession` commits it as usual. This is the one route that commits mid-request; the
-service says why in a comment.
+session, and `DbSession` commits it as usual. Upload does the same before its one mapping call.
+These are the only routes that commit mid-request; `_release_connection` in `imports/service.py`
+says why.
 
 1. **Read**: the held upload, or 404 `IMPORT_UPLOAD_NOT_FOUND` (missing, expired,
    another user's). Validate the mapping or 422 `INVALID_IMPORT_MAPPING`: date, merchant and amount
@@ -293,6 +297,8 @@ cell is stripped; a column of another currency is not detected.
 
 ### 5.4 Value parsing (`imports/domain.py`)
 
+- **Labelled formats.** The review labels a column's date format or amount style when at least 80 %
+  of its non-empty cells parse with it.
 - **Dates**, tried per column: `%Y-%m-%d`, `%d.%m.%Y`, `%d.%m.%y`, `%d/%m/%Y`, `%m/%d/%Y`, `%Y/%m/%d`,
   `%d-%m-%Y`, and ISO date-times. The format that parses the most non-empty cells wins; a tie goes
   day-first.
@@ -311,7 +317,10 @@ cell is stripped; a column of another currency is not detected.
 | `ImportUploadNotFoundError` | 404 | `IMPORT_UPLOAD_NOT_FOUND` |
 | `CategorisationUnavailableError` | 503 | `CATEGORISATION_UNAVAILABLE` |
 
-No file content and no merchant text in an error's details.
+No file content and no merchant text in an error's details. The two 422s carry a `reason` code in
+their details — `not_csv`, `too_large`, `empty`, `no_header`, `unnamed_column`, `duplicate_column`,
+`no_rows`, `too_many_rows`; `unknown_column`, `unknown_field`, `field_twice`, `missing_required` —
+and the web words each one itself, since it never renders server text.
 
 ## 6. The agents (`server/app/agents/`)
 
@@ -370,10 +379,10 @@ All inside `components/transactions/` and the page; no new `@app/ui` primitive; 
   3. **Importing** — "Importing and categorising N rows… You can close this; the import carries on."
   4. **Result** — Imported, Skipped as duplicates, Filed under Miscellaneous, Rejected; the rejected
      rows as "Row 14: unreadable date `31.02.2026`", the first 100 and "+N more"; **Done**.
-- **Closing mid-import.** The confirm mutation has a `mutationKey` and hook-level callbacks; it
-  finishes after unmount, refetches the list through `useRefreshTransactionsOnSuccess` (condition 4),
-  and toasts the counts with a **View details** action that reopens the dialog on the result, read
-  from the mutation cache with `useMutationState`.
+- **Closing mid-import.** The dialog stays mounted while the page is, so its step survives closing.
+  The confirm mutation's hook-level `onSuccess` refetches the list through `useInvalidateTransactions`
+  (condition 4), moves the dialog to the result and, when the dialog is closed, toasts the counts
+  with a **View details** action that reopens it. Off the page, the toast carries the counts only.
 - **Confirm errors, inline:** 404 → "This upload has expired — choose the file again", back to step 1;
   503 → "Categorisation isn't available right now. Your file is kept for 30 minutes", **Try again**;
   422 → the message, on step 2.
