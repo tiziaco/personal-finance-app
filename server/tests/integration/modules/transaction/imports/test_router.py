@@ -235,6 +235,8 @@ class TestConfirm:
         db_session.add(theirs)
         await db_session.flush()
         assert (await confirm(authenticated_client, str(theirs.id))).status_code == 404
+        still = (await db_session.execute(select(HeldUpload.id).where(HeldUpload.user_id == other_user.id))).scalars()
+        assert list(still) == [theirs.id]
 
     async def test_a_replaced_upload_is_404(self, authenticated_client, propose, labeller):
         first = await upload_id(authenticated_client)
@@ -280,7 +282,6 @@ class TestConfirm:
 
     async def test_the_eleventh_confirm_in_a_minute_is_429(self, authenticated_client, monkeypatch):
         monkeypatch.setattr(app.state, "limiter", limiter, raising=False)
-        held = str(uuid.uuid4())  # slowapi buckets by request path, so one id
         for _ in range(10):
-            assert (await confirm(authenticated_client, held)).status_code == 404
-        assert (await confirm(authenticated_client, held)).status_code == 429
+            assert (await confirm(authenticated_client, str(uuid.uuid4()))).status_code == 404
+        assert (await confirm(authenticated_client, str(uuid.uuid4()))).status_code == 429

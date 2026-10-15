@@ -45,7 +45,9 @@ async def upload_transactions_csv(
     "404 IMPORT_UPLOAD_NOT_FOUND for an expired, confirmed, replaced or another user's upload; 422 "
     "INVALID_IMPORT_MAPPING with details.reason; 503 CATEGORISATION_UNAVAILABLE keeps the upload for a retry.",
 )
-@limiter.limit(settings.rate_limits.endpoints.TRANSACTION_IMPORTS[0], key_func=user_or_ip_key)
+@limiter.shared_limit(
+    settings.rate_limits.endpoints.TRANSACTION_IMPORTS[0], scope="transaction-imports-confirm", key_func=user_or_ip_key
+)
 async def confirm_transactions_import(
     request: Request, upload_id: uuid.UUID, body: ImportConfirm, db_session: DbSession, user: CurrentUser
 ) -> ImportResult:

@@ -172,7 +172,7 @@ class ImportService:
             raise CategorisationUnavailableError("Categorisation is unavailable", upload_id=str(upload_id))
 
         if not await import_repository.take_upload(session, user_id, upload_id):
-            raise ImportUploadNotFoundError("Upload already confirmed", upload_id=str(upload_id))
+            raise ImportUploadNotFoundError("Upload not found", upload_id=str(upload_id))
         keys = [normalise_merchant(row.merchant) for row in fresh]
         imported = await transaction_service.import_many(
             session,
@@ -199,7 +199,7 @@ class ImportService:
             rejected=[ImportRejection(row=r.number, reason=r.reason) for r in rejected],
         )
         logger.info(
-            "transactions_import_confirmed",
+            "transactions_imported",
             user_id=user_id,
             imported=result.imported,
             skipped=result.skipped_duplicates,
