@@ -43,10 +43,13 @@ background while the session lasts; `useApiFetch` asks for it on every call and 
 current one. Signing out ends the session, and with it the refresh. The flip side: a claim
 can be up to a minute stale after what it describes changes.
 
-**Straight after sign-in, it is waited for.** Clerk navigates to the redirect before the
-new session is installed, so the first render's requests find no session and Clerk's
-`getToken()` answers `null`. `@app/auth`'s `getToken` waits for the session instead, up
-to five seconds, and the first queries go out with a token.
+**Straight after sign-in, it is waited for.** Clerk has loaded by then, but the session and
+the navigation to the redirect land together, and a request the first render fires inside
+that window finds no session: Clerk's `getToken()` answers `null`. A trace on 15 Oct 2026
+put the session and the navigation within the same 2 ms, so the window is narrow, and
+before the fix it was enough to send the first queries bare. `@app/auth`'s `getToken`
+waits for the session instead, up to five seconds, and the first queries go out with a
+token. A forced refresh, which only follows a refused request, does not wait.
 
 **The server reads four claims.** PyJWT also checks `nbf` and `iat`; the rest Clerk adds
 (`sid`, `jti`, `fva`, …) are ignored:

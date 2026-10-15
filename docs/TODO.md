@@ -81,6 +81,22 @@ short-lived session from `request.app.state.session_factory`, as a streaming bod
 must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
 (`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
 
+## Server — a transaction added by hand is not held to the date bounds
+
+The import rejects a row dated outside `MIN_DATE`/`MAX_DATE`
+(`transaction/domain/dates.py`), but a transaction added or edited by hand is not held to
+them, so a typo year drops out of every chart without a word, as the import's did. Validate
+the date on create and update against the same bounds. Found while fixing the import's
+(15 Oct 2026).
+
+## Server — the chatbot names the default model after a fallback
+
+After an LLM fallback, the chatbot's inference-time metric label and its stored model name
+are the default model's (`current_model_name()`), not the one that answered. `LLMService`
+keeps no fallback position on itself any more, by design; the answering model is in the
+response's `response_metadata`. Read it from there. Found while making the fallback
+per call (15 Oct 2026).
+
 ## Server — CSV import follow-ups
 
 - During an LLM outage every labeller batch walks the full model fallback chain before
@@ -90,19 +106,6 @@ must (`server/CLAUDE.md`, Code Conventions). The import routes already release i
   for 3,000 rows × 12 columns). Move them to `run_in_threadpool` if traffic grows.
 - A short DKB export whose preamble lines outnumber its transactions is refused as
   `unnamed_column`, because the most common line width is the preamble's.
-- `LLMService` keeps its fallback position on itself (`_current_model_index`, `_llm`), but
-  counts each call's attempts locally. Calls running at once on one service each move the
-  shared position, so a call can use up its attempts without reaching a healthy model, and
-  the position stays wherever it ended. The import builds a service per import
-  (`structured_llm()`), which keeps one user's failures off another's; its own five batches
-  still share one. The chatbot's singleton `llm_service` has the same issue. Fix: keep the
-  model index and client in locals inside `_call_with_fallback`, starting from the service's
-  default.
-- The import accepts any year `parse_date` reads (`transaction/imports/domain.py`), but
-  analytics reads only 1900–2100 (`MIN_DATE`/`MAX_DATE` in `analytics/schemas.py`). A row whose
-  year is a typo, say 2205, imports and then drops out of every chart without a word. Reject it
-  as a "date out of range" row against the same bounds, imported from one place rather than
-  copied. Picked up with the next change to the import.
 
 ## Web — tests the suite does not have yet
 
@@ -163,10 +166,3 @@ cover could be answered by generated code run in an isolated sandbox with its ow
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
-
-## Web — dedicated income and expense colours
-
-The trend chart draws income and expenses in `--chart-1`/`--chart-2`, which the donut beside it
-also uses for its top two categories; spec decision: income and expenses keep one fixed pair of
-colours wherever they appear. Fix: two validated tokens (dataviz validator) used by every
-income/expense mark. **Unblocks:** 5b's analytics charts.
