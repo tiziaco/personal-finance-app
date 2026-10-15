@@ -98,6 +98,11 @@ must (`server/CLAUDE.md`, Code Conventions). The import routes already release i
   still share one. The chatbot's singleton `llm_service` has the same issue. Fix: keep the
   model index and client in locals inside `_call_with_fallback`, starting from the service's
   default.
+- The import accepts any year `parse_date` reads (`transaction/imports/domain.py`), but
+  analytics reads only 1900–2100 (`MIN_DATE`/`MAX_DATE` in `analytics/schemas.py`). A row whose
+  year is a typo, say 2205, imports and then drops out of every chart without a word. Reject it
+  as a "date out of range" row against the same bounds, imported from one place rather than
+  copied. Picked up with the next change to the import.
 
 ## Web — tests the suite does not have yet
 
