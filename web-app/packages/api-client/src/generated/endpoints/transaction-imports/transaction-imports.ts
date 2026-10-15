@@ -15,10 +15,11 @@ import type {
 
 import type {
   BodyUploadTransactionsCsv,
-  HTTPValidationError,
+  FileRefusal,
   ImportConfirm,
   ImportPreview,
   ImportResult,
+  MappingRefusal,
 } from "../../types"
 
 import { useApiFetch } from "../../../use-api-fetch"
@@ -58,7 +59,7 @@ export const getUploadTransactionsCsvMutationKey = () =>
   ["uploadTransactionsCsv"] as const
 
 export const useUploadTransactionsCsvMutationOptions = <
-  TError = ErrorType<HTTPValidationError>,
+  TError = ErrorType<FileRefusal>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -101,7 +102,7 @@ export type UploadTransactionsCsvMutationResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof useUploadTransactionsCsvHook>>>
 >
 export type UploadTransactionsCsvMutationBody = BodyUploadTransactionsCsv
-export type UploadTransactionsCsvMutationError = ErrorType<HTTPValidationError>
+export type UploadTransactionsCsvMutationError = ErrorType<FileRefusal>
 export type UploadTransactionsCsvMutationVariables = {
   data: BodyUploadTransactionsCsv
 }
@@ -110,7 +111,7 @@ export type UploadTransactionsCsvMutationVariables = {
  * @summary Upload a CSV
  */
 export const useUploadTransactionsCsv = <
-  TError = ErrorType<HTTPValidationError>,
+  TError = ErrorType<FileRefusal>,
   TContext = unknown,
 >(
   options?: {
@@ -178,7 +179,7 @@ export const getConfirmTransactionsImportMutationKey = () =>
   ["confirmTransactionsImport"] as const
 
 export const useConfirmTransactionsImportMutationOptions = <
-  TError = ErrorType<HTTPValidationError>,
+  TError = ErrorType<MappingRefusal>,
   TContext = unknown,
 >(options?: {
   mutation?: UseMutationOptions<
@@ -221,8 +222,7 @@ export type ConfirmTransactionsImportMutationResult = NonNullable<
   Awaited<ReturnType<ReturnType<typeof useConfirmTransactionsImportHook>>>
 >
 export type ConfirmTransactionsImportMutationBody = ImportConfirm
-export type ConfirmTransactionsImportMutationError =
-  ErrorType<HTTPValidationError>
+export type ConfirmTransactionsImportMutationError = ErrorType<MappingRefusal>
 export type ConfirmTransactionsImportMutationVariables = {
   uploadId: string
   data: ImportConfirm
@@ -232,7 +232,7 @@ export type ConfirmTransactionsImportMutationVariables = {
  * @summary Confirm an import
  */
 export const useConfirmTransactionsImport = <
-  TError = ErrorType<HTTPValidationError>,
+  TError = ErrorType<MappingRefusal>,
   TContext = unknown,
 >(
   options?: {

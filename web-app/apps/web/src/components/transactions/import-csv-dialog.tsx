@@ -17,14 +17,13 @@ import {
 } from "@app/ui/dialog"
 import { ImportDropZone } from "./import-drop-zone"
 import {
-  EXPIRED,
-  UNAVAILABLE,
   checkFile,
-  confirmErrorMessage,
-  fileErrorMessage,
+  confirmProblem,
   isConfirmInlineError,
-  isExpired,
   isUploadInlineError,
+  problemMessage,
+  uploadProblem,
+  type ImportProblem,
 } from "./import-errors"
 import { initialMapping, type Mapping } from "./import-mapping"
 import { ImportMappingReview } from "./import-mapping-review"
@@ -32,8 +31,13 @@ import { ImportResultView } from "./import-result"
 import { useInvalidateTransactions } from "./use-invalidate-transactions"
 
 type Step =
-  | { name: "choose"; error?: string }
-  | { name: "review"; preview: ImportPreview; mapping: Mapping; error?: string }
+  | { name: "choose"; problem?: ImportProblem }
+  | {
+      name: "review"
+      preview: ImportPreview
+      mapping: Mapping
+      problem?: ImportProblem
+    }
   | { name: "importing"; preview: ImportPreview; mapping: Mapping }
   | { name: "result"; result: ImportResult }
 
@@ -109,7 +113,7 @@ export function ImportCsvDialog({
 
   const choose = (file: File) => {
     const problem = checkFile(file)
-    if (problem) return setStep({ name: "choose", error: problem })
+    if (problem) return setStep({ name: "choose", problem })
     setStep({ name: "choose" })
     upload.mutate(
       { data: { file } },
@@ -121,7 +125,7 @@ export function ImportCsvDialog({
             mapping: initialMapping(preview),
           }),
         onError: (error) =>
-          setStep({ name: "choose", error: fileErrorMessage(error) }),
+          setStep({ name: "choose", problem: uploadProblem(error) }),
       },
     )
   }
@@ -131,17 +135,14 @@ export function ImportCsvDialog({
     confirm.mutate(
       { uploadId: preview.upload_id, data: { mapping } },
       {
-        onError: (error) =>
+        onError: (error) => {
+          const problem = confirmProblem(error)
           setStep(
-            isExpired(error)
-              ? { name: "choose", error: EXPIRED }
-              : {
-                  name: "review",
-                  preview,
-                  mapping,
-                  error: confirmErrorMessage(error),
-                },
-          ),
+            problem === "expired"
+              ? { name: "choose", problem }
+              : { name: "review", preview, mapping, problem },
+          )
+        },
       },
     )
   }
@@ -163,17 +164,17 @@ export function ImportCsvDialog({
           <ImportDropZone
             onFile={choose}
             pending={upload.isPending}
-            error={step.error}
+            error={step.problem && problemMessage(step.problem)}
           />
         )}
         {step.name === "review" && (
           <ImportMappingReview
             preview={step.preview}
             mapping={step.mapping}
-            error={step.error}
-            retry={step.error === UNAVAILABLE}
+            error={step.problem && problemMessage(step.problem)}
+            retry={step.problem === "unavailable"}
             onChange={(mapping) =>
-              setStep({ ...step, mapping, error: undefined })
+              setStep({ ...step, mapping, problem: undefined })
             }
             onBack={() => setStep({ name: "choose" })}
             onImport={() => start(step.preview, step.mapping)}

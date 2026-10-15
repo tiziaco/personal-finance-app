@@ -36,6 +36,29 @@ class ImportField(StrEnum):
 
 REQUIRED = (ImportField.DATE, ImportField.MERCHANT, ImportField.AMOUNT)
 
+
+class FileProblem(StrEnum):
+    """Why a file is refused: `details.reason` of a 422 INVALID_IMPORT_FILE. The web words each one."""
+
+    NOT_CSV = "not_csv"
+    TOO_LARGE = "too_large"
+    EMPTY = "empty"
+    MALFORMED = "malformed"
+    NO_HEADER = "no_header"
+    UNNAMED_COLUMN = "unnamed_column"
+    DUPLICATE_COLUMN = "duplicate_column"
+    NO_ROWS = "no_rows"
+    TOO_MANY_ROWS = "too_many_rows"
+
+
+class MappingIssue(StrEnum):
+    """Why a confirmed mapping is refused: `details.reason` of a 422 INVALID_IMPORT_MAPPING."""
+
+    UNKNOWN_COLUMN = "unknown_column"
+    FIELD_TWICE = "field_twice"
+    MISSING_REQUIRED = "missing_required"
+
+
 COMMA_DECIMAL = "1.234,56"
 DOT_DECIMAL = "1,234.56"
 ISO = "iso"
@@ -67,7 +90,7 @@ _SHOWN = 40
 class CsvFormatError(ValueError):
     """The file cannot be read as a bank export."""
 
-    def __init__(self, reason: str, message: str):
+    def __init__(self, reason: FileProblem, message: str):
         super().__init__(message)
         self.reason = reason
         self.message = message
@@ -77,7 +100,7 @@ class CsvFormatError(ValueError):
 class MappingProblem:
     """Why a confirmed mapping cannot be used."""
 
-    reason: str
+    reason: MappingIssue
     message: str
 
 
@@ -132,6 +155,16 @@ class Rejection:
     reason: str
 
 
+def read_upload(filename: str, raw: bytes) -> tuple[str, ParsedCsv]:
+    """An uploaded file's text and its rows, or raise CsvFormatError: the one gate every refusal goes through."""
+    if not filename.casefold().endswith(".csv"):
+        raise CsvFormatError(FileProblem.NOT_CSV, "Only .csv files can be imported")
+    if len(raw) > MAX_BYTES:
+        raise CsvFormatError(FileProblem.TOO_LARGE, "The file is larger than 5 MB")
+    text = decode(raw)
+    return text, parse(text)
+
+
 def decode(raw: bytes) -> str:
     """UTF-8 (a BOM dropped), else Windows-1252, which reads any byte string."""
     try:
@@ -181,21 +214,21 @@ def parse(text: str) -> ParsedCsv:
     cannot read, or one holding NUL characters, is malformed.
     """
     if "\x00" in text:  # UTF-16 or a binary file: Postgres refuses NUL in text
-        raise CsvFormatError("malformed", "The file isn't a well-formed CSV.")
+        raise CsvFormatError(FileProblem.MALFORMED, "The file isn't a well-formed CSV.")
     try:
         reader = csv.reader(io.StringIO(text, newline=""), delimiter=sniff_delimiter(text))
         records = [(reader.line_num, [c.strip() for c in row]) for row in reader if any(c.strip() for c in row)]
     except csv.Error as error:
-        raise CsvFormatError("malformed", "The file isn't a well-formed CSV.") from error
+        raise CsvFormatError(FileProblem.MALFORMED, "The file isn't a well-formed CSV.") from error
     if not records:
-        raise CsvFormatError("empty", "The file is empty.")
+        raise CsvFormatError(FileProblem.EMPTY, "The file is empty.")
     counts: Counter[int] = Counter()
     for _, row in records:
         counts[len(row)] += 1
         counts[_width(row)] += 1
     width = counts.most_common(1)[0][0]
     if width < 2:
-        raise CsvFormatError("no_header", "The file needs a header row and at least two columns.")
+        raise CsvFormatError(FileProblem.NO_HEADER, "The file needs a header row and at least two columns.")
     start = next((i for i, (_, row) in enumerate(records) if _width(row) == width), None)
     if start is None:
         start = next(i for i, (_, row) in enumerate(records) if len(row) == width)
@@ -205,14 +238,14 @@ def parse(text: str) -> ParsedCsv:
         header.pop()
         rows = [CsvRow(r.number, r.cells[:-1], r.wide) for r in rows]
     if any(not name for name in header):
-        raise CsvFormatError("unnamed_column", "Every column needs a name in the header row.")
+        raise CsvFormatError(FileProblem.UNNAMED_COLUMN, "Every column needs a name in the header row.")
     folded = [name.casefold() for name in header]
     if len(set(folded)) != len(folded):
-        raise CsvFormatError("duplicate_column", "Two columns have the same name.")
+        raise CsvFormatError(FileProblem.DUPLICATE_COLUMN, "Two columns have the same name.")
     if not rows:
-        raise CsvFormatError("no_rows", "The file has a header but no rows.")
+        raise CsvFormatError(FileProblem.NO_ROWS, "The file has a header but no rows.")
     if len(rows) > MAX_ROWS:
-        raise CsvFormatError("too_many_rows", f"The file has more than {MAX_ROWS} rows.")
+        raise CsvFormatError(FileProblem.TOO_MANY_ROWS, f"The file has more than {MAX_ROWS} rows.")
     return ParsedCsv(columns=header, rows=rows)
 
 
@@ -352,12 +385,12 @@ def clean_proposal(columns: list[str], proposal: dict[str, str]) -> dict[str, Im
 def mapping_problem(columns: list[str], mapping: dict[str, ImportField]) -> Optional[MappingProblem]:
     """Why a confirmed mapping cannot be used, or None."""
     if set(mapping) - set(columns):
-        return MappingProblem("unknown_column", "The mapping names a column the file does not have.")
+        return MappingProblem(MappingIssue.UNKNOWN_COLUMN, "The mapping names a column the file does not have.")
     used = [field for field in mapping.values() if field != ImportField.IGNORE]
     if len(used) != len(set(used)):
-        return MappingProblem("field_twice", "Each field can be mapped to one column only.")
+        return MappingProblem(MappingIssue.FIELD_TWICE, "Each field can be mapped to one column only.")
     if any(field not in used for field in REQUIRED):
-        return MappingProblem("missing_required", "Map a date, a merchant and an amount.")
+        return MappingProblem(MappingIssue.MISSING_REQUIRED, "Map a date, a merchant and an amount.")
     return None
 
 

@@ -834,6 +834,64 @@
         "title": "Environment",
         "type": "string"
       },
+      "FileProblem": {
+        "description": "Why a file is refused: `details.reason` of a 422 INVALID_IMPORT_FILE. The web words each one.",
+        "enum": [
+          "not_csv",
+          "too_large",
+          "empty",
+          "malformed",
+          "no_header",
+          "unnamed_column",
+          "duplicate_column",
+          "no_rows",
+          "too_many_rows"
+        ],
+        "title": "FileProblem",
+        "type": "string"
+      },
+      "FileRefusal": {
+        "description": "A 422 INVALID_IMPORT_FILE. A request with no file part is a plain validation 422 instead.",
+        "properties": {
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/FileRefusalDetails"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "correlation_id",
+          "details"
+        ],
+        "title": "FileRefusal",
+        "type": "object"
+      },
+      "FileRefusalDetails": {
+        "description": "Why the file was refused.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/FileProblem",
+            "description": "A code the web words itself"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "FileRefusalDetails",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1099,6 +1157,58 @@
           "rejected"
         ],
         "title": "ImportResult",
+        "type": "object"
+      },
+      "MappingIssue": {
+        "description": "Why a confirmed mapping is refused: `details.reason` of a 422 INVALID_IMPORT_MAPPING.",
+        "enum": [
+          "unknown_column",
+          "field_twice",
+          "missing_required"
+        ],
+        "title": "MappingIssue",
+        "type": "string"
+      },
+      "MappingRefusal": {
+        "description": "A 422 INVALID_IMPORT_MAPPING. A mapping naming an unknown field is a plain validation 422 instead.",
+        "properties": {
+          "correlation_id": {
+            "title": "Correlation Id",
+            "type": "string"
+          },
+          "details": {
+            "$ref": "#/components/schemas/MappingRefusalDetails"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error",
+          "message",
+          "correlation_id",
+          "details"
+        ],
+        "title": "MappingRefusal",
+        "type": "object"
+      },
+      "MappingRefusalDetails": {
+        "description": "Why the mapping was refused.",
+        "properties": {
+          "reason": {
+            "$ref": "#/components/schemas/MappingIssue",
+            "description": "A code the web words itself"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "MappingRefusalDetails",
         "type": "object"
       },
       "MappingSource": {
@@ -3649,11 +3759,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/FileRefusal"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "The file cannot be imported"
           }
         },
         "security": [
@@ -3708,11 +3818,11 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
+                  "$ref": "#/components/schemas/MappingRefusal"
                 }
               }
             },
-            "description": "Validation Error"
+            "description": "The mapping cannot be used"
           }
         },
         "security": [

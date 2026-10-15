@@ -11,7 +11,6 @@ from app.agents.transaction_labeler import MerchantToLabel, label
 from app.core.logging import logger
 from app.modules.transaction.domain import fingerprint, normalise_merchant, plan_count_matched
 from app.modules.transaction.imports.domain import (
-    MAX_BYTES,
     ColumnProfile,
     CsvFormatError,
     CsvRow,
@@ -20,12 +19,12 @@ from app.modules.transaction.imports.domain import (
     ParsedCsv,
     clean_proposal,
     column_key,
-    decode,
     mapping_problem,
     parse,
     pick_samples,
     profile_columns,
     read_rows,
+    read_upload,
 )
 from app.modules.transaction.imports.exceptions import (
     CategorisationUnavailableError,
@@ -84,13 +83,8 @@ class ImportService:
     @staticmethod
     async def upload(session: AsyncSession, user_id: uuid.UUID, filename: str, raw: bytes) -> ImportPreview:
         """Read a file, hold it for 30 minutes, and propose a mapping. Raises InvalidImportFileError."""
-        if not filename.casefold().endswith(".csv"):
-            raise InvalidImportFileError("Only .csv files can be imported", reason="not_csv")
-        if len(raw) > MAX_BYTES:
-            raise InvalidImportFileError("The file is larger than 5 MB", reason="too_large")
-        text = decode(raw)
         try:
-            parsed = parse(text)
+            text, parsed = read_upload(filename, raw)
         except CsvFormatError as e:
             raise InvalidImportFileError(e.message, reason=e.reason) from e
         held = await import_repository.replace_upload(session, user_id, text, datetime.now(UTC) + UPLOAD_TTL)

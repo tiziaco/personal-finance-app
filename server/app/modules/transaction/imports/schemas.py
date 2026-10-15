@@ -6,7 +6,8 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from app.modules.transaction.imports.domain import ImportField
+from app.modules.transaction.imports.domain import FileProblem, ImportField, MappingIssue
+from app.schemas.base import ErrorResponse
 
 
 class MappingSource(StrEnum):
@@ -60,3 +61,27 @@ class ImportResult(BaseModel):
         ..., description="Rows saved under Miscellaneous because the labeller could not place them"
     )
     rejected: List[ImportRejection] = Field(..., description="Rows left out, in file order")
+
+
+class FileRefusalDetails(BaseModel):
+    """Why the file was refused."""
+
+    reason: FileProblem = Field(..., description="A code the web words itself")
+
+
+class FileRefusal(ErrorResponse):
+    """A 422 INVALID_IMPORT_FILE. A request with no file part is a plain validation 422 instead."""
+
+    details: FileRefusalDetails
+
+
+class MappingRefusalDetails(BaseModel):
+    """Why the mapping was refused."""
+
+    reason: MappingIssue = Field(..., description="A code the web words itself")
+
+
+class MappingRefusal(ErrorResponse):
+    """A 422 INVALID_IMPORT_MAPPING. A mapping naming an unknown field is a plain validation 422 instead."""
+
+    details: MappingRefusalDetails
