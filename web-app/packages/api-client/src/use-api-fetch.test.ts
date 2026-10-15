@@ -5,9 +5,12 @@ import { useApiFetch, useApiRequest } from "./use-api-fetch"
 
 // useApiFetch is a hook so it can read a fresh Clerk token per call. Only the
 // token source is mocked; everything else here is the real mutator.
-const { getToken } = vi.hoisted(() => ({ getToken: vi.fn() }))
+const { getToken, signOut } = vi.hoisted(() => ({
+  getToken: vi.fn(),
+  signOut: vi.fn(),
+}))
 
-vi.mock("@app/auth", () => ({ useAppAuth: () => ({ getToken }) }))
+vi.mock("@app/auth", () => ({ useAppAuth: () => ({ getToken, signOut }) }))
 
 function jsonResponse(
   body: unknown,
@@ -49,6 +52,8 @@ async function rejection(promise: Promise<unknown>): Promise<ApiError> {
 beforeEach(() => {
   getToken.mockReset()
   getToken.mockResolvedValue("tok-123")
+  signOut.mockReset()
+  signOut.mockResolvedValue(undefined)
   vi.stubGlobal("fetch", vi.fn().mockResolvedValue(jsonResponse({ ok: true })))
   process.env.NEXT_PUBLIC_API_URL = "http://localhost:8100"
 })
@@ -256,5 +261,73 @@ describe("useApiRequest", () => {
     const error = await rejection(request()("/api/v1/stream"))
     expect(error.status).toBe(429)
     expect(error.body).toEqual({ detail: "slow down" })
+  })
+})
+
+describe("a 401", () => {
+  it("is retried once with a fresh token", async () => {
+    getToken.mockResolvedValueOnce("stale").mockResolvedValueOnce("fresh")
+    vi.mocked(globalThis.fetch)
+      .mockResolvedValueOnce(jsonResponse({}, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+
+    await expect(callApi()("/api/v1/me")).resolves.toEqual({ ok: true })
+
+    expect(getToken).toHaveBeenLastCalledWith({ forceRefresh: true })
+    expect(lastCall().headers.get("Authorization")).toBe("Bearer fresh")
+    expect(signOut).not.toHaveBeenCalled()
+  })
+
+  it("replays the request's body", async () => {
+    vi.mocked(globalThis.fetch)
+      .mockResolvedValueOnce(jsonResponse({}, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({ ok: true }))
+
+    await callApi()("/api/v1/transactions", {
+      method: "POST",
+      body: '{"merchant":"x"}',
+    })
+
+    const bodies = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([, init]) => (init as RequestInit).body)
+    expect(bodies).toEqual(['{"merchant":"x"}', '{"merchant":"x"}'])
+  })
+
+  // The session is over: ended in another tab, or never coming back.
+  it("signs out when the retry is refused too, and still rejects", async () => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () =>
+      jsonResponse({}, { status: 401 }),
+    )
+
+    const error = await rejection(callApi()("/api/v1/me"))
+
+    expect(error.status).toBe(401)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    expect(signOut).toHaveBeenCalledOnce()
+  })
+
+  it("rejects with the ApiError even when signing out fails", async () => {
+    signOut.mockRejectedValue(new Error("session already gone"))
+    vi.mocked(globalThis.fetch).mockImplementation(async () =>
+      jsonResponse({}, { status: 401 }),
+    )
+
+    const error = await rejection(callApi()("/api/v1/me"))
+    expect(error.status).toBe(401)
+  })
+})
+
+describe("other refusals", () => {
+  it.each([403, 500])("%i is neither retried nor signs out", async (status) => {
+    vi.mocked(globalThis.fetch).mockImplementation(async () =>
+      jsonResponse({}, { status }),
+    )
+
+    await rejection(callApi()("/api/v1/me"))
+
+    expect(globalThis.fetch).toHaveBeenCalledOnce()
+    expect(getToken).toHaveBeenCalledOnce()
+    expect(signOut).not.toHaveBeenCalled()
   })
 })

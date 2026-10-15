@@ -149,6 +149,11 @@ component
   `query-meta.ts` types it for every hook through TanStack's `Register`. The toast
   maps `status` to copy in `@app/core`'s `constants/messages.ts`; server text never
   reaches the UI. A 4xx is not retried.
+- **A 401 is an auth event, not an error.** `useApiRequest`, under every hook and the
+  chat stream, retries a 401 once with a token fetched fresh (Clerk's cache skipped). A
+  second 401 means the session is over: `signOut()` ends it and loads `/sign-in`, so a
+  stale session never bounces back from the sign-in page. It only works because the
+  server keeps 401 for bad credentials ([`server.md`](./server.md), the error table).
 - **Reading an error body goes through the generated Zod schema.** `useServerStatus` is
   the example: `/ready` answers 503 with a valid payload when degraded, which arrives as
   `ApiError.body`. The hook parses it with `GetReadinessResponse` and prefers it over

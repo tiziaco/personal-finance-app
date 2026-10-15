@@ -79,6 +79,10 @@ app (signed in)             @app/auth: useAppAuth().getToken() — fresh on ever
 `CurrentUser`, and the decisions after that are authorization's
 ([`authorization.md`](./authorization.md) §2).
 
+**A 401 ends the session on the web.** The web retries it once with a fresh token, then
+signs out. So the server answers 401 only when the request's credentials fail; an outage
+behind valid ones is a 5xx ([`server.md`](./server.md)).
+
 **The audience is not checked; the token's party is.** The app's token must carry an
 `azp` in `ALLOWED_ORIGINS`; Swagger's passes on `client_id` instead
 (`server/app/utils/auth.py`). So `ALLOWED_ORIGINS` is part of authentication, not just
