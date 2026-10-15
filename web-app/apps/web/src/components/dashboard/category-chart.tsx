@@ -1,0 +1,81 @@
+"use client"
+
+import { Pie, PieChart } from "recharts"
+import type { CategorySliceResponse } from "@app/api-client/types"
+import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  type ChartConfig,
+} from "@app/ui/chart"
+import { useCategories } from "@/components/transactions/use-categories"
+import { toCategorySlices } from "./category-slices"
+
+/** A donut of the month's top five categories plus Other, with a labelled legend beside it. */
+export function CategoryChart({ slices }: { slices: CategorySliceResponse[] }) {
+  const { label } = useCategories()
+  const data = toCategorySlices(slices, label)
+  const config: ChartConfig = Object.fromEntries(
+    data.map((s) => [s.key, { label: s.name, color: s.fill }]),
+  )
+  const display = new Map(data.map((s) => [s.key, s.display]))
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Spending by category</CardTitle>
+      </CardHeader>
+      {data.length === 0 ? (
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            No spending this month.
+          </p>
+        </CardContent>
+      ) : (
+        <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
+          <ChartContainer
+            config={config}
+            className="aspect-square w-44 shrink-0"
+          >
+            <PieChart>
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    hideLabel
+                    formatter={(_, key) => display.get(key)}
+                  />
+                }
+              />
+              <Pie
+                data={data}
+                dataKey="amount"
+                nameKey="key"
+                innerRadius="58%"
+                outerRadius="100%"
+                stroke="var(--card)"
+                strokeWidth={2}
+                isAnimationActive={false}
+              />
+            </PieChart>
+          </ChartContainer>
+          <ul className="w-full space-y-2 text-sm">
+            {data.map((s) => (
+              <li key={s.key} className="flex items-center gap-2">
+                <span
+                  aria-hidden
+                  className="size-2.5 shrink-0 rounded-[2px]"
+                  style={{ backgroundColor: s.fill }}
+                />
+                <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                <span className="tabular-nums">{s.display}</span>
+                <span className="w-14 text-right text-muted-foreground tabular-nums">
+                  {s.share.toFixed(1)}%
+                </span>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      )}
+    </Card>
+  )
+}

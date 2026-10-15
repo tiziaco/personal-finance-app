@@ -1,5 +1,6 @@
 """Transaction repository: every query, each one scoped by user_id."""
 
+import datetime as dt
 import uuid
 from datetime import UTC, datetime
 from typing import Any, Optional
@@ -11,7 +12,7 @@ from sqlmodel import select
 from app.core.logging import logger
 from app.modules.transaction.domain import DETECTED
 from app.modules.transaction.models import Transaction
-from app.modules.transaction.schemas import TransactionFilters, TransactionOrdering
+from app.modules.transaction.schemas import AnalysisRow, TransactionFilters, TransactionOrdering
 
 _ORDER_COLUMNS = {
     "date": Transaction.date,
@@ -136,6 +137,36 @@ class TransactionRepository:
         )
         items = list((await session.execute(statement)).scalars().all())
         return items, total
+
+    @staticmethod
+    async def list_active_rows_for_analysis(
+        session: AsyncSession,
+        user_id: uuid.UUID,
+        date_from: Optional[dt.date],
+        date_to: Optional[dt.date],
+    ) -> list[AnalysisRow]:
+        """This user's active rows within inclusive bounds, oldest first, as plain values."""
+        conditions = [Transaction.user_id == user_id, Transaction.deleted_at.is_(None)]
+        if date_from is not None:
+            conditions.append(Transaction.date >= date_from)
+        if date_to is not None:
+            conditions.append(Transaction.date <= date_to)
+        statement = (
+            select(
+                Transaction.date,
+                Transaction.merchant,
+                Transaction.amount,
+                Transaction.category,
+                Transaction.is_recurring,
+            )
+            .where(*conditions)
+            .order_by(Transaction.date, Transaction.created_at, Transaction.id)
+        )
+        result = await session.execute(statement)
+        return [
+            AnalysisRow(date=date, merchant=merchant, amount=amount, category=category, is_recurring=is_recurring)
+            for date, merchant, amount, category, is_recurring in result.all()
+        ]
 
     @staticmethod
     async def set_category_for_ids(

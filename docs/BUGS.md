@@ -142,3 +142,27 @@ not stale healthy data with an error.
 
 **Fixing it** is gating the ring on the same condition as green — no `error` and a
 healthy status — with a test for the combination that fails first.
+
+### The first page load after sign-in fires its queries without a token
+
+`useApiFetch` (`web-app/packages/api-client/src/use-api-fetch.ts:98`) binds `getToken` from
+`useAppAuth()` and sends whatever it returns. Right after a Clerk sign-in, before the
+session is loaded, `getToken()` resolves to `null`, `apiRequest` sends the request with no
+`Authorization` header, and the server answers 401. Nothing holds the generated hooks back
+until `isLoaded`, so every query a page fires on its first render goes out bare.
+
+**Reproduce:** sign out, sign in, and land on `/transactions`. `GET /api/v1/transactions`
+and `/categories` go out with no `Authorization` header, the server logs
+`no_auth_header_present` and answers 401, and the table shows "Something went wrong"
+until the page is reloaded. With step 5a, `/home` does the same for `analytics/dashboard`,
+`transactions?limit=10` and `categories`.
+
+**Why it has gone unnoticed:** it only happens on the first render straight after the
+sign-in redirect; any later navigation or a reload has the token. Both wave-2 workers hit it
+in their hand checks on 15 Oct 2026.
+
+**Fixing it** belongs in the shared fetch layer, not in each page: hold queries until the
+session is loaded (for example, `QueryProvider` gating on `isLoaded`, or `useApiFetch`
+waiting for a token before it sends), with a test that renders a query before
+`isLoaded` and expects no request. It touches the hand-written `api-client` files, so it is a
+change of its own, never part of a feature step.

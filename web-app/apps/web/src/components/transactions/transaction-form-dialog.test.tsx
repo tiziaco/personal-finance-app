@@ -232,7 +232,12 @@ describe("TransactionFormDialog", () => {
         ?.onSuccess as () => Promise<void>
       await onSuccess()
     }
-    expect(invalidate).toHaveBeenCalledTimes(2)
+    const listCalls = invalidate.mock.calls.filter(
+      ([filters]) =>
+        JSON.stringify(filters?.queryKey) ===
+        JSON.stringify(getListTransactionsQueryKey()),
+    )
+    expect(listCalls).toHaveLength(2)
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: getListTransactionsQueryKey(),
     })

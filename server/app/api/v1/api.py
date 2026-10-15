@@ -2,10 +2,11 @@
 
 from fastapi import APIRouter
 
-from app.modules import account, conversation, transaction
+from app.modules import account, analytics, conversation, transaction
 
 api_router = APIRouter()
 api_router.include_router(account.router)
+api_router.include_router(analytics.router)
 api_router.include_router(conversation.router)
 api_router.include_router(transaction.imports_router)
 api_router.include_router(transaction.router)
