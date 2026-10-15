@@ -267,7 +267,8 @@ hand, from the same file:
 
 | What you see | Likely cause |
 |---|---|
-| 401 from the API, token looks valid | The web origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
+| You sign in, land on the dashboard, get a "session expired" toast and are sent back to `/sign-in`, every time (the server log shows 401 from the API) | The web origin is missing from `ALLOWED_ORIGINS` (§4). Server log: `token_party_not_allowed`. |
+| Every request fails with 503 `AUTH_UNAVAILABLE`, and you are not signed out | The server cannot reach Clerk's JWKS endpoint (a network problem, or a wrong `CLERK_ISSUER` in the server env). Server log: `token_jwks_unreachable`. |
 | Server won't start, `SettingsError` on `ALLOWED_ORIGINS` | Not a JSON array (§4). |
 | Browser CORS error on every request | Same as the 401 row — one setting, two symptoms (§4). |
 | Works locally, not in staging/production | `ALLOWED_ORIGINS` is per-environment; each `server/.env.<env>` needs its own origins. |

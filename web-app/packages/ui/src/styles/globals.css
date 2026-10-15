@@ -70,7 +70,7 @@
   --chart-4: #eda100;
   --chart-5: #e87ba4;
   --chart-6: #898781;
-  /* Income and expenses, wherever they appear: a pair no category slot uses (dataviz-validated). */
+  /* Income and expense series: a pair no category slot uses (dataviz-validated). */
   --chart-income: #008300;
   --chart-expense: #6250d6;
   --radius: 0.625rem;

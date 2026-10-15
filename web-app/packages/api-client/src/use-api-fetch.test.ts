@@ -294,6 +294,18 @@ describe("a 401", () => {
     expect(bodies).toEqual(['{"merchant":"x"}', '{"merchant":"x"}'])
   })
 
+  it("rejects with the retry's own error when that is not a 401", async () => {
+    vi.mocked(globalThis.fetch)
+      .mockResolvedValueOnce(jsonResponse({}, { status: 401 }))
+      .mockResolvedValueOnce(jsonResponse({}, { status: 500 }))
+
+    const error = await rejection(callApi()("/api/v1/me"))
+
+    expect(error.status).toBe(500)
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2)
+    expect(signOut).not.toHaveBeenCalled()
+  })
+
   // The session is over: ended in another tab, or never coming back.
   it("signs out when the retry is refused too, and still rejects", async () => {
     vi.mocked(globalThis.fetch).mockImplementation(async () =>
