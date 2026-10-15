@@ -38,11 +38,11 @@ class ConversationRepository:
 
     @staticmethod
     async def list_active_for_user(session: AsyncSession, user_id: uuid.UUID) -> List[Conversation]:
-        """A user's non-soft-deleted conversations, oldest first — the order `GET /conversations` publishes."""
+        """A user's non-soft-deleted conversations, newest first — the order `GET /conversations` publishes."""
         statement = (
             select(Conversation)
             .where(Conversation.user_id == user_id, Conversation.deleted_at.is_(None))
-            .order_by(Conversation.created_at)
+            .order_by(Conversation.created_at.desc())
         )
         result = await session.execute(statement)
         return list(result.scalars().all())
@@ -56,6 +56,35 @@ class ConversationRepository:
         await session.refresh(conversation)
 
         logger.info("conversation_name_updated", conversation_id=conversation.id, name=name)
+        return conversation
+
+    @staticmethod
+    async def set_name_if_untitled(session: AsyncSession, conversation: Conversation, name: str) -> Conversation:
+        """Name a conversation only if it is still untitled, active and its owner's; return the current row.
+
+        One conditional UPDATE, so a rename that lands between loading the row
+        and this call is kept rather than overwritten. The row is refreshed
+        either way: what it returns is what the database holds now.
+        """
+        result = await session.execute(
+            update(Conversation)
+            .where(
+                Conversation.id == conversation.id,
+                Conversation.user_id == conversation.user_id,
+                Conversation.name == "",
+                Conversation.deleted_at.is_(None),
+            )
+            .values(name=name)
+            .execution_options(synchronize_session=False)
+        )
+        await session.refresh(conversation)
+
+        logger.info(
+            "conversation_name_set_if_untitled",
+            conversation_id=conversation.id,
+            name=name,
+            applied=result.rowcount == 1,
+        )
         return conversation
 
     @staticmethod

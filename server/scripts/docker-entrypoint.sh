@@ -54,7 +54,7 @@ fi
 # REQUIRED_ENV_VARS to an empty value disables the check; leaving it unset keeps
 # the default. Note the single-dash ${VAR-default}, which distinguishes "unset"
 # from "set but empty".
-# OPENAI_API_KEY is deliberately not in the default: config.py defaults it to
+# OPENROUTER_API_KEY is deliberately not in the default: config.py defaults it to
 # empty and only an LLM call needs it, so requiring it made the container
 # stricter than the native server.
 required_vars=()

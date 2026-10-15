@@ -8,6 +8,8 @@ from typing import (
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.chatbot.graph import ChatbotAgent
+from app.core.logging import logger
 from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.repository import conversation_repository
@@ -28,7 +30,7 @@ class ConversationService:
 
     @staticmethod
     async def get_user_conversations(session: AsyncSession, user_id: uuid.UUID) -> List[Conversation]:
-        """Get a user's active conversations, oldest first."""
+        """Get a user's active conversations, newest first."""
         return await conversation_repository.list_active_for_user(session, user_id)
 
     @staticmethod
@@ -68,6 +70,23 @@ class ConversationService:
         number of rows touched.
         """
         return await conversation_repository.blank_names_for_user(session, user_id)
+
+    @staticmethod
+    async def generate_title(session: AsyncSession, conversation: Conversation, agent: ChatbotAgent) -> Conversation:
+        """Name an untitled conversation from its first exchange.
+
+        A no-op for a named conversation, and for one the agent has no title for
+        (no reply yet, or the model failed).
+        """
+        if conversation.name:
+            return conversation
+
+        title = await agent.title_for(conversation.id, conversation.user_id)
+        if title is None:
+            return conversation
+
+        # The model call takes seconds: a rename made meanwhile wins.
+        return await conversation_repository.set_name_if_untitled(session, conversation, title)
 
 
 conversation_service = ConversationService()

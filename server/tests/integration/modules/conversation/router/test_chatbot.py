@@ -1,5 +1,6 @@
 """Integration tests for chatbot endpoints — chat, stream, history, clear."""
 
+import asyncio
 import json
 import uuid
 
@@ -80,6 +81,13 @@ class TestChatEndpoint:
         )
         assert response.status_code == 404
 
+    async def test_chat_script_tag_returns_422(self, authenticated_client_with_agent, test_conversation):
+        response = await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}",
+            json={"message": "<script>alert(1)</script>"},
+        )
+        assert response.status_code == 422
+
 
 class TestStreamChatEndpoint:
     """Tests for POST /api/v1/chatbot/chat/{conversation_id}/stream"""
@@ -143,6 +151,19 @@ class TestGetChatHistory:
             assert "role" in msg
             assert "content" in msg
 
+    async def test_long_reply_in_history_returns_200(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
+        from app.agents.messages import Message
+
+        mock_agent.get_chat_history.return_value = [
+            Message(role="user", content="Explain budgeting"),
+            Message(role="assistant", content="x" * 5000),
+        ]
+        response = await authenticated_client_with_agent.get(f"/api/v1/chatbot/chat/{test_conversation.id}/messages")
+        assert response.status_code == 200
+        assert len(response.json()["messages"][1]["content"]) == 5000
+
 
 class TestClearChatHistory:
     """Tests for DELETE /api/v1/chatbot/chat/{conversation_id}/messages"""
@@ -159,3 +180,100 @@ class TestClearChatHistory:
         )
         assert response.status_code == 204
         assert response.content == b""
+
+
+class TestStreamWireFormat:
+    """The event shape is a published interface: WS7 must not move it."""
+
+    async def test_events_are_byte_identical(self, authenticated_client_with_agent, test_conversation, mock_agent):
+        async def mock_stream(*args, **kwargs):
+            yield "Hi"
+            yield " there"
+
+        mock_agent.get_stream_response = mock_stream
+
+        response = await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
+            json={"message": "Hello"},
+        )
+        frames = [f for f in response.text.split("\n\n") if f and not f.startswith(":")]
+        assert frames == [
+            'data: {"content": "Hi", "done": false}',
+            'data: {"content": " there", "done": false}',
+            'data: {"content": "", "done": true}',
+        ]
+
+    async def test_failure_is_a_final_event_with_content(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
+        async def failing_stream(*args, **kwargs):
+            yield "partial"
+            raise RuntimeError("model down")
+
+        mock_agent.get_stream_response = failing_stream
+
+        response = await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
+            json={"message": "Hello"},
+        )
+        frames = [f for f in response.text.split("\n\n") if f and not f.startswith(":")]
+        assert frames[-1] == 'data: {"content": "An error occurred. Please try again.", "done": true}'
+
+
+class TestStreamClientDisconnect:
+    """WS7: a client that leaves mid-stream stops the model call."""
+
+    async def test_disconnect_cancels_the_agent_stream(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
+        from app.main import app
+
+        first_chunk_sent = asyncio.Event()
+        cancelled = asyncio.Event()
+
+        async def slow_stream(*args, **kwargs):
+            try:
+                yield "first"
+                first_chunk_sent.set()
+                await asyncio.sleep(30)  # a model still generating
+                yield "never"
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        mock_agent.get_stream_response = slow_stream
+
+        body = b'{"message": "Hello"}'
+        request_sent = False
+
+        async def receive():
+            nonlocal request_sent
+            if not request_sent:
+                request_sent = True
+                return {"type": "http.request", "body": body, "more_body": False}
+            await first_chunk_sent.wait()
+            return {"type": "http.disconnect"}
+
+        async def send(message):
+            pass
+
+        path = f"/api/v1/chatbot/chat/{test_conversation.id}/stream"
+        scope = {
+            "type": "http",
+            # At spec 2.4 Starlette's StreamingResponse stops listening for disconnects;
+            # the generator must still be cancelled.
+            "asgi": {"version": "3.0", "spec_version": "2.4"},
+            "http_version": "1.1",
+            "method": "POST",
+            "scheme": "http",
+            "path": path,
+            "raw_path": path.encode(),
+            "root_path": "",
+            "query_string": b"",
+            "headers": [(b"host", b"test"), (b"content-type", b"application/json")],
+            "client": ("127.0.0.1", 12345),
+            "server": ("test", 80),
+        }
+
+        await asyncio.wait_for(app(scope, receive, send), timeout=5)
+        assert cancelled.is_set()

@@ -17,6 +17,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from mem0 import AsyncMemory
 from mem0.llms.base import LLMBase
+from pydantic import SecretStr
 
 import app.agents.shared.memory.factory as factory
 from app.core.config import settings
@@ -143,7 +144,7 @@ class _ProbeLLM(LLMBase):
         raise NotImplementedError
 
 
-@pytest.mark.parametrize("model", ["gpt-5-nano", "gpt-5-mini", "gpt-5"])
+@pytest.mark.parametrize("model", ["gpt-5-nano", "gpt-5-mini", "gpt-5", "openai/gpt-5-nano"])
 def test_gpt5_extraction_sends_no_temperature(model: str):
     """The 400 that silently lost every memory write, pinned at the source.
 
@@ -158,7 +159,10 @@ def test_gpt5_extraction_sends_no_temperature(model: str):
 
     assert config["is_reasoning_model"] is True
 
-    params = _ProbeLLM(config)._get_supported_params(messages=[{"role": "user", "content": "hi"}])
+    # The probe is a bare LLMBase, whose config has no provider-specific keys
+    # (api_key, base URLs); only the sampling-relevant ones matter here.
+    probe_config = {k: config[k] for k in ("model", "is_reasoning_model")}
+    params = _ProbeLLM(probe_config)._get_supported_params(messages=[{"role": "user", "content": "hi"}])
     assert "temperature" not in params
     assert "top_p" not in params
 
@@ -199,3 +203,53 @@ async def test_update_memory_strips_identity_keys_from_metadata():
     kwargs = instance.add.await_args.kwargs
     assert kwargs["user_id"] == str(USER_ID)
     assert kwargs["metadata"] == {"conversation_id": "c-1", "environment": "test"}
+
+
+async def test_llm_and_embedder_both_go_through_openrouter(monkeypatch):
+    """mem0 gets the OpenRouter key and base URL explicitly, not the environment."""
+    monkeypatch.setattr(factory, "_memory_instance", None)
+    from_config = MagicMock(return_value=MagicMock())
+    monkeypatch.setattr(factory.AsyncMemory, "from_config", from_config)
+
+    await factory.create_memory()
+
+    config = from_config.call_args.kwargs["config_dict"]
+    key = settings.llm.OPENROUTER_API_KEY.get_secret_value()
+    assert config["llm"]["config"]["api_key"] == key
+    assert config["llm"]["config"]["openai_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["llm"]["config"]["openrouter_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["embedder"]["config"]["api_key"] == key
+    assert config["embedder"]["config"]["openai_base_url"] == settings.llm.LLM_BASE_URL
+    assert config["embedder"]["config"]["model"] == "openai/text-embedding-3-small"
+
+
+async def test_an_empty_key_never_lets_mem0_fall_back_to_openai_api_key(monkeypatch):
+    """Given an empty key, mem0's OpenAI client reads OPENAI_API_KEY from the
+    environment and would send that secret to OpenRouter's base URL."""
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-openai-secret")
+    fake_cls = MagicMock()
+    with (
+        patch.object(factory, "AsyncMemory", fake_cls),
+        patch.object(settings.llm, "OPENROUTER_API_KEY", SecretStr("")),
+    ):
+        await factory.create_memory()
+
+    config = fake_cls.from_config.call_args.kwargs["config_dict"]
+    assert config["llm"]["config"]["api_key"]
+    assert config["embedder"]["config"]["api_key"]
+    assert "sk-openai-secret" not in str(config)
+
+
+async def test_erasure_deletes_memories_without_a_key():
+    """GDPR erasure makes no LLM call: an unset key must not leave a user's memories behind."""
+    instance = MagicMock(spec=AsyncMemory)
+    instance.delete_all = AsyncMock()
+    fake_cls = MagicMock()
+    fake_cls.from_config = MagicMock(return_value=instance)
+    with (
+        patch.object(factory, "AsyncMemory", fake_cls),
+        patch.object(settings.llm, "OPENROUTER_API_KEY", SecretStr("")),
+    ):
+        await factory.delete_user_memory(USER_ID)
+
+    instance.delete_all.assert_awaited_once_with(user_id=str(USER_ID))

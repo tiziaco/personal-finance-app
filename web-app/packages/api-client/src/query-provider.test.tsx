@@ -1,51 +1,90 @@
-import { describe, it, expect, vi, beforeEach } from "vitest"
-import { renderHook, waitFor } from "@testing-library/react"
-import { useMutation } from "@tanstack/react-query"
-import { toast } from "sonner"
-import { QueryProvider } from "./query-provider"
+import { useMutation, useQuery } from "@tanstack/react-query"
+import { render, waitFor } from "@testing-library/react"
+import { useEffect } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { ApiError } from "./errors"
+import type { AppMeta } from "./query-meta"
+import { QueryProvider } from "./query-provider"
 
-vi.mock("sonner", () => ({ toast: { error: vi.fn() } }))
+const { toastForError } = vi.hoisted(() => ({ toastForError: vi.fn() }))
 
-const failWith = (status: number) => () =>
-  Promise.reject(new ApiError("failed", status, null, null))
+vi.mock("./toast-for-error", () => ({ toastForError }))
 
-describe("QueryProvider mutation toasts", () => {
-  beforeEach(() => vi.mocked(toast.error).mockClear())
+function FailingMutation({ meta }: { meta?: AppMeta }) {
+  const { mutate } = useMutation({
+    mutationFn: async () => {
+      throw new ApiError("HTTP 500", 500, null, null)
+    },
+    meta,
+  })
+  useEffect(() => mutate(), [mutate])
+  return null
+}
+
+describe("QueryProvider — mutation errors", () => {
+  beforeEach(() => toastForError.mockClear())
 
   it("toasts a failed mutation", async () => {
-    const { result } = renderHook(
-      () => useMutation({ mutationFn: failWith(409) }),
-      { wrapper: QueryProvider },
+    render(
+      <QueryProvider>
+        <FailingMutation />
+      </QueryProvider>,
     )
-    result.current.mutate()
-    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce())
   })
 
-  it("stays silent for a status the mutation handles itself", async () => {
-    const { result } = renderHook(
-      () =>
-        useMutation({
-          mutationFn: failWith(409),
-          meta: { silentStatuses: [409] },
-        }),
-      { wrapper: QueryProvider },
+  // A request the user didn't make (a generated title) has no one waiting on it.
+  it("does not toast a mutation that opts out with silentError", async () => {
+    render(
+      <QueryProvider>
+        <FailingMutation meta={{ silentError: true }} />
+        <FailingMutation />
+      </QueryProvider>,
     )
-    result.current.mutate()
-    await waitFor(() => expect(result.current.isError).toBe(true))
-    expect(toast.error).not.toHaveBeenCalled()
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce())
+    await new Promise((r) => setTimeout(r, 20))
+    expect(toastForError).toHaveBeenCalledOnce()
+  })
+})
+
+function FailingQuery({ status, meta }: { status: number; meta?: AppMeta }) {
+  useQuery({
+    queryKey: ["failing", status],
+    queryFn: async () => {
+      throw new ApiError(`HTTP ${status}`, status, null, null)
+    },
+    meta,
+    retry: false,
+  })
+  return null
+}
+
+describe("QueryProvider — query errors", () => {
+  beforeEach(() => toastForError.mockClear())
+
+  it("toasts a query that has never resolved", async () => {
+    render(
+      <QueryProvider>
+        <FailingQuery status={500} />
+      </QueryProvider>,
+    )
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce())
   })
 
-  it("still toasts other statuses", async () => {
-    const { result } = renderHook(
-      () =>
-        useMutation({
-          mutationFn: failWith(500),
-          meta: { silentStatuses: [409] },
-        }),
-      { wrapper: QueryProvider },
+  // The chat page shows a 404 as its not-found screen; every other error
+  // must still toast.
+  it("a silentError predicate silences only the errors it matches", async () => {
+    const notFound = (e: unknown) => e instanceof ApiError && e.status === 404
+    render(
+      <QueryProvider>
+        <FailingQuery status={404} meta={{ silentError: notFound }} />
+        <FailingQuery status={500} meta={{ silentError: notFound }} />
+      </QueryProvider>,
     )
-    result.current.mutate()
-    await waitFor(() => expect(toast.error).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce())
+    await new Promise((r) => setTimeout(r, 20))
+    expect(toastForError).toHaveBeenCalledOnce()
+    expect(toastForError.mock.calls[0][0]).toMatchObject({ status: 500 })
   })
 })

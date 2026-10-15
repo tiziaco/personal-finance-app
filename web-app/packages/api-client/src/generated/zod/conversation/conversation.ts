@@ -74,6 +74,33 @@ export const RenameConversationResponse = zod
   )
 
 /**
+ * Name an untitled conversation from its first exchange. A conversation that already has a name, or has no reply yet, is returned unchanged.
+ * @summary Generate a conversation title
+ */
+export const GenerateConversationTitleParams = zod.object({
+  conversation_id: zod.uuid(),
+})
+
+export const generateConversationTitleResponseNameDefault = ``
+
+export const GenerateConversationTitleResponse = zod
+  .object({
+    conversation_id: zod
+      .uuid()
+      .describe("The unique identifier for the chat conversation"),
+    created_at: zod.iso
+      .datetime({ offset: true })
+      .describe("When the conversation was created"),
+    name: zod
+      .string()
+      .default(generateConversationTitleResponseNameDefault)
+      .describe("Name of the conversation"),
+  })
+  .describe(
+    "Response model for conversation operations.\n\nAttributes:\n    conversation_id: The unique identifier for the chat conversation\n    name: Name of the conversation (defaults to empty string)\n    created_at: When the conversation was created",
+  )
+
+/**
  * Retrieve all chat conversations created by the authenticated user.
  * @summary List all user chat conversations
  */

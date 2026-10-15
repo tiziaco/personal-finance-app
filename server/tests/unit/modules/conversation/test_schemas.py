@@ -97,3 +97,22 @@ class TestConversationResponse:
             created_at=datetime.now(UTC),
         )
         assert resp.name == ""
+
+
+class TestChatRequestInputRules:
+    """The rules on what a user may send live on the request, not on Message."""
+
+    def test_script_tag_rejected(self):
+        with pytest.raises(ValidationError, match="script"):
+            ChatRequest(message="<script>alert('xss')</script>")
+
+    def test_null_bytes_rejected(self):
+        with pytest.raises(ValidationError, match="null bytes"):
+            ChatRequest(message="hello\0world")
+
+    def test_max_length_boundary(self):
+        assert len(ChatRequest(message="a" * 3000).message) == 3000
+
+    def test_over_max_length_rejected(self):
+        with pytest.raises(ValidationError):
+            ChatRequest(message="a" * 3001)

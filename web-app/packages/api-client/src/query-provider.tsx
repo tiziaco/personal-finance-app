@@ -8,57 +8,10 @@ import {
 } from "@tanstack/react-query"
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools"
 import { useState } from "react"
-import { toast } from "sonner"
 import { ApiError } from "./errors"
 import { isDevelopment } from "@app/core/lib/env"
-import { messages } from "@app/core/constants/messages"
-
-// What QueryProvider reads from `meta`, typed at every useQuery / useMutation.
-declare module "@tanstack/react-query" {
-  interface Register {
-    queryMeta: {
-      /** never toast this query's errors (a poll that fails behind visible data) */
-      silentError?: boolean
-    }
-    mutationMeta: {
-      /** statuses the caller answers itself, so QueryProvider does not toast them */
-      silentStatuses?: number[]
-    }
-  }
-}
-
-/**
- * Map an error to a toast.
- *
- * SECURITY: status maps to curated copy. Never surface err.message or the
- * response body — server payloads may contain stack traces or internal route
- * names.
- */
-function toastForError(error: unknown): void {
-  if (error instanceof ApiError) {
-    switch (error.status) {
-      case 401:
-        toast.error(messages.toasts.sessionExpired)
-        return
-      case 403:
-        toast.error(messages.toasts.forbidden)
-        return
-      case 404:
-        toast.error(messages.toasts.notFound)
-        return
-      case 409:
-        toast.error(messages.toasts.conflictError)
-        return
-      case 422:
-        toast.error(messages.toasts.validationError)
-        return
-      default:
-        toast.error(messages.toasts.genericError)
-        return
-    }
-  }
-  toast.error(messages.toasts.genericError)
-}
+import { isSilenced } from "./query-meta"
+import { toastForError } from "./toast-for-error"
 
 export function QueryProvider({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -69,22 +22,17 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
             // onError fires for background refetches too. A polling query that
             // fails every 30s would otherwise toast every 30s, behind data the
             // user can already see. Only a query that has never resolved
-            // toasts, and a query can opt out entirely.
-            if (query.meta?.silentError === true) return
+            // toasts, unless its meta silences the error.
+            if (isSilenced(query.meta, error)) return
             if (query.state.data !== undefined) return
             toastForError(error)
           },
         }),
-        // Mutations toast: the user just acted and is waiting for a result. A
-        // mutation that answers some statuses itself — the add dialog explains
-        // a 409 inline — lists them in meta.silentStatuses.
+        // Mutations toast: the user just acted and is waiting for a result.
+        // One the app fires on its own (a generated title) opts out.
         mutationCache: new MutationCache({
           onError: (error, _variables, _context, mutation) => {
-            if (
-              error instanceof ApiError &&
-              mutation.meta?.silentStatuses?.includes(error.status)
-            )
-              return
+            if (isSilenced(mutation.meta, error)) return
             toastForError(error)
           },
         }),

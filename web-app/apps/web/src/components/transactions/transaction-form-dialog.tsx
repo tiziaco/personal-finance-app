@@ -59,6 +59,10 @@ type Values = {
 const AMOUNT_ERROR = "Enter an amount like -4.50"
 const MISSING_ERROR = "Fill in the date, merchant and category."
 
+/** A 409: an active transaction already has this date, merchant, amount and description. */
+const isDuplicate = (error: unknown) =>
+  error instanceof ApiError && error.status === 409
+
 function initialState(target: Target): FormState {
   if (target.mode === "add") {
     return {
@@ -127,7 +131,7 @@ function TransactionForm({
   const refresh = useRefreshTransactionsOnSuccess()
   // The add dialog explains a duplicate inline, so QueryProvider must not toast it.
   const create = useCreateTransaction({
-    mutation: { ...refresh.mutation, meta: { silentStatuses: [409] } },
+    mutation: { ...refresh.mutation, meta: { silentError: isDuplicate } },
   })
   const update = useUpdateTransaction(refresh)
   const [form, setForm] = useState<FormState>(() => initialState(target))
@@ -162,8 +166,7 @@ function TransactionForm({
         {
           onSuccess: onClose,
           onError: (error) => {
-            if (error instanceof ApiError && error.status === 409)
-              setDuplicate(true)
+            if (isDuplicate(error)) setDuplicate(true)
           },
         },
       )

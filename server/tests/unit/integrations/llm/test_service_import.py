@@ -23,7 +23,7 @@ SERVER_DIR = Path(__file__).resolve().parents[4]
 
 
 def test_app_imports_without_llm_credentials():
-    """Import app.main in a child process holding an empty OPENAI_API_KEY.
+    """Import app.main in a child process holding an empty OPENROUTER_API_KEY.
 
     A child process is required for the same reason
     tests/unit/scripts/test_export_openapi.py uses one: `settings` and `app`
@@ -35,7 +35,7 @@ def test_app_imports_without_llm_credentials():
     app/main.py cannot repopulate it from a discovered .env — python-dotenv
     does not override values already present. Empty is what CI effectively has.
     """
-    env = {**os.environ, "OPENAI_API_KEY": ""}
+    env = {**os.environ, "OPENROUTER_API_KEY": ""}
 
     result = subprocess.run(
         [sys.executable, "-c", "import app.main"],

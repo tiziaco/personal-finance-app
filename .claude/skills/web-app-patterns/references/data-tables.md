@@ -167,8 +167,8 @@ value from props.
   `@app/data-table` depends on `@app/components`.
 - **Moving a page without trapping Back:** the url-state page setter takes `{ history: "replace" }`
   (the transactions page uses it to bring a past-the-end page back to the last one).
-- **A mutation that handles a status itself** sets `meta.silentStatuses: number[]` so `QueryProvider`
-  does not toast it (the add dialog's 409).
+- **A mutation that handles an error itself** sets `meta.silentError` to a predicate so `QueryProvider`
+  does not toast it (the add dialog's `isDuplicate`, a 409; see `@app/api-client`'s `query-meta.ts`).
 
 Worked example: `apps/web/src/components/transactions/`.
 

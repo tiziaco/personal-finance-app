@@ -115,9 +115,11 @@ describe("TransactionFormDialog", () => {
         allow_duplicate: false,
       },
     })
-    expect(create.mock.calls[0][0]?.mutation?.meta).toEqual({
-      silentStatuses: [409],
-    })
+    const silentError = create.mock.calls[0][0]?.mutation?.meta?.silentError
+    expect(silentError).toBeTypeOf("function")
+    const silences = silentError as (error: unknown) => boolean
+    expect(silences(new ApiError("Conflict", 409, null, null))).toBe(true)
+    expect(silences(new ApiError("Server", 500, null, null))).toBe(false)
   })
 
   it.each(["4,505", "abc"])(

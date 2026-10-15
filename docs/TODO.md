@@ -57,18 +57,6 @@ unacceptable. The shape, decided so a fork does not re-decide it:
 
 Reasoning: `docs/architecture/server.md` §8.
 
-## Server — the chat stream ignores a client disconnect
-
-`event_generator()` in `app/modules/conversation/router/chatbot.py` never checks whether
-the client is still connected, so a client that leaves mid-stream keeps the LLM call
-running to completion. The fix is decided: add `sse-starlette` and return
-`EventSourceResponse(event_generator())` in place of the `StreamingResponse`, adapting the
-`data: {json}\n\n` framing to its event convention. Rewriting the `BaseHTTPMiddleware`
-stack as pure ASGI is not the fix — the gap is in the generator, whatever the middleware.
-**Owned by** roadmap step 3, Chat screen. **Unblocks:** the assistant in production. **Done when** a mid-stream disconnect stops the
-LLM call promptly, and the event shape and the middleware behaviour on the route are
-unchanged.
-
 ## Server — row-level security
 
 Ownership is enforced in the query layer: every user-owned repository method filters by
@@ -79,11 +67,26 @@ refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS
 role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the first
 finance table.
 
+## Server — a model call holds the request's DB connection
+
+`POST /chatbot/chat/{id}` and `POST /conversation/conversation/{id}/title` load the
+conversation through `UserConversation`, which opens the request's `DbSession`
+transaction, then await a model call of several seconds before the session commits after
+the route. The pool connection sits idle in transaction for that long. Fine at one user's
+traffic; under concurrent chats it starves other requests of connections. The fix is to
+read what the call needs, release the session before the model call, and write with a
+short-lived session from `request.app.state.session_factory`, as a streaming body already
+must (`server/CLAUDE.md`, Code Conventions). **Unblocks:** chat under concurrent load.
+
 ## Web — tests the suite does not have yet
 
-- **`QueryProvider`'s error policy.** Which queries toast (never-resolved only, unless
-  `silentError`), that mutations always do, and that a 4xx is not retried. The mutator and
-  the status-recovery hook are covered; the provider that applies their errors is not.
+- **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a
+  5xx is retried once, and that a failed refetch behind data already shown does not toast.
+  `query-provider.test.tsx` covers the rest: a never-resolved query toasts, a mutation
+  toasts, and `silentError` (`true` or a predicate) opts either out.
+- **A failed conversation create.** In `ChatRuntimeProvider`, a create that answers 500
+  clears the exchange and gives the text back to the composer if the user is still there.
+  The provider restructure moved this into `ensureConversation`; no test exercises it.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
