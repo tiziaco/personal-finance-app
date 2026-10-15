@@ -6,17 +6,7 @@ from typing import Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-
-class ImportField(StrEnum):
-    """What a CSV column can be mapped to. `ignore` drops the column."""
-
-    DATE = "date"
-    MERCHANT = "merchant"
-    AMOUNT = "amount"
-    DESCRIPTION = "description"
-    ORIGINAL_CATEGORY = "original_category"
-    RECURRING = "recurring"
-    IGNORE = "ignore"
+from app.modules.transaction.imports.domain import ImportField
 
 
 class MappingSource(StrEnum):

@@ -216,7 +216,6 @@ class TestMapping:
         ("mapping", "reason"),
         [
             ({"Nope": "date"}, "unknown_column"),
-            ({"Buchungsdatum": "when"}, "unknown_field"),
             ({"Buchungsdatum": "date", "Empfaenger": "date"}, "field_twice"),
             ({"Buchungsdatum": "date", "Empfaenger": "merchant"}, "missing_required"),
         ],

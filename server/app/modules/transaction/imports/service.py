@@ -11,11 +11,11 @@ from app.agents.transaction_labeler import MerchantToLabel, label
 from app.core.logging import logger
 from app.modules.transaction.domain import fingerprint, normalise_merchant, plan_count_matched
 from app.modules.transaction.imports.domain import (
-    IGNORE,
     MAX_BYTES,
     ColumnProfile,
     CsvFormatError,
     CsvRow,
+    ImportField,
     ImportRow,
     ParsedCsv,
     clean_proposal,
@@ -124,13 +124,13 @@ class ImportService:
         parsed: ParsedCsv,
         profiles: list[ColumnProfile],
         samples: list[CsvRow],
-    ) -> tuple[dict[str, str], MappingSource]:
+    ) -> tuple[dict[str, ImportField], MappingSource]:
         """The remembered mapping for these columns, else the agent's, else every column ignored."""
         remembered = await import_repository.get_profile(session, user_id, column_key(parsed.columns))
         if remembered is not None:
             # The profile is keyed by names folded; the new file may differ in case or spacing.
             folded = {name.strip().casefold(): field for name, field in remembered.mapping.items()}
-            mapping = {c: folded.get(c.strip().casefold(), IGNORE) for c in parsed.columns}
+            mapping = {c: folded.get(c.strip().casefold(), ImportField.IGNORE) for c in parsed.columns}
             return clean_proposal(parsed.columns, mapping), MappingSource.REMEMBERED
         await _release_connection(session)
         proposal = await propose_mapping(
@@ -140,12 +140,12 @@ class ImportService:
             upload_id=upload_id,
         )
         if proposal is None:
-            return {c: IGNORE for c in parsed.columns}, MappingSource.NONE
+            return {c: ImportField.IGNORE for c in parsed.columns}, MappingSource.NONE
         return clean_proposal(parsed.columns, proposal), MappingSource.PROPOSED
 
     @staticmethod
     async def confirm(
-        session: AsyncSession, user_id: uuid.UUID, upload_id: uuid.UUID, mapping: dict[str, str]
+        session: AsyncSession, user_id: uuid.UUID, upload_id: uuid.UUID, mapping: dict[str, ImportField]
     ) -> ImportResult:
         """Read the held file through the mapping, skip duplicates, label, save (spec §5.3).
 

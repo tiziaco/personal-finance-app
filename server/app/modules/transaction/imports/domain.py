@@ -12,6 +12,7 @@ import re
 from collections import Counter
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
+from enum import StrEnum
 from typing import Optional
 
 MAX_BYTES = 5 * 1024 * 1024
@@ -20,9 +21,20 @@ SAMPLE_SIZE = 3
 # A column is labelled a date or an amount column when this share of its non-empty cells parse.
 FORMAT_SHARE = 0.8
 
-IGNORE = "ignore"
-FIELDS = ("date", "merchant", "amount", "description", "original_category", "recurring", IGNORE)
-REQUIRED = ("date", "merchant", "amount")
+
+class ImportField(StrEnum):
+    """What a CSV column can be mapped to. `ignore` drops the column."""
+
+    DATE = "date"
+    MERCHANT = "merchant"
+    AMOUNT = "amount"
+    DESCRIPTION = "description"
+    ORIGINAL_CATEGORY = "original_category"
+    RECURRING = "recurring"
+    IGNORE = "ignore"
+
+
+REQUIRED = (ImportField.DATE, ImportField.MERCHANT, ImportField.AMOUNT)
 
 COMMA_DECIMAL = "1.234,56"
 DOT_DECIMAL = "1,234.56"
@@ -323,26 +335,25 @@ def pick_samples(parsed: ParsedCsv, size: int = SAMPLE_SIZE) -> list[CsvRow]:
     return [parsed.rows[i] for i in sorted(chosen)]
 
 
-def clean_proposal(columns: list[str], proposal: dict[str, str]) -> dict[str, str]:
+def clean_proposal(columns: list[str], proposal: dict[str, str]) -> dict[str, ImportField]:
     """A proposal made valid: every column present, known fields only, each field once (the first column keeps it)."""
-    taken: set[str] = set()
+    taken: set[ImportField] = set()
     cleaned = {}
     for column in columns:
-        field = proposal.get(column, IGNORE)
-        if field not in FIELDS or (field != IGNORE and field in taken):
-            field = IGNORE
+        raw = proposal.get(column, ImportField.IGNORE)
+        field = ImportField(raw) if raw in ImportField else ImportField.IGNORE
+        if field != ImportField.IGNORE and field in taken:
+            field = ImportField.IGNORE
         taken.add(field)
         cleaned[column] = field
     return cleaned
 
 
-def mapping_problem(columns: list[str], mapping: dict[str, str]) -> Optional[MappingProblem]:
+def mapping_problem(columns: list[str], mapping: dict[str, ImportField]) -> Optional[MappingProblem]:
     """Why a confirmed mapping cannot be used, or None."""
     if set(mapping) - set(columns):
         return MappingProblem("unknown_column", "The mapping names a column the file does not have.")
-    if any(field not in FIELDS for field in mapping.values()):
-        return MappingProblem("unknown_field", "The mapping uses an unknown field.")
-    used = [field for field in mapping.values() if field != IGNORE]
+    used = [field for field in mapping.values() if field != ImportField.IGNORE]
     if len(used) != len(set(used)):
         return MappingProblem("field_twice", "Each field can be mapped to one column only.")
     if any(field not in used for field in REQUIRED):
@@ -354,7 +365,7 @@ def _shown(value: str) -> str:
     return value if len(value) <= _SHOWN else value[: _SHOWN - 1] + "…"
 
 
-def read_rows(parsed: ParsedCsv, mapping: dict[str, str]) -> tuple[list[ImportRow], list[Rejection]]:
+def read_rows(parsed: ParsedCsv, mapping: dict[str, ImportField]) -> tuple[list[ImportRow], list[Rejection]]:
     """Every row through a valid mapping: the rows to save and the rows rejected, in file order.
 
     The date format and amount style are the best for the mapped column. A row
@@ -362,20 +373,24 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, str]) -> tuple[list[ImportRo
     amount or an empty merchant, checked in that order. Text is cut to the
     column sizes.
     """
-    index = {field: parsed.columns.index(column) for column, field in mapping.items() if field != IGNORE}
+    index = {field: parsed.columns.index(column) for column, field in mapping.items() if field != ImportField.IGNORE}
 
-    def cell(row: CsvRow, field: str) -> str:
+    def cell(row: CsvRow, field: ImportField) -> str:
         return row.cells[index[field]] if field in index else ""
 
-    date_format, _ = best_date_format([cell(r, "date") for r in parsed.rows])
-    style, _ = best_amount_style([cell(r, "amount") for r in parsed.rows])
+    date_format, _ = best_date_format([cell(r, ImportField.DATE) for r in parsed.rows])
+    style, _ = best_amount_style([cell(r, ImportField.AMOUNT) for r in parsed.rows])
     rows: list[ImportRow] = []
     rejected: list[Rejection] = []
     for row in parsed.rows:
         if row.wide:
             rejected.append(Rejection(row.number, "more cells than the header"))
             continue
-        raw_date, raw_amount, merchant = cell(row, "date"), cell(row, "amount"), cell(row, "merchant")
+        raw_date, raw_amount, merchant = (
+            cell(row, ImportField.DATE),
+            cell(row, ImportField.AMOUNT),
+            cell(row, ImportField.MERCHANT),
+        )
         date = parse_date(raw_date, date_format)
         if date is None:
             rejected.append(Rejection(row.number, f"unreadable date “{_shown(raw_date)}”"))
@@ -393,9 +408,11 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, str]) -> tuple[list[ImportRo
                 date=date,
                 merchant=merchant[:255],
                 amount=amount,
-                description=cell(row, "description")[:1000] or None,
-                original_category=cell(row, "original_category")[:255] or None,
-                is_recurring=parse_recurring(cell(row, "recurring")) if "recurring" in index else None,
+                description=cell(row, ImportField.DESCRIPTION)[:1000] or None,
+                original_category=cell(row, ImportField.ORIGINAL_CATEGORY)[:255] or None,
+                is_recurring=parse_recurring(cell(row, ImportField.RECURRING))
+                if ImportField.RECURRING in index
+                else None,
             )
         )
     return rows, rejected

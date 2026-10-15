@@ -52,5 +52,4 @@ async def confirm_transactions_import(
     request: Request, upload_id: uuid.UUID, body: ImportConfirm, db_session: DbSession, user: CurrentUser
 ) -> ImportResult:
     """Confirm a held upload's mapping and import it."""
-    mapping = {column: field.value for column, field in body.mapping.items()}
-    return await import_service.confirm(db_session, user.id, upload_id, mapping)
+    return await import_service.confirm(db_session, user.id, upload_id, body.mapping)
