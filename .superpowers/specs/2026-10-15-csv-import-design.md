@@ -27,7 +27,7 @@ Decided in brainstorming (15 Oct):
 |---|---|
 | Formats | Inferred per file: delimiter, encoding (UTF-8, fallback Windows-1252), date format and decimal style per column. Shown in the review, not chosen by hand. |
 | Duplicates | Count-matched: a fingerprint the file holds *n* times and the user holds *k* active times imports `max(0, n−k)`. |
-| Recurring rule | Thresholds in §4.3. |
+| Recurring rule | Thresholds in §4.3. Yearly needs 3 rows, not 2: two similar shop purchases a year apart were false positives in the test data (revised 15 Oct, after a dry run). |
 | Manual add | Only a ticked Recurring box is a `user` assertion; unticked is `detected`. |
 | Labeller failure | Partial failure files those rows under Miscellaneous at 0.3; total failure saves nothing, keeps the upload, answers 503. |
 | Confirm UX | The dialog stays and can be closed; the import carries on and a toast reports it. |
@@ -185,8 +185,10 @@ Conservative by design: no fuzzy matching. A missed merge loses a series; a wron
 Input: one merchant key's active rows as plain values `(id, date, amount, is_recurring, source)`.
 
 1. Split by sign: money in and money out are judged apart.
-2. **Amount clusters.** Sort by amount; a row joins a cluster when it is within ±15 % of the
-   cluster's median, with at least €1 of slack.
+2. **Amount clusters.** Seeds are the distinct absolute amounts, most frequent first, then smallest
+   first. Each row, taken in that same order, joins the first cluster whose seed is within ±15 % of
+   it — measured from the seed, with at least €1 of slack — or starts a cluster seeded by its own
+   amount. A fixed seed does not drift the way a running median does.
 3. **Cadence.** Sort a cluster by date and take the gaps between consecutive rows. A gap fits a
    cadence when it falls in the cadence's window, or in twice that window (one skipped period). The
    cluster is a series when at least 75 % of its gaps fit one cadence:
@@ -196,7 +198,7 @@ Input: one merchant key's active rows as plain values `(id, date, amount, is_rec
    | weekly | 6–8 | 3 |
    | monthly | 26–35 | 3 |
    | quarterly | 84–98 | 3 |
-   | yearly | 350–380 | 2 |
+   | yearly | 350–380 | 3 |
 
 4. Every row in a qualifying cluster is `true`; every other row is `false`.
 5. `user` rows count as evidence in steps 2–3, and are left out of the output, so never changed.
@@ -262,10 +264,14 @@ header is row 1), `reason`.
 
 ### 5.3 Confirm
 
-The route takes no `DbSession`. It opens short sessions from `request.app.state.session_factory` so
-no pool connection idles through the model calls.
+`CurrentUser` already uses the request's `DbSession`, so the route uses it too. Before the model
+calls, the service commits it, which ends the transaction and hands the connection back to the pool:
+no connection idles through the labelling. The read phase writes nothing of its own (the commit
+covers at most a JIT-provisioned user). The write phase then runs in a new transaction on the same
+session, and `DbSession` commits it as usual. This is the one route that commits mid-request; the
+service says why in a comment.
 
-1. **Read** (session 1): the held upload, or 404 `IMPORT_UPLOAD_NOT_FOUND` (missing, expired,
+1. **Read**: the held upload, or 404 `IMPORT_UPLOAD_NOT_FOUND` (missing, expired,
    another user's). Validate the mapping or 422 `INVALID_IMPORT_MAPPING`: date, merchant and amount
    mapped; each field at most once; only columns the file has. Re-parse.
 2. **Rows.** Parse each row with the column's inferred date format and amount style. Reject, into
@@ -275,11 +281,11 @@ no pool connection idles through the model calls.
 3. **Dedupe.** Fingerprint each row; one query (`transaction_service.count_active_by_fingerprints`)
    counts the user's active rows per fingerprint;
    `plan_count_matched` keeps the rest. Done before labelling.
-4. **Label** (no session): §6.3. All batches failed → 503 `CATEGORISATION_UNAVAILABLE`; nothing saved,
+4. **Label**, after the commit that releases the connection: §6.3. All batches failed → 503 `CATEGORISATION_UNAVAILABLE`; nothing saved,
    the upload kept.
-5. **Write** (session 2, one transaction): `DELETE … RETURNING` the held upload — none returned is a
-   404 (a second confirm); `transaction_service.import_many`; upsert the profile; the rule re-runs
-   inside `import_many` (§4.5); commit.
+5. **Write**, in a new transaction: `DELETE … RETURNING` the held upload — none returned is a 404
+   (a second confirm); `transaction_service.import_many`; upsert the profile; the rule re-runs inside
+   `import_many` (§4.5). `DbSession` commits after the route.
 6. Answer `ImportResult`. Log `transactions_imported` with counts only.
 
 Dates: a value with a time keeps its date as written. EUR only: a currency symbol or code in an amount
@@ -330,7 +336,9 @@ at 100 characters. Output: `{column: field}`, or `None` on failure. Validation i
   bank's original category, a typical signed amount (a decimal, not legacy's int). `categories` is the
   `(slug, label)` list from `CATEGORIES`.
 - **Known merchants** first: legacy's 129 entries as `key → slug`, matched on whole tokens of the
-  merchant key. Confidence 0.95.
+  merchant key. Confidence 0.95. The keys are written already normalised; a test in
+  `tests/unit/modules/transaction/` checks each equals `normalise_merchant(key)` and each slug is in
+  `CATEGORIES` (a test may import both sides; the agent may not).
 - **The LLM** for the rest: 50 merchants a batch, at most 5 batches at once. One prompt, legacy's v2
   wording, versioned `v2` on the trace; v1 is dropped. The model answers slugs; a label is accepted and
   mapped.
@@ -343,7 +351,8 @@ at 100 characters. Output: `{column: field}`, or `None` on failure. Validation i
 ## 7. Web — `/transactions`
 
 All inside `components/transactions/` and the page; no new `@app/ui` primitive; no hand-written
-`api-client` file changes (conditions 5–7).
+`api-client` file changes (conditions 5–7). `apps/web` gains `sonner` (`^2.0.7`, the specifier
+`@app/ui` already uses) to raise the toast; tell `orchestrator` (condition 8).
 
 - **Entry points.** An **Import CSV** button (upload icon) beside **Add transaction**. The empty state
   leads with **Upload a CSV**, then "or add a transaction" (closes the `TODO.md` entry).
@@ -374,9 +383,10 @@ All inside `components/transactions/` and the page; no new `@app/ui` primitive; 
 **Server unit** (pure):
 - `domain/test_merchant.py`: §4.2's table.
 - `domain/test_recurring.py`: each cadence at its window edges; the ±15 % band; a skipped period; 2
-  vs 3 rows; yearly with 2; `user` rows unchanged but counted; income and expense apart; legacy's
-  400-row fixture (`pf-legacy/server/tests/data/test_transactions_400.csv`, copied) — BVG, the
-  insurance, rent and salary flagged, a café not.
+  vs 3 rows; yearly needs 3; seeds that do not drift; `user` rows unchanged but counted; income and
+  expense apart; legacy's 400-row fixture (`pf-legacy/server/tests/data/test_transactions_400.csv`,
+  copied) — exactly BVG and Amazon Prime flagged. It is a sparse sample, so it proves the absence of
+  false positives, not recall.
 - `domain/test_fingerprint.py`: the existing vectors, moved.
 - `domain/test_dedupe.py`: (n, k) cases.
 - `imports/test_domain.py`: delimiter sniffing; UTF-8, BOM and Windows-1252; each date format and the
