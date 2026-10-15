@@ -211,5 +211,5 @@ allow_indirect_imports = true
 [[tool.importlinter.contracts]]
 name = "R9: a domain slot imports neither the ORM nor the framework"
 type = "forbidden"
-source_modules = ["app.modules.*.domain"]
+source_modules = ["app.modules.*.domain", "app.modules.*.*.domain"]
 forbidden_modules = ["sqlmodel", "sqlalchemy", "fastapi"]
