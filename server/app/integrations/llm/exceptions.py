@@ -1,12 +1,11 @@
 """LLM service domain exceptions."""
 
-from app.exceptions.base import ServiceError
+from app.exceptions.base import ServiceUnavailableError
 
 
-class LLMServiceError(ServiceError):
+class LLMServiceError(ServiceUnavailableError):
     """Base exception for LLM service errors."""
 
-    status_code = 503
     error_code = "LLM_ERROR"
 
 

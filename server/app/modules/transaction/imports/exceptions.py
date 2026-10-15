@@ -1,6 +1,6 @@
 """The import's exceptions. A 422's context carries `reason`, a code the web words itself."""
 
-from app.exceptions.base import NotFoundError, ServiceError, ValidationError
+from app.exceptions.base import NotFoundError, ServiceUnavailableError, ValidationError
 
 
 class InvalidImportFileError(ValidationError):
@@ -21,8 +21,7 @@ class ImportUploadNotFoundError(NotFoundError):
     error_code = "IMPORT_UPLOAD_NOT_FOUND"
 
 
-class CategorisationUnavailableError(ServiceError):
+class CategorisationUnavailableError(ServiceUnavailableError):
     """Every labelling call failed; nothing was saved and the upload is still held."""
 
-    status_code = 503
     error_code = "CATEGORISATION_UNAVAILABLE"

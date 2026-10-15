@@ -2,9 +2,11 @@
 
 import pytest
 
+import app.main  # noqa: F401  imports every module, so every exception class is defined
 from app.exceptions.base import (
     AuthenticationError,
     AuthorizationError,
+    AuthUnavailableError,
     ConflictError,
     DatabaseConflictError,
     DatabaseConnectionError,
@@ -12,8 +14,13 @@ from app.exceptions.base import (
     InvalidCredentialsError,
     NotFoundError,
     ServiceError,
+    ServiceUnavailableError,
     ValidationError,
 )
+from app.integrations.clerk.webhooks.exceptions import InvalidWebhookSignatureError
+from app.integrations.llm.exceptions import LLMServiceError
+from app.modules.account.exceptions import UserProvisioningError
+from app.modules.transaction.imports.exceptions import CategorisationUnavailableError
 
 pytestmark = pytest.mark.unit
 
@@ -124,3 +131,34 @@ class TestServiceExceptionHierarchy:
     )
     def test_all_inherit_from_service_error(self, exc_class):
         assert issubclass(exc_class, ServiceError)
+
+
+def _subclasses(cls: type) -> set[type]:
+    found: set[type] = set()
+    for sub in cls.__subclasses__():
+        found |= {sub} | _subclasses(sub)
+    return found
+
+
+def test_only_credential_failures_answer_401():
+    """The web signs out on a 401 that survives a retry, so a 401 must mean the caller's credentials."""
+    in_app = {c for c in _subclasses(ServiceError) if c.__module__.startswith("app.")}
+    assert {c for c in in_app if c.status_code == 401} == {
+        AuthenticationError,
+        InvalidCredentialsError,
+        InvalidWebhookSignatureError,
+    }
+
+
+@pytest.mark.parametrize(
+    "outage",
+    [AuthUnavailableError, UserProvisioningError, LLMServiceError, CategorisationUnavailableError],
+)
+def test_outages_are_service_unavailable(outage):
+    assert issubclass(outage, ServiceUnavailableError)
+    assert outage.status_code == 503
+
+
+def test_service_unavailable_is_503():
+    err = ServiceUnavailableError("down")
+    assert (err.status_code, err.error_code) == (503, "SERVICE_UNAVAILABLE")

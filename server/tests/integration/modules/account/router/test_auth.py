@@ -6,6 +6,8 @@ import pytest
 from sqlalchemy import select
 
 from app.exceptions.base import AuthUnavailableError
+from app.integrations.clerk import ClerkAuthenticationError, ClerkRateLimitError, ClerkUserNotFoundError
+from app.modules.account.exceptions import UserAlreadyExistsError
 from app.modules.account.models import User
 
 pytestmark = pytest.mark.integration
@@ -28,6 +30,7 @@ class TestGetMe:
 
         assert response.status_code == 503
         assert response.json()["error"] == "AUTH_UNAVAILABLE"
+        assert response.json()["message"] == "jwks unreachable"
 
     @patch("app.modules.account.dependencies.user_service.resolve_user", side_effect=RuntimeError("db down"))
     @patch("app.api.middlewares.auth.clerk_jwt_verifier")
@@ -39,6 +42,38 @@ class TestGetMe:
 
         assert response.status_code == 503
         assert response.json()["error"] == "USER_PROVISIONING_FAILED"
+
+    @pytest.mark.parametrize(
+        ("error", "status", "code"),
+        [
+            (ClerkAuthenticationError("secret refused"), 502, "CLERK_AUTH_ERROR"),
+            (ClerkRateLimitError("slow down"), 429, "CLERK_RATE_LIMIT"),
+            (UserAlreadyExistsError("email taken"), 409, "USER_ALREADY_EXISTS"),
+        ],
+    )
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_a_typed_provisioning_error_keeps_its_status(self, mock_verifier, client, error, status, code):
+        """Only an untyped failure becomes USER_PROVISIONING_FAILED; a typed one already says what happened."""
+        mock_verifier.verify_token.return_value = {"sub": "clerk_typed_error"}
+
+        with patch("app.modules.account.dependencies.user_service.resolve_user", side_effect=error):
+            response = await client.get("/api/v1/auth/me", headers={"Authorization": "Bearer t"})
+
+        assert response.status_code == status
+        assert response.json()["error"] == code
+
+    @patch(
+        "app.modules.account.dependencies.user_service.resolve_user",
+        side_effect=ClerkUserNotFoundError("gone"),
+    )
+    @patch("app.api.middlewares.auth.clerk_jwt_verifier")
+    async def test_a_user_clerk_no_longer_has_is_401(self, mock_verifier, _resolve, client):
+        """A valid token for a deleted user is a credentials failure: signing out is right."""
+        mock_verifier.verify_token.return_value = {"sub": "clerk_deleted"}
+
+        response = await client.get("/api/v1/auth/me", headers={"Authorization": "Bearer t"})
+
+        assert response.status_code == 401
 
     async def test_authenticated_returns_200(self, authenticated_client):
         response = await authenticated_client.get("/api/v1/auth/me")
