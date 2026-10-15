@@ -39,3 +39,23 @@ def create_graph_config(
             "langfuse_tags": [settings.ENVIRONMENT.value],
         },
     }
+
+
+def create_trace_config(user_id: uuid.UUID, session_id: uuid.UUID, name: str) -> dict:
+    """Langfuse config for a model call made outside a graph.
+
+    Traced to the user, grouped by `session_id` (an import's upload id), named
+    `name`. No thread id: nothing is checkpointed.
+    """
+    user, session = str(user_id), str(session_id)
+    return {
+        "callbacks": [CallbackHandler()],
+        "run_name": name,
+        "metadata": {
+            "user_id": user,
+            "environment": settings.ENVIRONMENT.value,
+            "langfuse_user_id": user,
+            "langfuse_session_id": session,
+            "langfuse_tags": [settings.ENVIRONMENT.value, name],
+        },
+    }

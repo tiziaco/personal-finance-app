@@ -92,7 +92,7 @@ class TestLLMServiceCall:
 
         call_count = 0
 
-        async def mock_retry(msgs):
+        async def mock_retry(msgs, config=None):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -113,7 +113,7 @@ class TestLLMServiceCall:
     async def test_all_models_rate_limited_raises(self, messages):
         service = LLMService()
 
-        async def always_rate_limit(msgs):
+        async def always_rate_limit(msgs, config=None):
             raise RateLimitError(
                 message="rate limited",
                 response=MagicMock(status_code=429, headers={}),
@@ -128,7 +128,7 @@ class TestLLMServiceCall:
     async def test_all_models_timeout_raises(self, messages):
         service = LLMService()
 
-        async def always_timeout(msgs):
+        async def always_timeout(msgs, config=None):
             raise APITimeoutError(request=MagicMock())
 
         with patch.object(service, "_call_llm_with_retry", side_effect=always_timeout):
@@ -139,7 +139,7 @@ class TestLLMServiceCall:
     async def test_all_models_api_error_raises(self, messages):
         service = LLMService()
 
-        async def always_api_error(msgs):
+        async def always_api_error(msgs, config=None):
             raise APIError(
                 message="server error",
                 request=MagicMock(),
@@ -156,7 +156,7 @@ class TestLLMServiceCall:
         service = LLMService().bind_tools([echo])
         seen = {}
 
-        async def capture(msgs):
+        async def capture(msgs, config=None):
             seen["llm"] = service.get_llm()
             return AIMessage(content="ok")
 
@@ -199,7 +199,7 @@ class TestLLMServiceCall:
         service = LLMService()
         before_llm, before_index = service.get_llm(), service._current_model_index
 
-        async def boom(msgs):
+        async def boom(msgs, config=None):
             raise RuntimeError("llm not initialized")
 
         with patch.object(service, "_call_llm_with_retry", side_effect=boom):
@@ -246,3 +246,16 @@ class TestLLMServiceModelSwitching:
         switched = service.get_llm()
         assert isinstance(switched, RunnableBinding)
         assert _bound_tool_names(switched) == ["echo"]
+
+
+@pytest.mark.asyncio
+async def test_call_passes_the_config_to_the_model(messages):
+    service = LLMService()
+    llm = MagicMock()
+    llm.ainvoke = AsyncMock(return_value=AIMessage(content="ok"))
+    service._llm = llm
+    config = {"callbacks": [], "metadata": {"langfuse_user_id": "u"}}
+
+    await service.call(messages, config=config)
+
+    llm.ainvoke.assert_awaited_once_with(messages, config=config)
