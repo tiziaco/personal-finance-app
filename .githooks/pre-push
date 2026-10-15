@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Lint, format-check and test before anything leaves the machine.
+# Lint, format-check, type-check and test before anything leaves the machine.
 #
 # Runs `make check-server` when server/ changed, and `make check-web` then
 # `make test-web` when web-app/ changed, measured against the upstream branch

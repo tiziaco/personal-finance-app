@@ -84,7 +84,7 @@ git config core.hooksPath .githooks
 Two hooks live there. `pre-commit` keeps the API contract in sync (see **API
 Contract** below). `pre-push` runs `make check-server` and `make check-web`
 for whichever side changed since the upstream branch: ruff and Prettier in
-check mode, plus ESLint — and, for `web-app/`, `make test-web` (Vitest).
+check mode, plus ESLint and `tsc` — and, for `web-app/`, `make test-web` (Vitest).
 CI repeats the server half (`.github/workflows/module-boundaries.yml`: import
 contracts, ruff, the module and ownership tests); nothing in CI runs the web checks,
 so for `web-app/` the hook is the only gate. `make check` runs both by hand and

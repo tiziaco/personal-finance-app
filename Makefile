@@ -55,7 +55,7 @@ help:
 	@echo "Checks:"
 	@echo "  make check              - Lint and format-check both sides (pre-push runs these, plus test-web)"
 	@echo "  make check-server       - ruff check + ruff format --check + lint-imports"
-	@echo "  make check-web          - pnpm lint + pnpm format:check"
+	@echo "  make check-web          - pnpm lint + format:check + type-check"
 	@echo "  make test-web           - Vitest unit and component tests (web-app)"
 	@echo ""
 	@echo "Contract:"
@@ -180,7 +180,7 @@ check-server:
 	@cd server && uv run ruff check . && uv run ruff format --check . && uv run lint-imports
 
 check-web:
-	@cd web-app && pnpm -s lint && pnpm -s format:check
+	@cd web-app && pnpm -s lint && pnpm -s format:check && pnpm -s type-check
 
 # Tests, not a check: `check` stays read-only lint/format. No NODE_ENV here —
 # vitest.config.mts pins it, whatever the -include'd .env.local exports.
