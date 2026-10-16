@@ -26,6 +26,9 @@ vi.mock("./category-chart", () => ({
 vi.mock("./insights-callout", () => ({
   InsightsCallout: () => <div>insights callout</div>,
 }))
+vi.mock("./month-to-date-card", () => ({
+  MonthToDateCard: () => <div>month to date card</div>,
+}))
 vi.mock("./trend-chart", () => ({ TrendChart: () => <div>trend chart</div> }))
 
 const dashboardRefetch = vi.fn()
@@ -113,6 +116,24 @@ describe("HomeDashboard", () => {
       "href",
       "/transactions",
     )
+  })
+
+  it("home renders the card beside the summary when month_to_date is present", () => {
+    dashboard({ data: { ...DATA, month_to_date: { month: "2026-10" } } })
+    render(<HomeDashboard />)
+    expect(screen.getByText("month to date card")).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
+  })
+
+  it("home renders the four cards alone when it is null", () => {
+    dashboard({ data: { ...DATA, month_to_date: null } })
+    render(<HomeDashboard />)
+    expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
   })
 
   it("shows the empty state, linking to /transactions, for a user with no data", () => {
