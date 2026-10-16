@@ -683,6 +683,12 @@ export const GetRecurringResponse = zod
   .object({
     amount_share_pct: zod.number(),
     count_share_pct: zod.number(),
+    date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The first day covered; null when the period is empty"),
+    date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day covered; null when the period is empty"),
     hidden_subscriptions: zod.array(
       zod
         .object({
@@ -697,13 +703,24 @@ export const GetRecurringResponse = zod
           months_active: zod.int(),
         })
         .describe(
-          "An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less.",
+          "An unflagged merchant charging like a subscription: in 3+ months, 25–35 days apart, steady, at most 50.",
         ),
     ),
     merchants: zod.array(
       zod
         .object({
+          active: zod
+            .boolean()
+            .describe(
+              "False when the period ends more than 1.5 × interval_days after last_charge",
+            ),
           charges: zod.int(),
+          interval_days: zod
+            .union([zod.int(), zod.null()])
+            .describe(
+              "Median gap in days between consecutive charges; null with one charge",
+            ),
+          last_charge: zod.iso.date(),
           median_charge: zod
             .string()
             .regex(getRecurringResponseMerchantsItemMedianChargeRegExp),
@@ -711,16 +728,19 @@ export const GetRecurringResponse = zod
           monthly_cost: zod
             .string()
             .regex(getRecurringResponseMerchantsItemMonthlyCostRegExp)
-            .describe("Median charge × charges per month charged"),
+            .describe(
+              "Median charge ÷ the whole months between charges when they are 25 days or more apart, else × 30.436875 ÷ interval_days; with one charge, ÷ the period's months",
+            ),
           months_charged: zod.int(),
         })
         .describe(
-          "One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost.",
+          "One merchant flagged recurring: its charges, billing rhythm, monthly cost, and whether it still charges.",
         ),
     ),
     monthly_recurring_cost: zod
       .string()
-      .regex(getRecurringResponseMonthlyRecurringCostRegExp),
+      .regex(getRecurringResponseMonthlyRecurringCostRegExp)
+      .describe("The sum of active merchants' monthly cost"),
     recurring_count: zod.int(),
     recurring_total: zod
       .string()
@@ -728,7 +748,7 @@ export const GetRecurringResponse = zod
     total_expenses: zod.string().regex(getRecurringResponseTotalExpensesRegExp),
   })
   .describe(
-    "Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions.",
+    "Recurring spend over the period: totals, monthly cost, each recurring merchant and hidden subscriptions.",
   )
 
 /**

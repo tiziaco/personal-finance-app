@@ -1017,7 +1017,7 @@
         "type": "object"
       },
       "HiddenSubscriptionResponse": {
-        "description": "An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less.",
+        "description": "An unflagged merchant charging like a subscription: in 3+ months, 25\u201335 days apart, steady, at most 50.",
         "properties": {
           "average_charge": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -1806,11 +1806,33 @@
         "type": "object"
       },
       "RecurringMerchantResponse": {
-        "description": "One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost.",
+        "description": "One merchant flagged recurring: its charges, billing rhythm, monthly cost, and whether it still charges.",
         "properties": {
+          "active": {
+            "description": "False when the period ends more than 1.5 \u00d7 interval_days after last_charge",
+            "title": "Active",
+            "type": "boolean"
+          },
           "charges": {
             "title": "Charges",
             "type": "integer"
+          },
+          "interval_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Median gap in days between consecutive charges; null with one charge",
+            "title": "Interval Days"
+          },
+          "last_charge": {
+            "format": "date",
+            "title": "Last Charge",
+            "type": "string"
           },
           "median_charge": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -1822,7 +1844,7 @@
             "type": "string"
           },
           "monthly_cost": {
-            "description": "Median charge \u00d7 charges per month charged",
+            "description": "Median charge \u00f7 the whole months between charges when they are 25 days or more apart, else \u00d7 30.436875 \u00f7 interval_days; with one charge, \u00f7 the period's months",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Monthly Cost",
             "type": "string"
@@ -1837,13 +1859,16 @@
           "charges",
           "months_charged",
           "median_charge",
-          "monthly_cost"
+          "interval_days",
+          "monthly_cost",
+          "last_charge",
+          "active"
         ],
         "title": "RecurringMerchantResponse",
         "type": "object"
       },
       "RecurringResponse": {
-        "description": "Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions.",
+        "description": "Recurring spend over the period: totals, monthly cost, each recurring merchant and hidden subscriptions.",
         "properties": {
           "amount_share_pct": {
             "title": "Amount Share Pct",
@@ -1852,6 +1877,32 @@
           "count_share_pct": {
             "title": "Count Share Pct",
             "type": "number"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered; null when the period is empty",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered; null when the period is empty",
+            "title": "Date To"
           },
           "hidden_subscriptions": {
             "items": {
@@ -1868,6 +1919,7 @@
             "type": "array"
           },
           "monthly_recurring_cost": {
+            "description": "The sum of active merchants' monthly cost",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Monthly Recurring Cost",
             "type": "string"
@@ -1888,6 +1940,8 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
           "total_expenses",
           "recurring_total",
           "recurring_count",

@@ -93,9 +93,9 @@ class AnalyticsService:
 
     @staticmethod
     async def recurring(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> RecurringResponse:
-        """Recurring spend over the range."""
-        rows = await _rows(session, user_id, date_range)
-        return RecurringResponse.model_validate(recurring_analysis(rows))
+        """Recurring spend over the period."""
+        rows, period, _ = await _context(session, user_id, date_range)
+        return RecurringResponse.model_validate(recurring_analysis(rows, period))
 
     @staticmethod
     async def behaviour(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> BehaviourResponse:

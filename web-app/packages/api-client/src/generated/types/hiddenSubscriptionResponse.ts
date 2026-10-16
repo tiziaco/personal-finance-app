@@ -7,7 +7,7 @@
  */
 
 /**
- * An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less.
+ * An unflagged merchant charging like a subscription: in 3+ months, 25–35 days apart, steady, at most 50.
  */
 export interface HiddenSubscriptionResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

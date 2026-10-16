@@ -7,15 +7,20 @@
  */
 
 /**
- * One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost.
+ * One merchant flagged recurring: its charges, billing rhythm, monthly cost, and whether it still charges.
  */
 export interface RecurringMerchantResponse {
+  /** False when the period ends more than 1.5 × interval_days after last_charge */
+  active: boolean
   charges: number
+  /** Median gap in days between consecutive charges; null with one charge */
+  interval_days: number | null
+  last_charge: string
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   median_charge: string
   merchant: string
   /**
-   * Median charge × charges per month charged
+   * Median charge ÷ the whole months between charges when they are 25 days or more apart, else × 30.436875 ÷ interval_days; with one charge, ÷ the period's months
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   monthly_cost: string

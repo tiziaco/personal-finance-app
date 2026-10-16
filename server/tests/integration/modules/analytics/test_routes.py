@@ -184,3 +184,17 @@ async def test_merchants_over_one_month_has_no_risk_band(authenticated_client, t
     assert (body["date_from"], body["date_to"]) == ("2026-09-01", "2026-09-30")
     assert [m["merchant"] for m in body["top_by_spend"]] == ["Sept Shop"]
     assert "risk" not in body["concentration"]
+
+
+async def test_recurring_over_three_months(authenticated_client, test_user, add, today):
+    for day in ("2026-06-05", "2026-07-05", "2026-08-05", "2026-09-05"):
+        await add(test_user, day, "-10.00", merchant="Netflix", recurring=True)
+
+    response = await authenticated_client.get(f"{BASE}/recurring", params={"months": 3})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["date_from"], body["date_to"]) == ("2026-07-01", "2026-09-30")
+    assert body["merchants"][0]["charges"] == 3
+    assert body["merchants"][0]["monthly_cost"] == "10.00"
+    assert body["merchants"][0]["active"] is True

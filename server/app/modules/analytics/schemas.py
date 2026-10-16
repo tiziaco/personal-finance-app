@@ -246,17 +246,28 @@ class MerchantBreakdownResponse(_Out):
 
 
 class RecurringMerchantResponse(_Out):
-    """One merchant charged on a recurring basis: its charges, months charged, median charge and monthly cost."""
+    """One merchant flagged recurring: its charges, billing rhythm, monthly cost, and whether it still charges."""
 
     merchant: str
     charges: int
     months_charged: int
     median_charge: Decimal
-    monthly_cost: Decimal = Field(..., description="Median charge × charges per month charged")
+    interval_days: Optional[int] = Field(
+        ..., description="Median gap in days between consecutive charges; null with one charge"
+    )
+    monthly_cost: Decimal = Field(
+        ...,
+        description=(
+            "Median charge ÷ the whole months between charges when they are 25 days or more apart, "
+            "else × 30.436875 ÷ interval_days; with one charge, ÷ the period's months"
+        ),
+    )
+    last_charge: dt.date
+    active: bool = Field(..., description="False when the period ends more than 1.5 × interval_days after last_charge")
 
 
 class HiddenSubscriptionResponse(_Out):
-    """An unflagged merchant charged small amounts often: 3 or more charges a month, averaging 50 or less."""
+    """An unflagged merchant charging like a subscription: in 3+ months, 25–35 days apart, steady, at most 50."""
 
     merchant: str
     charges: int
@@ -266,14 +277,16 @@ class HiddenSubscriptionResponse(_Out):
 
 
 class RecurringResponse(_Out):
-    """Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions."""
+    """Recurring spend over the period: totals, monthly cost, each recurring merchant and hidden subscriptions."""
 
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
     total_expenses: Decimal
     recurring_total: Decimal
     recurring_count: int
     amount_share_pct: float
     count_share_pct: float
-    monthly_recurring_cost: Decimal
+    monthly_recurring_cost: Decimal = Field(..., description="The sum of active merchants' monthly cost")
     merchants: List[RecurringMerchantResponse]
     hidden_subscriptions: List[HiddenSubscriptionResponse]
 

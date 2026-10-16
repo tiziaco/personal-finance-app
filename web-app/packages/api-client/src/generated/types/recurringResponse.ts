@@ -9,14 +9,21 @@ import type { HiddenSubscriptionResponse } from "./hiddenSubscriptionResponse"
 import type { RecurringMerchantResponse } from "./recurringMerchantResponse"
 
 /**
- * Recurring spend over the range: totals, monthly cost, each recurring merchant and hidden subscriptions.
+ * Recurring spend over the period: totals, monthly cost, each recurring merchant and hidden subscriptions.
  */
 export interface RecurringResponse {
   amount_share_pct: number
   count_share_pct: number
+  /** The first day covered; null when the period is empty */
+  date_from: string | null
+  /** The last day covered; null when the period is empty */
+  date_to: string | null
   hidden_subscriptions: HiddenSubscriptionResponse[]
   merchants: RecurringMerchantResponse[]
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * The sum of active merchants' monthly cost
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   monthly_recurring_cost: string
   recurring_count: number
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
