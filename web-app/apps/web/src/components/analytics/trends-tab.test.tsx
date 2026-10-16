@@ -207,6 +207,14 @@ describe("TrendsTab", () => {
     ).toHaveAttribute("data-tone", "neutral")
   })
 
+  it.each([-0, -0.04])("says Kept 0.0%% for %s, neutral", (rate) => {
+    spending({ data: { ...SPENDING, savings_rate_pct: rate } })
+    renderTab()
+    expect(
+      within(card("Savings rate")).getByText("Kept 0.0% of income"),
+    ).toHaveAttribute("data-tone", "neutral")
+  })
+
   it("shows a dash when there is no savings rate", () => {
     spending({ data: { ...SPENDING, savings_rate_pct: null } })
     renderTab()
@@ -227,6 +235,8 @@ describe("TrendsTab", () => {
     expect(
       screen.getAllByText("Needs at least two whole months."),
     ).toHaveLength(1)
+    expect(screen.queryByText("Growing")).toBeNull()
+    expect(screen.queryByText("Declining")).toBeNull()
   })
 
   it("names the empty list when only one is empty", () => {
@@ -269,9 +279,9 @@ describe("TrendsTab", () => {
       data: { ...CATEGORIES, date_from: null, date_to: null },
     })
     const { container } = renderTab()
-    expect(
-      screen.getAllByText("No transactions in this period.").length,
-    ).toBeGreaterThan(0)
+    expect(screen.getAllByText("No transactions in this period.")).toHaveLength(
+      2,
+    )
     expect(screen.queryByText(/Kept/)).not.toBeInTheDocument()
     expect(container.textContent).not.toContain("€")
   })

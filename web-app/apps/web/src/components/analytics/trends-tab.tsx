@@ -10,9 +10,10 @@ import type {
 } from "@app/api-client/types"
 import { Skeleton } from "@app/ui/skeleton"
 
-import { SavingsHeadline } from "./change"
 import { CategoryMovers } from "./category-movers"
+import { SavingsHeadline } from "./change"
 import { formatPeriod } from "./format"
+import { toMonthPoints } from "./month-points"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
@@ -22,7 +23,6 @@ import {
   SavingsRateChart,
   SpendingTrendChart,
 } from "./trends-charts"
-import { toMonthPoints } from "./month-points"
 import { PERIODS } from "./use-analytics-params"
 
 const EMPTY = "No transactions in this period."

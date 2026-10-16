@@ -7,6 +7,7 @@ import {
   GRID,
   MARGIN,
   MONEY_Y_AXIS,
+  pointOf,
   TooltipBox,
   X_AXIS,
 } from "./chart-parts"
@@ -27,7 +28,7 @@ export function WeekdayChart({ points }: { points: WeekdayPoint[] }) {
         <ChartTooltip
           {...BAR_TOOLTIP}
           content={({ active, payload }) => {
-            const p = payload?.[0]?.payload as WeekdayPoint | undefined
+            const p = pointOf<WeekdayPoint>(payload)
             if (!active || !p) return null
             return (
               <TooltipBox>
@@ -65,7 +66,7 @@ export function MonthOfYearChart({ points }: { points: MonthOfYearPoint[] }) {
         <ChartTooltip
           {...BAR_TOOLTIP}
           content={({ active, payload }) => {
-            const p = payload?.[0]?.payload as MonthOfYearPoint | undefined
+            const p = pointOf<MonthOfYearPoint>(payload)
             if (!active || !p) return null
             return (
               <TooltipBox>

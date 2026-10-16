@@ -167,6 +167,14 @@ describe("FlowTab", () => {
     ).toHaveAttribute("data-tone", "neutral")
   })
 
+  it.each([-0, -0.04])("says Kept 0.0%% for %s, neutral", (rate) => {
+    spending({ data: { ...DATA, savings_rate_pct: rate } })
+    renderTab()
+    expect(
+      within(card("Cash flow")).getByText("Kept 0.0% of income"),
+    ).toHaveAttribute("data-tone", "neutral")
+  })
+
   it("shows a negative monthly net average as negative", () => {
     spending({ data: { ...DATA, average_monthly_net: "-70.00" } })
     renderTab()

@@ -75,7 +75,7 @@ export function CategoryTab({
       >
         {(d) => (
           <>
-            <div>
+            <div className="-mt-3">
               <p className="text-sm text-muted-foreground">Total spent</p>
               <p className="text-3xl font-semibold tabular-nums">
                 {formatAmount(d.total_expenses)}

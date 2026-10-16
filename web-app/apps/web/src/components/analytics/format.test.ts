@@ -78,6 +78,11 @@ describe("formatPct", () => {
   it("one decimal, sign kept", () => {
     expect(formatPct(8.24)).toBe(one(8.24))
     expect(formatPct(-12)).toBe(one(-12))
+    expect(formatPct(-6.5)).toBe(one(-6.5))
+  })
+  it("never shows a negative zero", () => {
+    expect(formatPct(-0)).toBe(one(0))
+    expect(formatPct(-0.04)).toBe(one(0))
   })
 })
 

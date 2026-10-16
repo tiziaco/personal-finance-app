@@ -72,6 +72,12 @@ describe("useAnalyticsParams", () => {
   it("leaves defaults out of the URL", () => {
     const { result, rerender } = setup("tab=flow&flow_months=12")
     result.current.setMonths("flow", 6)
+    expect(replaceState).toHaveBeenNthCalledWith(
+      1,
+      null,
+      "",
+      "/analytics?tab=flow",
+    )
     mocks.current = "tab=flow"
     rerender()
     result.current.setTab("category")

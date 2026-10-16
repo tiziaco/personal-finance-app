@@ -17,10 +17,12 @@ export const TONE_FILL: Record<Tone, string> = {
 /** A savings rate in words, bad when spending beat income; a dash when there is none. */
 export function SavingsHeadline({ pct }: { pct: number | null }) {
   if (pct === null) return <span>—</span>
-  const tone = changeTone(pct, "income")
+  // A rate that displays as 0.0% reads as kept, neutral — never "spent 0.0% more".
+  const zero = formatPct(pct) === formatPct(0)
+  const tone = zero ? "neutral" : changeTone(pct, "income")
   return (
     <span data-tone={tone} className={TONE_CLASS[tone]}>
-      {pct >= 0
+      {zero || pct >= 0
         ? `Kept ${formatPct(pct)} of income`
         : `Spent ${formatPct(Math.abs(pct))} more than income`}
     </span>

@@ -29,11 +29,12 @@ export function formatPeriod(
   return range(MONTHS, from, to)
 }
 
-/** One decimal, the locale's digits, the sign kept: 8.24 → "8.2%". */
+/** One decimal, the locale's digits, a minus kept, never on a zero: 8.24 → "8.2%". */
 export function formatPct(pct: number): string {
   const number = new Intl.NumberFormat(undefined, {
     minimumFractionDigits: 1,
     maximumFractionDigits: 1,
+    signDisplay: "negative",
   }).format(pct)
   return `${number}%`
 }
