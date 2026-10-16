@@ -23,6 +23,9 @@ vi.mock("@app/auth", () => ({ useAppAuth: vi.fn() }))
 vi.mock("./category-chart", () => ({
   CategoryChart: () => <div>category chart</div>,
 }))
+vi.mock("./insights-callout", () => ({
+  InsightsCallout: () => <div>insights callout</div>,
+}))
 vi.mock("./trend-chart", () => ({ TrendChart: () => <div>trend chart</div> }))
 
 const dashboardRefetch = vi.fn()
@@ -104,6 +107,7 @@ describe("HomeDashboard", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("category chart")).toBeInTheDocument()
     expect(screen.getByText("trend chart")).toBeInTheDocument()
+    expect(screen.getByText("insights callout")).toBeInTheDocument()
     expect(screen.getAllByText("REWE").length).toBeGreaterThan(0)
     expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
       "href",
@@ -121,6 +125,7 @@ describe("HomeDashboard", () => {
     expect(
       screen.queryByRole("group", { name: "Total Spent" }),
     ).not.toBeInTheDocument()
+    expect(screen.queryByText("insights callout")).not.toBeInTheDocument()
     expect(screen.queryByText("Recent transactions")).not.toBeInTheDocument()
   })
 

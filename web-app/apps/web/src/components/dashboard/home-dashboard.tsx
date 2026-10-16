@@ -4,6 +4,7 @@ import { useGetDashboard } from "@app/api-client/endpoints/analytics"
 import { CategoryChart } from "./category-chart"
 import { DashboardSkeleton } from "./dashboard-skeleton"
 import { EmptyDashboard } from "./empty-dashboard"
+import { InsightsCallout } from "./insights-callout"
 import { RecentTransactions } from "./recent-transactions"
 import { SectionError } from "./section-error"
 import { SummaryCards } from "./summary-cards"
@@ -48,9 +49,9 @@ export function HomeDashboard() {
             <CategoryChart slices={data.spending_by_category} />
             <TrendChart points={data.monthly_trend} />
           </div>
+          <InsightsCallout />
         </>
       )}
-      {/* Step 6 puts the insights callout here, full width. */}
       <RecentTransactions />
     </div>
   )

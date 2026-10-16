@@ -16,7 +16,7 @@ export const SECTION_LABEL: Record<InsightResponse["section"], string> = {
 }
 
 /** "2026-10-14" → "October so far". */
-function monthSoFar(through: string | null | undefined) {
+export function monthSoFar(through: string | null | undefined) {
   const day = through ? parseIsoDay(through) : undefined
   if (!day) return "Month so far"
   const month = new Intl.DateTimeFormat(undefined, { month: "long" }).format(

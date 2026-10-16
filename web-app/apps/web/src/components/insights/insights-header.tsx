@@ -5,6 +5,14 @@ const generatedFormat = new Intl.DateTimeFormat(undefined, {
   timeStyle: "short",
 })
 
+/** "Generated Oct 14, 2026, 9:30 AM", or null when the time is missing or invalid. */
+export function generatedLabel(generatedAt: string | null | undefined) {
+  const date = generatedAt ? new Date(generatedAt) : null
+  return date && !Number.isNaN(date.getTime())
+    ? `Generated ${generatedFormat.format(date)}`
+    : null
+}
+
 export function InsightsHeader({
   generatedAt,
   pending,
@@ -17,11 +25,7 @@ export function InsightsHeader({
   /** Omitted when there is nothing to regenerate (no data yet). */
   onRegenerate?: () => void
 }) {
-  const date = generatedAt ? new Date(generatedAt) : null
-  const generated =
-    date && !Number.isNaN(date.getTime())
-      ? `Generated ${generatedFormat.format(date)}`
-      : null
+  const generated = generatedLabel(generatedAt)
   return (
     <div className="flex flex-wrap items-start justify-between gap-4">
       <div className="space-y-1">
