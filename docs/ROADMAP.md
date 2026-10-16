@@ -33,6 +33,7 @@ Links are relative to `docs/`.
 | **5b Analytics page** — the four `/analytics` views | complete — [PR #17](https://github.com/tiziaco/personal-finance-app/pull/17) into `template-base`; reaches `main` at Cutover | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md) §2 |
 | **6 Insights** — generation, the `/insights` page, the dashboard callout and the home month-to-date card | complete — [PR #18](https://github.com/tiziaco/personal-finance-app/pull/18) into `template-base`; reaches `main` at Cutover | `feat/insights` | [`insights.md`](./product/features/insights.md), [`data-model/insight.md`](./data-model/insight.md), [`transaction.md`](./data-model/transaction.md) D4 (the delete-all event) |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money | in progress | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md). No spec yet |
+| **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place | not started — after #17 and #18 merge | — | [`TODO.md`](./TODO.md) **Wave 3 cleanup** |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or

@@ -159,6 +159,72 @@ data on 14 Oct 2026.
 
 **Unblocks:** nothing; the app is usable with the template's theme.
 
+## Server — analytics: yearly charges, and empty months before the first data
+
+Two behaviours step 6's insights run surfaced. Both are correct by the current rules, but
+the rules may be wrong for the user:
+
+- **A yearly charge is recurring only after three years.** `CADENCES` in
+  `server/app/modules/transaction/domain/recurring.py` gives `yearly` a `min_rows` of 3, so
+  an annual subscription (Amazon Prime) seen once or twice is not flagged. `analytics`
+  recurring can already price one (`interval_days`, €600 a year shows as €50 a month) once
+  it is flagged. Decide whether two yearly charges at one amount are enough, or whether
+  only the user's flag marks one.
+- **A requested period zero-fills months before the user's first transaction.**
+  `months=7` for a user with five months of data averages over two empty months, so a new
+  user's monthly averages are understated. `analytics.md` says months without
+  transactions are zero-filled. That is right inside the data's span, but questionable
+  before its start. Step 6 works around it by asking only for months that hold data.
+  Decide whether the period should be clipped at the first month with data, and echo the
+  clipped span in `date_from`.
+- **A month-to-date-only period averages above its own total.** When the only data is the
+  month in progress, the period falls back to that partial month. Spending's
+  `average_monthly_*` then counts it by the days covered, so the figure is scaled up to a
+  whole month: "/ month" can exceed the period total (€4,118.25 / month against
+  €2,125.55, found by step 5b). Decide it with the clipping question above. One option is
+  to return no monthly average until a month is finished.
+
+## Wave 3 cleanup — shared analytics plumbing (roadmap row "Wave 3 cleanup")
+
+Found by the code reviews of 5b (#17) and 6 (#18), and by 5b's browser check. Each crossed
+another step's ownership during the wave, so it waits until #17 and #18 have merged.
+
+**Web**
+- Export `useQueryStates` and the number-literal parser from `@app/data-table/url-state`,
+  so `/analytics` stops reaching around them.
+- Move `ANALYTICS_STALE_TIME` out of `components/dashboard/home-dashboard.tsx` into a plain
+  module. Importing it from there may pull the home dashboard into `/analytics`'s bundle.
+- Share chart props between `components/analytics/` and `components/dashboard/trend-chart.tsx`.
+- Promote the analytics page's `Section`, `Change` and `PeriodSelect` to `@app/ui` if a
+  second screen wants them.
+- **Income vs Expenses shifts on load** (about 100 px, CLS 0.15): its loading skeleton has
+  no block for the month-to-date strip or the latest-month card. Add blocks of the same
+  height, and hide the strip's block when the period is the month in progress, as the strip
+  itself is.
+- **Picking a period not yet cached flashes the whole tab's skeletons.** Add
+  `placeholderData: keepPreviousData` in `components/analytics/query.ts`, as
+  `components/transactions/transactions-table.tsx` does. While the new period loads, the old
+  period's figures sit under the new period's button, so the page needs a sign that it is
+  updating (dimmed cards, say). This and the `ANALYTICS_STALE_TIME` move both edit
+  `query.ts`.
+
+**Server**
+- **One history load per caller.** Every `AnalyticsService` method loads the user's whole
+  transaction history (`_context`/`_rows` in `analytics/service.py`), and each reads its own
+  `_today()`. `insights/figures.py` makes about 11 such calls per generation and reshapes
+  the results as untyped dicts. Add one analytics method that loads rows and today once and
+  returns a typed bundle of the windows insights needs, then delete `figures.py`'s dict
+  reshaping, `_same_days_previous_month` and `_month_index`. Step 7's tools may want the
+  same bundle.
+- **"Same days of the previous month" lives in three places:**
+  `analytics/domain/spending.py`, `insights/figures.py`, and the web's
+  `month-to-date-card.tsx`. The card also computes net in the browser with floating-point
+  numbers. Add `previous_through` and `net` to `MonthToDateResponse`, worked out by the
+  `domain/spending.py` rule. Then delete the copy in `insights/figures.py` and the card's
+  copy: its date arithmetic, its browser-side net, and the regex that strips the minus sign.
+
+Both server items change analytics, insights and the web together, so they are one step.
+
 ## Cutover (roadmap step 8)
 
 Facts that exist only because the app was ported from a legacy codebase:
