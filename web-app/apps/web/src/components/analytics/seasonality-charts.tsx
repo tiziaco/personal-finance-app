@@ -22,11 +22,7 @@ export function WeekdayChart({ points }: { points: WeekdayPoint[] }) {
     <ChartContainer config={weekdayConfig} className="aspect-[2/1] w-full">
       <BarChart data={points} margin={MARGIN}>
         <CartesianGrid {...GRID} />
-        <XAxis
-          {...X_AXIS}
-          dataKey="name"
-          tickFormatter={(v: string) => v.slice(0, 3)}
-        />
+        <XAxis {...X_AXIS} />
         <YAxis {...MONEY_Y_AXIS} />
         <ChartTooltip
           {...BAR_TOOLTIP}

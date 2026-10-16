@@ -17,6 +17,11 @@ export const PERIODS = {
 } as const
 export type RangedTab = keyof typeof PERIODS
 
+/** Whether a value is one of the page's tabs. */
+export function isAnalyticsTab(v: unknown): v is AnalyticsTab {
+  return ANALYTICS_TABS.some((tab) => tab === v)
+}
+
 const DEFAULT_TAB: AnalyticsTab = "category"
 
 export function useAnalyticsParams() {
@@ -25,8 +30,7 @@ export function useAnalyticsParams() {
   const router = useRouter()
 
   const rawTab = params.get("tab")
-  const tab =
-    ANALYTICS_TABS.find((candidate) => candidate === rawTab) ?? DEFAULT_TAB
+  const tab = isAnalyticsTab(rawTab) ? rawTab : DEFAULT_TAB
 
   function months(forTab: RangedTab): number {
     const { key, choices, fallback } = PERIODS[forTab]

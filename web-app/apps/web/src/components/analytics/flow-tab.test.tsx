@@ -154,10 +154,17 @@ describe("FlowTab", () => {
     expect(cash.getByText(formatAmount("-420.00"))).toHaveClass(
       "text-destructive",
     )
-    expect(cash.getByText(`Kept ${formatPct(-6.5)} of income`)).toHaveAttribute(
-      "data-tone",
-      "bad",
-    )
+    expect(
+      cash.getByText(`Spent ${formatPct(6.5)} more than income`),
+    ).toHaveAttribute("data-tone", "bad")
+  })
+
+  it("says Kept 0.0% for a zero rate, neutral", () => {
+    spending({ data: { ...DATA, savings_rate_pct: 0 } })
+    renderTab()
+    expect(
+      within(card("Cash flow")).getByText("Kept 0.0% of income"),
+    ).toHaveAttribute("data-tone", "neutral")
   })
 
   it("shows a negative monthly net average as negative", () => {

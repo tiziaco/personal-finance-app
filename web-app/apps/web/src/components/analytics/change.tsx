@@ -14,6 +14,19 @@ export const TONE_FILL: Record<Tone, string> = {
   neutral: "fill-muted-foreground",
 }
 
+/** A savings rate in words, bad when spending beat income; a dash when there is none. */
+export function SavingsHeadline({ pct }: { pct: number | null }) {
+  if (pct === null) return <span>—</span>
+  const tone = changeTone(pct, "income")
+  return (
+    <span data-tone={tone} className={TONE_CLASS[tone]}>
+      {pct >= 0
+        ? `Kept ${formatPct(pct)} of income`
+        : `Spent ${formatPct(Math.abs(pct))} more than income`}
+    </span>
+  )
+}
+
 /** A percent change as an arrow and words, coloured good or bad, never by direction alone. */
 export function Change({
   pct,

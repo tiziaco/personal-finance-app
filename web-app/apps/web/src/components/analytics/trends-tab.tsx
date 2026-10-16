@@ -10,9 +10,9 @@ import type {
 } from "@app/api-client/types"
 import { Skeleton } from "@app/ui/skeleton"
 
-import { TONE_CLASS } from "./change"
+import { SavingsHeadline } from "./change"
 import { CategoryMovers } from "./category-movers"
-import { changeTone, formatPeriod, formatPct } from "./format"
+import { formatPeriod } from "./format"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
@@ -95,8 +95,6 @@ export function TrendsTab({
       >
         {(d) => {
           const points = toMonthPoints(d.months, d.month_to_date?.month)
-          const pct = d.savings_rate_pct
-          const tone = pct === null ? null : changeTone(pct, "income")
           return (
             <>
               <Section title="Spending trend">
@@ -110,13 +108,7 @@ export function TrendsTab({
               <Section title="Savings rate">
                 <div className="flex flex-col gap-3">
                   <p className="text-lg font-semibold">
-                    {pct === null || tone === null ? (
-                      "—"
-                    ) : (
-                      <span data-tone={tone} className={TONE_CLASS[tone]}>
-                        {`Kept ${formatPct(pct)} of income`}
-                      </span>
-                    )}
+                    <SavingsHeadline pct={d.savings_rate_pct} />
                   </p>
                   <SavingsRateChart points={points} />
                 </div>

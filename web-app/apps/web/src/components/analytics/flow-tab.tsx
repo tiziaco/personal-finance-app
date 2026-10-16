@@ -20,7 +20,7 @@ import {
   isExpense,
 } from "@/components/transactions/format"
 
-import { Change, TONE_CLASS } from "./change"
+import { Change, SavingsHeadline, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
 import {
   changeTone,
@@ -45,17 +45,6 @@ const isEmpty = (data: SpendingResponse) => data.date_from === null
 /** Red when negative; a positive amount keeps the text colour. */
 const netClass = (amount: string) =>
   isExpense(amount) ? amountClass(amount) : ""
-
-/** A savings rate in words, bad when negative; a dash when there is none. */
-function Kept({ pct }: { pct: number | null }) {
-  if (pct === null) return <span>—</span>
-  const tone = changeTone(pct, "income")
-  return (
-    <span data-tone={tone} className={TONE_CLASS[tone]}>
-      {`Kept ${formatPct(pct)} of income`}
-    </span>
-  )
-}
 
 function Figure({
   label,
@@ -182,7 +171,7 @@ export function FlowTab({
                     />
                   </div>
                   <p className="text-sm">
-                    <Kept pct={d.savings_rate_pct} />
+                    <SavingsHeadline pct={d.savings_rate_pct} />
                   </p>
                 </div>
               </Section>

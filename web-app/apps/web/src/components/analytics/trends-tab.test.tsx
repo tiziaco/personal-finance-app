@@ -189,6 +189,24 @@ describe("TrendsTab", () => {
     ).toHaveAttribute("data-tone", "good")
   })
 
+  it("says Spent more than income for a negative rate", () => {
+    spending({ data: { ...SPENDING, savings_rate_pct: -6.5 } })
+    renderTab()
+    expect(
+      within(card("Savings rate")).getByText(
+        `Spent ${formatPct(6.5)} more than income`,
+      ),
+    ).toHaveAttribute("data-tone", "bad")
+  })
+
+  it("says Kept 0.0% for a zero rate, neutral", () => {
+    spending({ data: { ...SPENDING, savings_rate_pct: 0 } })
+    renderTab()
+    expect(
+      within(card("Savings rate")).getByText("Kept 0.0% of income"),
+    ).toHaveAttribute("data-tone", "neutral")
+  })
+
   it("shows a dash when there is no savings rate", () => {
     spending({ data: { ...SPENDING, savings_rate_pct: null } })
     renderTab()

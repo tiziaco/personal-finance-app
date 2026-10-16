@@ -7,6 +7,9 @@ import { formatIndex } from "./format"
 
 /** One weekday as the chart draws it; the `*Text` fields are ready to show. */
 export type WeekdayPoint = {
+  /** Short weekday, "Mon", for the axis. */
+  label: string
+  /** Long weekday, "Monday", for the tooltip and table. */
   name: string
   perDay: number
   perDayText: string
@@ -24,10 +27,15 @@ export type MonthOfYearPoint = {
   years: number
 }
 
-/** Keeps the server's order (Monday first). */
+const SHORT_WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "short" })
+const LONG_WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "long" })
+
+/** Keeps the server's order (Monday first); names are in the browser's language. */
 export function toWeekdayPoints(days: WeekdaySpendResponse[]): WeekdayPoint[] {
   return days.map((d) => ({
-    name: d.name,
+    // 1 Jan 2024 was a Monday, and weekday 0 is Monday.
+    label: SHORT_WEEKDAY.format(new Date(2024, 0, 1 + d.weekday)),
+    name: LONG_WEEKDAY.format(new Date(2024, 0, 1 + d.weekday)),
     perDay: Number(d.per_day),
     perDayText: formatAmount(d.per_day),
     count: d.count,

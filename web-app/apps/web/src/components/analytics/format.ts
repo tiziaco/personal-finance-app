@@ -1,3 +1,4 @@
+import { parseIsoDay } from "@app/core/lib/dates"
 import { formatMonth } from "@/components/dashboard/month"
 
 export type Tone = "good" | "bad" | "neutral"
@@ -5,12 +6,6 @@ export type Tone = "good" | "bad" | "neutral"
 const MONTHS = { month: "short", year: "numeric" } as const
 const DAYS = { day: "numeric", month: "short", year: "numeric" } as const
 const DAY_MONTH = { day: "numeric", month: "short" } as const
-
-/** "YYYY-MM-DD" → a local-time Date (no UTC shift). */
-function parseDate(iso: string) {
-  const [y, m, d] = iso.split("-").map(Number)
-  return new Date(y, m - 1, d)
-}
 
 function range(options: Intl.DateTimeFormatOptions, from: Date, to: Date) {
   return new Intl.DateTimeFormat(undefined, options).formatRange(from, to)
@@ -22,8 +17,9 @@ export function formatPeriod(
   dateTo: string | null,
 ): string | null {
   if (!dateFrom || !dateTo) return null
-  const from = parseDate(dateFrom)
-  const to = parseDate(dateTo)
+  const from = parseIsoDay(dateFrom)
+  const to = parseIsoDay(dateTo)
+  if (!from || !to) return null
   const wholeMonths =
     from.getDate() === 1 &&
     to.getDate() === new Date(to.getFullYear(), to.getMonth() + 1, 0).getDate()

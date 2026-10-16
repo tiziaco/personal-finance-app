@@ -8,6 +8,7 @@ import { SeasonalityTab } from "./seasonality-tab"
 import { TrendsTab } from "./trends-tab"
 import {
   ANALYTICS_TABS,
+  isAnalyticsTab,
   type AnalyticsTab,
   useAnalyticsParams,
 } from "./use-analytics-params"
@@ -29,7 +30,12 @@ export function AnalyticsPage() {
   return (
     <div className="min-w-0 space-y-4">
       <h1 className="text-2xl font-semibold">Analytics</h1>
-      <Tabs value={tab} onValueChange={(v) => setTab(v as AnalyticsTab)}>
+      <Tabs
+        value={tab}
+        onValueChange={(v) => {
+          if (isAnalyticsTab(v)) setTab(v)
+        }}
+      >
         <div className="-mx-1 overflow-x-auto px-1 pb-1">
           <TabsList>
             {ANALYTICS_TABS.map((value) => (

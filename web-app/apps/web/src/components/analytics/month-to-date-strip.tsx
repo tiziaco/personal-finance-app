@@ -1,4 +1,5 @@
 import type { MonthToDateResponse } from "@app/api-client/types"
+import { parseIsoDay } from "@app/core/lib/dates"
 import { formatAmount } from "@/components/transactions/format"
 import { Change } from "./change"
 import { formatDayRange } from "./format"
@@ -13,12 +14,13 @@ function monthName(month: string) {
 
 /** This month so far, against the same days of the month before. Independent of the period. */
 export function MonthToDateStrip({ data }: { data: MonthToDateResponse }) {
-  // The day part of the server's date; no clock.
-  const day = Number(data.through.split("-")[2])
-  const against = formatDayRange(data.previous_month, day)
+  // The day part of the server's date; no clock. Undefined only if the date is malformed.
+  const day = parseIsoDay(data.through)?.getDate()
+  const against =
+    day === undefined ? null : formatDayRange(data.previous_month, day)
   const comparison = (pct: number | null, kind: "spend" | "income") => (
     <Change
-      pct={pct}
+      pct={against === null ? null : pct}
       kind={kind}
       up={`more than ${against}`}
       down={`less than ${against}`}
@@ -29,7 +31,9 @@ export function MonthToDateStrip({ data }: { data: MonthToDateResponse }) {
     <div className="flex flex-col gap-1 rounded-lg border bg-card p-4 text-sm">
       <p className="font-medium">
         {`${monthName(data.month)} so far `}
-        <span className="whitespace-nowrap">{`(${formatDayRange(data.month, day)})`}</span>
+        {day === undefined ? null : (
+          <span className="whitespace-nowrap">{`(${formatDayRange(data.month, day)})`}</span>
+        )}
       </p>
       <p>
         Spent{" "}

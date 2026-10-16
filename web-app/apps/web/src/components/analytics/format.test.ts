@@ -44,6 +44,8 @@ describe("formatPeriod", () => {
     expect(formatPeriod("2028-02-01", "2028-02-29")).toBe(
       formatMonth("2028-02"),
     ))
+  it("is null for an invalid day rather than rolling over", () =>
+    expect(formatPeriod("2026-02-30", "2026-03-31")).toBeNull())
   it("is null when the period is empty", () =>
     expect(formatPeriod(null, null)).toBeNull())
 })

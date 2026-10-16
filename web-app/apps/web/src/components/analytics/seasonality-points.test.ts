@@ -27,7 +27,19 @@ describe("toWeekdayPoints", () => {
   it("keeps Monday first and per-day text", () => {
     const points = toWeekdayPoints(NAMES.map((_, i) => day(i)))
     expect(points).toHaveLength(7)
-    expect(points[0].name).toBe("Monday")
+    expect(points.map((p) => p.perDayText)).toHaveLength(7)
+    const jan1 = new Date(2024, 0, 1)
+    expect(points[0].label).toBe(
+      new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(jan1),
+    )
+    expect(points[0].name).toBe(
+      new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(jan1),
+    )
+    expect(points[6].name).toBe(
+      new Intl.DateTimeFormat(undefined, { weekday: "long" }).format(
+        new Date(2024, 0, 7),
+      ),
+    )
     expect(points[0].perDay).toBe(15)
     expect(points[0].perDayText).toBe(formatAmount("15.00"))
     expect(points[0].averageText).toBe(formatAmount("30.00"))
