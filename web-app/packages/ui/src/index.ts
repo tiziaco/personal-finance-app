@@ -157,4 +157,11 @@ export {
 export { Calendar, CalendarDayButton } from "./primitives/calendar"
 export { Checkbox } from "./primitives/checkbox"
 export { Switch } from "./primitives/switch"
+export {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  tabsListVariants,
+} from "./primitives/tabs"
 export { Textarea } from "./primitives/textarea"
