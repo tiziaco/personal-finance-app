@@ -160,3 +160,14 @@ async def test_rows_outside_1900_2100_are_left_out(authenticated_client, test_us
 
     assert body["total_expenses"] == "40.00"
     assert [m["month"] for m in body["months"]] == ["2026-03"]
+
+
+async def test_categories_over_two_months(authenticated_client, test_user, add, today):
+    await add(test_user, "2026-07-05", "-100.00", category="shopping")
+    await add(test_user, "2026-08-05", "-150.00", category="shopping")
+    await add(test_user, "2026-09-05", "-300.00", category="shopping")
+
+    body = (await authenticated_client.get(f"{BASE}/categories", params={"months": 2})).json()
+
+    assert (body["date_from"], body["date_to"]) == ("2026-08-01", "2026-09-30")
+    assert body["top_categories"][0]["total"] == "450.00"

@@ -9,10 +9,18 @@ import type { CategorySpendResponse } from "./categorySpendResponse"
 import type { CategoryTrendResponse } from "./categoryTrendResponse"
 
 /**
- * Spend by category over the range: the biggest, most frequent, fastest growing and declining.
+ * Spend by category over the period: the biggest, most frequent, growing and declining.
  */
 export interface CategoryBreakdownResponse {
   by_frequency: CategorySpendResponse[]
+  /** The first day covered; null when the period is empty */
+  date_from: string | null
+  /** The last day covered; null when the period is empty */
+  date_to: string | null
+  /** The first day of the previous period of the same length; null when it holds no transaction */
+  previous_date_from: string | null
+  /** The last day of the previous period; null as above */
+  previous_date_to: string | null
   top_categories: CategorySpendResponse[]
   top_declining: CategoryTrendResponse[]
   top_growing: CategoryTrendResponse[]

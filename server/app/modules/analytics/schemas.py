@@ -165,28 +165,42 @@ class SpendingResponse(_Out):
 
 
 class CategorySpendResponse(_Out):
-    """One category's spend in the range: total, count, average and share of all expenses."""
+    """One category's spend in the period: total, count, average, share of all expenses, and against the previous period."""
 
     category: str
     total: Decimal
     count: int
     average: Decimal
     share_pct: float
+    previous_total: Optional[Decimal] = Field(
+        ..., description="The category's spend in the previous period; null when there is no previous period"
+    )
+    change_pct: Optional[float] = Field(
+        ..., description="Change from previous_total to total, in percent; null when previous_total is 0 or null"
+    )
 
 
 class CategoryTrendResponse(_Out):
-    """How one category's monthly spend moved between the first and last month of the range, and how steady it was."""
+    """A category's monthly average over the earlier and the later half of the period's whole months."""
 
     category: str
-    first_month_total: Decimal
-    last_month_total: Decimal
-    growth_pct: float
-    cv: Optional[float] = Field(..., description="Coefficient of variation of the monthly totals")
+    earlier_monthly_average: Decimal
+    later_monthly_average: Decimal
+    change_amount: Decimal = Field(..., description="later_monthly_average minus earlier_monthly_average")
+    change_pct: Optional[float] = Field(
+        ..., description="Change over the earlier average, in percent; -100 when the later half is zero; null when new"
+    )
 
 
 class CategoryBreakdownResponse(_Out):
-    """Spend by category over the range: the biggest, most frequent, fastest growing and declining."""
+    """Spend by category over the period: the biggest, most frequent, growing and declining."""
 
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    previous_date_from: Optional[dt.date] = Field(
+        ..., description="The first day of the previous period of the same length; null when it holds no transaction"
+    )
+    previous_date_to: Optional[dt.date] = Field(..., description="The last day of the previous period; null as above")
     total_expenses: Decimal
     top_categories: List[CategorySpendResponse]
     by_frequency: List[CategorySpendResponse]

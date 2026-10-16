@@ -80,9 +80,8 @@ class AnalyticsService:
         session: AsyncSession, user_id: uuid.UUID, date_range: DateRange, top_n: int
     ) -> CategoryBreakdownResponse:
         """Spend by category over the range."""
-        rows = await _rows(session, user_id, date_range)
-        result = category_breakdown(rows, top_n, date_range.date_from, date_range.date_to)
-        return CategoryBreakdownResponse.model_validate(result)
+        rows, period, today = await _context(session, user_id, date_range)
+        return CategoryBreakdownResponse.model_validate(category_breakdown(rows, period, top_n, today=today))
 
     @staticmethod
     async def merchants(

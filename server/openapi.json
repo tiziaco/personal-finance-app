@@ -297,7 +297,7 @@
         "type": "string"
       },
       "CategoryBreakdownResponse": {
-        "description": "Spend by category over the range: the biggest, most frequent, fastest growing and declining.",
+        "description": "Spend by category over the period: the biggest, most frequent, growing and declining.",
         "properties": {
           "by_frequency": {
             "items": {
@@ -305,6 +305,58 @@
             },
             "title": "By Frequency",
             "type": "array"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered; null when the period is empty",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered; null when the period is empty",
+            "title": "Date To"
+          },
+          "previous_date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day of the previous period of the same length; null when it holds no transaction",
+            "title": "Previous Date From"
+          },
+          "previous_date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day of the previous period; null as above",
+            "title": "Previous Date To"
           },
           "top_categories": {
             "items": {
@@ -334,6 +386,10 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
+          "previous_date_from",
+          "previous_date_to",
           "total_expenses",
           "top_categories",
           "by_frequency",
@@ -399,7 +455,7 @@
         "type": "object"
       },
       "CategorySpendResponse": {
-        "description": "One category's spend in the range: total, count, average and share of all expenses.",
+        "description": "One category's spend in the period: total, count, average, share of all expenses, and against the previous period.",
         "properties": {
           "average": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -410,9 +466,34 @@
             "title": "Category",
             "type": "string"
           },
+          "change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Change from previous_total to total, in percent; null when previous_total is 0 or null",
+            "title": "Change Pct"
+          },
           "count": {
             "title": "Count",
             "type": "integer"
+          },
+          "previous_total": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The category's spend in the previous period; null when there is no previous period",
+            "title": "Previous Total"
           },
           "share_pct": {
             "title": "Share Pct",
@@ -429,7 +510,9 @@
           "total",
           "count",
           "average",
-          "share_pct"
+          "share_pct",
+          "previous_total",
+          "change_pct"
         ],
         "title": "CategorySpendResponse",
         "type": "object"
@@ -500,13 +583,19 @@
         "type": "object"
       },
       "CategoryTrendResponse": {
-        "description": "How one category's monthly spend moved between the first and last month of the range, and how steady it was.",
+        "description": "A category's monthly average over the earlier and the later half of the period's whole months.",
         "properties": {
           "category": {
             "title": "Category",
             "type": "string"
           },
-          "cv": {
+          "change_amount": {
+            "description": "later_monthly_average minus earlier_monthly_average",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Change Amount",
+            "type": "string"
+          },
+          "change_pct": {
             "anyOf": [
               {
                 "type": "number"
@@ -515,30 +604,26 @@
                 "type": "null"
               }
             ],
-            "description": "Coefficient of variation of the monthly totals",
-            "title": "Cv"
+            "description": "Change over the earlier average, in percent; -100 when the later half is zero; null when new",
+            "title": "Change Pct"
           },
-          "first_month_total": {
+          "earlier_monthly_average": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "First Month Total",
+            "title": "Earlier Monthly Average",
             "type": "string"
           },
-          "growth_pct": {
-            "title": "Growth Pct",
-            "type": "number"
-          },
-          "last_month_total": {
+          "later_monthly_average": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Last Month Total",
+            "title": "Later Monthly Average",
             "type": "string"
           }
         },
         "required": [
           "category",
-          "first_month_total",
-          "last_month_total",
-          "growth_pct",
-          "cv"
+          "earlier_monthly_average",
+          "later_monthly_average",
+          "change_amount",
+          "change_pct"
         ],
         "title": "CategoryTrendResponse",
         "type": "object"

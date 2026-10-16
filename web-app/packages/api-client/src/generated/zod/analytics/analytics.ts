@@ -263,19 +263,27 @@ export const GetCategoryBreakdownQueryParams = zod.object({
 
 export const getCategoryBreakdownResponseByFrequencyItemAverageRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getCategoryBreakdownResponseByFrequencyItemPreviousTotalOneRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getCategoryBreakdownResponseByFrequencyItemTotalRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getCategoryBreakdownResponseTopCategoriesItemAverageRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getCategoryBreakdownResponseTopCategoriesItemPreviousTotalOneRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getCategoryBreakdownResponseTopCategoriesItemTotalRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
-export const getCategoryBreakdownResponseTopDecliningItemFirstMonthTotalRegExp =
+export const getCategoryBreakdownResponseTopDecliningItemChangeAmountRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
-export const getCategoryBreakdownResponseTopDecliningItemLastMonthTotalRegExp =
+export const getCategoryBreakdownResponseTopDecliningItemEarlierMonthlyAverageRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
-export const getCategoryBreakdownResponseTopGrowingItemFirstMonthTotalRegExp =
+export const getCategoryBreakdownResponseTopDecliningItemLaterMonthlyAverageRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
-export const getCategoryBreakdownResponseTopGrowingItemLastMonthTotalRegExp =
+export const getCategoryBreakdownResponseTopGrowingItemChangeAmountRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getCategoryBreakdownResponseTopGrowingItemEarlierMonthlyAverageRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getCategoryBreakdownResponseTopGrowingItemLaterMonthlyAverageRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getCategoryBreakdownResponseTotalExpensesRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -290,16 +298,47 @@ export const GetCategoryBreakdownResponse = zod
             .string()
             .regex(getCategoryBreakdownResponseByFrequencyItemAverageRegExp),
           category: zod.string(),
+          change_pct: zod
+            .union([zod.number(), zod.null()])
+            .describe(
+              "Change from previous_total to total, in percent; null when previous_total is 0 or null",
+            ),
           count: zod.int(),
+          previous_total: zod
+            .union([
+              zod
+                .string()
+                .regex(
+                  getCategoryBreakdownResponseByFrequencyItemPreviousTotalOneRegExp,
+                ),
+              zod.null(),
+            ])
+            .describe(
+              "The category's spend in the previous period; null when there is no previous period",
+            ),
           share_pct: zod.number(),
           total: zod
             .string()
             .regex(getCategoryBreakdownResponseByFrequencyItemTotalRegExp),
         })
         .describe(
-          "One category's spend in the range: total, count, average and share of all expenses.",
+          "One category's spend in the period: total, count, average, share of all expenses, and against the previous period.",
         ),
     ),
+    date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The first day covered; null when the period is empty"),
+    date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day covered; null when the period is empty"),
+    previous_date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe(
+        "The first day of the previous period of the same length; null when it holds no transaction",
+      ),
+    previous_date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day of the previous period; null as above"),
     top_categories: zod.array(
       zod
         .object({
@@ -307,60 +346,89 @@ export const GetCategoryBreakdownResponse = zod
             .string()
             .regex(getCategoryBreakdownResponseTopCategoriesItemAverageRegExp),
           category: zod.string(),
+          change_pct: zod
+            .union([zod.number(), zod.null()])
+            .describe(
+              "Change from previous_total to total, in percent; null when previous_total is 0 or null",
+            ),
           count: zod.int(),
+          previous_total: zod
+            .union([
+              zod
+                .string()
+                .regex(
+                  getCategoryBreakdownResponseTopCategoriesItemPreviousTotalOneRegExp,
+                ),
+              zod.null(),
+            ])
+            .describe(
+              "The category's spend in the previous period; null when there is no previous period",
+            ),
           share_pct: zod.number(),
           total: zod
             .string()
             .regex(getCategoryBreakdownResponseTopCategoriesItemTotalRegExp),
         })
         .describe(
-          "One category's spend in the range: total, count, average and share of all expenses.",
+          "One category's spend in the period: total, count, average, share of all expenses, and against the previous period.",
         ),
     ),
     top_declining: zod.array(
       zod
         .object({
           category: zod.string(),
-          cv: zod
+          change_amount: zod
+            .string()
+            .regex(
+              getCategoryBreakdownResponseTopDecliningItemChangeAmountRegExp,
+            )
+            .describe("later_monthly_average minus earlier_monthly_average"),
+          change_pct: zod
             .union([zod.number(), zod.null()])
-            .describe("Coefficient of variation of the monthly totals"),
-          first_month_total: zod
-            .string()
-            .regex(
-              getCategoryBreakdownResponseTopDecliningItemFirstMonthTotalRegExp,
+            .describe(
+              "Change over the earlier average, in percent; -100 when the later half is zero; null when new",
             ),
-          growth_pct: zod.number(),
-          last_month_total: zod
+          earlier_monthly_average: zod
             .string()
             .regex(
-              getCategoryBreakdownResponseTopDecliningItemLastMonthTotalRegExp,
+              getCategoryBreakdownResponseTopDecliningItemEarlierMonthlyAverageRegExp,
+            ),
+          later_monthly_average: zod
+            .string()
+            .regex(
+              getCategoryBreakdownResponseTopDecliningItemLaterMonthlyAverageRegExp,
             ),
         })
         .describe(
-          "How one category's monthly spend moved between the first and last month of the range, and how steady it was.",
+          "A category's monthly average over the earlier and the later half of the period's whole months.",
         ),
     ),
     top_growing: zod.array(
       zod
         .object({
           category: zod.string(),
-          cv: zod
+          change_amount: zod
+            .string()
+            .regex(getCategoryBreakdownResponseTopGrowingItemChangeAmountRegExp)
+            .describe("later_monthly_average minus earlier_monthly_average"),
+          change_pct: zod
             .union([zod.number(), zod.null()])
-            .describe("Coefficient of variation of the monthly totals"),
-          first_month_total: zod
-            .string()
-            .regex(
-              getCategoryBreakdownResponseTopGrowingItemFirstMonthTotalRegExp,
+            .describe(
+              "Change over the earlier average, in percent; -100 when the later half is zero; null when new",
             ),
-          growth_pct: zod.number(),
-          last_month_total: zod
+          earlier_monthly_average: zod
             .string()
             .regex(
-              getCategoryBreakdownResponseTopGrowingItemLastMonthTotalRegExp,
+              getCategoryBreakdownResponseTopGrowingItemEarlierMonthlyAverageRegExp,
+            ),
+          later_monthly_average: zod
+            .string()
+            .regex(
+              getCategoryBreakdownResponseTopGrowingItemLaterMonthlyAverageRegExp,
             ),
         })
         .describe(
-          "How one category's monthly spend moved between the first and last month of the range, and how steady it was.",
+          "A category's monthly average over the earlier and the later half of the period's whole months.",
         ),
     ),
     total_expenses: zod
@@ -368,7 +436,7 @@ export const GetCategoryBreakdownResponse = zod
       .regex(getCategoryBreakdownResponseTotalExpensesRegExp),
   })
   .describe(
-    "Spend by category over the range: the biggest, most frequent, fastest growing and declining.",
+    "Spend by category over the period: the biggest, most frequent, growing and declining.",
   )
 
 /**
