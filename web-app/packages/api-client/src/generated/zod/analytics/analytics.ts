@@ -130,6 +130,9 @@ export const GetBehaviourQueryParams = zod.object({
 export const getBehaviourResponseByWeekdayItemAverageRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getBehaviourResponseByWeekdayItemPerDayRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getBehaviourResponseByWeekdayItemTotalRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
@@ -158,7 +161,14 @@ export const GetBehaviourResponse = zod
             .string()
             .regex(getBehaviourResponseByWeekdayItemAverageRegExp),
           count: zod.int(),
+          days: zod
+            .int()
+            .describe("How many times this weekday occurs in the period"),
           name: zod.string(),
+          per_day: zod
+            .string()
+            .regex(getBehaviourResponseByWeekdayItemPerDayRegExp)
+            .describe("Total spend ÷ days"),
           share_pct: zod.number(),
           total: zod
             .string()
@@ -169,9 +179,15 @@ export const GetBehaviourResponse = zod
           "One weekday's spend in the range: total, count, average and share of all expenses.",
         ),
     ),
+    date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The first day covered; null when the period is empty"),
+    date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day covered; null when the period is empty"),
     expense_change_pct: zod
       .union([zod.number(), zod.null()])
-      .describe("Between the range's last two months"),
+      .describe("Between the period's last two whole months"),
     moderate_share_pct: zod.number(),
     seasonality: zod.array(
       zod
@@ -181,10 +197,11 @@ export const GetBehaviourResponse = zod
             .regex(getBehaviourResponseSeasonalityItemAverageSpendRegExp),
           index: zod
             .union([zod.number(), zod.null()])
-            .describe(
-              "100 is the average month; null when the month is not in range",
-            ),
+            .describe("100 is the average whole month; null when years is 0"),
           month: zod.int().describe("1 is January"),
+          years: zod
+            .int()
+            .describe("Whole months of this calendar month in the period"),
         })
         .describe(
           "Average spend for one calendar month of the year, with an index against the average month.",
@@ -194,8 +211,11 @@ export const GetBehaviourResponse = zod
       zod
         .object({
           category: zod.string(),
-          count: zod.int(),
+          count: zod.int().describe("Expenses in the months judged"),
           cv: zod.number(),
+          months: zod
+            .int()
+            .describe("Whole months judged, from the first with spend"),
           stability: zod.enum(["stable", "moderate", "volatile"]),
         })
         .describe(

@@ -303,6 +303,8 @@ class WeekdaySpendResponse(_Out):
     count: int
     average: Decimal
     share_pct: float
+    days: int = Field(..., description="How many times this weekday occurs in the period")
+    per_day: Decimal = Field(..., description="Total spend ÷ days")
 
 
 class WeekPartResponse(_Out):
@@ -318,14 +320,16 @@ class MonthOfYearResponse(_Out):
 
     month: int = Field(..., description="1 is January")
     average_spend: Decimal
-    index: Optional[float] = Field(..., description="100 is the average month; null when the month is not in range")
+    index: Optional[float] = Field(..., description="100 is the average whole month; null when years is 0")
+    years: int = Field(..., description="Whole months of this calendar month in the period")
 
 
 class CategoryStabilityResponse(_Out):
     """How steady one category's expense amounts are, from their coefficient of variation."""
 
     category: str
-    count: int
+    count: int = Field(..., description="Expenses in the months judged")
+    months: int = Field(..., description="Whole months judged, from the first with spend")
     cv: float
     stability: Stability
 
@@ -333,6 +337,8 @@ class CategoryStabilityResponse(_Out):
 class BehaviourResponse(_Out):
     """Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability."""
 
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
     by_weekday: List[WeekdaySpendResponse]
     weekday: WeekPartResponse
     weekend: WeekPartResponse
@@ -342,7 +348,7 @@ class BehaviourResponse(_Out):
     stable_share_pct: float
     moderate_share_pct: float
     volatile_share_pct: float
-    expense_change_pct: Optional[float] = Field(..., description="Between the range's last two months")
+    expense_change_pct: Optional[float] = Field(..., description="Between the period's last two whole months")
 
 
 # Anomalies

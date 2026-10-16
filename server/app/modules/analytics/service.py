@@ -100,9 +100,8 @@ class AnalyticsService:
     @staticmethod
     async def behaviour(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> BehaviourResponse:
         """Spending patterns over the range."""
-        rows = await _rows(session, user_id, date_range)
-        result = behaviour_analysis(rows, date_range.date_from, date_range.date_to)
-        return BehaviourResponse.model_validate(result)
+        rows, period, _ = await _context(session, user_id, date_range)
+        return BehaviourResponse.model_validate(behaviour_analysis(rows, period))
 
     @staticmethod
     async def anomalies(

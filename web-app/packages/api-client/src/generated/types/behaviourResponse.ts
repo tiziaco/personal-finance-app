@@ -15,7 +15,11 @@ import type { WeekPartResponse } from "./weekPartResponse"
  */
 export interface BehaviourResponse {
   by_weekday: WeekdaySpendResponse[]
-  /** Between the range's last two months */
+  /** The first day covered; null when the period is empty */
+  date_from: string | null
+  /** The last day covered; null when the period is empty */
+  date_to: string | null
+  /** Between the period's last two whole months */
   expense_change_pct: number | null
   moderate_share_pct: number
   seasonality: MonthOfYearResponse[]

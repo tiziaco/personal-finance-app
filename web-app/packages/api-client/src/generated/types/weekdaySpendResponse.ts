@@ -13,7 +13,14 @@ export interface WeekdaySpendResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   average: string
   count: number
+  /** How many times this weekday occurs in the period */
+  days: number
   name: string
+  /**
+   * Total spend ÷ days
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
+  per_day: string
   share_pct: number
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   total: string

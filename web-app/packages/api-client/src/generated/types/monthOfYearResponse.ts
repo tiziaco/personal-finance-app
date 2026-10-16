@@ -12,8 +12,10 @@
 export interface MonthOfYearResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   average_spend: string
-  /** 100 is the average month; null when the month is not in range */
+  /** 100 is the average whole month; null when years is 0 */
   index: number | null
   /** 1 is January */
   month: number
+  /** Whole months of this calendar month in the period */
+  years: number
 }

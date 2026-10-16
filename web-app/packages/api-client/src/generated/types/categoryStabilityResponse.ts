@@ -12,7 +12,10 @@ import type { CategoryStabilityResponseStability } from "./categoryStabilityResp
  */
 export interface CategoryStabilityResponse {
   category: string
+  /** Expenses in the months judged */
   count: number
   cv: number
+  /** Whole months judged, from the first with spend */
+  months: number
   stability: CategoryStabilityResponseStability
 }

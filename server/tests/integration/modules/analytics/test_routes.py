@@ -198,3 +198,13 @@ async def test_recurring_over_three_months(authenticated_client, test_user, add,
     assert body["merchants"][0]["charges"] == 3
     assert body["merchants"][0]["monthly_cost"] == "10.00"
     assert body["merchants"][0]["active"] is True
+
+
+async def test_behaviour_over_three_months_echoes_the_period(authenticated_client, test_user, add, today):
+    await add(test_user, "2026-07-01", "-10.00")
+    await add(test_user, "2026-09-30", "-10.00")
+
+    body = (await authenticated_client.get(f"{BASE}/behaviour", params={"months": 3})).json()
+
+    assert (body["date_from"], body["date_to"]) == ("2026-07-01", "2026-09-30")
+    assert [d["days"] for d in body["by_weekday"]] == [13, 13, 14, 13, 13, 13, 13]

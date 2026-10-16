@@ -170,6 +170,32 @@
             "title": "By Weekday",
             "type": "array"
           },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered; null when the period is empty",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered; null when the period is empty",
+            "title": "Date To"
+          },
           "expense_change_pct": {
             "anyOf": [
               {
@@ -179,7 +205,7 @@
                 "type": "null"
               }
             ],
-            "description": "Between the range's last two months",
+            "description": "Between the period's last two whole months",
             "title": "Expense Change Pct"
           },
           "moderate_share_pct": {
@@ -227,6 +253,8 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
           "by_weekday",
           "weekday",
           "weekend",
@@ -556,12 +584,18 @@
             "type": "string"
           },
           "count": {
+            "description": "Expenses in the months judged",
             "title": "Count",
             "type": "integer"
           },
           "cv": {
             "title": "Cv",
             "type": "number"
+          },
+          "months": {
+            "description": "Whole months judged, from the first with spend",
+            "title": "Months",
+            "type": "integer"
           },
           "stability": {
             "enum": [
@@ -576,6 +610,7 @@
         "required": [
           "category",
           "count",
+          "months",
           "cv",
           "stability"
         ],
@@ -1623,19 +1658,25 @@
                 "type": "null"
               }
             ],
-            "description": "100 is the average month; null when the month is not in range",
+            "description": "100 is the average whole month; null when years is 0",
             "title": "Index"
           },
           "month": {
             "description": "1 is January",
             "title": "Month",
             "type": "integer"
+          },
+          "years": {
+            "description": "Whole months of this calendar month in the period",
+            "title": "Years",
+            "type": "integer"
           }
         },
         "required": [
           "month",
           "average_spend",
-          "index"
+          "index",
+          "years"
         ],
         "title": "MonthOfYearResponse",
         "type": "object"
@@ -2605,8 +2646,19 @@
             "title": "Count",
             "type": "integer"
           },
+          "days": {
+            "description": "How many times this weekday occurs in the period",
+            "title": "Days",
+            "type": "integer"
+          },
           "name": {
             "title": "Name",
+            "type": "string"
+          },
+          "per_day": {
+            "description": "Total spend \u00f7 days",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Per Day",
             "type": "string"
           },
           "share_pct": {
@@ -2630,7 +2682,9 @@
           "total",
           "count",
           "average",
-          "share_pct"
+          "share_pct",
+          "days",
+          "per_day"
         ],
         "title": "WeekdaySpendResponse",
         "type": "object"
