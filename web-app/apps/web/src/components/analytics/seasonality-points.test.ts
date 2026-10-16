@@ -27,7 +27,6 @@ describe("toWeekdayPoints", () => {
   it("keeps Monday first and per-day text", () => {
     const points = toWeekdayPoints(NAMES.map((_, i) => day(i)))
     expect(points).toHaveLength(7)
-    expect(points.map((p) => p.perDayText)).toHaveLength(7)
     const jan1 = new Date(2024, 0, 1)
     expect(points[0].label).toBe(
       new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(jan1),

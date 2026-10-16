@@ -32,16 +32,19 @@ const LONG_WEEKDAY = new Intl.DateTimeFormat(undefined, { weekday: "long" })
 
 /** Keeps the server's order (Monday first); names are in the browser's language. */
 export function toWeekdayPoints(days: WeekdaySpendResponse[]): WeekdayPoint[] {
-  return days.map((d) => ({
+  return days.map((d) => {
     // 1 Jan 2024 was a Monday, and weekday 0 is Monday.
-    label: SHORT_WEEKDAY.format(new Date(2024, 0, 1 + d.weekday)),
-    name: LONG_WEEKDAY.format(new Date(2024, 0, 1 + d.weekday)),
-    perDay: Number(d.per_day),
-    perDayText: formatAmount(d.per_day),
-    count: d.count,
-    averageText: formatAmount(d.average),
-    days: d.days,
-  }))
+    const date = new Date(2024, 0, 1 + d.weekday)
+    return {
+      label: SHORT_WEEKDAY.format(date),
+      name: LONG_WEEKDAY.format(date),
+      perDay: Number(d.per_day),
+      perDayText: formatAmount(d.per_day),
+      count: d.count,
+      averageText: formatAmount(d.average),
+      days: d.days,
+    }
+  })
 }
 
 const SHORT_MONTH = new Intl.DateTimeFormat(undefined, { month: "short" })
