@@ -126,7 +126,7 @@ async def batch_delete(
 @limiter.limit(settings.rate_limits.endpoints.TRANSACTIONS[0])
 async def delete_all(request: Request, db_session: DbSession, user: CurrentUser) -> DeleteAllResponse:
     """Permanently delete all of the caller's transactions."""
-    return DeleteAllResponse(deleted=await transaction_service.delete_all_for_user(db_session, user.id))
+    return DeleteAllResponse(deleted=await transaction_service.delete_all_on_request(db_session, user.id))
 
 
 @router.patch(

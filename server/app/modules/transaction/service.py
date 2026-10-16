@@ -2,11 +2,13 @@
 
 import datetime as dt
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.events import events
 from app.modules.transaction.domain import (
     DETECTED,
     USER,
@@ -30,8 +32,20 @@ from app.modules.transaction.schemas import (
     TransactionUpdate,
 )
 
+# Published for the modules above transaction (architecture §8). Only Settings'
+# delete-all publishes it; erasure does not, its subscribers listen to USER_ERASING.
+TRANSACTIONS_ALL_DELETED = "transaction.all_deleted"  # session, user_id — after the user's transactions are removed
+
 # A category the user picked or confirmed by hand is certain (docs/data-model/transaction.md).
 MANUAL_CONFIDENCE = 1.0
+
+
+@dataclass(frozen=True)
+class TransactionActivity:
+    """What insights needs to judge its stored set: any active rows, and when the user's data last moved."""
+
+    has_active: bool
+    last_changed_at: Optional[dt.datetime]
 
 
 class TransactionService:
@@ -196,6 +210,23 @@ class TransactionService:
     async def delete_all_for_user(session: AsyncSession, user_id: uuid.UUID) -> int:
         """Permanently remove every transaction a user owns: Settings' delete-all and erasure."""
         return await transaction_repository.delete_all_for_user(session, user_id)
+
+    @staticmethod
+    async def delete_all_on_request(session: AsyncSession, user_id: uuid.UUID) -> int:
+        """Settings' delete-all: remove every transaction, then tell the modules above.
+
+        Erasure calls delete_all_for_user directly and does not publish; its subscribers
+        listen to USER_ERASING.
+        """
+        count = await TransactionService.delete_all_for_user(session, user_id)
+        await events.publish(TRANSACTIONS_ALL_DELETED, session=session, user_id=user_id)
+        return count
+
+    @staticmethod
+    async def activity(session: AsyncSession, user_id: uuid.UUID) -> TransactionActivity:
+        """Whether the user has active transactions, and the last change to any row, soft-deleted included."""
+        has_active, last_changed_at = await transaction_repository.activity_for_user(session, user_id)
+        return TransactionActivity(has_active, last_changed_at)
 
     @staticmethod
     async def list_for_analysis(

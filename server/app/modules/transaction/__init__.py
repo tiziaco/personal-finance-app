@@ -21,7 +21,7 @@ from app.modules.transaction.schemas import (
     TransactionListResponse,
     TransactionResponse,
 )
-from app.modules.transaction.service import transaction_service
+from app.modules.transaction.service import TRANSACTIONS_ALL_DELETED, TransactionActivity, transaction_service
 
 __all__ = [
     "AnalysisRow",
@@ -31,6 +31,8 @@ __all__ = [
     "DuplicateTransactionError",
     "MAX_DATE",
     "MIN_DATE",
+    "TRANSACTIONS_ALL_DELETED",
+    "TransactionActivity",
     "TransactionFilters",
     "TransactionImport",
     "TransactionListResponse",
