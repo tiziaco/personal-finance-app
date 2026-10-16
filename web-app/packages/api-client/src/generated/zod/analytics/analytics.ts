@@ -492,6 +492,16 @@ export const GetCategoryBreakdownResponse = zod
 export const getDashboardResponseAverageCashflowRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getDashboardResponseMonthToDateOneExpensesRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getDashboardResponseMonthToDateOneIncomeRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getDashboardResponseMonthToDateOnePreviousExpensesRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getDashboardResponseMonthToDateOnePreviousIncomeRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getDashboardResponseMonthlyTrendItemExpensesRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
@@ -519,6 +529,48 @@ export const GetDashboardResponse = zod
     cashflow_months: zod
       .int()
       .describe("1–3 months ending at the reference month; 0 with no data"),
+    month_to_date: zod
+      .union([
+        zod
+          .object({
+            expenses: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOneExpensesRegExp),
+            expenses_change_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe("Against previous_expenses; null when it is 0"),
+            income: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOneIncomeRegExp),
+            income_change_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe("Against previous_income; null when it is 0"),
+            month: zod.string().describe("YYYY-MM, the current month"),
+            previous_expenses: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOnePreviousExpensesRegExp)
+              .describe(
+                "Expenses in the previous month's days 1 to through's day",
+              ),
+            previous_income: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOnePreviousIncomeRegExp)
+              .describe(
+                "Income in the previous month's days 1 to through's day",
+              ),
+            previous_month: zod.string().describe("YYYY-MM"),
+            through: zod.iso
+              .date()
+              .describe("The day of the current month's last transaction"),
+          })
+          .describe(
+            "The current month from day 1 to its last transaction, against the same days of the month before.",
+          ),
+        zod.null(),
+      ])
+      .describe(
+        "The current month so far against the month before; null when it holds no transaction",
+      ),
     monthly_trend: zod
       .array(
         zod
@@ -535,7 +587,9 @@ export const GetDashboardResponse = zod
             "One month of the dashboard's trend chart: income and expenses.",
           ),
       )
-      .describe("The six months ending at the reference month"),
+      .describe(
+        "Up to six months ending at the reference month, not before the data's first month",
+      ),
     net_balance: zod
       .string()
       .regex(getDashboardResponseNetBalanceRegExp)
@@ -548,8 +602,11 @@ export const GetDashboardResponse = zod
     reference_month: zod
       .union([zod.string(), zod.null()])
       .describe(
-        "YYYY-MM: latest month with a transaction up to this month; null with no transactions",
+        "YYYY-MM: latest finished month with a transaction, else the current month; null with no data",
       ),
+    reference_partial: zod
+      .boolean()
+      .describe("True when the reference month is the month in progress"),
     spending_by_category: zod.array(
       zod
         .object({
@@ -571,7 +628,7 @@ export const GetDashboardResponse = zod
     total_spent: zod.string().regex(getDashboardResponseTotalSpentRegExp),
   })
   .describe(
-    "The home page's figures for the reference month: the latest month with a transaction, up to this month.",
+    "The home page's figures for the reference month: the latest finished month with a transaction.",
   )
 
 /**

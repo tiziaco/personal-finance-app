@@ -12,7 +12,6 @@ from app.modules.analytics.domain._aggregate import (
     add_months,
     expenses,
     money,
-    month_end,
     month_key,
     month_range,
     month_start,
@@ -20,8 +19,8 @@ from app.modules.analytics.domain._aggregate import (
     total_spend,
 )
 from app.modules.analytics.domain.categories import category_spend
-from app.modules.analytics.domain.period import PeriodMonth, calendar_month
-from app.modules.analytics.domain.spending import monthly_flows
+from app.modules.analytics.domain.period import PeriodMonth, anchor_month, calendar_month, usable_rows
+from app.modules.analytics.domain.spending import MonthToDate, month_to_date, monthly_flows
 
 TOP_SLICES = 5
 CASHFLOW_MONTHS = 3
@@ -51,6 +50,7 @@ class Dashboard:
     """Every figure the home page draws, anchored to the reference month."""
 
     reference_month: Optional[str]
+    reference_partial: bool
     total_spent: Decimal
     recurring_spent: Decimal
     recurring_count: int
@@ -59,9 +59,10 @@ class Dashboard:
     cashflow_months: int
     spending_by_category: tuple[CategorySlice, ...]
     monthly_trend: tuple[TrendPoint, ...]
+    month_to_date: Optional[MonthToDate]
 
 
-EMPTY = Dashboard(None, ZERO, ZERO, 0, ZERO, ZERO, 0, (), ())
+EMPTY = Dashboard(None, False, ZERO, ZERO, 0, ZERO, ZERO, 0, (), (), None)
 
 
 def _slices(month_rows: Sequence[Row], total: Decimal) -> tuple[CategorySlice, ...]:
@@ -75,28 +76,21 @@ def _slices(month_rows: Sequence[Row], total: Decimal) -> tuple[CategorySlice, .
 
 
 def _months(rows: Sequence[Row], months: Sequence[dt.date], today: dt.date) -> list[PeriodMonth]:
-    """The months as the data sees them; a month outside the data is whole."""
-    return [calendar_month(m, rows, today) or PeriodMonth(m, m, month_end(m), False, Decimal(1)) for m in months]
-
-
-def _reference_month(rows: Sequence[Row], today: dt.date) -> dt.date:
-    """The latest month holding a transaction, up to today's month; the overall latest if all are later."""
-    current = month_start(today)
-    months = {month_start(r.date) for r in rows}
-    reached = [m for m in months if m <= current]
-    return max(reached) if reached else max(months)
+    """The months as the data sees them; every month asked for lies inside the data."""
+    return [month for m in months if (month := calendar_month(m, rows, today)) is not None]
 
 
 def build_dashboard(rows: Sequence[Row], *, today: dt.date) -> Dashboard:
     """Everything the home page draws.
 
-    The reference month is the latest month holding a transaction that is no later than today's
-    month, so one future-dated row cannot take the page over. When every row is in the future it
-    is the overall latest month.
+    The reference month is the anchor month: the latest finished month holding a usable row, else the
+    current month (then partial). Rows dated after the current month are ignored. The trend runs six
+    months to the reference but not before the data's first month.
     """
-    if not rows:
+    rows = usable_rows(rows, today)
+    reference = anchor_month(rows, today)
+    if reference is None:
         return EMPTY
-    reference = _reference_month(rows, today)
     first = month_start(min(r.date for r in rows))
     month_rows = [r for r in rows if month_start(r.date) == reference]
     spent = expenses(month_rows)
@@ -105,11 +99,12 @@ def build_dashboard(rows: Sequence[Row], *, today: dt.date) -> Dashboard:
 
     cashflow_window = month_range(max(first, add_months(reference, -(CASHFLOW_MONTHS - 1))), reference)
     cashflow = monthly_flows(rows, _months(rows, cashflow_window, today), today=today)
-    trend_window = month_range(add_months(reference, -(TREND_MONTHS - 1)), reference)
+    trend_window = month_range(max(first, add_months(reference, -(TREND_MONTHS - 1))), reference)
     trend = monthly_flows(rows, _months(rows, trend_window, today), today=today)
 
     return Dashboard(
         reference_month=month_key(reference),
+        reference_partial=reference == month_start(today),
         total_spent=total,
         recurring_spent=total_spend(flagged),
         recurring_count=len(flagged),
@@ -118,4 +113,5 @@ def build_dashboard(rows: Sequence[Row], *, today: dt.date) -> Dashboard:
         cashflow_months=len(cashflow),
         spending_by_category=_slices(month_rows, total),
         monthly_trend=tuple(TrendPoint(m.month, m.income, m.expenses) for m in trend),
+        month_to_date=month_to_date(rows, today),
     )

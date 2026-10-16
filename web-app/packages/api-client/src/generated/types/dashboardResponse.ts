@@ -6,10 +6,11 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { CategorySliceResponse } from "./categorySliceResponse"
+import type { MonthToDateResponse } from "./monthToDateResponse"
 import type { TrendPointResponse } from "./trendPointResponse"
 
 /**
- * The home page's figures for the reference month: the latest month with a transaction, up to this month.
+ * The home page's figures for the reference month: the latest finished month with a transaction.
  */
 export interface DashboardResponse {
   /**
@@ -19,7 +20,9 @@ export interface DashboardResponse {
   average_cashflow: string
   /** 1–3 months ending at the reference month; 0 with no data */
   cashflow_months: number
-  /** The six months ending at the reference month */
+  /** The current month so far against the month before; null when it holds no transaction */
+  month_to_date: MonthToDateResponse | null
+  /** Up to six months ending at the reference month, not before the data's first month */
   monthly_trend: TrendPointResponse[]
   /**
    * Income minus expenses in the reference month
@@ -32,8 +35,10 @@ export interface DashboardResponse {
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   recurring_spent: string
-  /** YYYY-MM: latest month with a transaction up to this month; null with no transactions */
+  /** YYYY-MM: latest finished month with a transaction, else the current month; null with no data */
   reference_month: string | null
+  /** True when the reference month is the month in progress */
+  reference_partial: boolean
   spending_by_category: CategorySliceResponse[]
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   total_spent: string

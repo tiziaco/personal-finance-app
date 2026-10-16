@@ -63,6 +63,7 @@ async def test_empty_dashboard(authenticated_client):
     body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
     assert body == {
         "reference_month": None,
+        "reference_partial": False,
         "total_spent": "0.00",
         "recurring_spent": "0.00",
         "recurring_count": 0,
@@ -71,10 +72,11 @@ async def test_empty_dashboard(authenticated_client):
         "cashflow_months": 0,
         "spending_by_category": [],
         "monthly_trend": [],
+        "month_to_date": None,
     }
 
 
-async def test_dashboard_counts_only_this_users_active_rows(authenticated_client, test_user, other_user, add):
+async def test_dashboard_counts_only_this_users_active_rows(authenticated_client, test_user, other_user, add, today):
     await add(test_user, "2026-08-10", "2000.00", category="salary")
     await add(test_user, "2026-09-01", "-900.00", category="household_utilities", merchant="Landlord", recurring=True)
     await add(test_user, "2026-09-05", "-200.00")
@@ -94,14 +96,9 @@ async def test_dashboard_counts_only_this_users_active_rows(authenticated_client
         {"category": "household_utilities", "amount": "900.00", "share_pct": 81.82},
         {"category": "food_groceries", "amount": "200.00", "share_pct": 18.18},
     ]
-    assert [p["month"] for p in body["monthly_trend"]] == [
-        "2026-04",
-        "2026-05",
-        "2026-06",
-        "2026-07",
-        "2026-08",
-        "2026-09",
-    ]
+    assert body["reference_partial"] is False
+    assert body["month_to_date"] is None
+    assert [p["month"] for p in body["monthly_trend"]] == ["2026-08", "2026-09"]  # not before the first month
 
 
 async def test_spending_over_the_last_three_finished_months(authenticated_client, test_user, add, today):

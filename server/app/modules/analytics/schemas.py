@@ -58,12 +58,28 @@ class TrendPointResponse(_Out):
     expenses: Decimal
 
 
+class MonthToDateResponse(_Out):
+    """The current month from day 1 to its last transaction, against the same days of the month before."""
+
+    month: str = Field(..., description="YYYY-MM, the current month")
+    through: dt.date = Field(..., description="The day of the current month's last transaction")
+    income: Decimal
+    expenses: Decimal
+    previous_month: str = Field(..., description="YYYY-MM")
+    previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
+    previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
+    income_change_pct: Optional[float] = Field(..., description="Against previous_income; null when it is 0")
+    expenses_change_pct: Optional[float] = Field(..., description="Against previous_expenses; null when it is 0")
+
+
 class DashboardResponse(_Out):
-    """The home page's figures for the reference month: the latest month with a transaction, up to this month."""
+    """The home page's figures for the reference month: the latest finished month with a transaction."""
 
     reference_month: Optional[str] = Field(
-        ..., description="YYYY-MM: latest month with a transaction up to this month; null with no transactions"
+        ...,
+        description="YYYY-MM: latest finished month with a transaction, else the current month; null with no data",
     )
+    reference_partial: bool = Field(..., description="True when the reference month is the month in progress")
     total_spent: Decimal
     recurring_spent: Decimal = Field(..., description="Expenses flagged recurring in the reference month")
     recurring_count: int
@@ -71,7 +87,12 @@ class DashboardResponse(_Out):
     average_cashflow: Decimal = Field(..., description="Mean monthly net over cashflow_months")
     cashflow_months: int = Field(..., description="1–3 months ending at the reference month; 0 with no data")
     spending_by_category: List[CategorySliceResponse]
-    monthly_trend: List[TrendPointResponse] = Field(..., description="The six months ending at the reference month")
+    monthly_trend: List[TrendPointResponse] = Field(
+        ..., description="Up to six months ending at the reference month, not before the data's first month"
+    )
+    month_to_date: Optional[MonthToDateResponse] = Field(
+        ..., description="The current month so far against the month before; null when it holds no transaction"
+    )
 
 
 # Spending
@@ -110,20 +131,6 @@ class LatestMonthResponse(_Out):
     expenses_vs_average_pct: Optional[float] = Field(
         ..., description="Against average_monthly_expenses; null when that average is 0"
     )
-
-
-class MonthToDateResponse(_Out):
-    """The current month from day 1 to its last transaction, against the same days of the month before."""
-
-    month: str = Field(..., description="YYYY-MM, the current month")
-    through: dt.date = Field(..., description="The day of the current month's last transaction")
-    income: Decimal
-    expenses: Decimal
-    previous_month: str = Field(..., description="YYYY-MM")
-    previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
-    previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
-    income_change_pct: Optional[float] = Field(..., description="Against previous_income; null when it is 0")
-    expenses_change_pct: Optional[float] = Field(..., description="Against previous_expenses; null when it is 0")
 
 
 class SpendingResponse(_Out):

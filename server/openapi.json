@@ -868,7 +868,7 @@
         "type": "object"
       },
       "DashboardResponse": {
-        "description": "The home page's figures for the reference month: the latest month with a transaction, up to this month.",
+        "description": "The home page's figures for the reference month: the latest finished month with a transaction.",
         "properties": {
           "average_cashflow": {
             "description": "Mean monthly net over cashflow_months",
@@ -881,8 +881,19 @@
             "title": "Cashflow Months",
             "type": "integer"
           },
+          "month_to_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonthToDateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The current month so far against the month before; null when it holds no transaction"
+          },
           "monthly_trend": {
-            "description": "The six months ending at the reference month",
+            "description": "Up to six months ending at the reference month, not before the data's first month",
             "items": {
               "$ref": "#/components/schemas/TrendPointResponse"
             },
@@ -914,8 +925,13 @@
                 "type": "null"
               }
             ],
-            "description": "YYYY-MM: latest month with a transaction up to this month; null with no transactions",
+            "description": "YYYY-MM: latest finished month with a transaction, else the current month; null with no data",
             "title": "Reference Month"
+          },
+          "reference_partial": {
+            "description": "True when the reference month is the month in progress",
+            "title": "Reference Partial",
+            "type": "boolean"
           },
           "spending_by_category": {
             "items": {
@@ -932,6 +948,7 @@
         },
         "required": [
           "reference_month",
+          "reference_partial",
           "total_spent",
           "recurring_spent",
           "recurring_count",
@@ -939,7 +956,8 @@
           "average_cashflow",
           "cashflow_months",
           "spending_by_category",
-          "monthly_trend"
+          "monthly_trend",
+          "month_to_date"
         ],
         "title": "DashboardResponse",
         "type": "object"
