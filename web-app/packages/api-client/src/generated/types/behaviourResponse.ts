@@ -11,11 +11,15 @@ import type { WeekdaySpendResponse } from "./weekdaySpendResponse"
 import type { WeekPartResponse } from "./weekPartResponse"
 
 /**
- * Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability.
+ * Spending patterns over the period: by weekday, weekday against weekend, seasonality and category stability.
  */
 export interface BehaviourResponse {
   by_weekday: WeekdaySpendResponse[]
-  /** Between the range's last two months */
+  /** First day of the resolved period; null when empty */
+  date_from: string | null
+  /** Last day of the resolved period; null when empty */
+  date_to: string | null
+  /** Between the period's last two whole months */
   expense_change_pct: number | null
   moderate_share_pct: number
   seasonality: MonthOfYearResponse[]
@@ -24,5 +28,6 @@ export interface BehaviourResponse {
   volatile_share_pct: number
   weekday: WeekPartResponse
   weekend: WeekPartResponse
+  /** Weekend spend per day against weekday spend per day; null when the period has no weekend or no weekday days, or weekday spend is 0 */
   weekend_bias_pct: number | null
 }

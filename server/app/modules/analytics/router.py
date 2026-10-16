@@ -28,7 +28,7 @@ LIMIT = settings.rate_limits.endpoints.TRANSACTIONS[0]
     operation_id="getDashboard",
     response_model=DashboardResponse,
     summary="The home dashboard",
-    description="Figures for the latest month holding an active transaction, and the six months up to it.",
+    description="Figures for the latest finished month holding a transaction (else the month in progress, marked partial), up to six months to it, and month-to-date.",
 )
 @limiter.limit(LIMIT)
 async def get_dashboard(request: Request, db_session: DbSession, user: CurrentUser) -> DashboardResponse:
@@ -41,13 +41,13 @@ async def get_dashboard(request: Request, db_session: DbSession, user: CurrentUs
     operation_id="getSpending",
     response_model=SpendingResponse,
     summary="Income, expenses and net",
-    description="Totals, averages and a zero-filled per-month series. Bounds are inclusive and optional.",
+    description="Totals, averages and a zero-filled per-month series. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds; all time when neither is given.",
 )
 @limiter.limit(LIMIT)
 async def get_spending(
     request: Request, db_session: DbSession, user: CurrentUser, date_range: AnalyticsRange
 ) -> SpendingResponse:
-    """Income, expenses and net over the range."""
+    """Income, expenses and net over the period."""
     return await analytics_service.spending(db_session, user.id, date_range)
 
 
@@ -56,7 +56,7 @@ async def get_spending(
     operation_id="getCategoryBreakdown",
     response_model=CategoryBreakdownResponse,
     summary="Spend by category",
-    description="Categories ranked by spend and by count, and the fastest growing and declining.",
+    description="Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_categories(
@@ -66,7 +66,7 @@ async def get_categories(
     date_range: AnalyticsRange,
     top_n: int = Query(10, ge=1, le=50, description="How many categories each ranking keeps"),
 ) -> CategoryBreakdownResponse:
-    """Spend by category over the range."""
+    """Spend by category over the period."""
     return await analytics_service.categories(db_session, user.id, date_range, top_n)
 
 
@@ -75,7 +75,7 @@ async def get_categories(
     operation_id="getMerchantBreakdown",
     response_model=MerchantBreakdownResponse,
     summary="Spend by merchant",
-    description="Merchants ranked by spend and by count, and how concentrated spending is.",
+    description="Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_merchants(
@@ -85,7 +85,7 @@ async def get_merchants(
     date_range: AnalyticsRange,
     top_n: int = Query(15, ge=1, le=50, description="How many merchants each ranking keeps"),
 ) -> MerchantBreakdownResponse:
-    """Spend by merchant over the range."""
+    """Spend by merchant over the period."""
     return await analytics_service.merchants(db_session, user.id, date_range, top_n)
 
 
@@ -94,13 +94,13 @@ async def get_merchants(
     operation_id="getRecurring",
     response_model=RecurringResponse,
     summary="Recurring spend",
-    description="Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges.",
+    description="Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_recurring(
     request: Request, db_session: DbSession, user: CurrentUser, date_range: AnalyticsRange
 ) -> RecurringResponse:
-    """Recurring spend over the range."""
+    """Recurring spend over the period."""
     return await analytics_service.recurring(db_session, user.id, date_range)
 
 
@@ -109,13 +109,13 @@ async def get_recurring(
     operation_id="getBehaviour",
     response_model=BehaviourResponse,
     summary="Spending patterns",
-    description="By weekday, weekday against weekend, by calendar month, and how steady each category is.",
+    description="By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_behaviour(
     request: Request, db_session: DbSession, user: CurrentUser, date_range: AnalyticsRange
 ) -> BehaviourResponse:
-    """Spending patterns over the range."""
+    """Spending patterns over the period."""
     return await analytics_service.behaviour(db_session, user.id, date_range)
 
 
@@ -124,7 +124,7 @@ async def get_behaviour(
     operation_id="getAnomalies",
     response_model=AnomaliesResponse,
     summary="Unusual spending",
-    description="Expenses far above their trailing window, and categories spending more than usual lately.",
+    description="Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_anomalies(
@@ -135,5 +135,5 @@ async def get_anomalies(
     std_threshold: float = Query(2.5, ge=1.0, le=5.0, description="Standard deviations above the window mean"),
     window_days: int = Query(30, ge=7, le=90, description="Days before an expense that it is compared with"),
 ) -> AnomaliesResponse:
-    """Outliers and category spikes over the range."""
+    """Outliers and category spikes over the period."""
     return await analytics_service.anomalies(db_session, user.id, date_range, std_threshold, window_days)

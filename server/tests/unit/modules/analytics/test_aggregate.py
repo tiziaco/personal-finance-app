@@ -18,7 +18,6 @@ from app.modules.analytics.domain._aggregate import (
     monthly_totals,
     pct_change,
     share_pct,
-    span,
     spend,
     total_spend,
 )
@@ -30,9 +29,15 @@ D = dt.date
 
 
 def test_money_quantises_and_drops_negative_zero():
-    assert money(Decimal("1.005")) == Decimal("1.00")  # banker's rounding, as Decimal does
+    assert money(Decimal("1.005")) == Decimal("1.01")
     assert money(Decimal("2.675")) == Decimal("2.68")
     assert str(money(Decimal("-0.001"))) == "0.00"
+
+
+def test_money_rounds_half_up():
+    assert money(Decimal("0.125")) == Decimal("0.13")
+    assert money(Decimal("0.525")) == Decimal("0.53")
+    assert money(Decimal("-0.125")) == Decimal("-0.13")
 
 
 def test_the_sign_decides_and_zero_is_neither():
@@ -54,15 +59,6 @@ def test_months():
         D(2026, 2, 1),
     ]
     assert month_range(D(2026, 3, 1), D(2026, 2, 1)) == []
-
-
-def test_span_prefers_given_bounds_then_the_data():
-    rows = [row("2026-01-05", "-1.00"), row("2026-03-28", "-1.00")]
-    assert span(rows, None, None) == (D(2026, 1, 5), D(2026, 3, 28))
-    assert span(rows, D(2025, 12, 1), None) == (D(2025, 12, 1), D(2026, 3, 28))
-    assert span([], D(2026, 1, 1), D(2026, 1, 31)) == (D(2026, 1, 1), D(2026, 1, 31))
-    assert span([], None, None) is None
-    assert span([], D(2026, 1, 1), None) is None
 
 
 def test_group_by_keeps_first_seen_order():

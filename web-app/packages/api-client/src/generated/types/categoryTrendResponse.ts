@@ -7,15 +7,19 @@
  */
 
 /**
- * How one category's monthly spend moved between the first and last month of the range, and how steady it was.
+ * A category's monthly average over the earlier and the later half of the period's whole months.
  */
 export interface CategoryTrendResponse {
   category: string
-  /** Coefficient of variation of the monthly totals */
-  cv: number | null
+  /**
+   * later_monthly_average minus earlier_monthly_average
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
+  change_amount: string
+  /** Change over the earlier average, in percent; -100 when the later half is zero; null when new */
+  change_pct: number | null
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
-  first_month_total: string
-  growth_pct: number
+  earlier_monthly_average: string
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
-  last_month_total: string
+  later_monthly_average: string
 }

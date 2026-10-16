@@ -5,15 +5,13 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
-import type { MerchantConcentrationResponseRisk } from "./merchantConcentrationResponseRisk"
 
 /**
- * How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band.
+ * How concentrated spending is across merchants: top-5 and top-10 shares, and the Herfindahl index.
  */
 export interface MerchantConcentrationResponse {
   /** Σ(share %)² over every merchant, 0–10000 */
   herfindahl_index: number
-  risk: MerchantConcentrationResponseRisk
   top_10_share_pct: number
   top_5_share_pct: number
   unique_merchants: number

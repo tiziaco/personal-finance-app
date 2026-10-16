@@ -8,11 +8,15 @@
 import type { CategoryStabilityResponseStability } from "./categoryStabilityResponseStability"
 
 /**
- * How steady one category's expense amounts are, from their coefficient of variation.
+ * How steady one category's monthly totals are, from their coefficient of variation.
  */
 export interface CategoryStabilityResponse {
   category: string
+  /** Expenses in the months judged */
   count: number
+  /** Coefficient of variation of the category's whole-month totals */
   cv: number
+  /** Whole months judged, from the first with spend */
+  months: number
   stability: CategoryStabilityResponseStability
 }

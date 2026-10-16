@@ -17,6 +17,8 @@ const dashboard = (
   cashflow_months: 3,
   spending_by_category: [],
   monthly_trend: [],
+  reference_partial: false,
+  month_to_date: null,
   ...over,
 })
 

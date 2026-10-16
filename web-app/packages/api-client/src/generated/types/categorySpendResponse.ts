@@ -7,13 +7,17 @@
  */
 
 /**
- * One category's spend in the range: total, count, average and share of all expenses.
+ * One category's spend in the period: total, count, average, share of all expenses, and against the previous period.
  */
 export interface CategorySpendResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   average: string
   category: string
+  /** Change from previous_total to total, in percent; null when previous_total is 0 or null */
+  change_pct: number | null
   count: number
+  /** The category's spend in the previous period; null when there is no previous period */
+  previous_total: string | null
   share_pct: number
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   total: string

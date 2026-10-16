@@ -7,13 +7,24 @@
  */
 
 /**
- * One category whose last 30 days spend well above its average 30 days over the rest of the range.
+ * One category whose spend in the period's last 30 days is well above its average 30 days before them.
  */
 export interface CategorySpikeResponse {
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * Average 30 days' spend from the period's first day to the window
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   baseline_30d: string
   category: string
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * recent_total − baseline_30d; spikes are ranked by it
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
+  increase_amount: string
+  /**
+   * Spend in the spike window
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   recent_total: string
   spike_pct: number
 }

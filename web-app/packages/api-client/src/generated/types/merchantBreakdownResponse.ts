@@ -9,10 +9,14 @@ import type { MerchantConcentrationResponse } from "./merchantConcentrationRespo
 import type { MerchantSpendResponse } from "./merchantSpendResponse"
 
 /**
- * Spend by merchant over the range: the top by spend and by frequency, and the concentration.
+ * Spend by merchant over the period: the top by spend and by frequency, and the concentration.
  */
 export interface MerchantBreakdownResponse {
   concentration: MerchantConcentrationResponse
+  /** First day of the resolved period; null when empty */
+  date_from: string | null
+  /** Last day of the resolved period; null when empty */
+  date_to: string | null
   top_by_frequency: MerchantSpendResponse[]
   top_by_spend: MerchantSpendResponse[]
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */

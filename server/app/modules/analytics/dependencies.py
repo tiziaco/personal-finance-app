@@ -5,24 +5,22 @@ from typing import Annotated, Optional
 
 from fastapi import Depends, Query
 
-from app.modules.analytics.exceptions import InvalidDateRangeError
 from app.modules.analytics.schemas import DateRange
-from app.modules.transaction import MAX_DATE, MIN_DATE
 
 
 def get_date_range(
     date_from: Optional[dt.date] = Query(None, description="On or after this day"),
     date_to: Optional[dt.date] = Query(None, description="On or before this day"),
+    months: Optional[int] = Query(
+        None,
+        ge=1,
+        le=120,
+        description="The last N finished months (or the month in progress when none has finished); "
+        "not with date_from/date_to",
+    ),
 ) -> DateRange:
-    """Inclusive, optional bounds, each between 1900 and 2100. A start after the end is a 422."""
-    for name, value in (("date_from", date_from), ("date_to", date_to)):
-        if value is not None and not MIN_DATE <= value <= MAX_DATE:
-            raise InvalidDateRangeError(
-                f"{name} must be between {MIN_DATE} and {MAX_DATE}", date_from=str(date_from), date_to=str(date_to)
-            )
-    if date_from and date_to and date_from > date_to:
-        raise InvalidDateRangeError("date_from is after date_to", date_from=str(date_from), date_to=str(date_to))
-    return DateRange(date_from=date_from, date_to=date_to)
+    """Inclusive, optional bounds, each between 1900 and 2100, or `months`; DateRange rejects the rest with a 422."""
+    return DateRange(date_from=date_from, date_to=date_to, months=months)
 
 
 AnalyticsRange = Annotated[DateRange, Depends(get_date_range)]

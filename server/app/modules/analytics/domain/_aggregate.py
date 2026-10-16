@@ -1,13 +1,15 @@
 """Shared helpers: the row the library reads, money, months, grouping and safe ratios."""
 
+import calendar
 import datetime as dt
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from statistics import mean, pstdev
 from typing import Optional, Protocol, TypeVar
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
+AVERAGE_MONTH_DAYS = Decimal("30.436875")  # 365.2425 / 12
 
 
 class Row(Protocol):
@@ -39,8 +41,8 @@ K = TypeVar("K", bound=Hashable)
 
 
 def money(value: Decimal) -> Decimal:
-    """Quantise to cents; -0.00 becomes 0.00."""
-    cents = value.quantize(CENT)
+    """Quantise to cents, half-up; -0.00 becomes 0.00."""
+    cents = value.quantize(CENT, rounding=ROUND_HALF_UP)
     return ZERO if cents == 0 else cents
 
 
@@ -74,6 +76,11 @@ def month_start(day: dt.date) -> dt.date:
     return day.replace(day=1)
 
 
+def month_end(day: dt.date) -> dt.date:
+    """The last day of day's month."""
+    return day.replace(day=calendar.monthrange(day.year, day.month)[1])
+
+
 def month_key(month: dt.date) -> str:
     """The month as YYYY-MM, its form on the wire."""
     return f"{month:%Y-%m}"
@@ -96,17 +103,6 @@ def month_range(first: dt.date, last: dt.date) -> list[dt.date]:
             break
         current = add_months(current, 1)
     return months
-
-
-def span(
-    rows: Sequence[Row], date_from: Optional[dt.date], date_to: Optional[dt.date]
-) -> Optional[tuple[dt.date, dt.date]]:
-    """The days a result covers: the given bounds, else the data's first and last day; None when unknown."""
-    start = date_from or min((r.date for r in rows), default=None)
-    end = date_to or max((r.date for r in rows), default=None)
-    if start is None or end is None or end < start:
-        return None
-    return start, end
 
 
 def group_by(rows: Iterable[R], key: Callable[[R], K]) -> dict[K, list[R]]:

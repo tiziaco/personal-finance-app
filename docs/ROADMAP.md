@@ -29,7 +29,7 @@ Links are relative to `docs/`.
 | **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler; the recurring-detection rule that sets `is_recurring` | complete — [PR #14](https://github.com/tiziaco/personal-finance-app/pull/14) into `template-base`; reaches `main` at Cutover | `feat/csv-import` | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md), [`data-model/transaction.md`](./data-model/transaction.md) D6–D9 |
 | **5a Analytics dashboard** — the whole computation library and the home dashboard | complete — [PR #13](https://github.com/tiziaco/personal-finance-app/pull/13) into `template-base`; reaches `main` at Cutover | `feat/analytics-dashboard` | [`analytics.md`](./product/features/analytics.md) |
 | **Fixes before wave 3** — the 401 race after sign-in; `LLMService`'s shared fallback state; the import rejects dates analytics cannot read; fixed income and expense chart colours | complete — [PR #15](https://github.com/tiziaco/personal-finance-app/pull/15) into `template-base`; reaches `main` at Cutover | `fix/pre-wave-3` | [`authentication.md`](./architecture/authentication.md) §2–3, [`web-app.md`](./architecture/web-app.md) §4–5, [`server.md`](./architecture/server.md) (the error table), [`csv-import.md`](./product/features/csv-import.md) |
-| **Analytics figures** — the category-growth fix and every derived figure the `/analytics` page shows, computed by the server | in progress | `feat/analytics-figures` | [`analytics.md`](./product/features/analytics.md). No spec yet |
+| **Analytics figures** — the category-growth fix and every derived figure the `/analytics` page shows, computed by the server | complete — [PR #16](https://github.com/tiziaco/personal-finance-app/pull/16) into `template-base`; reaches `main` at Cutover | `feat/analytics-figures` | [`analytics.md`](./product/features/analytics.md) §2–3 |
 | **5b Analytics page** — the four `/analytics` views | in progress | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **6 Insights** — generation, the `/insights` page and the dashboard callout | in progress | `feat/insights` | [`insights.md`](./product/features/insights.md). No spec yet |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money | in progress | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md). No spec yet |
@@ -90,6 +90,10 @@ not wait for 4.
   growth measure is fixed there (earlier half of the range against the later half, not
   first month against last). 6 and 7 build on the same module, so one step owns it and
   merges first; the others merge `template-base` after it.
+- **Analytics periods are finished months** (product; 16 Oct 2026). Every analytics range
+  is whole finished months, with the month in progress shown apart as month-to-date. Imports
+  lag the calendar, and a partly filled month read as a collapse in spending. This reverses
+  the dashboard decision of 15 Oct 2026 (the latest month with data).
 
 ### Running a wave in parallel
 

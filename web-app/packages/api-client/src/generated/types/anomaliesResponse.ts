@@ -9,11 +9,18 @@ import type { CategorySpikeResponse } from "./categorySpikeResponse"
 import type { OutlierResponse } from "./outlierResponse"
 
 /**
- * Outlier expenses and category spikes over the range, with the thresholds used.
+ * Outlier expenses and category spikes over the period, with the thresholds used.
  */
 export interface AnomaliesResponse {
+  /** First day of the resolved period; null when empty */
+  date_from: string | null
+  /** Last day of the resolved period; null when empty */
+  date_to: string | null
+  /** The top 20 by z-score */
   outliers: OutlierResponse[]
+  /** Last day of the period; null when spikes were not checked */
   spike_window_end: string | null
+  /** First day of the period's last 30 days; null when spikes were not checked */
   spike_window_start: string | null
   spikes: CategorySpikeResponse[]
   std_threshold: number
