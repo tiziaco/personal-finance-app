@@ -44,7 +44,9 @@ export const GetAnomaliesQueryParams = zod.object({
   months: zod
     .union([zod.int().min(1).max(getAnomaliesQueryMonthsOneMax), zod.null()])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getAnomaliesResponseOutliersItemAmountRegExp = new RegExp(
@@ -150,7 +152,9 @@ export const GetBehaviourQueryParams = zod.object({
   months: zod
     .union([zod.int().min(1).max(getBehaviourQueryMonthsOneMax), zod.null()])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getBehaviourResponseByWeekdayItemAverageRegExp = new RegExp(
@@ -240,14 +244,18 @@ export const GetBehaviourResponse = zod
         .object({
           category: zod.string(),
           count: zod.int().describe("Expenses in the months judged"),
-          cv: zod.number(),
+          cv: zod
+            .number()
+            .describe(
+              "Coefficient of variation of the category's whole-month totals",
+            ),
           months: zod
             .int()
             .describe("Whole months judged, from the first with spend"),
           stability: zod.enum(["stable", "moderate", "volatile"]),
         })
         .describe(
-          "How steady one category's expense amounts are, from their coefficient of variation.",
+          "How steady one category's monthly totals are, from their coefficient of variation.",
         ),
     ),
     stable_share_pct: zod.number(),
@@ -310,7 +318,9 @@ export const GetCategoryBreakdownQueryParams = zod.object({
       zod.null(),
     ])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getCategoryBreakdownResponseByFrequencyItemAverageRegExp =
@@ -671,7 +681,9 @@ export const GetMerchantBreakdownQueryParams = zod.object({
       zod.null(),
     ])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getMerchantBreakdownResponseTopByFrequencyItemAverageRegExp =
@@ -771,7 +783,9 @@ export const GetRecurringQueryParams = zod.object({
   months: zod
     .union([zod.int().min(1).max(getRecurringQueryMonthsOneMax), zod.null()])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getRecurringResponseHiddenSubscriptionsItemAverageChargeRegExp =
@@ -882,7 +896,9 @@ export const GetSpendingQueryParams = zod.object({
   months: zod
     .union([zod.int().min(1).max(getSpendingQueryMonthsOneMax), zod.null()])
     .optional()
-    .describe("The last N finished months; not with date_from\/date_to"),
+    .describe(
+      "The last N finished months (or the month in progress when none has finished); not with date_from\/date_to",
+    ),
 })
 
 export const getSpendingResponseAverageExpenseRegExp = new RegExp(

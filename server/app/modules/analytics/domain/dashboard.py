@@ -1,4 +1,4 @@
-"""The home page's figures: the latest month with data, its cards, its categories, and the trend to it."""
+"""The home page's figures: the latest finished month with data, its cards, its categories, and the trend to it."""
 
 import datetime as dt
 from collections.abc import Sequence

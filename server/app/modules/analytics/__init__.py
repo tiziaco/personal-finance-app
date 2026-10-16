@@ -4,6 +4,7 @@ This is the public surface. Another module imports from here and nowhere
 deeper (docs/architecture/server.md, R1).
 """
 
+from app.modules.analytics.exceptions import InvalidDateRangeError
 from app.modules.analytics.router import router
 from app.modules.analytics.schemas import (
     AnomaliesResponse,
@@ -11,7 +12,9 @@ from app.modules.analytics.schemas import (
     CategoryBreakdownResponse,
     DashboardResponse,
     DateRange,
+    LatestMonthResponse,
     MerchantBreakdownResponse,
+    MonthToDateResponse,
     RecurringResponse,
     SpendingResponse,
 )
@@ -23,7 +26,10 @@ __all__ = [
     "CategoryBreakdownResponse",
     "DashboardResponse",
     "DateRange",
+    "InvalidDateRangeError",
+    "LatestMonthResponse",
     "MerchantBreakdownResponse",
+    "MonthToDateResponse",
     "RecurringResponse",
     "SpendingResponse",
     "analytics_service",

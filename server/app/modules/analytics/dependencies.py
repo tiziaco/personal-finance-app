@@ -12,7 +12,11 @@ def get_date_range(
     date_from: Optional[dt.date] = Query(None, description="On or after this day"),
     date_to: Optional[dt.date] = Query(None, description="On or before this day"),
     months: Optional[int] = Query(
-        None, ge=1, le=120, description="The last N finished months; not with date_from/date_to"
+        None,
+        ge=1,
+        le=120,
+        description="The last N finished months (or the month in progress when none has finished); "
+        "not with date_from/date_to",
     ),
 ) -> DateRange:
     """Inclusive, optional bounds, each between 1900 and 2100, or `months`; DateRange rejects the rest with a 422."""

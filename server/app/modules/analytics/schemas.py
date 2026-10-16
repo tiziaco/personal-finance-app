@@ -16,7 +16,10 @@ class _Out(BaseModel):
 
 
 class DateRange(BaseModel):
-    """Inclusive, optional bounds (omitted means all time), or the last `months` finished months, not both."""
+    """Inclusive, optional bounds (omitted means all time), or the last `months` months, not both.
+
+    `months` counts finished months (or the month in progress when none has finished).
+    """
 
     date_from: Optional[dt.date] = None
     date_to: Optional[dt.date] = None
@@ -344,12 +347,12 @@ class MonthOfYearResponse(_Out):
 
 
 class CategoryStabilityResponse(_Out):
-    """How steady one category's expense amounts are, from their coefficient of variation."""
+    """How steady one category's monthly totals are, from their coefficient of variation."""
 
     category: str
     count: int = Field(..., description="Expenses in the months judged")
     months: int = Field(..., description="Whole months judged, from the first with spend")
-    cv: float
+    cv: float = Field(..., description="Coefficient of variation of the category's whole-month totals")
     stability: Stability
 
 

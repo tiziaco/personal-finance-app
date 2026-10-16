@@ -22,7 +22,7 @@ export type GetMerchantBreakdownParams = {
    */
   date_to?: string | null
   /**
-   * The last N finished months; not with date_from/date_to
+   * The last N finished months (or the month in progress when none has finished); not with date_from/date_to
    */
   months?: number | null
 }
