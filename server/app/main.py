@@ -44,6 +44,7 @@ from app.exceptions.base import ServiceError
 from app.modules import account as _account
 from app.modules import analytics as _analytics
 from app.modules import conversation as _conversation
+from app.modules import insights as _insights
 from app.modules import transaction as _transaction
 
 # Load environment variables
