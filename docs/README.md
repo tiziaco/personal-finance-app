@@ -44,6 +44,7 @@ decisions that record why its schema looks the way it does. Conventions are in
 |---|---|
 | [`data-model/account.md`](./data-model/account.md) | The `"user"` table — the platform's record of a person Clerk has told it about |
 | [`data-model/conversation.md`](./data-model/conversation.md) | The `conversation` table — one row per chat thread with the assistant |
+| [`data-model/insight.md`](./data-model/insight.md) | The `insight_set` table — one user's current set of AI-written insights |
 
 ## Architecture
 

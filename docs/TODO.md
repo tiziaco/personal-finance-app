@@ -115,6 +115,16 @@ answered" hint on the service and start unpinned calls there.
 - A short DKB export whose preamble lines outnumber its transactions is refused as
   `unnamed_column`, because the most common line width is the preamble's.
 
+## Server — a per-user cap on insight generation
+
+Every `POST /insights/generate` is a paid model call over the user's figures, and opening
+`/insights` on a stale set calls it too. Today only the per-address rate limit of 10 a minute
+guards it — a runaway-click guard, not a budget — and step 6 deliberately set no cooldown or
+daily cap (16 Oct 2026). Before public sign-up, cap generations per user (a daily count, or a
+cooldown when the set is fresh), answered with an error the page can show by the Regenerate
+button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
+[`product/features/insights.md`](./product/features/insights.md) §4–5.
+
 ## Web — tests the suite does not have yet
 
 - **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a

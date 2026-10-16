@@ -135,6 +135,10 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
   transaction, so no foreign key breaks, and a row that holds a person's finances is not kept
   once they ask for it to go — which is why this table is hard-deleted rather than anonymised
   ([`README.md`](./README.md) §3).
+  The Settings delete-all (`delete_all_on_request`) then publishes `transaction.all_deleted`
+  (`TRANSACTIONS_ALL_DELETED`, payload `user_id`); erasure does not, its subscribers
+  listening to `USER_ERASING`. `insights` subscribes inline and deletes the stored set, which quotes
+  the deleted rows ([`insight.md`](./insight.md) D3) — added 16 Oct 2026.
 - **D5 — the duplicate check on a manual add (13 Oct 2026).** `POST /transactions` looks for an
   active row with the same `(user_id, fingerprint)`. On a match it answers 409
   `DUPLICATE_TRANSACTION`, its details carrying only `existing_transaction_id` — merchant text
