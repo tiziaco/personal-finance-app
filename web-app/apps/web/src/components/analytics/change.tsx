@@ -7,6 +7,13 @@ export const TONE_CLASS: Record<Tone, string> = {
   neutral: "text-muted-foreground",
 }
 
+/** Fill for a chart shape in a tone; mirrors TONE_CLASS, since a fill needs a fill class. */
+export const TONE_FILL: Record<Tone, string> = {
+  good: "fill-emerald-600 dark:fill-emerald-400",
+  bad: "fill-destructive",
+  neutral: "fill-muted-foreground",
+}
+
 /** A percent change as an arrow and words, coloured good or bad, never by direction alone. */
 export function Change({
   pct,
