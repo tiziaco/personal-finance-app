@@ -1,15 +1,15 @@
 import { fireEvent, render, screen } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { HUB_NAV } from "@/lib/hub-nav"
 
 import { AnalyticsPage } from "./analytics-page"
 
-const mocks = vi.hoisted(() => ({ current: "", replace: vi.fn() }))
+const mocks = vi.hoisted(() => ({ current: "" }))
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mocks.current),
   usePathname: () => "/analytics",
-  useRouter: () => ({ replace: mocks.replace }),
 }))
 
 type Props = { months: number }
@@ -32,8 +32,16 @@ function setup(current: string) {
 }
 
 describe("AnalyticsPage", () => {
+  let replaceState: MockInstance<History["replaceState"]>
+
   beforeEach(() => {
-    mocks.replace.mockClear()
+    replaceState = vi
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    replaceState.mockRestore()
   })
 
   it("opens By Category by default", () => {
@@ -56,9 +64,11 @@ describe("AnalyticsPage", () => {
   it("switching tab writes the URL", () => {
     setup("")
     fireEvent.click(screen.getByRole("tab", { name: "Seasonality" }))
-    expect(mocks.replace).toHaveBeenCalledWith("/analytics?tab=seasonality", {
-      scroll: false,
-    })
+    expect(replaceState).toHaveBeenCalledWith(
+      null,
+      "",
+      "/analytics?tab=seasonality",
+    )
   })
 
   it("lists Analytics after Transactions", () => {

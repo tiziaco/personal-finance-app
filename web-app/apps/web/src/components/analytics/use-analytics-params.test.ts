@@ -1,13 +1,13 @@
 import { renderHook } from "@testing-library/react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import type { MockInstance } from "vitest"
 
 import { useAnalyticsParams } from "./use-analytics-params"
 
-const mocks = vi.hoisted(() => ({ current: "", replace: vi.fn() }))
+const mocks = vi.hoisted(() => ({ current: "" }))
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(mocks.current),
   usePathname: () => "/analytics",
-  useRouter: () => ({ replace: mocks.replace }),
 }))
 
 function setup(current: string) {
@@ -16,8 +16,16 @@ function setup(current: string) {
 }
 
 describe("useAnalyticsParams", () => {
+  let replaceState: MockInstance<History["replaceState"]>
+
   beforeEach(() => {
-    mocks.replace.mockClear()
+    replaceState = vi
+      .spyOn(window.history, "replaceState")
+      .mockImplementation(() => {})
+  })
+
+  afterEach(() => {
+    replaceState.mockRestore()
   })
 
   it("defaults with an empty URL", () => {
@@ -54,9 +62,10 @@ describe("useAnalyticsParams", () => {
   it("writes a choice and keeps the other keys", () => {
     const { result } = setup("tab=flow&trend_months=12")
     result.current.setMonths("flow", 12)
-    expect(mocks.replace).toHaveBeenCalledWith(
+    expect(replaceState).toHaveBeenCalledWith(
+      null,
+      "",
       "/analytics?tab=flow&trend_months=12&flow_months=12",
-      { scroll: false },
     )
   })
 
@@ -66,8 +75,6 @@ describe("useAnalyticsParams", () => {
     mocks.current = "tab=flow"
     rerender()
     result.current.setTab("category")
-    expect(mocks.replace).toHaveBeenLastCalledWith("/analytics", {
-      scroll: false,
-    })
+    expect(replaceState).toHaveBeenLastCalledWith(null, "", "/analytics")
   })
 })

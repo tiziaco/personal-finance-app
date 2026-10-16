@@ -1,6 +1,6 @@
 "use client"
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation"
+import { usePathname, useSearchParams } from "next/navigation"
 
 export const ANALYTICS_TABS = [
   "category",
@@ -27,7 +27,6 @@ const DEFAULT_TAB: AnalyticsTab = "category"
 export function useAnalyticsParams() {
   const params = useSearchParams()
   const pathname = usePathname()
-  const router = useRouter()
 
   const rawTab = params.get("tab")
   const tab = isAnalyticsTab(rawTab) ? rawTab : DEFAULT_TAB
@@ -45,7 +44,9 @@ export function useAnalyticsParams() {
     if (value === fallback) next.delete(key)
     else next.set(key, value)
     const qs = next.toString()
-    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+    // Update the URL without fetching the page again from the server; Next
+    // keeps useSearchParams in sync with history.replaceState.
+    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname)
   }
 
   return {
