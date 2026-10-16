@@ -90,6 +90,10 @@ not wait for 4.
   growth measure is fixed there (earlier half of the range against the later half, not
   first month against last). 6 and 7 build on the same module, so one step owns it and
   merges first; the others merge `template-base` after it.
+- **Analytics periods are finished months** (product; 16 Oct 2026). Every analytics range
+  is whole finished months, with the month in progress shown apart as month-to-date. Imports
+  lag the calendar, and a partly filled month read as a collapse in spending. This reverses
+  the dashboard decision of 15 Oct 2026 (the latest month with data).
 
 ### Running a wave in parallel
 
