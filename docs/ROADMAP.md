@@ -29,9 +29,9 @@ Links are relative to `docs/`.
 | **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler; the recurring-detection rule that sets `is_recurring` | complete — [PR #14](https://github.com/tiziaco/personal-finance-app/pull/14) into `template-base`; reaches `main` at Cutover | `feat/csv-import` | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md), [`data-model/transaction.md`](./data-model/transaction.md) D6–D9 |
 | **5a Analytics dashboard** — the whole computation library and the home dashboard | complete — [PR #13](https://github.com/tiziaco/personal-finance-app/pull/13) into `template-base`; reaches `main` at Cutover | `feat/analytics-dashboard` | [`analytics.md`](./product/features/analytics.md) |
 | **Fixes before wave 3** — the 401 race after sign-in; `LLMService`'s shared fallback state; the import rejects dates analytics cannot read; fixed income and expense chart colours | complete — [PR #15](https://github.com/tiziaco/personal-finance-app/pull/15) into `template-base`; reaches `main` at Cutover | `fix/pre-wave-3` | [`authentication.md`](./architecture/authentication.md) §2–3, [`web-app.md`](./architecture/web-app.md) §4–5, [`server.md`](./architecture/server.md) (the error table), [`csv-import.md`](./product/features/csv-import.md) |
-| **5b Analytics page** — the four `/analytics` views | not started | — | [`analytics.md`](./product/features/analytics.md). No spec yet |
-| **6 Insights** — generation, the `/insights` page and the dashboard callout | not started | — | [`insights.md`](./product/features/insights.md). No spec yet |
-| **7 Chat finance tools** — the assistant answers questions about the user's own money | not started | — | [`chat.md`](./product/features/chat.md). No spec yet |
+| **5b Analytics page** — the four `/analytics` views | in progress | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md). No spec yet |
+| **6 Insights** — generation, the `/insights` page and the dashboard callout | in progress | `feat/insights` | [`insights.md`](./product/features/insights.md). No spec yet |
+| **7 Chat finance tools** — the assistant answers questions about the user's own money | in progress | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md). No spec yet |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -46,7 +46,7 @@ here when someone picks it up.
 |---|---|---|
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
 | 2 | 4 CSV import ∥ 5a Analytics dashboard | done — #13, #14 merged into `template-base` |
-| 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | the fixes before wave 3 have merged |
+| 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | in progress — launched 16 Oct 2026 |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -79,6 +79,11 @@ not wait for 4.
   functions, and its callout goes on the home page 5a builds. The chat tools wrap the
   library; `app.agents` may not import a module (contract R2), so they are built in a
   module and injected, which is 7's main design question.
+- **The Tabs primitive went in ahead of wave 3** (technical; 16 Oct 2026). 5b and 6 both
+  have tabbed pages; built in each branch, the same new file would conflict.
+- **7 wraps only the analytics library, not the stored insights** (product; 16 Oct 2026).
+  `conversation` does not import `insights`, so 7 does not wait for 6. A tool that reads
+  insights is a follow-up.
 
 ### Running a wave in parallel
 
