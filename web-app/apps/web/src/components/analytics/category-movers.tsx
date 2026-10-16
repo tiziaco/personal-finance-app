@@ -29,12 +29,7 @@ export function CategoryMovers({
 }) {
   const { label } = useCategories()
   if (rows.length === 0) {
-    return (
-      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-        <p>{empty}</p>
-        <p className="text-xs">Needs at least two whole months.</p>
-      </div>
-    )
+    return <p className="text-sm text-muted-foreground">{empty}</p>
   }
   return (
     <ul className="flex flex-col gap-3">

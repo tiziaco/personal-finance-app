@@ -3,7 +3,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { Change } from "./change"
 import { PeriodSelect } from "./period-select"
-import { Section } from "./section"
 
 describe("PeriodSelect", () => {
   it("marks the chosen period and reports a click", () => {
@@ -55,51 +54,5 @@ describe("Change", () => {
     render(<Change pct={0} kind="spend" up="a" down="b" />)
     const el = screen.getByText("no change")
     expect(el.getAttribute("data-tone")).toBe("neutral")
-  })
-})
-
-function renderSection(query: {
-  data: string[] | undefined
-  isError: boolean
-  refetch: () => unknown
-}) {
-  return render(
-    <Section
-      title="Things"
-      query={query}
-      what="things"
-      skeleton={<div>loading</div>}
-      isEmpty={(d) => d.length === 0}
-      empty="Nothing here."
-    >
-      {(d) => <div>{d.join(",")}</div>}
-    </Section>,
-  )
-}
-
-describe("Section", () => {
-  it("shows the skeleton while loading", () => {
-    renderSection({ data: undefined, isError: false, refetch: vi.fn() })
-    expect(screen.getByText("Things")).toBeTruthy()
-    expect(screen.getByText("loading")).toBeTruthy()
-  })
-
-  it("shows the error with a retry when nothing loaded", () => {
-    const refetch = vi.fn()
-    renderSection({ data: undefined, isError: true, refetch })
-    expect(screen.getByText(/Couldn't load things/)).toBeTruthy()
-    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
-    expect(refetch).toHaveBeenCalled()
-  })
-
-  it("keeps data when a refetch fails", () => {
-    renderSection({ data: ["a", "b"], isError: true, refetch: vi.fn() })
-    expect(screen.getByText("a,b")).toBeTruthy()
-    expect(screen.queryByText(/Couldn't load/)).toBeNull()
-  })
-
-  it("shows the empty text", () => {
-    renderSection({ data: [], isError: false, refetch: vi.fn() })
-    expect(screen.getByText("Nothing here.")).toBeTruthy()
   })
 })

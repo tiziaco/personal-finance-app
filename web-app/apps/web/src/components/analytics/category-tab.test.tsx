@@ -169,7 +169,7 @@ describe("CategoryTab", () => {
     categories({ data: EMPTY })
     merchants({ data: { top_by_spend: [] } })
     const { container } = renderTab()
-    expect(screen.getAllByText("No spending in this period.")).toHaveLength(2)
+    expect(screen.getAllByText("No spending in this period.")).toHaveLength(1)
     expect(screen.queryByText("Total spent")).not.toBeInTheDocument()
     expect(container.textContent).not.toContain("€")
   })

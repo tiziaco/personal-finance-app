@@ -159,7 +159,7 @@ describe("SeasonalityTab", () => {
   it("shows the empty state", () => {
     behaviour({ data: { ...BEHAVIOUR, date_from: null, date_to: null } })
     render(<SeasonalityTab />)
-    expect(screen.getAllByText("No spending yet.")).toHaveLength(3)
+    expect(screen.getAllByText("No spending yet.")).toHaveLength(1)
     expect(screen.queryByText(/^Based on/)).toBeNull()
   })
 

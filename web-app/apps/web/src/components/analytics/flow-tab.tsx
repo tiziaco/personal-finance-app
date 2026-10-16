@@ -33,6 +33,7 @@ import {
 import { MonthToDateStrip } from "./month-to-date-strip"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
+import { QueryGate } from "./query-gate"
 import { Section } from "./section"
 import { PERIODS } from "./use-analytics-params"
 
@@ -114,7 +115,6 @@ export function FlowTab({
   const query = useGetSpending({ months }, ANALYTICS_QUERY)
   const data = query.data
   const period = data && formatPeriod(data.date_from, data.date_to)
-  const section = { query, what: WHAT, isEmpty, empty: EMPTY }
 
   return (
     <div className="flex flex-col gap-6">
@@ -129,170 +129,183 @@ export function FlowTab({
         ) : null}
       </header>
 
-      {data && showMonthToDate(data) ? (
-        <MonthToDateStrip data={data.month_to_date!} />
-      ) : null}
-
-      <Section
-        {...section}
-        title="Income and expenses"
-        skeleton={<Skeleton className="aspect-[2/1] w-full" />}
-      >
-        {(d) => (
-          <FlowChart points={toFlowPoints(d.months, d.month_to_date?.month)} />
-        )}
-      </Section>
-
-      <Section
-        {...section}
-        title="Cash flow"
-        skeleton={<Skeleton className="h-32 w-full" />}
-      >
-        {(d) => (
-          <div className="flex flex-col gap-4">
-            <div className="grid gap-4 sm:grid-cols-3">
-              <Figure
-                label="Income"
-                amount={d.total_income}
-                average={d.average_monthly_income}
-              />
-              <Figure
-                label="Expenses"
-                amount={d.total_expenses}
-                average={d.average_monthly_expenses}
-              />
-              <Figure
-                label="Net"
-                amount={d.net}
-                average={d.average_monthly_net}
-                signed
-              />
-            </div>
-            <p className="text-sm">
-              <Kept pct={d.savings_rate_pct} />
-            </p>
-          </div>
-        )}
-      </Section>
-
-      {data?.latest_month ? (
-        <Section
-          {...section}
-          title={`${formatMonth(data.latest_month.month)} vs the period average`}
-          skeleton={<Skeleton className="h-16 w-full" />}
-        >
-          {(d) => (
-            <dl className="grid gap-3 sm:grid-cols-2">
-              <div>
-                <dt className="text-sm text-muted-foreground">Income</dt>
-                <dd className="tabular-nums">
-                  {formatAmount(d.latest_month!.income)}{" "}
-                  <Change
-                    pct={d.latest_month!.income_vs_average_pct}
-                    kind="income"
-                    up="above average"
-                    down="below average"
-                  />
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm text-muted-foreground">Expenses</dt>
-                <dd className="tabular-nums">
-                  {formatAmount(d.latest_month!.expenses)}{" "}
-                  <Change
-                    pct={d.latest_month!.expenses_vs_average_pct}
-                    kind="spend"
-                    up="above average"
-                    down="below average"
-                  />
-                </dd>
-              </div>
-            </dl>
-          )}
-        </Section>
-      ) : null}
-
-      <Section
-        {...section}
-        title="Month by month"
-        skeleton={<Skeleton className="h-40 w-full" />}
-      >
-        {(d) => (
+      <QueryGate
+        query={query}
+        what={WHAT}
+        isEmpty={isEmpty}
+        empty={EMPTY}
+        skeleton={
           <>
-            <Table className="hidden sm:table">
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Month</TableHead>
-                  <TableHead className="text-right">Income</TableHead>
-                  <TableHead className="text-right">Expenses</TableHead>
-                  <TableHead className="text-right">Net</TableHead>
-                  <TableHead className="text-right">Savings rate</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {d.months.map((m) => (
-                  <TableRow key={m.month}>
-                    <TableCell>
-                      {formatMonth(m.month)}
-                      <PartialTag
-                        label={partialLabel(
-                          m.partial,
-                          m.month,
-                          d.month_to_date?.month,
-                        )}
-                        className="text-muted-foreground"
-                      />
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatAmount(m.income)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      {formatAmount(m.expenses)}
-                    </TableCell>
-                    <TableCell
-                      className={`text-right tabular-nums ${netClass(m.net)}`}
-                    >
-                      {formatAmount(m.net)}
-                    </TableCell>
-                    <TableCell className="text-right tabular-nums">
-                      <Rate pct={m.savings_rate_pct} />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-            <ul className="flex flex-col gap-3 sm:hidden">
-              {d.months.map((m) => (
-                <li key={m.month} className="flex justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="font-medium">
-                      {formatMonth(m.month)}
-                      <PartialTag
-                        label={partialLabel(
-                          m.partial,
-                          m.month,
-                          d.month_to_date?.month,
-                        )}
-                        className="text-xs font-normal text-muted-foreground"
-                      />
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {formatAmount(m.income)} in · {formatAmount(m.expenses)}{" "}
-                      out
-                    </p>
-                  </div>
-                  <div className="text-right tabular-nums">
-                    <p className={netClass(m.net)}>{formatAmount(m.net)}</p>
-                    <p className="text-xs">
-                      <Rate pct={m.savings_rate_pct} />
-                    </p>
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <Section title="Income and expenses">
+              <Skeleton className="aspect-[2/1] w-full" />
+            </Section>
+            <Section title="Cash flow">
+              <Skeleton className="h-32 w-full" />
+            </Section>
+            <Section title="Month by month">
+              <Skeleton className="h-40 w-full" />
+            </Section>
           </>
-        )}
-      </Section>
+        }
+      >
+        {(d) => {
+          const latest = d.latest_month
+          return (
+            <>
+              {showMonthToDate(d) ? (
+                <MonthToDateStrip data={d.month_to_date!} />
+              ) : null}
+
+              <Section title="Income and expenses">
+                <FlowChart
+                  points={toFlowPoints(d.months, d.month_to_date?.month)}
+                />
+              </Section>
+
+              <Section title="Cash flow">
+                <div className="flex flex-col gap-4">
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Figure
+                      label="Income"
+                      amount={d.total_income}
+                      average={d.average_monthly_income}
+                    />
+                    <Figure
+                      label="Expenses"
+                      amount={d.total_expenses}
+                      average={d.average_monthly_expenses}
+                    />
+                    <Figure
+                      label="Net"
+                      amount={d.net}
+                      average={d.average_monthly_net}
+                      signed
+                    />
+                  </div>
+                  <p className="text-sm">
+                    <Kept pct={d.savings_rate_pct} />
+                  </p>
+                </div>
+              </Section>
+
+              {latest ? (
+                <Section
+                  title={`${formatMonth(latest.month)} vs the period average`}
+                >
+                  <dl className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-sm text-muted-foreground">Income</dt>
+                      <dd className="tabular-nums">
+                        {formatAmount(latest.income)}{" "}
+                        <Change
+                          pct={latest.income_vs_average_pct}
+                          kind="income"
+                          up="above average"
+                          down="below average"
+                        />
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-sm text-muted-foreground">
+                        Expenses
+                      </dt>
+                      <dd className="tabular-nums">
+                        {formatAmount(latest.expenses)}{" "}
+                        <Change
+                          pct={latest.expenses_vs_average_pct}
+                          kind="spend"
+                          up="above average"
+                          down="below average"
+                        />
+                      </dd>
+                    </div>
+                  </dl>
+                </Section>
+              ) : null}
+
+              <Section title="Month by month">
+                <>
+                  <Table className="hidden sm:table">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Month</TableHead>
+                        <TableHead className="text-right">Income</TableHead>
+                        <TableHead className="text-right">Expenses</TableHead>
+                        <TableHead className="text-right">Net</TableHead>
+                        <TableHead className="text-right">
+                          Savings rate
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {d.months.map((m) => (
+                        <TableRow key={m.month}>
+                          <TableCell>
+                            {formatMonth(m.month)}
+                            <PartialTag
+                              label={partialLabel(
+                                m.partial,
+                                m.month,
+                                d.month_to_date?.month,
+                              )}
+                              className="text-muted-foreground"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatAmount(m.income)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {formatAmount(m.expenses)}
+                          </TableCell>
+                          <TableCell
+                            className={`text-right tabular-nums ${netClass(m.net)}`}
+                          >
+                            {formatAmount(m.net)}
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            <Rate pct={m.savings_rate_pct} />
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <ul className="flex flex-col gap-3 sm:hidden">
+                    {d.months.map((m) => (
+                      <li key={m.month} className="flex justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            {formatMonth(m.month)}
+                            <PartialTag
+                              label={partialLabel(
+                                m.partial,
+                                m.month,
+                                d.month_to_date?.month,
+                              )}
+                              className="text-xs font-normal text-muted-foreground"
+                            />
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatAmount(m.income)} in ·{" "}
+                            {formatAmount(m.expenses)} out
+                          </p>
+                        </div>
+                        <div className="text-right tabular-nums">
+                          <p className={netClass(m.net)}>
+                            {formatAmount(m.net)}
+                          </p>
+                          <p className="text-xs">
+                            <Rate pct={m.savings_rate_pct} />
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              </Section>
+            </>
+          )
+        }}
+      </QueryGate>
     </div>
   )
 }

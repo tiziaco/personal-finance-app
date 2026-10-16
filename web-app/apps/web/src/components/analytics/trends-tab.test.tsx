@@ -203,17 +203,44 @@ describe("TrendsTab", () => {
     renderTab()
     expect(
       screen.getByText(
-        "No category grew between the two halves of the period.",
-      ),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText(
-        "No category declined between the two halves of the period.",
+        "No category grew or declined between the two halves of the period.",
       ),
     ).toBeInTheDocument()
     expect(
       screen.getAllByText("Needs at least two whole months."),
-    ).toHaveLength(2)
+    ).toHaveLength(1)
+  })
+
+  it("names the empty list when only one is empty", () => {
+    categories({ data: { ...CATEGORIES, top_growing: [] } })
+    renderTab()
+    expect(
+      screen.getByText(
+        "No category grew between the two halves of the period.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Needs at least two whole months."),
+    ).not.toBeInTheDocument()
+  })
+
+  it("says there are no transactions when the period is empty", () => {
+    categories({
+      data: {
+        ...CATEGORIES,
+        date_from: null,
+        date_to: null,
+        top_growing: [],
+        top_declining: [],
+      },
+    })
+    renderTab()
+    expect(screen.getAllByText("No transactions in this period.")).toHaveLength(
+      1,
+    )
+    expect(
+      screen.queryByText("Needs at least two whole months."),
+    ).not.toBeInTheDocument()
   })
 
   it("shows the empty state", () => {
@@ -244,10 +271,10 @@ describe("TrendsTab", () => {
     categories({ data: undefined, isError: true })
     renderTab()
     expect(
-      screen.getAllByText(/Couldn't load your spending trend/).length,
-    ).toBeGreaterThan(0)
+      screen.getAllByText(/Couldn't load your spending trend/),
+    ).toHaveLength(1)
     expect(
-      screen.getAllByText(/Couldn't load your category movers/).length,
-    ).toBeGreaterThan(0)
+      screen.getAllByText(/Couldn't load your category movers/),
+    ).toHaveLength(1)
   })
 })

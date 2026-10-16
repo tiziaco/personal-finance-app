@@ -15,6 +15,7 @@ import { CategoryMovers } from "./category-movers"
 import { changeTone, formatPeriod, formatPct } from "./format"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
+import { QueryGate } from "./query-gate"
 import { Section } from "./section"
 import {
   MonthChangeChart,
@@ -27,10 +28,23 @@ import { PERIODS } from "./use-analytics-params"
 const EMPTY = "No transactions in this period."
 const CAPTION = "Earlier half vs later half of the period, per month"
 
-const isEmpty = (data: SpendingResponse | CategoryBreakdownResponse) =>
-  data.date_from === null
+const isEmpty = (data: SpendingResponse) => data.date_from === null
 
-const chartSkeleton = <Skeleton className="aspect-[2/1] w-full" />
+/** No period, or neither list has a mover. */
+const moversEmpty = (data: CategoryBreakdownResponse) =>
+  data.date_from === null ||
+  (data.top_growing.length === 0 && data.top_declining.length === 0)
+
+/** Why there are no movers: no period at all, or too short a period to compare. */
+function moversEmptyNode(data: CategoryBreakdownResponse) {
+  if (data.date_from === null) return EMPTY
+  return (
+    <div className="flex flex-col gap-1">
+      <p>No category grew or declined between the two halves of the period.</p>
+      <p className="text-xs">Needs at least two whole months.</p>
+    </div>
+  )
+}
 
 export function TrendsTab({
   months,
@@ -47,21 +61,6 @@ export function TrendsTab({
   const period =
     spending.data &&
     formatPeriod(spending.data.date_from, spending.data.date_to)
-  const flow = {
-    query: spending,
-    what: "your spending trend",
-    isEmpty,
-    empty: EMPTY,
-    skeleton: chartSkeleton,
-  }
-  const movers = {
-    query: categories,
-    what: "your category movers",
-    isEmpty,
-    empty: EMPTY,
-    skeleton: <Skeleton className="h-32 w-full" />,
-  }
-
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-3">
@@ -75,68 +74,98 @@ export function TrendsTab({
         ) : null}
       </header>
 
-      <Section {...flow} title="Spending trend">
-        {(d) => (
-          <SpendingTrendChart
-            points={toTrendsPoints(d.months, d.month_to_date?.month)}
-          />
-        )}
-      </Section>
-
-      <Section {...flow} title="Month-over-month change">
-        {(d) => (
-          <MonthChangeChart
-            points={toTrendsPoints(d.months, d.month_to_date?.month)}
-          />
-        )}
-      </Section>
-
-      <Section {...flow} title="Savings rate">
+      <QueryGate
+        query={spending}
+        what="your spending trend"
+        isEmpty={isEmpty}
+        empty={EMPTY}
+        skeleton={
+          <>
+            <Section title="Spending trend">
+              <Skeleton className="aspect-[2/1] w-full" />
+            </Section>
+            <Section title="Month-over-month change">
+              <Skeleton className="aspect-[2/1] w-full" />
+            </Section>
+            <Section title="Savings rate">
+              <Skeleton className="aspect-[2/1] w-full" />
+            </Section>
+          </>
+        }
+      >
         {(d) => {
+          const points = toTrendsPoints(d.months, d.month_to_date?.month)
           const pct = d.savings_rate_pct
           const tone = pct === null ? null : changeTone(pct, "income")
           return (
-            <div className="flex flex-col gap-3">
-              <p className="text-lg font-semibold">
-                {pct === null || tone === null ? (
-                  "—"
-                ) : (
-                  <span data-tone={tone} className={TONE_CLASS[tone]}>
-                    {`Kept ${formatPct(pct)} of income`}
-                  </span>
-                )}
-              </p>
-              <SavingsRateChart
-                points={toTrendsPoints(d.months, d.month_to_date?.month)}
-              />
-            </div>
+            <>
+              <Section title="Spending trend">
+                <SpendingTrendChart points={points} />
+              </Section>
+
+              <Section title="Month-over-month change">
+                <MonthChangeChart points={points} />
+              </Section>
+
+              <Section title="Savings rate">
+                <div className="flex flex-col gap-3">
+                  <p className="text-lg font-semibold">
+                    {pct === null || tone === null ? (
+                      "—"
+                    ) : (
+                      <span data-tone={tone} className={TONE_CLASS[tone]}>
+                        {`Kept ${formatPct(pct)} of income`}
+                      </span>
+                    )}
+                  </p>
+                  <SavingsRateChart points={points} />
+                </div>
+              </Section>
+            </>
           )
         }}
-      </Section>
+      </QueryGate>
 
-      <Section {...movers} title="Growing">
+      <QueryGate
+        query={categories}
+        what="your category movers"
+        isEmpty={moversEmpty}
+        empty={moversEmptyNode}
+        skeleton={
+          <>
+            <Section title="Growing">
+              <Skeleton className="h-32 w-full" />
+            </Section>
+            <Section title="Declining">
+              <Skeleton className="h-32 w-full" />
+            </Section>
+          </>
+        }
+      >
         {(d) => (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">{CAPTION}</p>
-            <CategoryMovers
-              rows={d.top_growing}
-              empty="No category grew between the two halves of the period."
-            />
-          </div>
-        )}
-      </Section>
+          <>
+            <Section title="Growing">
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">{CAPTION}</p>
+                <CategoryMovers
+                  rows={d.top_growing}
+                  empty="No category grew between the two halves of the period."
+                />
+              </div>
+            </Section>
 
-      <Section {...movers} title="Declining">
-        {(d) => (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm text-muted-foreground">{CAPTION}</p>
-            <CategoryMovers
-              rows={d.top_declining}
-              empty="No category declined between the two halves of the period."
-            />
-          </div>
+            <Section title="Declining">
+              <div className="flex flex-col gap-3">
+                <p className="text-sm text-muted-foreground">{CAPTION}</p>
+                <CategoryMovers
+                  rows={d.top_declining}
+                  empty="No category declined between the two halves of the period."
+                />
+              </div>
+            </Section>
+          </>
         )}
-      </Section>
+      </QueryGate>
     </div>
   )
 }

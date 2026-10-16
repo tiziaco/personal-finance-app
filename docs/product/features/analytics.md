@@ -78,8 +78,9 @@ month-to-date. A user with no finished month yet sees the month in progress, mar
 partial. Any whole number of months from 1 to 120 is accepted; the tabs offer the choices
 above.
 
-Every chart has a loading skeleton and an empty state, and fails on its own without taking
-the page down.
+Every chart has a loading skeleton. Each request has one empty state and fails on its own:
+one error card with a retry, in place of the charts that request feeds, without taking the
+page down.
 
 Rules that hold across the analytics page, for any change to it:
 

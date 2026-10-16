@@ -248,7 +248,7 @@ describe("FlowTab", () => {
     spending({ data: undefined, isError: true })
     renderTab()
     expect(
-      screen.getAllByText(/Couldn't load your income and expenses/).length,
-    ).toBeGreaterThan(0)
+      screen.getAllByText(/Couldn't load your income and expenses/),
+    ).toHaveLength(1)
   })
 })
