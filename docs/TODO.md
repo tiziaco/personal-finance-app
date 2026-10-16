@@ -118,7 +118,7 @@ answered" hint on the service and start unpinned calls there.
 ## Server — a per-user cap on insight generation
 
 Every `POST /insights/generate` is a paid model call over the user's figures, and opening
-`/insights` on a stale set calls it too. Today only the per-address rate limit of 10 a minute
+`/insights` on a stale set calls it too. Today only the per-user rate limit of 10 a minute
 guards it — a runaway-click guard, not a budget — and step 6 deliberately set no cooldown or
 daily cap (16 Oct 2026). Before public sign-up, cap generations per user (a daily count, or a
 cooldown when the set is fresh), answered with an error the page can show by the Regenerate

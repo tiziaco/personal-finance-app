@@ -1,9 +1,10 @@
 """The only reader of analytics: gathers one user's figures and builds the insights agent's input.
 
 Windows (analytics.md §2, PR #16): `months=N` counts the last N finished months, anchored at the latest
-finished month with data, which is the dashboard's reference month. So `months=1` is the reference month and
-`months=BASELINE_MONTHS + 1` is the reference month plus up to six before it. The month in progress is read
-apart, as month-to-date, with explicit bounds.
+finished month with data, which is the dashboard's reference month. So `months=1` is the reference month. The
+usual is the reference month and the months before it back to the first one holding data, at most
+`BASELINE_MONTHS` of them: a newer user's averages never count the empty months before their data began (a gap
+month after it stays in). The month in progress is read apart, as month-to-date, with explicit bounds.
 """
 
 import calendar
@@ -15,7 +16,7 @@ from typing import Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.insights import InsightsInput
-from app.modules.analytics import DateRange, analytics_service
+from app.modules.analytics import DateRange, SpendingResponse, analytics_service
 from app.modules.transaction import CATEGORIES
 
 BASELINE_MONTHS = 6
@@ -47,11 +48,42 @@ def _merchants(node: Any) -> set[str]:
     return found
 
 
+def _month_index(month: str) -> int:
+    """A YYYY-MM month as a count of months, so two of them subtract."""
+    year, number = month.split("-")
+    return int(year) * 12 + int(number) - 1
+
+
+def _usual_months(spending: SpendingResponse, reference_month: str) -> int:
+    """The window from the first month in `spending` holding data to the reference month, inclusive; at least 1."""
+    held = [m.month for m in spending.months if m.month <= reference_month and (m.income or m.expenses)]
+    if not held:
+        return 1
+    return _month_index(reference_month) - _month_index(min(held)) + 1
+
+
 def _same_days_previous_month(through: dt.date) -> tuple[dt.date, dt.date]:
     """Days 1 to through's day of the month before, clamped to that month's length."""
     last_of_previous = through.replace(day=1) - dt.timedelta(days=1)
     day = min(through.day, last_of_previous.day)
     return last_of_previous.replace(day=1), last_of_previous.replace(day=day)
+
+
+async def _anomalies(session: AsyncSession, user_id: uuid.UUID, one: DateRange, usual: DateRange) -> dict[str, Any]:
+    """The reference month's outliers, with the spikes of the usual's window.
+
+    A spike compares a period's last 30 days with the 30-day average before them, so it needs more than one
+    month: over the reference month alone analytics never checks. The second call is read for its spikes only.
+    """
+    found = (
+        await analytics_service.anomalies(session, user_id, one, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS)
+    ).model_dump(mode="json")
+    spikes = (
+        await analytics_service.anomalies(session, user_id, usual, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS)
+    ).model_dump(mode="json")
+    for key in ("spikes", "spike_window_start", "spike_window_end"):
+        found[key] = spikes[key]
+    return found
 
 
 async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[Gathered]:
@@ -61,9 +93,13 @@ async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[
         return None
 
     one = DateRange(months=1)
-    seven = DateRange(months=BASELINE_MONTHS + 1)
-    spending = await analytics_service.spending(session, user_id, seven)
-    behaviour = (await analytics_service.behaviour(session, user_id, seven)).model_dump(mode="json")
+    longest = BASELINE_MONTHS + 1
+    spending = await analytics_service.spending(session, user_id, DateRange(months=longest))
+    months = _usual_months(spending, dashboard.reference_month)
+    usual = DateRange(months=months)
+    if months < longest:
+        spending = await analytics_service.spending(session, user_id, usual)
+    behaviour = (await analytics_service.behaviour(session, user_id, usual)).model_dump(mode="json")
     behaviour.pop("seasonality", None)  # a year-shaped series that says nothing about this month
 
     spending_json = spending.model_dump(mode="json")
@@ -72,15 +108,13 @@ async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[
         "dashboard": dashboard.model_dump(mode="json", exclude={"month_to_date"}),
         "spending": spending_json,
         "categories_month": (await analytics_service.categories(session, user_id, one, TOP_N)).model_dump(mode="json"),
-        "categories_trend": (await analytics_service.categories(session, user_id, seven, TOP_N)).model_dump(
+        "categories_trend": (await analytics_service.categories(session, user_id, usual, TOP_N)).model_dump(
             mode="json"
         ),
         "merchants": (await analytics_service.merchants(session, user_id, one, TOP_N)).model_dump(mode="json"),
-        "recurring": (await analytics_service.recurring(session, user_id, seven)).model_dump(mode="json"),
+        "recurring": (await analytics_service.recurring(session, user_id, usual)).model_dump(mode="json"),
         "behaviour": behaviour,
-        "anomalies": (
-            await analytics_service.anomalies(session, user_id, one, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS)
-        ).model_dump(mode="json"),
+        "anomalies": await _anomalies(session, user_id, one, DateRange(months=max(months, 2))),
     }
 
     month_to_date = dashboard.month_to_date

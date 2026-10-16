@@ -35,7 +35,9 @@ insights** from the analytics figures, in one call, keeping the same kinds of ob
 - **See the top three on the home page**, in a callout between the charts and Recent
   transactions: severity, section and summary of each, the generated time, and **View all**.
   When the set is stale the cards are dimmed, with a note and a **Refresh insights** link to
-  `/insights`; with no set yet, an invitation to open Insights.
+  `/insights` — "A new month has started since these were written" when it was generated in an
+  earlier month, otherwise "You've added or changed transactions since these were written";
+  with no set yet, an invitation to open Insights.
 - **Read the month so far.** Besides the insights about the last finished month, one or two
   cards may be about the month in progress, tagged "October so far" — on the page and in the
   callout.
@@ -56,7 +58,9 @@ insights** from the analytics figures, in one call, keeping the same kinds of ob
   merchant links open `/transactions` filtered to it over the card's period — the finished
   month, or the month so far. A link to a
   category that does not exist, or to a merchant not in the figures the model was given, is
-  dropped; the card stays.
+  dropped; the card stays. A card the model got wrong — an unknown section, severity or
+  period, a malformed key figure, an empty summary or narrative — is dropped and the rest are
+  kept; only an answer with no valid card (out of a non-empty list) is asked for again.
 
 Amounts in the summary and narrative are written by the model in one fixed form: `€` before
 the number, whole euros with a comma for thousands (`€1,240`), cents only under €10
@@ -70,14 +74,19 @@ the period is the set's, and a model's self-rated confidence told the user nothi
 
 - **One set per user, replaced whole** on each generation. There is no history.
 - **What the insights are about.** The last finished month with data — the dashboard's month
-  — against "your usual", up to the six finished months with data before it (fewer for a new
-  user, none for a user with one month). When the current month has data, the model also gets
-  the month so far against the same days of the previous month, and may write one or two
-  cards about it; they compare like with like and their severity stops at medium. A user
-  whose only data is the month in progress gets insights about it, told through which day
-  it runs, and never reads its lower total as a fall in spending.
+  — against "your usual", up to the six finished months before it, counted from the first
+  month with data in that span (fewer for a new user, none for a user with one month), so a
+  newer user's averages never take in the empty months before their data began; a gap month
+  after it stays in. Category spikes compare the month's last 30 days with that usual. When
+  the current month has data, the model also gets the month so far against the same days of
+  the previous month, and may write one or two cards about it; they compare like with like
+  and their severity stops at medium. A user whose only data is the month in progress gets
+  insights about it, told through which day it runs, and never reads its lower total as a
+  fall in spending.
 - **Stale** when a transaction was added, edited, recategorised, re-flagged or deleted after
-  the set was generated, or when a new calendar month has begun since.
+  the set was generated, or when a new calendar month has begun since. The set is stamped
+  when its figures were read, before the model call, so a change made while it was being
+  written makes it stale.
 - **Opening `/insights` with no set, or a stale one, generates** while the page waits
   (expected 10–30 s), showing the previous cards, if any, under a loading state. Opening it
   when the set is fresh costs nothing, however often.
@@ -98,7 +107,7 @@ the period is the set's, and a model's self-rated confidence told the user nothi
   a card specific. Every figure in a card must come from those aggregates; the model
   narrates, it never computes.
 - `POST /insights/generate` and `GET /insights` each carry a rate limit of 10 a minute per
-  address, a guard against runaway clicks rather than a product rule.
+  user, a guard against runaway clicks rather than a product rule.
 
 ## 5. Not built
 

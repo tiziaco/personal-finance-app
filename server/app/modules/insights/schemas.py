@@ -6,6 +6,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+InsightsStatus = Literal["no_data", "none", "stale", "fresh"]
+
 
 class KeyFigureResponse(BaseModel):
     """The card's chip: a number the web formats, and a short qualifier."""
@@ -38,7 +40,7 @@ class InsightResponse(BaseModel):
 class InsightsResponse(BaseModel):
     """The user's insights and how current they are."""
 
-    status: Literal["no_data", "none", "stale", "fresh"] = Field(
+    status: InsightsStatus = Field(
         ...,
         description="no_data: nothing to analyse; none: never generated; stale: data changed or the month rolled over since; fresh",
     )

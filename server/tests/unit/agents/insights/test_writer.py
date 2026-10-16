@@ -220,3 +220,41 @@ async def test_a_model_error_propagates():
         pytest.raises(LLMServiceError),
     ):
         await write_insights(data(), **IDS)
+
+
+async def test_an_invalid_insight_is_dropped_and_the_rest_survive():
+    """The real parse runs: a bad section, severity, period or key figure, or an empty text, drops that card only."""
+    items = [
+        insight(summary="first"),
+        insight(summary="bad section", section="month_to_date"),
+        insight(summary="bad severity", severity="urgent"),
+        insight(summary="bad period", period="week"),
+        insight(summary="bad figure", key_figure={"kind": "ratio", "value": 1, "qualifier": "x"}),
+        insight(summary=""),
+        insight(summary="empty narrative", narrative=""),
+        "not an object",
+        insight(summary="last"),
+    ]
+    service = MagicMock()
+    service.call = AsyncMock(return_value=AIMessage(content=json.dumps(items)))
+    with patch(f"{WRITER}.structured_llm_service", service), patch(f"{WRITER}.logger") as log:
+        result = await write_insights(data(), **IDS)
+    assert [i.summary for i in result] == ["first", "last"]
+    assert service.call.await_count == 1
+    log.warning.assert_called_once_with("insights_items_dropped", generation_id=str(IDS["generation_id"]), dropped=7)
+
+
+async def test_an_answer_whose_every_insight_is_invalid_is_asked_again_then_raises():
+    service = MagicMock()
+    service.call = AsyncMock(return_value=AIMessage(content=json.dumps([insight(section="behaviour")] * 3)))
+    with patch(f"{WRITER}.structured_llm_service", service), pytest.raises(InvalidModelAnswer):
+        await write_insights(data(), **IDS)
+    assert service.call.await_count == 2
+
+
+async def test_an_answer_that_is_not_a_list_is_invalid():
+    service = MagicMock()
+    service.call = AsyncMock(return_value=AIMessage(content=json.dumps(insight())))
+    with patch(f"{WRITER}.structured_llm_service", service), pytest.raises(InvalidModelAnswer):
+        await write_insights(data(), **IDS)
+    assert service.call.await_count == 2

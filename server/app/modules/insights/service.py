@@ -14,7 +14,7 @@ from app.modules.insights.exceptions import InsightsUnavailableError
 from app.modules.insights.figures import gather_figures
 from app.modules.insights.models import InsightSet
 from app.modules.insights.repository import insight_repository
-from app.modules.insights.schemas import InsightResponse, InsightsResponse
+from app.modules.insights.schemas import InsightResponse, InsightsResponse, InsightsStatus
 from app.modules.transaction import transaction_service
 
 
@@ -23,9 +23,9 @@ def _today() -> dt.date:
     return dt.datetime.now(dt.UTC).date()
 
 
-def _response(row: InsightSet, status: str) -> InsightsResponse:
+def _response(row: InsightSet, status: InsightsStatus) -> InsightsResponse:
     return InsightsResponse(
-        status=status,  # type: ignore[arg-type]
+        status=status,
         generated_at=row.generated_at,
         reference_month=row.reference_month,
         month_to_date_through=row.month_to_date_through,
@@ -57,7 +57,12 @@ class InsightsService:
 
     @staticmethod
     async def generate(session: AsyncSession, user_id: uuid.UUID) -> InsightsResponse:
-        """Write a new set from the user's figures and store it over the old one."""
+        """Write a new set from the user's figures and store it over the old one.
+
+        The set is stamped with the moment its figures were read, not when the model answered: a transaction
+        written while the model is thinking is newer than the set, which then reads stale.
+        """
+        started = dt.datetime.now(dt.UTC)
         gathered = await gather_figures(session, user_id)
         if gathered is None:
             return InsightsResponse(status="no_data")
@@ -71,7 +76,7 @@ class InsightsService:
         row = await insight_repository.replace(
             session,
             user_id,
-            generated_at=dt.datetime.now(dt.UTC),
+            generated_at=started,
             reference_month=gathered.input.reference_month,
             baseline_months=gathered.baseline_months,
             month_to_date_through=gathered.input.month_to_date_through,

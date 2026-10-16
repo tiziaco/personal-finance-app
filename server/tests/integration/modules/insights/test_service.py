@@ -154,14 +154,16 @@ async def test_generate_failure_keeps_the_previous_set(db_session, test_user, ad
     with patcher:
         await insights_service.generate(db_session, test_user.id)
     stored = await insight_repository.get(db_session, test_user.id)
+    # Values, not the row: the repository hands back the same identity-mapped object both times.
+    stored_at, stored_insights = stored.generated_at, list(stored.insights)
 
     failing, _ = model(error=InvalidModelAnswer("ValidationError"))
     with failing, pytest.raises(InsightsUnavailableError):
         await insights_service.generate(db_session, test_user.id)
 
     after = await insight_repository.get(db_session, test_user.id)
-    assert after.generated_at == stored.generated_at
-    assert after.insights == stored.insights
+    assert after.generated_at == stored_at
+    assert after.insights == stored_insights
 
 
 async def test_generate_stores_zero_insights_as_fresh(db_session, test_user, add):
@@ -173,3 +175,22 @@ async def test_generate_stores_zero_insights_as_fresh(db_session, test_user, add
     assert generated.status == "fresh"
     assert generated.insights == []
     assert (await insights_service.read(db_session, test_user.id)).status == "fresh"
+
+
+async def test_a_transaction_written_while_the_model_runs_makes_the_set_stale(db_session, test_user, add):
+    """The set is stamped when its figures are read, before the model call, not when it answers."""
+    await aged(add, test_user)
+    written_during: list[dt.datetime] = []
+
+    async def slow_model(*args, **kwargs):
+        txn = await add(test_user, "2026-09-08", "-7.00", merchant="Mid-call")
+        txn.updated_at = dt.datetime.now(dt.UTC)
+        await db_session.flush()
+        written_during.append(txn.updated_at)
+        return _written()
+
+    with patch("app.modules.insights.service.write_insights", AsyncMock(side_effect=slow_model)):
+        generated = await insights_service.generate(db_session, test_user.id)
+
+    assert generated.generated_at < written_during[0]
+    assert (await insights_service.read(db_session, test_user.id)).status == "stale"
