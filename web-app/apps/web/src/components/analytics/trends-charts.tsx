@@ -48,12 +48,13 @@ export function SpendingTrendChart({ points }: { points: MonthPoint[] }) {
     <div className="flex flex-col gap-3">
       <ChartLegend config={spendingConfig} />
       <ChartContainer config={spendingConfig} className="aspect-[2/1] w-full">
+        {/* A ComposedChart draws a line cursor, so it takes LINE_TOOLTIP (a bar cursor's fill would not apply). */}
         <ComposedChart data={points} margin={MARGIN}>
           <CartesianGrid {...GRID} />
           <XAxis {...X_AXIS} />
           <YAxis {...MONEY_Y_AXIS} />
           <ChartTooltip
-            {...BAR_TOOLTIP}
+            {...LINE_TOOLTIP}
             content={({ active, payload }) => (
               <ChartTooltipContent
                 active={active}

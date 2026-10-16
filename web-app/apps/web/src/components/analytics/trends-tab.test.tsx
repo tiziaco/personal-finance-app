@@ -59,7 +59,10 @@ const SPENDING: SpendingResponse = {
   burn_rate: "-1060.00",
   savings_rate_pct: 33.13,
   transaction_count: 80,
-  months: ["06", "07", "08", "09"].map((m) => flow(`2026-${m}`)),
+  months: ["06", "07", "08", "09"].map((m, i) => ({
+    ...flow(`2026-${m}`),
+    expense_change_pct: i === 0 ? null : 4.2,
+  })),
   latest_month: null,
   month_to_date: null,
 }
@@ -141,6 +144,47 @@ describe("TrendsTab", () => {
     expect(screen.getByTestId("spending-chart")).toHaveTextContent("4 points")
     expect(screen.getByTestId("change-chart")).toBeInTheDocument()
     expect(screen.getByTestId("savings-chart")).toBeInTheDocument()
+  })
+
+  it("says a single month cannot be compared, with no change chart", () => {
+    spending({ data: { ...SPENDING, months: [flow("2026-09")] } })
+    renderTab()
+    const part = within(card("Month-over-month change"))
+    expect(
+      part.getByText("Needs at least two months to compare."),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("change-chart")).toBeNull()
+  })
+
+  it("draws the change chart when some month has a change", () => {
+    spending({
+      data: {
+        ...SPENDING,
+        months: [
+          flow("2026-08"),
+          { ...flow("2026-09"), expense_change_pct: 4.2 },
+        ],
+      },
+    })
+    renderTab()
+    expect(screen.getByTestId("change-chart")).toBeInTheDocument()
+    expect(
+      screen.queryByText("Needs at least two months to compare."),
+    ).toBeNull()
+  })
+
+  it("says no month has income when every savings rate is null", () => {
+    spending({
+      data: {
+        ...SPENDING,
+        months: SPENDING.months.map((m) => ({ ...m, savings_rate_pct: null })),
+      },
+    })
+    renderTab()
+    expect(
+      within(card("Savings rate")).getByText("No month with income yet."),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("savings-chart")).toBeNull()
   })
 
   it("shows movers with new and stopped", () => {

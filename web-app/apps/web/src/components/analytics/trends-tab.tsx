@@ -102,7 +102,13 @@ export function TrendsTab({
               </Section>
 
               <Section title="Month-over-month change">
-                <MonthChangeChart points={points} />
+                {points.every((p) => p.change === null) ? (
+                  <p className="text-sm text-muted-foreground">
+                    Needs at least two months to compare.
+                  </p>
+                ) : (
+                  <MonthChangeChart points={points} />
+                )}
               </Section>
 
               <Section title="Savings rate">
@@ -110,7 +116,13 @@ export function TrendsTab({
                   <p className="text-lg font-semibold">
                     <SavingsHeadline pct={d.savings_rate_pct} />
                   </p>
-                  <SavingsRateChart points={points} />
+                  {points.every((p) => p.savingsRate === null) ? (
+                    <p className="text-sm text-muted-foreground">
+                      No month with income yet.
+                    </p>
+                  ) : (
+                    <SavingsRateChart points={points} />
+                  )}
                 </div>
               </Section>
             </>

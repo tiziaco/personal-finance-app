@@ -116,6 +116,37 @@ describe("SeasonalityTab", () => {
     expect(screen.queryByText(/cost the same/)).toBeNull()
   })
 
+  it("says a finished month is needed when no month has years", () => {
+    behaviour({
+      data: {
+        ...BEHAVIOUR,
+        seasonality: BEHAVIOUR.seasonality.map((m) => ({ ...m, years: 0 })),
+      },
+    })
+    render(<SeasonalityTab />)
+    expect(
+      within(card("Average spend by month of year")).getByText(
+        "Needs at least one finished month.",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("month-chart")).toBeNull()
+  })
+
+  it("draws the month chart when one month has years", () => {
+    behaviour({
+      data: {
+        ...BEHAVIOUR,
+        seasonality: BEHAVIOUR.seasonality.map((m, i) => ({
+          ...m,
+          years: i === 0 ? 1 : 0,
+        })),
+      },
+    })
+    render(<SeasonalityTab />)
+    expect(screen.getByTestId("month-chart")).toBeInTheDocument()
+    expect(screen.queryByText("Needs at least one finished month.")).toBeNull()
+  })
+
   it("shows the weekday table and both charts", () => {
     render(<SeasonalityTab />)
     expect(screen.getByTestId("weekday-chart")).toHaveTextContent("7 points")

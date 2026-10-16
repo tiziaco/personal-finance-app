@@ -62,6 +62,7 @@ export function SeasonalityTab() {
         {(d) => {
           const points = toWeekdayPoints(d.by_weekday)
           const sentence = biasSentence(d.weekend_bias_pct)
+          const monthPoints = toMonthOfYearPoints(d.seasonality)
           return (
             <>
               <Section title="Average spend per day, by day of week">
@@ -136,7 +137,13 @@ export function SeasonalityTab() {
               </Section>
 
               <Section title="Average spend by month of year">
-                <MonthOfYearChart points={toMonthOfYearPoints(d.seasonality)} />
+                {monthPoints.every((p) => p.years === 0) ? (
+                  <p className="text-sm text-muted-foreground">
+                    Needs at least one finished month.
+                  </p>
+                ) : (
+                  <MonthOfYearChart points={monthPoints} />
+                )}
               </Section>
             </>
           )
