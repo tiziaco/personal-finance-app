@@ -45,7 +45,8 @@ export function HomeDashboard() {
         )
       ) : (
         <>
-          {data.month_to_date ? (
+          {/* In a first month the reference month is the month in progress: the card would repeat it. */}
+          {data.month_to_date && !data.reference_partial ? (
             <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
               <MonthToDateCard monthToDate={data.month_to_date} />
               <SummaryCards

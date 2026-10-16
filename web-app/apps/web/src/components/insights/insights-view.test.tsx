@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import {
+  getGenerateInsightsMutationKey,
   useGenerateInsights,
   useGetInsights,
 } from "@app/api-client/endpoints/insights"
@@ -187,5 +188,67 @@ describe("InsightsView", () => {
     expect(
       screen.getByText("Couldn't regenerate insights."),
     ).toBeInTheDocument()
+  })
+
+  it("keeps its failures out of the toast and keys the run", () => {
+    insights(response("fresh", [CARD]))
+    renderView()
+    expect(useGenerateInsights).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mutation: expect.objectContaining({
+          mutationKey: getGenerateInsightsMutationKey(),
+          meta: { silentError: true },
+        }),
+      }),
+    )
+  })
+
+  it("a remount while a run is in flight starts no second run", async () => {
+    const client = new QueryClient()
+    // The run an earlier mount of the page started, still waiting on the model.
+    let finish: (value: unknown) => void = () => {}
+    const gate = new Promise((resolve) => (finish = resolve))
+    const pending = client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: getGenerateInsightsMutationKey(),
+        mutationFn: () => gate,
+      })
+      .execute(undefined)
+    await waitFor(() => expect(client.isMutating()).toBe(1))
+    insights(response("stale", [CARD]))
+    render(
+      <QueryClientProvider client={client}>
+        <InsightsView />
+      </QueryClientProvider>,
+    )
+    expect(mutate).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", { name: "Generating…" })).toBeDisabled()
+    finish(undefined)
+    await pending
+  })
+
+  it("when that earlier run fails, the remounted page makes its own one attempt", async () => {
+    const client = new QueryClient()
+    let fail: (reason: unknown) => void = () => {}
+    const gate = new Promise((_, reject) => (fail = reject))
+    const pending = client
+      .getMutationCache()
+      .build(client, {
+        mutationKey: getGenerateInsightsMutationKey(),
+        mutationFn: () => gate,
+      })
+      .execute(undefined)
+    await waitFor(() => expect(client.isMutating()).toBe(1))
+    insights(response("none"))
+    render(
+      <QueryClientProvider client={client}>
+        <InsightsView />
+      </QueryClientProvider>,
+    )
+    expect(mutate).not.toHaveBeenCalled()
+    fail(new Error("503"))
+    await expect(pending).rejects.toThrow("503")
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1))
   })
 })

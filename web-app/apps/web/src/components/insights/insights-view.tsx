@@ -2,8 +2,9 @@
 
 import { useEffect, useRef } from "react"
 import Link from "next/link"
-import { useQueryClient } from "@tanstack/react-query"
+import { useIsMutating, useQueryClient } from "@tanstack/react-query"
 import {
+  getGenerateInsightsMutationKey,
   getGetInsightsQueryKey,
   useGenerateInsights,
   useGetInsights,
@@ -21,19 +22,24 @@ import { InsightsHeader } from "./insights-header"
  * a single time, keyed by the stored set's `generated_at`. A failed run leaves
  * the key unchanged, so it cannot loop; Retry is the user's explicit second
  * attempt. A set that goes stale again after a success has a new key and runs
- * once more.
+ * once more. While a run is in flight — one started before the page remounted
+ * included — nothing starts: a second paid call would answer the same. If that
+ * run fails, this mount makes its own single attempt.
  */
 export function useGenerateOnArrival(
   staleKey: string | null,
   generate: () => void,
+  inFlight: boolean,
 ) {
   const attempted = useRef<string | null>(null)
   useEffect(() => {
-    if (staleKey === null || attempted.current === staleKey) return
+    if (staleKey === null || inFlight || attempted.current === staleKey) return
     attempted.current = staleKey
     generate()
-  }, [staleKey, generate])
+  }, [staleKey, generate, inFlight])
 }
+
+const GENERATE_KEY = getGenerateInsightsMutationKey()
 
 function CardsSkeleton() {
   return (
@@ -50,16 +56,25 @@ export function InsightsView() {
   const query = useGetInsights({ query: { meta: { silentError: true } } })
   const generate = useGenerateInsights({
     mutation: {
+      mutationKey: GENERATE_KEY,
+      // The page reports a failure itself, by the button or as a Retry card.
+      meta: { silentError: true },
       onSuccess: (data: InsightsResponse) =>
         queryClient.setQueryData(getGetInsightsQueryKey(), data),
     },
   })
+  // Counts runs from an earlier mount of this page too, which `generate` cannot see.
+  const inFlight = useIsMutating({ mutationKey: GENERATE_KEY }) > 0
   const data = query.data
   const stale = data?.status === "none" || data?.status === "stale"
   const { mutate } = generate
   const run = () => mutate()
 
-  useGenerateOnArrival(stale ? (data?.generated_at ?? "none") : null, run)
+  useGenerateOnArrival(
+    stale ? (data?.generated_at ?? "none") : null,
+    run,
+    inFlight,
+  )
 
   if (!data) {
     return (
@@ -102,7 +117,7 @@ export function InsightsView() {
   const failed = generate.isError
   // Working means a run is in flight, never merely that the set is stale: a stale
   // set the page has already tried (and failed) must not look busy.
-  const working = generate.isPending
+  const working = generate.isPending || inFlight
 
   return (
     <div className="space-y-6">

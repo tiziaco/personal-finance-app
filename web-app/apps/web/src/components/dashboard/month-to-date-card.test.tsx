@@ -39,7 +39,49 @@ describe("MonthToDateCard", () => {
     const card = screen.getByRole("group", { name: /so far/ })
     expect(card).toHaveTextContent(formatAmount("1184.00"))
     expect(card).not.toHaveTextContent(`vs ${formatAmount("1057.00")}`)
-    expect(card).not.toHaveTextContent("%")
+    expect(card).not.toHaveTextContent("12%")
+  })
+
+  it("shows income's change beside income", () => {
+    render(<MonthToDateCard monthToDate={mtd()} />)
+    expect(
+      screen.getByText(`Income ${formatAmount("2950.00")}`, { exact: false }),
+    ).toHaveTextContent(
+      `Income ${formatAmount("2950.00")} · +5% vs ${formatAmount("2800.00")}`,
+    )
+  })
+
+  it("a null income change shows no income comparison", () => {
+    render(<MonthToDateCard monthToDate={mtd({ income_change_pct: null })} />)
+    const card = screen.getByRole("group", { name: /so far/ })
+    expect(card).toHaveTextContent(`Income ${formatAmount("2950.00")}`)
+    expect(card).not.toHaveTextContent(`vs ${formatAmount("2800.00")}`)
+    expect(card).toHaveTextContent(`+12% vs ${formatAmount("1057.00")}`)
+  })
+
+  it("writes a fall with a true minus sign", () => {
+    render(
+      <MonthToDateCard
+        monthToDate={mtd({
+          expenses_change_pct: -5.4,
+          income_change_pct: -12.6,
+        })}
+      />,
+    )
+    const card = screen.getByRole("group", { name: /so far/ })
+    expect(card).toHaveTextContent(`\u22125% vs ${formatAmount("1057.00")}`)
+    expect(card).toHaveTextContent(`\u221213% vs ${formatAmount("2800.00")}`)
+    expect(card).not.toHaveTextContent("-5%")
+  })
+
+  it("cuts the previous month's days at its length", () => {
+    render(
+      <MonthToDateCard
+        monthToDate={mtd({ month: "2026-10", through: "2026-10-31" })}
+      />,
+    )
+    const range = screen.getByText(/· vs 1–/)
+    expect(range.textContent).toMatch(/^1–31 .+ · vs 1–30 /)
   })
 
   it("shows days covered", () => {

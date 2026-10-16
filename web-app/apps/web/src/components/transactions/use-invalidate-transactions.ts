@@ -37,8 +37,8 @@ export function useInvalidateTransactions() {
 }
 
 /**
- * Hook-level mutation options that refetch the list and every analytics
- * figure on success. Hook-level
+ * Hook-level mutation options that refetch the list, every analytics figure
+ * and the insights on success. Hook-level
  * callbacks run even after the component unmounts — a per-call
  * `mutate(…, { onSuccess })` is skipped then — and the mutation stays
  * pending while the refetch runs.

@@ -14,6 +14,23 @@ const LINK = "text-sm underline underline-offset-4"
 const TOP = 3
 
 /**
+ * Why a stale set is stale: written in an earlier calendar month (UTC, as the
+ * server decides), or the transactions changed since.
+ */
+function staleNote(generatedAt: string | null | undefined) {
+  const generated = generatedAt ? new Date(generatedAt) : null
+  const now = new Date()
+  const earlierMonth =
+    generated !== null &&
+    !Number.isNaN(generated.getTime()) &&
+    generated.getUTCFullYear() * 12 + generated.getUTCMonth() <
+      now.getUTCFullYear() * 12 + now.getUTCMonth()
+  return earlierMonth
+    ? "A new month has started since these were written."
+    : "You've added or changed transactions since these were written."
+}
+
+/**
  * The home page's read-only view of the stored insights. It never generates:
  * a stale or missing set sends the user to /insights, which does.
  */
@@ -52,8 +69,7 @@ export function InsightsCallout() {
         {stale && (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              You&apos;ve added or changed transactions since these were
-              written.
+              {staleNote(data.generated_at)}
             </p>
             <Link href="/insights" className={LINK}>
               Refresh insights

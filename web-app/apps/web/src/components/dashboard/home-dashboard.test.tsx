@@ -127,6 +127,22 @@ describe("HomeDashboard", () => {
     ).toBeInTheDocument()
   })
 
+  it("a first month in progress shows the four cards alone, not the month twice", () => {
+    dashboard({
+      data: {
+        ...DATA,
+        reference_month: "2026-10",
+        reference_partial: true,
+        month_to_date: { month: "2026-10" },
+      },
+    })
+    render(<HomeDashboard />)
+    expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
+  })
+
   it("home renders the four cards alone when it is null", () => {
     dashboard({ data: { ...DATA, month_to_date: null } })
     render(<HomeDashboard />)

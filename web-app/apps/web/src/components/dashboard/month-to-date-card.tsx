@@ -7,11 +7,16 @@ import { formatMonth } from "./month"
 
 const unsigned = (amount: string) => amount.trim().replace(/^-/, "")
 
-/** "+12%" / "-5%" / "0%"; the server rounds to a float, the card to a whole percent. */
+/** "+12%" / "−5%" / "0%" (a true minus, as on the insight chips); the card shows a whole percent. */
 const formatPct = (pct: number) => {
   const rounded = Math.round(pct)
-  return `${rounded > 0 ? "+" : ""}${rounded}%`
+  const sign = rounded > 0 ? "+" : rounded < 0 ? "−" : ""
+  return `${sign}${Math.abs(rounded)}%`
 }
+
+/** "+12% vs €1,057", or null when the server sends no change. */
+const formatChange = (pct: number | null, previous: string) =>
+  pct === null ? null : `${formatPct(pct)} vs ${formatAmount(previous)}`
 
 /** The month in progress, from day 1 to its last transaction, against the same days of the month before. */
 export function MonthToDateCard({
@@ -25,6 +30,11 @@ export function MonthToDateCard({
   const daysInMonth = through
     ? new Date(through.getFullYear(), through.getMonth() + 1, 0).getDate()
     : 0
+  // The same days of the month before, cut at its length: through the 31st compares with 1–30 Sep.
+  const daysInPrevious = through
+    ? new Date(through.getFullYear(), through.getMonth(), 0).getDate()
+    : 0
+  const previousDay = Math.min(day, daysInPrevious)
   const monthName = through
     ? new Intl.DateTimeFormat(undefined, { month: "long" }).format(through)
     : formatMonth(monthToDate.month)
@@ -34,10 +44,15 @@ export function MonthToDateCard({
   const spent = unsigned(monthToDate.expenses)
   const previousSpent = unsigned(monthToDate.previous_expenses)
   const net = (Number(monthToDate.income) - Number(spent)).toFixed(2)
-  const pct = monthToDate.expenses_change_pct
-  const comparison =
-    pct === null ? null : `${formatPct(pct)} vs ${formatAmount(previousSpent)}`
-  const range = `1–${day} ${mon} · vs 1–${day} ${prevMon}`
+  const comparison = formatChange(
+    monthToDate.expenses_change_pct,
+    previousSpent,
+  )
+  const incomeComparison = formatChange(
+    monthToDate.income_change_pct,
+    monthToDate.previous_income,
+  )
+  const range = `1–${day} ${mon} · vs 1–${previousDay} ${prevMon}`
   const income = `Income ${formatAmount(monthToDate.income)}`
   const netText = `Net ${formatAmount(net)}`
   const days = `${day} of ${daysInMonth} days`
@@ -63,7 +78,15 @@ export function MonthToDateCard({
             <p className="text-sm text-muted-foreground">{comparison}</p>
           )}
         </div>
-        <p className="text-sm tabular-nums">{`${income} · ${netText}`}</p>
+        <div className="space-y-1 text-sm tabular-nums">
+          <p>
+            {income}
+            {incomeComparison && (
+              <span className="text-muted-foreground">{` · ${incomeComparison}`}</span>
+            )}
+          </p>
+          <p>{netText}</p>
+        </div>
         <div className="mt-auto space-y-1">
           <div
             role="progressbar"
