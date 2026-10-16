@@ -30,9 +30,15 @@ D = dt.date
 
 
 def test_money_quantises_and_drops_negative_zero():
-    assert money(Decimal("1.005")) == Decimal("1.00")  # banker's rounding, as Decimal does
+    assert money(Decimal("1.005")) == Decimal("1.01")
     assert money(Decimal("2.675")) == Decimal("2.68")
     assert str(money(Decimal("-0.001"))) == "0.00"
+
+
+def test_money_rounds_half_up():
+    assert money(Decimal("0.125")) == Decimal("0.13")
+    assert money(Decimal("0.525")) == Decimal("0.53")
+    assert money(Decimal("-0.125")) == Decimal("-0.13")
 
 
 def test_the_sign_decides_and_zero_is_neither():

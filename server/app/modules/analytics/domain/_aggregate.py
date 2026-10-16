@@ -1,13 +1,15 @@
 """Shared helpers: the row the library reads, money, months, grouping and safe ratios."""
 
+import calendar
 import datetime as dt
 from collections.abc import Callable, Hashable, Iterable, Sequence
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 from statistics import mean, pstdev
 from typing import Optional, Protocol, TypeVar
 
 CENT = Decimal("0.01")
 ZERO = Decimal("0.00")
+AVERAGE_MONTH_DAYS = Decimal("30.436875")  # 365.2425 / 12
 
 
 class Row(Protocol):
@@ -39,8 +41,8 @@ K = TypeVar("K", bound=Hashable)
 
 
 def money(value: Decimal) -> Decimal:
-    """Quantise to cents; -0.00 becomes 0.00."""
-    cents = value.quantize(CENT)
+    """Quantise to cents, half-up; -0.00 becomes 0.00."""
+    cents = value.quantize(CENT, rounding=ROUND_HALF_UP)
     return ZERO if cents == 0 else cents
 
 
@@ -72,6 +74,11 @@ def total_amount(rows: Iterable[Row]) -> Decimal:
 def month_start(day: dt.date) -> dt.date:
     """The first day of day's month."""
     return day.replace(day=1)
+
+
+def month_end(day: dt.date) -> dt.date:
+    """The last day of day's month."""
+    return day.replace(day=calendar.monthrange(day.year, day.month)[1])
 
 
 def month_key(month: dt.date) -> str:
