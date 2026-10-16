@@ -63,6 +63,14 @@ def test_a_monthly_charge_costs_its_median_charge():
     assert 28 <= netflix.interval_days <= 31
 
 
+def test_the_median_charge_is_the_median_not_the_mean():
+    rows = [
+        row(day, amount, merchant="Netflix", recurring=True)
+        for day, amount in (("2026-01-05", "-10.00"), ("2026-02-05", "-10.00"), ("2026-03-05", "-12.00"))
+    ]
+    assert analyse(rows).merchants[0].median_charge == Decimal("10.00")  # the mean is 10.67
+
+
 def test_a_single_yearly_charge_is_spread_over_the_period():
     rows = monthly(5, "2025-10", "2026-09", "-10.00", "Netflix") + [
         row("2026-02-14", "-600.00", merchant="Insurance", recurring=True)
@@ -140,6 +148,17 @@ def test_hidden_subscriptions_look_like_subscriptions():
         + monthly(12, "2026-06", "2026-09", "-79.00", "Pricey", recurring=False)  # over €50
     )
     assert analyse(rows).hidden_subscriptions == (HiddenSubscription("Spotify", 4, 4, Decimal("9.99"), 1.0),)
+
+
+def test_a_merchant_flagged_once_is_never_a_hidden_subscription():
+    rows = monthly(5, "2026-01", "2026-03", "-10.00", "Netflix") + monthly(
+        5, "2026-04", "2026-09", "-10.00", "Netflix", recurring=False
+    )
+    result = analyse(rows)
+    assert [m.merchant for m in result.merchants] == ["Netflix"]
+    assert result.hidden_subscriptions == ()
+    later = analyse(rows, months=3)  # the flagged rows fall before the period
+    assert later.merchants == () and later.hidden_subscriptions == ()
 
 
 def test_hidden_subscriptions_rank_by_monthly_spend():

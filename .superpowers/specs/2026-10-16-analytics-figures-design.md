@@ -165,11 +165,13 @@ thresholds; rent alone makes anyone "high"); `top_5_share_pct`, `top_10_share_pc
 
 Gains `months` and the echo. Per merchant (still keyed by the stored flag, grouped by merchant key):
 
-- `interval_days` (**new**, nullable): the median gap in days between consecutive charges; null with one charge.
+- `interval_days` (**new**, nullable): the median gap in days between consecutive charges, rounded half-up to whole
+  days; null with one charge.
 - `monthly_cost` (**changed**), by billing rhythm: with `interval_days` ≥ 25, median charge ÷ `cadence`, where
   `cadence` = max(1, round(`interval_days` ÷ 30.436875)) months (€10 every 28–31 days is €10.00; €600 every 365
   days is €50.00); below 25 days, median charge × 30.436875 ÷ `interval_days`; with one charge, the charge ÷ the
-  period's month weights.
+  period's month weights. A median gap of 0 (same-day charges) uses the single-charge formula, and the merchant
+  counts as active.
 - `last_charge` (**new**) and `active` (**new**): active unless the period's last day is more than
   1.5 × `interval_days` after `last_charge`. A single charge is active.
 - `monthly_recurring_cost` (**changed**) sums active merchants only.

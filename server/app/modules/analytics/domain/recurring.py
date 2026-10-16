@@ -52,7 +52,7 @@ class RecurringMerchant:
 
 @dataclass(frozen=True)
 class HiddenSubscription:
-    """An unflagged merchant charging like a subscription: a steady, small amount about once a month."""
+    """A merchant never flagged, charging like a subscription: a steady, small amount about once a month."""
 
     merchant: str
     charges: int
@@ -130,7 +130,8 @@ def recurring_analysis(rows: Sequence[Row], period: Optional[Period]) -> Recurri
         return RecurringAnalysis(None, None, ZERO, ZERO, 0, 0.0, 0.0, ZERO, (), ())
     spent = expenses(period.rows(rows))
     flagged = [r for r in spent if r.is_recurring]
-    unflagged = [r for r in spent if not r.is_recurring]
+    ever_flagged = {r.merchant_key for r in expenses(rows) if r.is_recurring}  # all history, not only the period
+    unflagged = [r for r in spent if r.merchant_key not in ever_flagged]
     names = display_names(spent)
 
     merchants: list[RecurringMerchant] = []
