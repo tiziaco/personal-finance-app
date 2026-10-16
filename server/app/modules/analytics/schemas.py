@@ -7,7 +7,6 @@ from typing import List, Optional
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.modules.analytics.domain.behaviour import Stability
-from app.modules.analytics.domain.merchants import Risk
 from app.modules.analytics.exceptions import InvalidDateRangeError
 from app.modules.transaction import MAX_DATE, MIN_DATE
 
@@ -224,18 +223,19 @@ class MerchantSpendResponse(_Out):
 
 
 class MerchantConcentrationResponse(_Out):
-    """How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band."""
+    """How concentrated spending is across merchants: top-5 and top-10 shares, and the Herfindahl index."""
 
     top_5_share_pct: float
     top_10_share_pct: float
     herfindahl_index: float = Field(..., description="Σ(share %)² over every merchant, 0–10000")
-    risk: Risk
     unique_merchants: int
 
 
 class MerchantBreakdownResponse(_Out):
-    """Spend by merchant over the range: the top by spend and by frequency, and the concentration."""
+    """Spend by merchant over the period: the top by spend and by frequency, and the concentration."""
 
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
     total_expenses: Decimal
     top_by_spend: List[MerchantSpendResponse]
     top_by_frequency: List[MerchantSpendResponse]

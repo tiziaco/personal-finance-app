@@ -581,14 +581,19 @@ export const GetMerchantBreakdownResponse = zod
         herfindahl_index: zod
           .number()
           .describe("Σ(share %)² over every merchant, 0–10000"),
-        risk: zod.enum(["low", "medium", "high"]),
         top_10_share_pct: zod.number(),
         top_5_share_pct: zod.number(),
         unique_merchants: zod.int(),
       })
       .describe(
-        "How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band.",
+        "How concentrated spending is across merchants: top-5 and top-10 shares, and the Herfindahl index.",
       ),
+    date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The first day covered; null when the period is empty"),
+    date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day covered; null when the period is empty"),
     top_by_frequency: zod.array(
       zod
         .object({
@@ -632,7 +637,7 @@ export const GetMerchantBreakdownResponse = zod
       .regex(getMerchantBreakdownResponseTotalExpensesRegExp),
   })
   .describe(
-    "Spend by merchant over the range: the top by spend and by frequency, and the concentration.",
+    "Spend by merchant over the period: the top by spend and by frequency, and the concentration.",
   )
 
 /**

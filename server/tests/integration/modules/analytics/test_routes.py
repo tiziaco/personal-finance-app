@@ -171,3 +171,16 @@ async def test_categories_over_two_months(authenticated_client, test_user, add, 
 
     assert (body["date_from"], body["date_to"]) == ("2026-08-01", "2026-09-30")
     assert body["top_categories"][0]["total"] == "450.00"
+
+
+async def test_merchants_over_one_month_has_no_risk_band(authenticated_client, test_user, add, today):
+    await add(test_user, "2026-06-05", "-50.00", merchant="June Shop")
+    await add(test_user, "2026-09-05", "-20.00", merchant="Sept Shop")
+
+    response = await authenticated_client.get(f"{BASE}/merchants", params={"months": 1})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert (body["date_from"], body["date_to"]) == ("2026-09-01", "2026-09-30")
+    assert [m["merchant"] for m in body["top_by_spend"]] == ["Sept Shop"]
+    assert "risk" not in body["concentration"]

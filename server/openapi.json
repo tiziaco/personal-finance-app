@@ -1360,10 +1360,36 @@
         "type": "string"
       },
       "MerchantBreakdownResponse": {
-        "description": "Spend by merchant over the range: the top by spend and by frequency, and the concentration.",
+        "description": "Spend by merchant over the period: the top by spend and by frequency, and the concentration.",
         "properties": {
           "concentration": {
             "$ref": "#/components/schemas/MerchantConcentrationResponse"
+          },
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered; null when the period is empty",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered; null when the period is empty",
+            "title": "Date To"
           },
           "top_by_frequency": {
             "items": {
@@ -1386,6 +1412,8 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
           "total_expenses",
           "top_by_spend",
           "top_by_frequency",
@@ -1395,21 +1423,12 @@
         "type": "object"
       },
       "MerchantConcentrationResponse": {
-        "description": "How concentrated spending is across merchants: top-5 and top-10 shares, the Herfindahl index and a risk band.",
+        "description": "How concentrated spending is across merchants: top-5 and top-10 shares, and the Herfindahl index.",
         "properties": {
           "herfindahl_index": {
             "description": "\u03a3(share %)\u00b2 over every merchant, 0\u201310000",
             "title": "Herfindahl Index",
             "type": "number"
-          },
-          "risk": {
-            "enum": [
-              "low",
-              "medium",
-              "high"
-            ],
-            "title": "Risk",
-            "type": "string"
           },
           "top_10_share_pct": {
             "title": "Top 10 Share Pct",
@@ -1428,7 +1447,6 @@
           "top_5_share_pct",
           "top_10_share_pct",
           "herfindahl_index",
-          "risk",
           "unique_merchants"
         ],
         "title": "MerchantConcentrationResponse",

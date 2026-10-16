@@ -87,9 +87,9 @@ class AnalyticsService:
     async def merchants(
         session: AsyncSession, user_id: uuid.UUID, date_range: DateRange, top_n: int
     ) -> MerchantBreakdownResponse:
-        """Spend by merchant over the range."""
-        rows = await _rows(session, user_id, date_range)
-        return MerchantBreakdownResponse.model_validate(merchant_breakdown(rows, top_n))
+        """Spend by merchant over the period."""
+        rows, period, _ = await _context(session, user_id, date_range)
+        return MerchantBreakdownResponse.model_validate(merchant_breakdown(rows, period, top_n))
 
     @staticmethod
     async def recurring(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> RecurringResponse:
