@@ -75,7 +75,7 @@ export const getGetAnomaliesUrl = (params?: GetAnomaliesParams) => {
 }
 
 /**
- * Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months or inclusive bounds.
+ * Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Unusual spending
  */
 export const useGetAnomaliesHook = (): ((
@@ -259,7 +259,7 @@ export const getGetBehaviourUrl = (params?: GetBehaviourParams) => {
 }
 
 /**
- * By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months or inclusive bounds.
+ * By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spending patterns
  */
 export const useGetBehaviourHook = (): ((
@@ -445,7 +445,7 @@ export const getGetCategoryBreakdownUrl = (
 }
 
 /**
- * Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months or inclusive bounds.
+ * Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spend by category
  */
 export const useGetCategoryBreakdownHook = (): ((
@@ -796,7 +796,7 @@ export const getGetMerchantBreakdownUrl = (
 }
 
 /**
- * Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months or inclusive bounds.
+ * Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spend by merchant
  */
 export const useGetMerchantBreakdownHook = (): ((
@@ -984,7 +984,7 @@ export const getGetRecurringUrl = (params?: GetRecurringParams) => {
 }
 
 /**
- * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months or inclusive bounds.
+ * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Recurring spend
  */
 export const useGetRecurringHook = (): ((
@@ -1168,7 +1168,7 @@ export const getGetSpendingUrl = (params?: GetSpendingParams) => {
 }
 
 /**
- * Totals, averages and a zero-filled per-month series. Over the last `months` finished months or inclusive bounds; all time when neither is given.
+ * Totals, averages and a zero-filled per-month series. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds; all time when neither is given.
  * @summary Income, expenses and net
  */
 export const useGetSpendingHook = (): ((

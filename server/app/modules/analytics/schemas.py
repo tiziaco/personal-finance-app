@@ -327,7 +327,9 @@ class MonthOfYearResponse(_Out):
 
     month: int = Field(..., description="1 is January")
     average_spend: Decimal
-    index: Optional[float] = Field(..., description="100 is the average whole month; null when years is 0")
+    index: Optional[float] = Field(
+        ..., description="100 is the average whole month; null when years is 0 or the average month is 0"
+    )
     years: int = Field(..., description="Whole months of this calendar month in the period")
 
 

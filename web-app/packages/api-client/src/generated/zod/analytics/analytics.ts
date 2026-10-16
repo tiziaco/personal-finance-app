@@ -8,7 +8,7 @@
 import * as zod from "zod"
 
 /**
- * Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months or inclusive bounds.
+ * Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Unusual spending
  */
 export const getAnomaliesQueryStdThresholdDefault = 2.5
@@ -133,7 +133,7 @@ export const GetAnomaliesResponse = zod
   )
 
 /**
- * By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months or inclusive bounds.
+ * By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spending patterns
  */
 export const getBehaviourQueryMonthsOneMax = 120
@@ -223,7 +223,9 @@ export const GetBehaviourResponse = zod
             .regex(getBehaviourResponseSeasonalityItemAverageSpendRegExp),
           index: zod
             .union([zod.number(), zod.null()])
-            .describe("100 is the average whole month; null when years is 0"),
+            .describe(
+              "100 is the average whole month; null when years is 0 or the average month is 0",
+            ),
           month: zod.int().describe("1 is January"),
           years: zod
             .int()
@@ -275,7 +277,7 @@ export const GetBehaviourResponse = zod
   )
 
 /**
- * Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months or inclusive bounds.
+ * Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spend by category
  */
 export const getCategoryBreakdownQueryTopNDefault = 10
@@ -632,7 +634,7 @@ export const GetDashboardResponse = zod
   )
 
 /**
- * Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months or inclusive bounds.
+ * Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Spend by merchant
  */
 export const getMerchantBreakdownQueryTopNDefault = 15
@@ -744,7 +746,7 @@ export const GetMerchantBreakdownResponse = zod
   )
 
 /**
- * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months or inclusive bounds.
+ * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.
  * @summary Recurring spend
  */
 export const getRecurringQueryMonthsOneMax = 120
@@ -855,7 +857,7 @@ export const GetRecurringResponse = zod
   )
 
 /**
- * Totals, averages and a zero-filled per-month series. Over the last `months` finished months or inclusive bounds; all time when neither is given.
+ * Totals, averages and a zero-filled per-month series. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds; all time when neither is given.
  * @summary Income, expenses and net
  */
 export const getSpendingQueryMonthsOneMax = 120

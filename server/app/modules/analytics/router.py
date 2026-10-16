@@ -41,7 +41,7 @@ async def get_dashboard(request: Request, db_session: DbSession, user: CurrentUs
     operation_id="getSpending",
     response_model=SpendingResponse,
     summary="Income, expenses and net",
-    description="Totals, averages and a zero-filled per-month series. Over the last `months` finished months or inclusive bounds; all time when neither is given.",
+    description="Totals, averages and a zero-filled per-month series. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds; all time when neither is given.",
 )
 @limiter.limit(LIMIT)
 async def get_spending(
@@ -56,7 +56,7 @@ async def get_spending(
     operation_id="getCategoryBreakdown",
     response_model=CategoryBreakdownResponse,
     summary="Spend by category",
-    description="Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months or inclusive bounds.",
+    description="Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_categories(
@@ -75,7 +75,7 @@ async def get_categories(
     operation_id="getMerchantBreakdown",
     response_model=MerchantBreakdownResponse,
     summary="Spend by merchant",
-    description="Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months or inclusive bounds.",
+    description="Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_merchants(
@@ -94,7 +94,7 @@ async def get_merchants(
     operation_id="getRecurring",
     response_model=RecurringResponse,
     summary="Recurring spend",
-    description="Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months or inclusive bounds.",
+    description="Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_recurring(
@@ -109,7 +109,7 @@ async def get_recurring(
     operation_id="getBehaviour",
     response_model=BehaviourResponse,
     summary="Spending patterns",
-    description="By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months or inclusive bounds.",
+    description="By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_behaviour(
@@ -124,7 +124,7 @@ async def get_behaviour(
     operation_id="getAnomalies",
     response_model=AnomaliesResponse,
     summary="Unusual spending",
-    description="Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months or inclusive bounds.",
+    description="Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months (or the month in progress when none has finished) or inclusive bounds.",
 )
 @limiter.limit(LIMIT)
 async def get_anomalies(
