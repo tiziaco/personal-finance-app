@@ -31,7 +31,6 @@ def upgrade() -> None:
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("generated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("reference_month", sqlmodel.sql.sqltypes.AutoString(length=7), nullable=False),
-        sa.Column("baseline_months", sa.Integer(), nullable=False),
         sa.Column("month_to_date_through", sa.Date(), nullable=True),
         sa.Column("prompt_version", sqlmodel.sql.sqltypes.AutoString(length=16), nullable=False),
         sa.Column("insights", postgresql.JSONB(astext_type=sa.Text()), nullable=False),

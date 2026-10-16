@@ -29,7 +29,6 @@ class InsightRepository:
         *,
         generated_at: dt.datetime,
         reference_month: str,
-        baseline_months: int,
         month_to_date_through: Optional[dt.date],
         prompt_version: str,
         insights: list[dict[str, Any]],
@@ -42,7 +41,6 @@ class InsightRepository:
         values = {
             "generated_at": generated_at,
             "reference_month": reference_month,
-            "baseline_months": baseline_months,
             "month_to_date_through": month_to_date_through,
             "prompt_version": prompt_version,
             "insights": insights,

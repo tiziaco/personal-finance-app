@@ -6,6 +6,8 @@ from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from app.agents.insights import Period, Section, Severity
+
 InsightsStatus = Literal["no_data", "none", "stale", "fresh"]
 StaleReason = Literal["new_month", "data_changed"]
 
@@ -29,9 +31,9 @@ class InsightLinkResponse(BaseModel):
 class InsightResponse(BaseModel):
     """One insight."""
 
-    section: Literal["spending", "recurring", "savings", "anomalies", "comparisons"]
-    severity: Literal["info", "low", "medium", "high", "critical"]
-    period: Literal["month", "month_to_date"]
+    section: Section
+    severity: Severity
+    period: Period
     summary: str
     narrative: str
     key_figure: Optional[KeyFigureResponse] = None

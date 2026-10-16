@@ -1,17 +1,5 @@
 import { Button } from "@app/ui/button"
-
-const generatedFormat = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "medium",
-  timeStyle: "short",
-})
-
-/** "Generated Oct 14, 2026, 9:30 AM", or null when the time is missing or invalid. */
-export function generatedLabel(generatedAt: string | null | undefined) {
-  const date = generatedAt ? new Date(generatedAt) : null
-  return date && !Number.isNaN(date.getTime())
-    ? `Generated ${generatedFormat.format(date)}`
-    : null
-}
+import { generatedLabel } from "./labels"
 
 export function InsightsHeader({
   generatedAt,

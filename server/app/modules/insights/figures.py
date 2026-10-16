@@ -1,4 +1,4 @@
-"""The only reader of analytics: gathers one user's figures and builds the insights agent's input.
+"""The only reader of analytics within insights: gathers one user's figures and builds the insights agent's input.
 
 Windows (analytics.md §2, PR #16): `months=N` counts the last N finished months, anchored at the latest
 finished month with data, which is the dashboard's reference month. So `months=1` is the reference month. The
@@ -10,7 +10,6 @@ month after it stays in). The month in progress is read apart, as month-to-date,
 import calendar
 import datetime as dt
 import uuid
-from dataclasses import dataclass
 from typing import Any, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,14 +22,6 @@ BASELINE_MONTHS = 6
 TOP_N = 10
 ANOMALY_STD_THRESHOLD = 2.5
 ANOMALY_WINDOW_DAYS = 30
-
-
-@dataclass(frozen=True)
-class Gathered:
-    """The agent's input, and how many baseline months stand behind it."""
-
-    input: InsightsInput
-    baseline_months: int
 
 
 def _merchants(node: Any) -> set[str]:
@@ -86,8 +77,8 @@ async def _anomalies(session: AsyncSession, user_id: uuid.UUID, one: DateRange, 
     return found
 
 
-async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[Gathered]:
-    """The figures for the user's reference month; None when they have no data."""
+async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[InsightsInput]:
+    """The agent's input for the user's reference month; None when they have no data."""
     dashboard = await analytics_service.dashboard(session, user_id)
     if dashboard.reference_month is None:
         return None
@@ -138,18 +129,11 @@ async def gather_figures(session: AsyncSession, user_id: uuid.UUID) -> Optional[
             )
         ).model_dump(mode="json")
 
-    baseline = sum(
-        1 for month in spending.months if month.month < dashboard.reference_month and (month.income or month.expenses)
-    )
-
-    return Gathered(
-        input=InsightsInput(
-            reference_month=dashboard.reference_month,
-            reference_partial=dashboard.reference_partial,
-            month_to_date_through=through,
-            figures=figures,
-            categories=list(CATEGORIES),
-            merchants=frozenset(_merchants(figures)),
-        ),
-        baseline_months=min(baseline, BASELINE_MONTHS),
+    return InsightsInput(
+        reference_month=dashboard.reference_month,
+        reference_partial=dashboard.reference_partial,
+        month_to_date_through=through,
+        figures=figures,
+        categories=list(CATEGORIES),
+        merchants=frozenset(_merchants(figures)),
     )

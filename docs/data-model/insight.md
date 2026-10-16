@@ -30,7 +30,6 @@ CREATE TABLE insight_set (
     user_id                UUID         NOT NULL REFERENCES "user" (id),  -- unique: one set per user
     generated_at           TIMESTAMPTZ  NOT NULL,
     reference_month        VARCHAR(7)   NOT NULL,   -- YYYY-MM, the finished month the set is about
-    baseline_months        INTEGER      NOT NULL,   -- how many earlier months with data were "the usual" (0–6)
     month_to_date_through  DATE,                    -- last day of the month-so-far figures; null when none
     prompt_version         VARCHAR(16)  NOT NULL,   -- the prompt that wrote it, e.g. 'v1'
     insights               JSONB        NOT NULL,   -- the array of insights, below

@@ -2,17 +2,14 @@ import { useId } from "react"
 import type { MonthToDateResponse } from "@app/api-client/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
 import { parseIsoDay } from "@app/core/lib/dates"
-import { formatAmount } from "@/components/transactions/format"
+import { formatAmount, formatPercent } from "@/components/transactions/format"
 import { formatMonth } from "./month"
 
 const unsigned = (amount: string) => amount.trim().replace(/^-/, "")
 
-/** "+12%" / "−5%" / "0%" (a true minus, as on the insight chips); the card shows a whole percent. */
-const formatPct = (pct: number) => {
-  const rounded = Math.round(pct)
-  const sign = rounded > 0 ? "+" : rounded < 0 ? "−" : ""
-  return `${sign}${Math.abs(rounded)}%`
-}
+/** "+12%" / "−5%" / "0%": the card shows a whole percent (the insight chips keep a decimal below 10). */
+const formatPct = (pct: number) =>
+  formatPercent(pct, { decimals: "whole", unsignedZero: true })
 
 /** "+12% vs €1,057", or null when the server sends no change. */
 const formatChange = (pct: number | null, previous: string) =>

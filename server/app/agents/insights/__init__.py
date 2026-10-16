@@ -6,6 +6,9 @@ from app.agents.insights.writer import (
     InsightLink,
     InsightsInput,
     KeyFigure,
+    Period,
+    Section,
+    Severity,
     WrittenInsight,
     write_insights,
 )
@@ -16,6 +19,9 @@ __all__ = [
     "InsightLink",
     "InsightsInput",
     "KeyFigure",
+    "Period",
+    "Section",
+    "Severity",
     "WrittenInsight",
     "write_insights",
 ]

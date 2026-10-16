@@ -42,7 +42,7 @@ MANUAL_CONFIDENCE = 1.0
 
 @dataclass(frozen=True)
 class TransactionActivity:
-    """What insights needs to judge its stored set: any active rows, and when the user's data last moved."""
+    """Whether a user has any active rows, and when their data last moved."""
 
     has_active: bool
     last_changed_at: Optional[dt.datetime]

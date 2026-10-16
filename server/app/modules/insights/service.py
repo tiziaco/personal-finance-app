@@ -85,13 +85,13 @@ class InsightsService:
         stored set — nothing is stored: the set would quote the rows just removed.
         """
         started = dt.datetime.now(dt.UTC)
-        gathered = await gather_figures(session, user_id)
-        if gathered is None:
+        figures = await gather_figures(session, user_id)
+        if figures is None:
             return InsightsResponse(status="no_data")
         generation_id = uuid7()
         await _release_connection(session)
         try:
-            written = await write_insights(gathered.input, user_id=user_id, generation_id=generation_id)
+            written = await write_insights(figures, user_id=user_id, generation_id=generation_id)
         except (InvalidModelAnswer, LLMServiceError) as e:
             logger.warning("insights_generation_failed", generation_id=str(generation_id), error=type(e).__name__)
             raise InsightsUnavailableError("Insights could not be generated", generation_id=str(generation_id)) from e
@@ -102,9 +102,8 @@ class InsightsService:
             session,
             user_id,
             generated_at=started,
-            reference_month=gathered.input.reference_month,
-            baseline_months=gathered.baseline_months,
-            month_to_date_through=gathered.input.month_to_date_through,
+            reference_month=figures.reference_month,
+            month_to_date_through=figures.month_to_date_through,
             prompt_version=PROMPT_VERSION,
             insights=[item.model_dump(mode="json") for item in items],
         )

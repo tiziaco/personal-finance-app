@@ -2,12 +2,14 @@
 
 import Link from "next/link"
 import { useGetInsights } from "@app/api-client/endpoints/insights"
-import { Badge } from "@app/ui/badge"
 import { Card, CardContent } from "@app/ui/card"
 import { Skeleton } from "@app/ui/skeleton"
-import { monthSoFar, SECTION_LABEL } from "@/components/insights/insight-card"
-import { generatedLabel } from "@/components/insights/insights-header"
-import { SEVERITY_LABEL, sortBySeverity } from "@/components/insights/severity"
+import { InsightBadges } from "@/components/insights/insight-badges"
+import {
+  generatedLabel,
+  NOTHING_STANDS_OUT,
+} from "@/components/insights/labels"
+import { sortBySeverity } from "@/components/insights/severity"
 import { SectionError } from "./section-error"
 
 const LINK = "text-sm underline underline-offset-4"
@@ -75,9 +77,7 @@ export function InsightsCallout() {
             </Link>
           </div>
         ) : top.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            Nothing stands out this month.
-          </p>
+          <p className="text-sm text-muted-foreground">{NOTHING_STANDS_OUT}</p>
         ) : (
           <ul
             data-testid="callout-cards"
@@ -85,19 +85,12 @@ export function InsightsCallout() {
           >
             {top.map((insight, i) => (
               <li key={i} className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline">
-                    {SEVERITY_LABEL[insight.severity]}
-                  </Badge>
-                  <Badge variant="secondary">
-                    {SECTION_LABEL[insight.section]}
-                  </Badge>
-                  {insight.period === "month_to_date" && (
-                    <Badge variant="secondary">
-                      {monthSoFar(data.month_to_date_through)}
-                    </Badge>
-                  )}
-                </div>
+                <InsightBadges
+                  insight={insight}
+                  showSection
+                  showKeyFigure={false}
+                  monthToDateThrough={data.month_to_date_through}
+                />
                 <p
                   data-testid="callout-summary"
                   className="text-sm font-medium"

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useCallback, useEffect, useRef } from "react"
 import Link from "next/link"
 import { useIsMutating, useQueryClient } from "@tanstack/react-query"
 import {
@@ -12,10 +12,11 @@ import {
 import type { InsightsResponse } from "@app/api-client/types"
 import { Button } from "@app/ui/button"
 import { Card, CardContent } from "@app/ui/card"
-import { Skeleton } from "@app/ui/skeleton"
 import { SectionError } from "@/components/dashboard/section-error"
+import { CardsSkeleton } from "./cards-skeleton"
 import { InsightTabs } from "./insight-tabs"
 import { InsightsHeader } from "./insights-header"
+import { NOTHING_STANDS_OUT } from "./labels"
 
 /**
  * Each staleness generates once: a set that is new or out of date runs `generate`
@@ -41,15 +42,17 @@ export function useGenerateOnArrival(
 
 const GENERATE_KEY = getGenerateInsightsMutationKey()
 
-function CardsSkeleton() {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: 3 }, (_, i) => (
-        <Skeleton key={i} className="h-28 w-full" />
-      ))}
-    </div>
-  )
-}
+/** Stale-key stand-in for a set that was never generated (it has no `generated_at`). */
+const NEVER_GENERATED = "none"
+
+type Phase =
+  | "loading"
+  | "load_error"
+  | "no_data"
+  | "generating"
+  | "failed"
+  | "empty"
+  | "cards"
 
 export function InsightsView() {
   const queryClient = useQueryClient()
@@ -68,34 +71,59 @@ export function InsightsView() {
   const data = query.data
   const stale = data?.status === "none" || data?.status === "stale"
   const { mutate } = generate
-  const run = () => mutate()
+  // Stable, so the arrival effect does not re-run every render. Called with no
+  // arguments: an onClick must not pass the event on as mutation variables.
+  const run = useCallback(() => mutate(), [mutate])
 
   useGenerateOnArrival(
-    stale ? (data?.generated_at ?? "none") : null,
+    stale ? (data?.generated_at ?? NEVER_GENERATED) : null,
     run,
     inFlight,
   )
 
-  if (!data) {
-    return (
-      <div className="space-y-6">
-        <InsightsHeader pending={false} error={false} />
-        {query.isError ? (
-          <SectionError
-            what="your insights"
-            onRetry={() => void query.refetch()}
-          />
-        ) : (
-          <CardsSkeleton />
-        )}
-      </div>
-    )
-  }
+  const cards = data?.insights ?? []
+  const failed = generate.isError
+  // Working means a run is in flight, never merely that the set is stale: a stale
+  // set the page has already tried (and failed) must not look busy.
+  const working = generate.isPending || inFlight
 
-  if (data.status === "no_data") {
-    return (
-      <div className="space-y-6">
-        <InsightsHeader pending={false} error={false} />
+  const phase: Phase = !data
+    ? query.isError
+      ? "load_error"
+      : "loading"
+    : data.status === "no_data"
+      ? "no_data"
+      : cards.length > 0
+        ? "cards"
+        : working || (stale && !failed)
+          ? "generating"
+          : failed
+            ? "failed"
+            : "empty"
+
+  const header =
+    data && phase !== "no_data" ? (
+      <InsightsHeader
+        generatedAt={data.generated_at}
+        pending={working}
+        error={failed && cards.length > 0}
+        onRegenerate={run}
+      />
+    ) : (
+      <InsightsHeader pending={false} error={false} />
+    )
+
+  return (
+    <div className="space-y-6">
+      {header}
+      {phase === "loading" && <CardsSkeleton />}
+      {phase === "load_error" && (
+        <SectionError
+          what="your insights"
+          onRetry={() => void query.refetch()}
+        />
+      )}
+      {phase === "no_data" && (
         <Card>
           <CardContent className="flex flex-wrap items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
@@ -109,25 +137,8 @@ export function InsightsView() {
             </Link>
           </CardContent>
         </Card>
-      </div>
-    )
-  }
-
-  const cards = data.insights ?? []
-  const failed = generate.isError
-  // Working means a run is in flight, never merely that the set is stale: a stale
-  // set the page has already tried (and failed) must not look busy.
-  const working = generate.isPending || inFlight
-
-  return (
-    <div className="space-y-6">
-      <InsightsHeader
-        generatedAt={data.generated_at}
-        pending={working}
-        error={failed && cards.length > 0}
-        onRegenerate={run}
-      />
-      {cards.length > 0 ? (
+      )}
+      {phase === "cards" && data && (
         <div className={working ? "opacity-60" : undefined} aria-busy={working}>
           <InsightTabs
             insights={cards}
@@ -135,9 +146,9 @@ export function InsightsView() {
             monthToDateThrough={data.month_to_date_through}
           />
         </div>
-      ) : working || (stale && !failed) ? (
-        <CardsSkeleton />
-      ) : failed ? (
+      )}
+      {phase === "generating" && <CardsSkeleton />}
+      {phase === "failed" && (
         <Card>
           <CardContent className="flex items-center justify-between gap-4">
             <p className="text-sm text-muted-foreground">
@@ -148,10 +159,9 @@ export function InsightsView() {
             </Button>
           </CardContent>
         </Card>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Nothing stands out this month.
-        </p>
+      )}
+      {phase === "empty" && (
+        <p className="text-sm text-muted-foreground">{NOTHING_STANDS_OUT}</p>
       )}
     </div>
   )

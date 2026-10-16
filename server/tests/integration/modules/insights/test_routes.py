@@ -89,7 +89,6 @@ async def test_another_users_set_is_not_returned(authenticated_client, test_user
         other_user.id,
         generated_at=dt.datetime.now(dt.UTC),
         reference_month="2026-09",
-        baseline_months=1,
         month_to_date_through=None,
         prompt_version="v1",
         insights=[],

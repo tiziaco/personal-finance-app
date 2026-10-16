@@ -1,11 +1,11 @@
 "use client"
 
+import { useMemo } from "react"
 import type { InsightResponse } from "@app/api-client/types"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@app/ui/tabs"
-import { InsightCard, SECTION_LABEL } from "./insight-card"
+import { InsightCard } from "./insight-card"
+import { SECTION_LABEL, SECTIONS } from "./labels"
 import { sortBySeverity } from "./severity"
-
-const SECTIONS = Object.keys(SECTION_LABEL) as InsightResponse["section"][]
 
 /** "All" first, sorted by severity, then one tab per section with its count. */
 export function InsightTabs({
@@ -17,7 +17,14 @@ export function InsightTabs({
   referenceMonth: string | null | undefined
   monthToDateThrough: string | null | undefined
 }) {
-  const sorted = sortBySeverity(insights)
+  const sorted = useMemo(() => sortBySeverity(insights), [insights])
+  const bySection = useMemo(() => {
+    const groups = Object.fromEntries(
+      SECTIONS.map((section) => [section, [] as InsightResponse[]]),
+    ) as Record<InsightResponse["section"], InsightResponse[]>
+    for (const insight of sorted) groups[insight.section].push(insight)
+    return groups
+  }, [sorted])
   const cards = (list: InsightResponse[], showSection: boolean) => (
     <div className="space-y-3">
       {list.map((insight, i) => (
@@ -42,14 +49,14 @@ export function InsightTabs({
           <TabsTrigger key={section} value={section}>
             {SECTION_LABEL[section]}{" "}
             <span className="text-muted-foreground">
-              {sorted.filter((i) => i.section === section).length}
+              {bySection[section].length}
             </span>
           </TabsTrigger>
         ))}
       </TabsList>
       <TabsContent value="all">{cards(sorted, true)}</TabsContent>
       {SECTIONS.map((section) => {
-        const inSection = sorted.filter((i) => i.section === section)
+        const inSection = bySection[section]
         return (
           <TabsContent key={section} value={section}>
             {inSection.length === 0 ? (

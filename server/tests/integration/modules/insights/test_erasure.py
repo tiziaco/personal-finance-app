@@ -23,7 +23,6 @@ async def _set_for(session, user):
         user.id,
         generated_at=datetime(2026, 10, 1, tzinfo=UTC),
         reference_month="2026-09",
-        baseline_months=3,
         month_to_date_through=None,
         prompt_version="v1",
         insights=[{"title": "x"}],
