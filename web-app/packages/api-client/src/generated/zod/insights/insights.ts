@@ -74,6 +74,12 @@ export const GetInsightsResponse = zod
       .union([zod.string(), zod.null()])
       .optional()
       .describe("YYYY-MM of the finished month the insights describe"),
+    stale_reason: zod
+      .union([zod.enum(["new_month", "data_changed"]), zod.null()])
+      .optional()
+      .describe(
+        "Set when stale: new_month when a calendar month (UTC) began since, else data_changed",
+      ),
     status: zod
       .enum(["no_data", "none", "stale", "fresh"])
       .describe(
@@ -149,6 +155,12 @@ export const GenerateInsightsResponse = zod
       .union([zod.string(), zod.null()])
       .optional()
       .describe("YYYY-MM of the finished month the insights describe"),
+    stale_reason: zod
+      .union([zod.enum(["new_month", "data_changed"]), zod.null()])
+      .optional()
+      .describe(
+        "Set when stale: new_month when a calendar month (UTC) began since, else data_changed",
+      ),
     status: zod
       .enum(["no_data", "none", "stale", "fresh"])
       .describe(

@@ -19,7 +19,8 @@ per insight would add a join and a delete-then-insert for nothing.
 
 **What makes a set stale is not stored here.** `GET /insights` compares `generated_at` with
 the latest `updated_at` over the user's transaction rows, soft-deleted included
-(`transaction_service.activity`), and with the calendar month.
+(`transaction_service.activity`), and with the calendar month (UTC); it returns which of the
+two made the set stale (`stale_reason`), so the web never re-derives it.
 
 ## 2. Schema sketch
 
@@ -65,7 +66,9 @@ Each element of `insights`, as `InsightResponse` in `server/app/modules/insights
 
 - **D1 — JSONB, not a row per insight (16 Oct 2026).** The set is read and replaced as a
   unit and its shape is the prompt's; storing it as one document keeps a generation to one
-  statement and lets the insight's fields change with the prompt without a migration.
+  statement and lets the insight's fields change with the prompt without a migration: a
+  stored set that no longer fits the response's shape reads as never written (`none`), and
+  the page writes a new one.
 - **D2 — `insight_set` carries `UserOwnedMixin`, its `user_id` redeclared unique** (one set
   per user).
 - **D3 — hard-deleted, never anonymised (16 Oct 2026).** The set quotes merchants and
@@ -73,7 +76,10 @@ Each element of `insights`, as `InsightResponse` in `server/app/modules/insights
   on Settings' "delete all transactions", by an inline subscriber to
   `transaction.all_deleted` ([`transaction.md`](./transaction.md) D4); and on account
   erasure, by an inline subscriber to `account.user_erasing`. Both run in the publisher's
-  transaction, so the set cannot outlive the rows.
+  transaction, so the set cannot outlive the rows. A generation already in flight re-checks
+  that the user still has transactions after the model answers, and stores nothing if not;
+  otherwise it would write back a set quoting the deleted rows, and an erased user's would
+  never go. Only the milliseconds between that check and the write remain.
 - **D4 — no history (16 Oct 2026).** A new generation overwrites the old set. A failed
   generation writes nothing, so the previous set stays.
 - **D5 — the prompt version is stored with the set.** A set's wording can be traced to the

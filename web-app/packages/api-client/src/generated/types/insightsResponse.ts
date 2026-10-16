@@ -6,6 +6,7 @@
  * OpenAPI spec version: 1.0.0
  */
 import type { InsightResponse } from "./insightResponse"
+import type { InsightsResponseStaleReason } from "./insightsResponseStaleReason"
 import type { InsightsResponseStatus } from "./insightsResponseStatus"
 
 /**
@@ -17,6 +18,8 @@ export interface InsightsResponse {
   month_to_date_through?: string | null
   /** YYYY-MM of the finished month the insights describe */
   reference_month?: string | null
+  /** Set when stale: new_month when a calendar month (UTC) began since, else data_changed */
+  stale_reason?: InsightsResponseStaleReason
   /** no_data: nothing to analyse; none: never generated; stale: data changed or the month rolled over since; fresh */
   status: InsightsResponseStatus
 }

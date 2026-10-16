@@ -54,8 +54,8 @@ async def _release_connection(session: AsyncSession) -> None:
     call holds the request's DB connection"). Nothing written before this point
     depends on what follows: at most a held upload, which must survive a failed
     model call anyway. The session opens a new transaction on its next use, and
-    DbSession commits that one after the route as usual. The only commits outside
-    DbSession in this app; keep it that way.
+    DbSession commits that one after the route as usual. With insights' generate, the
+    only commits outside DbSession in this app; keep it that way.
     """
     await session.commit()
 

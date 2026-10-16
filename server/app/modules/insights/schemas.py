@@ -7,6 +7,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 InsightsStatus = Literal["no_data", "none", "stale", "fresh"]
+StaleReason = Literal["new_month", "data_changed"]
 
 
 class KeyFigureResponse(BaseModel):
@@ -43,6 +44,10 @@ class InsightsResponse(BaseModel):
     status: InsightsStatus = Field(
         ...,
         description="no_data: nothing to analyse; none: never generated; stale: data changed or the month rolled over since; fresh",
+    )
+    stale_reason: Optional[StaleReason] = Field(
+        None,
+        description="Set when stale: new_month when a calendar month (UTC) began since, else data_changed",
     )
     generated_at: Optional[dt.datetime] = None
     reference_month: Optional[str] = Field(None, description="YYYY-MM of the finished month the insights describe")

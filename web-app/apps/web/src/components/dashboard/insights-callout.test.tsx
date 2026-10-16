@@ -90,7 +90,10 @@ describe("InsightsCallout", () => {
   })
 
   it("stale shows the note and a refresh link", () => {
-    insights(response("stale", [card("Old", "high")]))
+    insights({
+      ...response("stale", [card("Old", "high")]),
+      stale_reason: "data_changed",
+    })
     render(<InsightsCallout />)
     expect(
       screen.getByText(
@@ -106,7 +109,7 @@ describe("InsightsCallout", () => {
   it("stale from a new month says the month started", () => {
     insights({
       ...response("stale", [card("Old", "high")]),
-      generated_at: "2026-09-30T23:30:00Z",
+      stale_reason: "new_month",
     })
     render(<InsightsCallout />)
     expect(
@@ -117,21 +120,6 @@ describe("InsightsCallout", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("link", { name: "Refresh insights" }),
-    ).toBeInTheDocument()
-  })
-
-  it("compares months in UTC, as the server does", () => {
-    // 1 Oct 00:30 in UTC+2 is still 30 Sep in UTC: the month has started there, not here.
-    vi.setSystemTime(new Date("2026-09-30T22:30:00Z"))
-    insights({
-      ...response("stale", [card("Old", "high")]),
-      generated_at: "2026-09-30T10:00:00Z",
-    })
-    render(<InsightsCallout />)
-    expect(
-      screen.getByText(
-        "You've added or changed transactions since these were written.",
-      ),
     ).toBeInTheDocument()
   })
 

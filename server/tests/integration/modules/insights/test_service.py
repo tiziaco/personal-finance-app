@@ -13,6 +13,7 @@ from app.modules.insights import service as insights_service_module
 from app.modules.insights.exceptions import InsightsUnavailableError
 from app.modules.insights.repository import insight_repository
 from app.modules.insights.service import insights_service
+from app.modules.transaction import transaction_service
 
 pytestmark = pytest.mark.integration
 
@@ -99,7 +100,38 @@ async def test_read_stale_after_an_edit(db_session, test_user, add):
 
     await add(test_user, "2026-09-06", "-5.00", merchant="Other")
 
-    assert (await insights_service.read(db_session, test_user.id)).status == "stale"
+    read = await insights_service.read(db_session, test_user.id)
+    assert (read.status, read.stale_reason) == ("stale", "data_changed")
+
+
+async def test_read_fresh_has_no_stale_reason(db_session, test_user, add):
+    await aged(add, test_user)
+    patcher, _ = model()
+    with patcher:
+        await insights_service.generate(db_session, test_user.id)
+
+    read = await insights_service.read(db_session, test_user.id)
+    assert (read.status, read.stale_reason) == ("fresh", None)
+
+
+async def test_read_a_set_of_an_earlier_shape_is_none(db_session, test_user, add):
+    """A stored set the response can no longer read (the prompt changed it) counts as never written."""
+    await aged(add, test_user)
+    await insight_repository.replace(
+        db_session,
+        test_user.id,
+        generated_at=dt.datetime.now(dt.UTC),
+        reference_month="2026-09",
+        baseline_months=1,
+        month_to_date_through=None,
+        prompt_version="v0",
+        insights=[{"section": "retired_section", "severity": "high", "summary": "s", "narrative": "n"}],
+    )
+
+    read = await insights_service.read(db_session, test_user.id)
+
+    assert read.status == "none"
+    assert read.insights == []
 
 
 async def test_read_stale_after_a_soft_delete(db_session, test_user, add):
@@ -129,8 +161,10 @@ async def test_read_stale_when_the_month_rolled_over(db_session, test_user, add,
         insights=[],
     )
     monkeypatch.setattr(insights_service_module, "_today", lambda: dt.date(2026, 10, 2))
+    await add(test_user, "2026-10-01", "-5.00", merchant="Also changed")
 
-    assert (await insights_service.read(db_session, test_user.id)).status == "stale"
+    read = await insights_service.read(db_session, test_user.id)
+    assert (read.status, read.stale_reason) == ("stale", "new_month")
 
 
 async def test_read_only_soft_deleted_rows_is_no_data(db_session, test_user, add):
@@ -194,3 +228,23 @@ async def test_a_transaction_written_while_the_model_runs_makes_the_set_stale(db
 
     assert generated.generated_at < written_during[0]
     assert (await insights_service.read(db_session, test_user.id)).status == "stale"
+
+
+@pytest.mark.parametrize("removal", ["delete_all", "soft_delete"])
+async def test_transactions_removed_while_the_model_runs_store_nothing(db_session, test_user, add, removal):
+    """Erasure or delete-all while the model is thinking: the answer would quote rows that are gone."""
+    txn = await aged(add, test_user)
+
+    async def slow_model(*args, **kwargs):
+        if removal == "delete_all":
+            await transaction_service.delete_all_on_request(db_session, test_user.id)
+        else:
+            txn.soft_delete()
+            await db_session.flush()
+        return _written()
+
+    with patch("app.modules.insights.service.write_insights", AsyncMock(side_effect=slow_model)):
+        generated = await insights_service.generate(db_session, test_user.id)
+
+    assert generated.status == "no_data"
+    assert await insight_repository.get(db_session, test_user.id) is None

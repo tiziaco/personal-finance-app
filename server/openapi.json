@@ -1498,6 +1498,22 @@
             "description": "YYYY-MM of the finished month the insights describe",
             "title": "Reference Month"
           },
+          "stale_reason": {
+            "anyOf": [
+              {
+                "enum": [
+                  "new_month",
+                  "data_changed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Set when stale: new_month when a calendar month (UTC) began since, else data_changed",
+            "title": "Stale Reason"
+          },
           "status": {
             "description": "no_data: nothing to analyse; none: never generated; stale: data changed or the month rolled over since; fresh",
             "enum": [

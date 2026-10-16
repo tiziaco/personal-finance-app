@@ -78,8 +78,8 @@ the route. The pool connection sits idle in transaction for that long. Fine at o
 traffic; under concurrent chats it starves other requests of connections. The fix is to
 read what the call needs, release the session before the model call, and write with a
 short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
-(`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
+must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insights/generate` already release it
+(`_release_connection` in `transaction/imports/service.py` and `insights/service.py`). **Unblocks:** chat under concurrent load.
 
 ## Server — a transaction added by hand is not held to the date bounds
 

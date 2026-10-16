@@ -13,22 +13,11 @@ import { SectionError } from "./section-error"
 const LINK = "text-sm underline underline-offset-4"
 const TOP = 3
 
-/**
- * Why a stale set is stale: written in an earlier calendar month (UTC, as the
- * server decides), or the transactions changed since.
- */
-function staleNote(generatedAt: string | null | undefined) {
-  const generated = generatedAt ? new Date(generatedAt) : null
-  const now = new Date()
-  const earlierMonth =
-    generated !== null &&
-    !Number.isNaN(generated.getTime()) &&
-    generated.getUTCFullYear() * 12 + generated.getUTCMonth() <
-      now.getUTCFullYear() * 12 + now.getUTCMonth()
-  return earlierMonth
-    ? "A new month has started since these were written."
-    : "You've added or changed transactions since these were written."
-}
+const STALE_NOTE = {
+  new_month: "A new month has started since these were written.",
+  data_changed:
+    "You've added or changed transactions since these were written.",
+} as const
 
 /**
  * The home page's read-only view of the stored insights. It never generates:
@@ -69,7 +58,7 @@ export function InsightsCallout() {
         {stale && (
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm text-muted-foreground">
-              {staleNote(data.generated_at)}
+              {STALE_NOTE[data.stale_reason ?? "data_changed"]}
             </p>
             <Link href="/insights" className={LINK}>
               Refresh insights
