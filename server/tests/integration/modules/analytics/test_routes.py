@@ -1,11 +1,23 @@
 """The analytics routes against a real database: auth, ownership, ranges, and one end-to-end dashboard."""
 
+import datetime as dt
+
 import pytest
+
+from app.modules.analytics import service
 
 pytestmark = pytest.mark.integration
 
 BASE = "/api/v1/analytics"
 ROUTES = ["dashboard", "spending", "categories", "merchants", "recurring", "behaviour", "anomalies"]
+TODAY = dt.date(2026, 10, 16)
+
+
+@pytest.fixture
+def today(monkeypatch):
+    """Pin the service's today, so a period resolves the same whenever the suite runs."""
+    monkeypatch.setattr(service, "_today", lambda: TODAY)
+    return TODAY
 
 
 @pytest.mark.parametrize("route", ROUTES)
@@ -92,7 +104,27 @@ async def test_dashboard_counts_only_this_users_active_rows(authenticated_client
     ]
 
 
-async def test_spending_respects_the_range(authenticated_client, test_user, add):
+async def test_spending_over_the_last_three_finished_months(authenticated_client, test_user, add, today):
+    await add(test_user, "2026-06-01", "-800.00")
+    for month in ("07", "08"):
+        await add(test_user, f"2026-{month}-10", "-1000.00")
+        await add(test_user, f"2026-{month}-25", "2000.00", category="salary")
+    await add(test_user, "2026-09-01", "-50.00")
+    await add(test_user, "2026-09-10", "-1250.00")
+    await add(test_user, "2026-09-25", "2000.00", category="salary")
+    await add(test_user, "2026-10-02", "-100.00")
+
+    body = (await authenticated_client.get(f"{BASE}/spending", params={"months": 3})).json()
+
+    assert (body["date_from"], body["date_to"]) == ("2026-07-01", "2026-09-30")
+    assert body["average_monthly_net"] == "900.00"
+    assert [m["month"] for m in body["months"]] == ["2026-07", "2026-08", "2026-09"]
+    assert body["latest_month"]["month"] == "2026-09"
+    assert body["month_to_date"]["through"] == "2026-10-02"
+    assert body["month_to_date"]["expenses"] == "100.00"
+
+
+async def test_spending_respects_the_range(authenticated_client, test_user, add, today):
     await add(test_user, "2026-01-15", "-10.00")
     await add(test_user, "2026-02-15", "-20.00")
     await add(test_user, "2026-03-15", "-40.00")
@@ -119,7 +151,7 @@ async def test_anomalies_echo_their_parameters(authenticated_client):
     assert (await authenticated_client.get(f"{BASE}/anomalies", params={"window_days": 6})).status_code == 422
 
 
-async def test_rows_outside_1900_2100_are_left_out(authenticated_client, test_user, add):
+async def test_rows_outside_1900_2100_are_left_out(authenticated_client, test_user, add, today):
     await add(test_user, "2026-03-15", "-40.00")
     await add(test_user, "9999-12-31", "-10.00")
     await add(test_user, "0001-01-01", "-10.00")

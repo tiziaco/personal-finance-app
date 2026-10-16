@@ -2,6 +2,7 @@
 
 import datetime as dt
 import uuid
+from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +11,7 @@ from app.modules.analytics.domain.behaviour import behaviour_analysis
 from app.modules.analytics.domain.categories import category_breakdown
 from app.modules.analytics.domain.dashboard import build_dashboard
 from app.modules.analytics.domain.merchants import merchant_breakdown
+from app.modules.analytics.domain.period import Period, resolve_period, usable_rows
 from app.modules.analytics.domain.recurring import recurring_analysis
 from app.modules.analytics.domain.spending import spending_summary
 from app.modules.analytics.schemas import (
@@ -35,6 +37,27 @@ async def _rows(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange
     )
 
 
+def _today() -> dt.date:
+    """Today's date in UTC; route tests pin it by monkeypatching this."""
+    return dt.datetime.now(dt.UTC).date()
+
+
+async def _context(
+    session: AsyncSession, user_id: uuid.UUID, date_range: DateRange
+) -> tuple[list[AnalysisRow], Optional[Period], dt.date]:
+    """The user's usable rows, the period the range resolves to, and today (spec §3.4).
+
+    Every row is loaded, not only the period's: months=N, the month before the period and the rolling
+    average need rows outside it.
+    """
+    today = _today()
+    rows = usable_rows(await transaction_service.list_for_analysis(session, user_id, MIN_DATE, MAX_DATE), today)
+    period = resolve_period(
+        rows, today, date_from=date_range.date_from, date_to=date_range.date_to, months=date_range.months
+    )
+    return rows, period, today
+
+
 class AnalyticsService:
     """Every analysis over one user's active transactions. Steps 6 and 7 call these directly."""
 
@@ -48,10 +71,9 @@ class AnalyticsService:
 
     @staticmethod
     async def spending(session: AsyncSession, user_id: uuid.UUID, date_range: DateRange) -> SpendingResponse:
-        """Income, expenses and net over the range."""
-        rows = await _rows(session, user_id, date_range)
-        result = spending_summary(rows, date_range.date_from, date_range.date_to)
-        return SpendingResponse.model_validate(result)
+        """Income, expenses and net over the period, and the current month so far."""
+        rows, period, today = await _context(session, user_id, date_range)
+        return SpendingResponse.model_validate(spending_summary(rows, period, today=today))
 
     @staticmethod
     async def categories(

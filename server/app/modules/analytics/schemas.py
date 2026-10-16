@@ -79,30 +79,86 @@ class DashboardResponse(_Out):
 
 
 class MonthFlowResponse(_Out):
-    """One month's income, expenses and net, with the change in expenses against the month before."""
+    """One month's income, expenses and net, with the change in expenses, a rolling average and the savings rate."""
 
-    month: str
+    month: str = Field(..., description="YYYY-MM")
     income: Decimal
     expenses: Decimal
     net: Decimal
-    expense_change_pct: Optional[float] = Field(..., description="Against the month before; null after a zero month")
+    expense_change_pct: Optional[float] = Field(
+        ...,
+        description="Against the month before, which may precede the period; null when either month is partial, "
+        "the month before is outside the data or spent nothing",
+    )
+    partial: bool = Field(..., description="The period covers only some of the month's days")
+    expenses_rolling_avg_3m: Optional[Decimal] = Field(
+        ...,
+        description="Mean expenses of this month and the two before it, which may precede the period; null when "
+        "any of the three is partial or before the data's first month",
+    )
+    savings_rate_pct: Optional[float] = Field(..., description="Net ÷ income × 100; null when income is 0")
+
+
+class LatestMonthResponse(_Out):
+    """The period's last whole month against the period's monthly averages, which include it."""
+
+    month: str = Field(..., description="YYYY-MM")
+    income: Decimal
+    expenses: Decimal
+    income_vs_average_pct: Optional[float] = Field(
+        ..., description="Against average_monthly_income; null when that average is 0"
+    )
+    expenses_vs_average_pct: Optional[float] = Field(
+        ..., description="Against average_monthly_expenses; null when that average is 0"
+    )
+
+
+class MonthToDateResponse(_Out):
+    """The current month from day 1 to its last transaction, against the same days of the month before."""
+
+    month: str = Field(..., description="YYYY-MM, the current month")
+    through: dt.date = Field(..., description="The day of the current month's last transaction")
+    income: Decimal
+    expenses: Decimal
+    previous_month: str = Field(..., description="YYYY-MM")
+    previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
+    previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
+    income_change_pct: Optional[float] = Field(..., description="Against previous_income; null when it is 0")
+    expenses_change_pct: Optional[float] = Field(..., description="Against previous_expenses; null when it is 0")
 
 
 class SpendingResponse(_Out):
-    """Income, expenses and net over the range, with monthly averages, burn rate and a monthly series."""
+    """Income, expenses and net over the period, with weighted monthly averages, a monthly series and month-to-date."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered")
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
     total_income: Decimal
     total_expenses: Decimal
     net: Decimal
     transaction_count: int
-    average_income: Decimal
-    average_expense: Decimal
-    average_monthly_income: Decimal
-    average_monthly_expenses: Decimal
-    burn_rate: Decimal = Field(..., description="Average monthly expenses minus average monthly income")
+    average_income: Decimal = Field(..., description="Per transaction")
+    average_expense: Decimal = Field(..., description="Per transaction")
+    average_monthly_income: Decimal = Field(
+        ..., description="Total income ÷ the period's months, a partial month counting for the share of it covered"
+    )
+    average_monthly_expenses: Decimal = Field(
+        ..., description="Total expenses ÷ the period's months, a partial month counting for the share of it covered"
+    )
+    average_monthly_net: Decimal = Field(
+        ..., description="Net ÷ the period's months, a partial month counting for the share of it covered"
+    )
+    burn_rate: Decimal = Field(
+        ..., description="Average monthly expenses minus average monthly income; negative while saving"
+    )
+    savings_rate_pct: Optional[float] = Field(..., description="Net ÷ income × 100; null when income is 0")
     months: List[MonthFlowResponse]
+    latest_month: Optional[LatestMonthResponse] = Field(
+        ..., description="The period's last whole month; null when it has none"
+    )
+    month_to_date: Optional[MonthToDateResponse] = Field(
+        ...,
+        description="The current month so far, independent of the period; null when it holds no transaction",
+    )
 
 
 # Categories

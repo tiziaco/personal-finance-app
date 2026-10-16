@@ -1159,6 +1159,59 @@
         "title": "ImportResult",
         "type": "object"
       },
+      "LatestMonthResponse": {
+        "description": "The period's last whole month against the period's monthly averages, which include it.",
+        "properties": {
+          "expenses": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "expenses_vs_average_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Against average_monthly_expenses; null when that average is 0",
+            "title": "Expenses Vs Average Pct"
+          },
+          "income": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income",
+            "type": "string"
+          },
+          "income_vs_average_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Against average_monthly_income; null when that average is 0",
+            "title": "Income Vs Average Pct"
+          },
+          "month": {
+            "description": "YYYY-MM",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "income",
+          "expenses",
+          "income_vs_average_pct",
+          "expenses_vs_average_pct"
+        ],
+        "title": "LatestMonthResponse",
+        "type": "object"
+      },
       "MappingIssue": {
         "description": "Why a confirmed mapping is refused: `details.reason` of a 422 INVALID_IMPORT_MAPPING.",
         "enum": [
@@ -1372,7 +1425,7 @@
         "type": "object"
       },
       "MonthFlowResponse": {
-        "description": "One month's income, expenses and net, with the change in expenses against the month before.",
+        "description": "One month's income, expenses and net, with the change in expenses, a rolling average and the savings rate.",
         "properties": {
           "expense_change_pct": {
             "anyOf": [
@@ -1383,7 +1436,7 @@
                 "type": "null"
               }
             ],
-            "description": "Against the month before; null after a zero month",
+            "description": "Against the month before, which may precede the period; null when either month is partial, the month before is outside the data or spent nothing",
             "title": "Expense Change Pct"
           },
           "expenses": {
@@ -1391,12 +1444,26 @@
             "title": "Expenses",
             "type": "string"
           },
+          "expenses_rolling_avg_3m": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Mean expenses of this month and the two before it, which may precede the period; null when any of the three is partial or before the data's first month",
+            "title": "Expenses Rolling Avg 3M"
+          },
           "income": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Income",
             "type": "string"
           },
           "month": {
+            "description": "YYYY-MM",
             "title": "Month",
             "type": "string"
           },
@@ -1404,6 +1471,23 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Net",
             "type": "string"
+          },
+          "partial": {
+            "description": "The period covers only some of the month's days",
+            "title": "Partial",
+            "type": "boolean"
+          },
+          "savings_rate_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Net \u00f7 income \u00d7 100; null when income is 0",
+            "title": "Savings Rate Pct"
           }
         },
         "required": [
@@ -1411,7 +1495,10 @@
           "income",
           "expenses",
           "net",
-          "expense_change_pct"
+          "expense_change_pct",
+          "partial",
+          "expenses_rolling_avg_3m",
+          "savings_rate_pct"
         ],
         "title": "MonthFlowResponse",
         "type": "object"
@@ -1448,6 +1535,86 @@
           "index"
         ],
         "title": "MonthOfYearResponse",
+        "type": "object"
+      },
+      "MonthToDateResponse": {
+        "description": "The current month from day 1 to its last transaction, against the same days of the month before.",
+        "properties": {
+          "expenses": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Expenses",
+            "type": "string"
+          },
+          "expenses_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Against previous_expenses; null when it is 0",
+            "title": "Expenses Change Pct"
+          },
+          "income": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Income",
+            "type": "string"
+          },
+          "income_change_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Against previous_income; null when it is 0",
+            "title": "Income Change Pct"
+          },
+          "month": {
+            "description": "YYYY-MM, the current month",
+            "title": "Month",
+            "type": "string"
+          },
+          "previous_expenses": {
+            "description": "Expenses in the previous month's days 1 to through's day",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Previous Expenses",
+            "type": "string"
+          },
+          "previous_income": {
+            "description": "Income in the previous month's days 1 to through's day",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Previous Income",
+            "type": "string"
+          },
+          "previous_month": {
+            "description": "YYYY-MM",
+            "title": "Previous Month",
+            "type": "string"
+          },
+          "through": {
+            "description": "The day of the current month's last transaction",
+            "format": "date",
+            "title": "Through",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month",
+          "through",
+          "income",
+          "expenses",
+          "previous_month",
+          "previous_income",
+          "previous_expenses",
+          "income_change_pct",
+          "expenses_change_pct"
+        ],
+        "title": "MonthToDateResponse",
         "type": "object"
       },
       "OutlierResponse": {
@@ -1676,30 +1843,40 @@
         "type": "object"
       },
       "SpendingResponse": {
-        "description": "Income, expenses and net over the range, with monthly averages, burn rate and a monthly series.",
+        "description": "Income, expenses and net over the period, with weighted monthly averages, a monthly series and month-to-date.",
         "properties": {
           "average_expense": {
+            "description": "Per transaction",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Average Expense",
             "type": "string"
           },
           "average_income": {
+            "description": "Per transaction",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Average Income",
             "type": "string"
           },
           "average_monthly_expenses": {
+            "description": "Total expenses \u00f7 the period's months, a partial month counting for the share of it covered",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Average Monthly Expenses",
             "type": "string"
           },
           "average_monthly_income": {
+            "description": "Total income \u00f7 the period's months, a partial month counting for the share of it covered",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Average Monthly Income",
             "type": "string"
           },
+          "average_monthly_net": {
+            "description": "Net \u00f7 the period's months, a partial month counting for the share of it covered",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Average Monthly Net",
+            "type": "string"
+          },
           "burn_rate": {
-            "description": "Average monthly expenses minus average monthly income",
+            "description": "Average monthly expenses minus average monthly income; negative while saving",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Burn Rate",
             "type": "string"
@@ -1714,7 +1891,7 @@
                 "type": "null"
               }
             ],
-            "description": "The first day covered",
+            "description": "The first day covered; null when the period is empty",
             "title": "Date From"
           },
           "date_to": {
@@ -1727,8 +1904,30 @@
                 "type": "null"
               }
             ],
-            "description": "The last day covered",
+            "description": "The last day covered; null when the period is empty",
             "title": "Date To"
+          },
+          "latest_month": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LatestMonthResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The period's last whole month; null when it has none"
+          },
+          "month_to_date": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MonthToDateResponse"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The current month so far, independent of the period; null when it holds no transaction"
           },
           "months": {
             "items": {
@@ -1741,6 +1940,18 @@
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Net",
             "type": "string"
+          },
+          "savings_rate_pct": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Net \u00f7 income \u00d7 100; null when income is 0",
+            "title": "Savings Rate Pct"
           },
           "total_expenses": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -1768,8 +1979,12 @@
           "average_expense",
           "average_monthly_income",
           "average_monthly_expenses",
+          "average_monthly_net",
           "burn_rate",
-          "months"
+          "savings_rate_pct",
+          "months",
+          "latest_month",
+          "month_to_date"
         ],
         "title": "SpendingResponse",
         "type": "object"

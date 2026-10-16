@@ -7,16 +7,23 @@
  */
 
 /**
- * One month's income, expenses and net, with the change in expenses against the month before.
+ * One month's income, expenses and net, with the change in expenses, a rolling average and the savings rate.
  */
 export interface MonthFlowResponse {
-  /** Against the month before; null after a zero month */
+  /** Against the month before, which may precede the period; null when either month is partial, the month before is outside the data or spent nothing */
   expense_change_pct: number | null
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   expenses: string
+  /** Mean expenses of this month and the two before it, which may precede the period; null when any of the three is partial or before the data's first month */
+  expenses_rolling_avg_3m: string | null
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   income: string
+  /** YYYY-MM */
   month: string
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   net: string
+  /** The period covers only some of the month's days */
+  partial: boolean
+  /** Net ÷ income × 100; null when income is 0 */
+  savings_rate_pct: number | null
 }

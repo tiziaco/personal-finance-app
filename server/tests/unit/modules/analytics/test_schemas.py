@@ -17,6 +17,8 @@ PAIRS = [
     (dashboard.TrendPoint, schemas.TrendPointResponse),
     (dashboard.Dashboard, schemas.DashboardResponse),
     (spending.MonthFlow, schemas.MonthFlowResponse),
+    (spending.LatestMonth, schemas.LatestMonthResponse),
+    (spending.MonthToDate, schemas.MonthToDateResponse),
     (spending.SpendingSummary, schemas.SpendingResponse),
     (categories.CategorySpend, schemas.CategorySpendResponse),
     (categories.CategoryTrend, schemas.CategoryTrendResponse),

@@ -691,12 +691,34 @@ export const getSpendingResponseAverageMonthlyExpensesRegExp = new RegExp(
 export const getSpendingResponseAverageMonthlyIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getSpendingResponseAverageMonthlyNetRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getSpendingResponseBurnRateRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseLatestMonthOneExpensesRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseLatestMonthOneIncomeRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseMonthToDateOneExpensesRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseMonthToDateOneIncomeRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseMonthToDateOnePreviousExpensesRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
+export const getSpendingResponseMonthToDateOnePreviousIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 export const getSpendingResponseMonthsItemExpensesRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getSpendingResponseMonthsItemExpensesRollingAvg3mOneRegExp =
+  new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getSpendingResponseMonthsItemIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
@@ -717,46 +739,157 @@ export const GetSpendingResponse = zod
   .object({
     average_expense: zod
       .string()
-      .regex(getSpendingResponseAverageExpenseRegExp),
-    average_income: zod.string().regex(getSpendingResponseAverageIncomeRegExp),
+      .regex(getSpendingResponseAverageExpenseRegExp)
+      .describe("Per transaction"),
+    average_income: zod
+      .string()
+      .regex(getSpendingResponseAverageIncomeRegExp)
+      .describe("Per transaction"),
     average_monthly_expenses: zod
       .string()
-      .regex(getSpendingResponseAverageMonthlyExpensesRegExp),
+      .regex(getSpendingResponseAverageMonthlyExpensesRegExp)
+      .describe(
+        "Total expenses ÷ the period's months, a partial month counting for the share of it covered",
+      ),
     average_monthly_income: zod
       .string()
-      .regex(getSpendingResponseAverageMonthlyIncomeRegExp),
+      .regex(getSpendingResponseAverageMonthlyIncomeRegExp)
+      .describe(
+        "Total income ÷ the period's months, a partial month counting for the share of it covered",
+      ),
+    average_monthly_net: zod
+      .string()
+      .regex(getSpendingResponseAverageMonthlyNetRegExp)
+      .describe(
+        "Net ÷ the period's months, a partial month counting for the share of it covered",
+      ),
     burn_rate: zod
       .string()
       .regex(getSpendingResponseBurnRateRegExp)
-      .describe("Average monthly expenses minus average monthly income"),
+      .describe(
+        "Average monthly expenses minus average monthly income; negative while saving",
+      ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered"),
+      .describe("The first day covered; null when the period is empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered"),
+      .describe("The last day covered; null when the period is empty"),
+    latest_month: zod
+      .union([
+        zod
+          .object({
+            expenses: zod
+              .string()
+              .regex(getSpendingResponseLatestMonthOneExpensesRegExp),
+            expenses_vs_average_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe(
+                "Against average_monthly_expenses; null when that average is 0",
+              ),
+            income: zod
+              .string()
+              .regex(getSpendingResponseLatestMonthOneIncomeRegExp),
+            income_vs_average_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe(
+                "Against average_monthly_income; null when that average is 0",
+              ),
+            month: zod.string().describe("YYYY-MM"),
+          })
+          .describe(
+            "The period's last whole month against the period's monthly averages, which include it.",
+          ),
+        zod.null(),
+      ])
+      .describe("The period's last whole month; null when it has none"),
+    month_to_date: zod
+      .union([
+        zod
+          .object({
+            expenses: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOneExpensesRegExp),
+            expenses_change_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe("Against previous_expenses; null when it is 0"),
+            income: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOneIncomeRegExp),
+            income_change_pct: zod
+              .union([zod.number(), zod.null()])
+              .describe("Against previous_income; null when it is 0"),
+            month: zod.string().describe("YYYY-MM, the current month"),
+            previous_expenses: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOnePreviousExpensesRegExp)
+              .describe(
+                "Expenses in the previous month's days 1 to through's day",
+              ),
+            previous_income: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOnePreviousIncomeRegExp)
+              .describe(
+                "Income in the previous month's days 1 to through's day",
+              ),
+            previous_month: zod.string().describe("YYYY-MM"),
+            through: zod.iso
+              .date()
+              .describe("The day of the current month's last transaction"),
+          })
+          .describe(
+            "The current month from day 1 to its last transaction, against the same days of the month before.",
+          ),
+        zod.null(),
+      ])
+      .describe(
+        "The current month so far, independent of the period; null when it holds no transaction",
+      ),
     months: zod.array(
       zod
         .object({
           expense_change_pct: zod
             .union([zod.number(), zod.null()])
-            .describe("Against the month before; null after a zero month"),
+            .describe(
+              "Against the month before, which may precede the period; null when either month is partial, the month before is outside the data or spent nothing",
+            ),
           expenses: zod
             .string()
             .regex(getSpendingResponseMonthsItemExpensesRegExp),
+          expenses_rolling_avg_3m: zod
+            .union([
+              zod
+                .string()
+                .regex(
+                  getSpendingResponseMonthsItemExpensesRollingAvg3mOneRegExp,
+                ),
+              zod.null(),
+            ])
+            .describe(
+              "Mean expenses of this month and the two before it, which may precede the period; null when any of the three is partial or before the data's first month",
+            ),
           income: zod.string().regex(getSpendingResponseMonthsItemIncomeRegExp),
-          month: zod.string(),
+          month: zod.string().describe("YYYY-MM"),
           net: zod.string().regex(getSpendingResponseMonthsItemNetRegExp),
+          partial: zod
+            .boolean()
+            .describe("The period covers only some of the month's days"),
+          savings_rate_pct: zod
+            .union([zod.number(), zod.null()])
+            .describe("Net ÷ income × 100; null when income is 0"),
         })
         .describe(
-          "One month's income, expenses and net, with the change in expenses against the month before.",
+          "One month's income, expenses and net, with the change in expenses, a rolling average and the savings rate.",
         ),
     ),
     net: zod.string().regex(getSpendingResponseNetRegExp),
+    savings_rate_pct: zod
+      .union([zod.number(), zod.null()])
+      .describe("Net ÷ income × 100; null when income is 0"),
     total_expenses: zod.string().regex(getSpendingResponseTotalExpensesRegExp),
     total_income: zod.string().regex(getSpendingResponseTotalIncomeRegExp),
     transaction_count: zod.int(),
   })
   .describe(
-    "Income, expenses and net over the range, with monthly averages, burn rate and a monthly series.",
+    "Income, expenses and net over the period, with weighted monthly averages, a monthly series and month-to-date.",
   )

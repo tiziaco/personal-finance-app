@@ -12,6 +12,7 @@ from app.modules.analytics.domain._aggregate import (
     add_months,
     expenses,
     money,
+    month_end,
     month_key,
     month_range,
     month_start,
@@ -19,6 +20,7 @@ from app.modules.analytics.domain._aggregate import (
     total_spend,
 )
 from app.modules.analytics.domain.categories import category_spend
+from app.modules.analytics.domain.period import PeriodMonth, calendar_month
 from app.modules.analytics.domain.spending import monthly_flows
 
 TOP_SLICES = 5
@@ -72,6 +74,11 @@ def _slices(month_rows: Sequence[Row], total: Decimal) -> tuple[CategorySlice, .
     return tuple(slices)
 
 
+def _months(rows: Sequence[Row], months: Sequence[dt.date], today: dt.date) -> list[PeriodMonth]:
+    """The months as the data sees them; a month outside the data is whole."""
+    return [calendar_month(m, rows, today) or PeriodMonth(m, m, month_end(m), False, Decimal(1)) for m in months]
+
+
 def _reference_month(rows: Sequence[Row], today: dt.date) -> dt.date:
     """The latest month holding a transaction, up to today's month; the overall latest if all are later."""
     current = month_start(today)
@@ -97,8 +104,9 @@ def build_dashboard(rows: Sequence[Row], *, today: dt.date) -> Dashboard:
     total = total_spend(spent)
 
     cashflow_window = month_range(max(first, add_months(reference, -(CASHFLOW_MONTHS - 1))), reference)
-    cashflow = monthly_flows(rows, cashflow_window)
-    trend = monthly_flows(rows, month_range(add_months(reference, -(TREND_MONTHS - 1)), reference))
+    cashflow = monthly_flows(rows, _months(rows, cashflow_window, today), today=today)
+    trend_window = month_range(add_months(reference, -(TREND_MONTHS - 1)), reference)
+    trend = monthly_flows(rows, _months(rows, trend_window, today), today=today)
 
     return Dashboard(
         reference_month=month_key(reference),

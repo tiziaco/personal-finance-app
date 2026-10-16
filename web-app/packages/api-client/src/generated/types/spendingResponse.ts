@@ -5,32 +5,57 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
+import type { LatestMonthResponse } from "./latestMonthResponse"
 import type { MonthFlowResponse } from "./monthFlowResponse"
+import type { MonthToDateResponse } from "./monthToDateResponse"
 
 /**
- * Income, expenses and net over the range, with monthly averages, burn rate and a monthly series.
+ * Income, expenses and net over the period, with weighted monthly averages, a monthly series and month-to-date.
  */
 export interface SpendingResponse {
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * Per transaction
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   average_expense: string
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * Per transaction
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   average_income: string
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * Total expenses ÷ the period's months, a partial month counting for the share of it covered
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   average_monthly_expenses: string
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * Total income ÷ the period's months, a partial month counting for the share of it covered
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   average_monthly_income: string
   /**
-   * Average monthly expenses minus average monthly income
+   * Net ÷ the period's months, a partial month counting for the share of it covered
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
+  average_monthly_net: string
+  /**
+   * Average monthly expenses minus average monthly income; negative while saving
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   burn_rate: string
-  /** The first day covered */
+  /** The first day covered; null when the period is empty */
   date_from: string | null
-  /** The last day covered */
+  /** The last day covered; null when the period is empty */
   date_to: string | null
+  /** The period's last whole month; null when it has none */
+  latest_month: LatestMonthResponse | null
+  /** The current month so far, independent of the period; null when it holds no transaction */
+  month_to_date: MonthToDateResponse | null
   months: MonthFlowResponse[]
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   net: string
+  /** Net ÷ income × 100; null when income is 0 */
+  savings_rate_pct: number | null
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   total_expenses: string
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
