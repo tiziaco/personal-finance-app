@@ -41,13 +41,33 @@ user's own transactions on request; nothing is entered.
 
 **The analytics page** has four tabs, each loaded the first time it is opened:
 
-- **By Category** — spend per category, ranked, with each one's share of the total and its
-  change against the previous period. A range of 1, 3 or 6 months (3 by default).
-- **Income vs Expenses** — income and expenses by month, with a cash-flow summary and the
-  savings rate. A range of 3, 6 or 12 months.
-- **Trends** — the monthly expense trend and month-over-month growth. A range of 4, 6, 12
-  or 24 months.
-- **Seasonality** — spending by day of week and by month of year.
+- **By Category** — every category with spend, ranked as bars: its total, its share and
+  its change against the previous period of the same length, named on the page ("compared
+  with Apr – Jun 2026"). A category with a previous total but no percent reads "new"; with
+  no previous period at all, the change reads "—". Below it, how often against how much (a
+  table of purchases, average each and total per category, ranked by purchases) and the top
+  10 merchants by spend. A range of 1, 3 or 6 months (3 by default); the totals are for the
+  period.
+- **Income vs Expenses** — above everything, the month-to-date strip: this month so far
+  against the same days of the previous month. It hides when the period itself is the month
+  in progress, since the chart already shows it. Then income and expenses by month as
+  paired bars, the cash-flow summary (income, expenses and net for the period, each with its
+  monthly average, and the savings rate), the latest month against the period average, and
+  a monthly table with each month's savings rate. A range of 3, 6 or 12 months (6 by
+  default).
+- **Trends** — the spending trend by month with its 3-month average, the change from one
+  month to the next, the savings rate over time, and the categories growing and declining
+  (top five each: the monthly average in the earlier half of the period against the later
+  half, the change in euros and in percent; "new" when there was no earlier spend,
+  "stopped" when none is left). A range of 4, 6, 12 or 24 months (4 by default).
+- **Seasonality** — all history, with no range, captioned with the months it rests on.
+  The average spend per day of the week, with the purchases and average purchase behind
+  it; weekdays against the weekend per day, with how much more or less a weekend day costs;
+  and the month of year as an average, with its index against a typical month (35% above)
+  and the number of years the average covers. A month with no data yet has no bar.
+
+Every tab keeps the open tab and its range in the URL, so a reload or the back button
+returns to the same view; a value the tab does not offer falls back to its default.
 
 Every range is made of **finished months**: the last N months before the one in progress,
 and never earlier than the first month of data. The month in progress is shown apart, as
@@ -57,6 +77,16 @@ above.
 
 Every chart has a loading skeleton and an empty state, and fails on its own without taking
 the page down.
+
+Rules that hold across the analytics page, for any change to it:
+
+- The server computes every figure; the page fetches, formats and draws, and does no
+  arithmetic on money or percents.
+- A total is for a named period and an average says what it averages; no figure over all
+  history stands in for a period, except Seasonality, which says it covers all history.
+- A null percent reads "—", or a short reason ("no comparison yet"), never 0.
+- Colour means good or bad, not direction: spending up and income down are bad. It always
+  comes with an arrow or words.
 
 ## 3. What is measured
 
@@ -190,9 +220,9 @@ How they compute, so the numbers can be checked:
 - **No risk label on merchant concentration.** The old high-medium-low band used antitrust
   thresholds, and rent alone made anyone "high". The shares and the index remain.
 - **No screen for recurring, merchant concentration or anomalies.** The v1.0 backend
-  computes them and the client has hooks for them, but no page shows them; only the
-  seasonality tab uses the behaviour data. The anomalies and recurring figures reach the
-  user through [insights](./insights.md).
+  computes them and the client has hooks for them, but no page shows them. Top merchants
+  have a screen, on the By Category tab; the anomalies and recurring figures reach the user
+  through [insights](./insights.md).
 - Stable-or-volatile badges; a custom date range on the analytics page; saving or sharing a
   view; exporting; drag-and-drop dashboard layout.
 

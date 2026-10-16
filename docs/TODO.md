@@ -115,6 +115,13 @@ answered" hint on the service and start unpinned calls there.
 - A short DKB export whose preamble lines outnumber its transactions is refused as
   `unnamed_column`, because the most common line width is the preamble's.
 
+## Server — income and expense are decided by the sign of the amount alone
+
+A refund counts as income, and a transfer to savings or an ATM withdrawal as spending, in
+every analytics figure (`analytics.md` §4). Found in the 5b legacy audit. **Unblocks:**
+figures that match what the user means by income and spending. **Needs:** a transfer/refund
+notion on `transaction`.
+
 ## Web — tests the suite does not have yet
 
 - **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a
