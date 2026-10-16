@@ -160,6 +160,16 @@ describe("FlowTab", () => {
     )
   })
 
+  it("shows a negative monthly net average as negative", () => {
+    spending({ data: { ...DATA, average_monthly_net: "-70.00" } })
+    renderTab()
+    const el = within(card("Cash flow")).getByText(
+      `${formatAmount("-70.00")} / month`,
+    )
+    expect(el).toHaveClass("text-destructive")
+    expect(el).not.toHaveClass("text-muted-foreground")
+  })
+
   it("shows a dash when there is no savings rate", () => {
     spending({ data: { ...DATA, savings_rate_pct: null } })
     renderTab()

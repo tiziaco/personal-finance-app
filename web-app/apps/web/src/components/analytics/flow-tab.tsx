@@ -2,6 +2,7 @@
 
 import { useGetSpending } from "@app/api-client/endpoints/analytics"
 import type { SpendingResponse } from "@app/api-client/types"
+import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
 import {
   Table,
@@ -53,20 +54,33 @@ function Figure({
   label,
   amount,
   average,
-  className,
+  signed,
 }: {
   label: string
   amount: string
   average: string
-  className?: string
+  /** Colour a negative amount and a negative average as bad. */
+  signed?: boolean
 }) {
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-semibold tabular-nums ${className ?? ""}`}>
+      <p
+        className={cn(
+          "text-2xl font-semibold tabular-nums",
+          signed && netClass(amount),
+        )}
+      >
         {formatAmount(amount)}
       </p>
-      <p className="text-xs text-muted-foreground">
+      <p
+        className={cn(
+          "text-xs",
+          signed && isExpense(average)
+            ? amountClass(average)
+            : "text-muted-foreground",
+        )}
+      >
         {`${formatAmount(average)} / month`}
       </p>
     </div>
@@ -132,7 +146,7 @@ export function FlowTab({
                 label="Net"
                 amount={d.net}
                 average={d.average_monthly_net}
-                className={netClass(d.net)}
+                signed
               />
             </div>
             <p className="text-sm">
