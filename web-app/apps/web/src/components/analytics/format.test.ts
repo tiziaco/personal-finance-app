@@ -6,6 +6,8 @@ import {
   formatIndex,
   formatPct,
   formatPeriod,
+  partialLabel,
+  purchases,
 } from "./format"
 
 const d = (iso: string) => {
@@ -87,4 +89,21 @@ describe("formatDayRange", () => {
     expect(formatDayRange("2026-09", 31)).toBe(
       range(DM, "2026-09-01", "2026-09-30"),
     ))
+})
+
+describe("purchases", () => {
+  it("pluralises", () => {
+    expect(purchases(0)).toBe("0 purchases")
+    expect(purchases(1)).toBe("1 purchase")
+    expect(purchases(2)).toBe("2 purchases")
+  })
+})
+
+describe("partialLabel", () => {
+  it("says so far only for the month in progress", () => {
+    expect(partialLabel(true, "2026-10", "2026-10")).toBe("so far")
+    expect(partialLabel(true, "2026-04", "2026-10")).toBe("partial")
+    expect(partialLabel(true, "2026-04", undefined)).toBe("partial")
+    expect(partialLabel(false, "2026-10", "2026-10")).toBeNull()
+  })
 })

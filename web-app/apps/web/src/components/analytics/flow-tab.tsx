@@ -23,7 +23,13 @@ import {
 import { Change, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
 import { showMonthToDate, toFlowPoints } from "./flow-points"
-import { changeTone, formatPeriod, formatPct } from "./format"
+import {
+  changeTone,
+  formatPeriod,
+  formatPct,
+  partialLabel,
+  type PartialLabel,
+} from "./format"
 import { MonthToDateStrip } from "./month-to-date-strip"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
@@ -87,6 +93,17 @@ function Figure({
   )
 }
 
+/** " · so far" or " · partial" after a month's name; nothing for a whole month. */
+function PartialTag({
+  label,
+  className,
+}: {
+  label: PartialLabel | null
+  className: string
+}) {
+  return label ? <span className={className}>{` · ${label}`}</span> : null
+}
+
 export function FlowTab({
   months,
   onMonthsChange,
@@ -121,7 +138,9 @@ export function FlowTab({
         title="Income and expenses"
         skeleton={<Skeleton className="aspect-[2/1] w-full" />}
       >
-        {(d) => <FlowChart points={toFlowPoints(d.months)} />}
+        {(d) => (
+          <FlowChart points={toFlowPoints(d.months, d.month_to_date?.month)} />
+        )}
       </Section>
 
       <Section
@@ -215,9 +234,14 @@ export function FlowTab({
                   <TableRow key={m.month}>
                     <TableCell>
                       {formatMonth(m.month)}
-                      {m.partial ? (
-                        <span className="text-muted-foreground"> · so far</span>
-                      ) : null}
+                      <PartialTag
+                        label={partialLabel(
+                          m.partial,
+                          m.month,
+                          d.month_to_date?.month,
+                        )}
+                        className="text-muted-foreground"
+                      />
                     </TableCell>
                     <TableCell className="text-right tabular-nums">
                       {formatAmount(m.income)}
@@ -243,12 +267,14 @@ export function FlowTab({
                   <div className="min-w-0">
                     <p className="font-medium">
                       {formatMonth(m.month)}
-                      {m.partial ? (
-                        <span className="text-xs font-normal text-muted-foreground">
-                          {" "}
-                          · so far
-                        </span>
-                      ) : null}
+                      <PartialTag
+                        label={partialLabel(
+                          m.partial,
+                          m.month,
+                          d.month_to_date?.month,
+                        )}
+                        className="text-xs font-normal text-muted-foreground"
+                      />
                     </p>
                     <p className="text-xs text-muted-foreground">
                       {formatAmount(m.income)} in · {formatAmount(m.expenses)}{" "}

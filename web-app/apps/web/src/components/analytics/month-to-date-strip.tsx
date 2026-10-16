@@ -28,7 +28,8 @@ export function MonthToDateStrip({ data }: { data: MonthToDateResponse }) {
   return (
     <div className="flex flex-col gap-1 rounded-lg border bg-card p-4 text-sm">
       <p className="font-medium">
-        {`${monthName(data.month)} so far (${formatDayRange(data.month, day)})`}
+        {`${monthName(data.month)} so far `}
+        <span className="whitespace-nowrap">{`(${formatDayRange(data.month, day)})`}</span>
       </p>
       <p>
         Spent{" "}

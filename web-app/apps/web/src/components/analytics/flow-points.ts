@@ -1,5 +1,6 @@
 import type { MonthFlowResponse, SpendingResponse } from "@app/api-client/types"
 import { formatMonth } from "@/components/dashboard/month"
+import { partialLabel, type PartialLabel } from "./format"
 
 /** One month as the chart draws it: numbers for geometry only, never shown as text. */
 export type FlowPoint = {
@@ -8,15 +9,20 @@ export type FlowPoint = {
   income: number
   expenses: number
   partial: boolean
+  partialLabel: PartialLabel | null
 }
 
-export function toFlowPoints(months: MonthFlowResponse[]): FlowPoint[] {
+export function toFlowPoints(
+  months: MonthFlowResponse[],
+  currentMonth?: string | null,
+): FlowPoint[] {
   return months.map((m) => ({
     month: m.month,
     label: formatMonth(m.month, "short"),
     income: Number(m.income),
     expenses: Number(m.expenses),
     partial: m.partial,
+    partialLabel: partialLabel(m.partial, m.month, currentMonth),
   }))
 }
 

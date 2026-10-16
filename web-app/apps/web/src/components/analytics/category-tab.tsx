@@ -15,7 +15,7 @@ import { formatAmount } from "@/components/transactions/format"
 import { useCategories } from "@/components/transactions/use-categories"
 
 import { CategoryRanking } from "./category-ranking"
-import { formatPeriod } from "./format"
+import { formatPeriod, purchases } from "./format"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { Section } from "./section"
@@ -123,7 +123,7 @@ export function CategoryTab({
                   <div className="min-w-0">
                     <p className="truncate font-medium">{label(c.category)}</p>
                     <p className="text-xs text-muted-foreground">
-                      {c.count} purchases · {formatAmount(c.average)} each
+                      {purchases(c.count)} · {formatAmount(c.average)} each
                     </p>
                   </div>
                   <span className="tabular-nums">{formatAmount(c.total)}</span>

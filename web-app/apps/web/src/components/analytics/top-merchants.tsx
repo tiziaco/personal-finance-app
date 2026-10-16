@@ -13,7 +13,7 @@ import {
 
 import { formatAmount } from "@/components/transactions/format"
 
-import { formatPct } from "./format"
+import { formatPct, purchases } from "./format"
 import { ANALYTICS_QUERY } from "./query"
 import { Section } from "./section"
 
@@ -63,7 +63,7 @@ export function TopMerchants({ months }: { months: number }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{m.merchant}</p>
                   <p className="text-xs text-muted-foreground">
-                    {m.count} purchases · {formatPct(m.share_pct)}
+                    {purchases(m.count)} · {formatPct(m.share_pct)}
                   </p>
                 </div>
                 <span className="tabular-nums">{formatAmount(m.total)}</span>

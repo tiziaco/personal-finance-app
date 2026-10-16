@@ -21,6 +21,7 @@ import {
 import { formatAmount } from "@/components/transactions/format"
 import { formatMonth } from "@/components/dashboard/month"
 import { TONE_FILL } from "./change"
+import { ChartLegend } from "./chart-legend"
 import { BAR_TOOLTIP, LINE_TOOLTIP } from "./chart-tooltip"
 import { changeTone, formatPct } from "./format"
 import type { TrendsPoint } from "./trends-points"
@@ -34,7 +35,7 @@ const MARGIN = { left: 4, right: 8, top: 8 }
 
 const monthLabel = (point?: TrendsPoint) =>
   point
-    ? `${formatMonth(point.month)}${point.partial ? " (so far)" : ""}`
+    ? `${formatMonth(point.month)}${point.partialLabel ? ` (${point.partialLabel})` : ""}`
     : undefined
 
 const pointOf = (payload?: readonly { payload?: unknown }[]) =>
@@ -42,63 +43,67 @@ const pointOf = (payload?: readonly { payload?: unknown }[]) =>
 
 const spendingConfig: ChartConfig = {
   expenses: { label: "Expenses", color: "var(--chart-expense)" },
-  rollingAvg: { label: "3-month average", color: "var(--chart-income)" },
+  rollingAvg: { label: "3-month average", color: "var(--muted-foreground)" },
 }
 
 /** Expense bars per month (a partial month lighter) with the 3-month average as a line that breaks at gaps. */
 export function SpendingTrendChart({ points }: { points: TrendsPoint[] }) {
   return (
-    <ChartContainer config={spendingConfig} className="aspect-[2/1] w-full">
-      <ComposedChart data={points} margin={MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis
-          dataKey="label"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          width={48}
-          tickFormatter={(v: number) => compact.format(v)}
-        />
-        <ChartTooltip
-          {...LINE_TOOLTIP}
-          content={({ active, payload }) => (
-            <ChartTooltipContent
-              active={active}
-              payload={payload}
-              label={monthLabel(pointOf(payload))}
-              formatter={(value) =>
-                value === null || value === undefined
-                  ? "—"
-                  : formatAmount(String(value))
-              }
-            />
-          )}
-        />
-        <Bar
-          dataKey="expenses"
-          fill="var(--color-expenses)"
-          radius={[3, 3, 0, 0]}
-          isAnimationActive={false}
-        >
-          {points.map((p) => (
-            <Cell key={p.month} fillOpacity={p.partial ? 0.4 : 1} />
-          ))}
-        </Bar>
-        <Line
-          dataKey="rollingAvg"
-          type="monotone"
-          stroke="var(--color-rollingAvg)"
-          strokeWidth={2}
-          dot={false}
-          connectNulls={false}
-          isAnimationActive={false}
-        />
-      </ComposedChart>
-    </ChartContainer>
+    <div className="flex flex-col gap-3">
+      <ChartLegend config={spendingConfig} />
+      <ChartContainer config={spendingConfig} className="aspect-[2/1] w-full">
+        <ComposedChart data={points} margin={MARGIN}>
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <XAxis
+            dataKey="label"
+            tickLine={false}
+            axisLine={false}
+            tickMargin={8}
+          />
+          <YAxis
+            tickLine={false}
+            axisLine={false}
+            width={48}
+            tickFormatter={(v: number) => compact.format(v)}
+          />
+          <ChartTooltip
+            {...LINE_TOOLTIP}
+            content={({ active, payload }) => (
+              <ChartTooltipContent
+                active={active}
+                payload={payload}
+                label={monthLabel(pointOf(payload))}
+                formatter={(value) =>
+                  value === null || value === undefined
+                    ? "—"
+                    : formatAmount(String(value))
+                }
+              />
+            )}
+          />
+          <Bar
+            dataKey="expenses"
+            fill="var(--color-expenses)"
+            radius={[3, 3, 0, 0]}
+            isAnimationActive={false}
+          >
+            {points.map((p) => (
+              <Cell key={p.month} fillOpacity={p.partial ? 0.4 : 1} />
+            ))}
+          </Bar>
+          <Line
+            dataKey="rollingAvg"
+            type="monotone"
+            stroke="var(--color-rollingAvg)"
+            strokeWidth={2}
+            strokeDasharray="5 3"
+            dot={false}
+            connectNulls={false}
+            isAnimationActive={false}
+          />
+        </ComposedChart>
+      </ChartContainer>
+    </div>
   )
 }
 

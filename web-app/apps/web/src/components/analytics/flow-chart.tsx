@@ -9,6 +9,7 @@ import {
 } from "@app/ui/chart"
 import { formatAmount } from "@/components/transactions/format"
 import { formatMonth } from "@/components/dashboard/month"
+import { ChartLegend } from "./chart-legend"
 import { BAR_TOOLTIP } from "./chart-tooltip"
 import type { FlowPoint } from "./flow-points"
 
@@ -26,18 +27,7 @@ const compact = new Intl.NumberFormat(undefined, {
 export function FlowChart({ points }: { points: FlowPoint[] }) {
   return (
     <div className="flex flex-col gap-3">
-      <ul className="flex gap-4 text-xs text-muted-foreground">
-        {Object.entries(config).map(([key, item]) => (
-          <li key={key} className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className="size-2.5 rounded-sm"
-              style={{ backgroundColor: item.color }}
-            />
-            {item.label}
-          </li>
-        ))}
-      </ul>
+      <ChartLegend config={config} />
       <ChartContainer config={config} className="aspect-[2/1] w-full">
         <BarChart data={points} margin={{ left: 4, right: 8, top: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -63,7 +53,7 @@ export function FlowChart({ points }: { points: FlowPoint[] }) {
                   payload={payload}
                   label={
                     point
-                      ? `${formatMonth(point.month)}${point.partial ? " (so far)" : ""}`
+                      ? `${formatMonth(point.month)}${point.partialLabel ? ` (${point.partialLabel})` : ""}`
                       : undefined
                   }
                   formatter={(value) => formatAmount(String(value))}

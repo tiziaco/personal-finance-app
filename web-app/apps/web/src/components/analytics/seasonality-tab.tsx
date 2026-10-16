@@ -14,14 +14,13 @@ import {
 
 import { formatAmount } from "@/components/transactions/format"
 
-import { formatPct, formatPeriod } from "./format"
+import { formatPct, formatPeriod, purchases } from "./format"
 import { ANALYTICS_QUERY } from "./query"
 import { Section } from "./section"
 import { MonthOfYearChart, WeekdayChart } from "./seasonality-charts"
 import { toMonthOfYearPoints, toWeekdayPoints } from "./seasonality-points"
 
 const isEmpty = (data: BehaviourResponse) => data.date_from === null
-const purchases = (n: number) => `${n} ${n === 1 ? "purchase" : "purchases"}`
 
 function biasSentence(bias: number | null) {
   if (bias === null) return null
@@ -48,7 +47,7 @@ export function SeasonalityTab() {
         <p className="text-sm text-muted-foreground">Based on {period}</p>
       ) : null}
 
-      <Section {...shared} title="By day of week">
+      <Section {...shared} title="Average spend per day, by day of week">
         {(d) => {
           const points = toWeekdayPoints(d.by_weekday)
           return (
@@ -91,7 +90,7 @@ export function SeasonalityTab() {
                         {purchases(p.count)} · {p.averageText} average
                       </p>
                     </div>
-                    <span className="tabular-nums">{p.perDayText}</span>
+                    <span className="tabular-nums">{p.perDayText} per day</span>
                   </li>
                 ))}
               </ul>
@@ -131,7 +130,7 @@ export function SeasonalityTab() {
         }}
       </Section>
 
-      <Section {...shared} title="By month of year">
+      <Section {...shared} title="Average spend by month of year">
         {(d) => (
           <MonthOfYearChart points={toMonthOfYearPoints(d.seasonality)} />
         )}

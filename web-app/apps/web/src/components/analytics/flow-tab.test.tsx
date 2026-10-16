@@ -205,6 +205,19 @@ describe("FlowTab", () => {
     expect(month.getAllByText("33.1%").length).toBeGreaterThan(0)
   })
 
+  it("says 'so far' only for the month in progress, 'partial' for any other", () => {
+    spending({
+      data: {
+        ...DATA,
+        months: [flow("2026-04", true), flow("2026-10", true)],
+      },
+    })
+    renderTab()
+    const month = within(card("Month by month"))
+    expect(month.getAllByText(/so far/)).toHaveLength(2) // table + card list
+    expect(month.getAllByText(/partial/)).toHaveLength(2)
+  })
+
   it("shows the empty state", () => {
     spending({
       data: {

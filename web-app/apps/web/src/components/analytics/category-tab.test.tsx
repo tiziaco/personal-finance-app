@@ -136,6 +136,20 @@ describe("CategoryTab", () => {
     expect(within(row("Rent")).getByText("—")).toBeInTheDocument()
   })
 
+  it("does not pluralise a single purchase", () => {
+    categories({
+      data: { ...DATA, by_frequency: [{ ...DATA.by_frequency[0], count: 1 }] },
+    })
+    merchants({
+      data: {
+        top_by_spend: [{ ...MERCHANTS.top_by_spend[0], count: 1 }],
+      },
+    })
+    renderTab()
+    expect(screen.queryByText(/\b1 purchases/)).toBeNull()
+    expect(screen.getAllByText(/\b1 purchase ·/)).toHaveLength(2)
+  })
+
   it("asks for the chosen period", async () => {
     const onMonthsChange = vi.fn()
     renderTab(onMonthsChange)

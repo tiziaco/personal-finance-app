@@ -17,7 +17,7 @@ const month = (over: Partial<MonthFlowResponse>): MonthFlowResponse => ({
 
 describe("toTrendsPoints", () => {
   it("keeps nulls as gaps", () => {
-    expect(toTrendsPoints([month({})])).toEqual([
+    expect(toTrendsPoints([month({})], "2026-10")).toEqual([
       {
         month: "2026-09",
         label: formatMonth("2026-09", "short"),
@@ -26,6 +26,7 @@ describe("toTrendsPoints", () => {
         change: null,
         savingsRate: null,
         partial: false,
+        partialLabel: null,
       },
     ])
   })
@@ -36,5 +37,16 @@ describe("toTrendsPoints", () => {
     ])
     expect(point.rollingAvg).toBe(2050.33)
     expect(point.change).toBe(4.5)
+  })
+
+  it("says so far only for the current month", () => {
+    const points = toTrendsPoints(
+      [
+        month({ month: "2026-08", partial: true }),
+        month({ month: "2026-10", partial: true }),
+      ],
+      "2026-10",
+    )
+    expect(points.map((p) => p.partialLabel)).toEqual(["partial", "so far"])
   })
 })

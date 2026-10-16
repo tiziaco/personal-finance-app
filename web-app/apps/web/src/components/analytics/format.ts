@@ -67,3 +67,24 @@ export function formatDayRange(month: string, day: number): string {
     new Date(y, m - 1, Math.min(day, last)),
   )
 }
+
+/** "1 purchase", "2 purchases". */
+export function purchases(n: number): string {
+  return `${n} ${n === 1 ? "purchase" : "purchases"}`
+}
+
+export type PartialLabel = "so far" | "partial"
+
+/**
+ * How to name a partial month: "so far" only for the month in progress (the
+ * server's month-to-date month, compared as text, no clock); any other partial
+ * month, such as a first month of data starting late, is just "partial".
+ */
+export function partialLabel(
+  partial: boolean,
+  month: string,
+  currentMonth: string | null | undefined,
+): PartialLabel | null {
+  if (!partial) return null
+  return month === currentMonth ? "so far" : "partial"
+}

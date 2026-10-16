@@ -13,7 +13,8 @@ function MoverPct({ pct }: { pct: number | null }) {
   const tone = changeTone(pct, "spend")
   return (
     <span data-tone={tone} className={TONE_CLASS[tone]}>
-      {pct === -100 ? "stopped" : formatPct(pct)}
+      <span aria-hidden>{pct > 0 ? "▲" : "▼"}</span>{" "}
+      {pct === -100 ? "stopped" : formatPct(Math.abs(pct))}
     </span>
   )
 }
@@ -28,7 +29,12 @@ export function CategoryMovers({
 }) {
   const { label } = useCategories()
   if (rows.length === 0) {
-    return <p className="text-sm text-muted-foreground">{empty}</p>
+    return (
+      <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+        <p>{empty}</p>
+        <p className="text-xs">Needs at least two whole months.</p>
+      </div>
+    )
   }
   return (
     <ul className="flex flex-col gap-3">

@@ -121,8 +121,34 @@ describe("SeasonalityTab", () => {
     expect(screen.getByTestId("weekday-chart")).toHaveTextContent("7 points")
     expect(screen.getByTestId("month-chart")).toHaveTextContent("12 points")
     expect(
-      within(card("By day of week")).getAllByText("Monday").length,
+      within(card("Average spend per day, by day of week")).getAllByText(
+        "Monday",
+      ).length,
     ).toBeGreaterThan(0)
+  })
+
+  it("labels every figure as an average", () => {
+    render(<SeasonalityTab />)
+    expect(
+      screen.getByText("Average spend by month of year"),
+    ).toBeInTheDocument()
+    const list = card("Average spend per day, by day of week").querySelector(
+      "ul",
+    ) as HTMLElement
+    expect(list).toHaveTextContent(`${formatAmount("15.00")} per day`)
+    expect(list).toHaveTextContent("10 purchases")
+  })
+
+  it("does not pluralise one purchase", () => {
+    behaviour({
+      data: {
+        ...BEHAVIOUR,
+        by_weekday: BEHAVIOUR.by_weekday.map((d) => ({ ...d, count: 1 })),
+      },
+    })
+    render(<SeasonalityTab />)
+    expect(screen.queryByText(/1 purchases/)).toBeNull()
+    expect(screen.getAllByText(/1 purchase ·/).length).toBeGreaterThan(0)
   })
 
   it("calls behaviour with no params", () => {

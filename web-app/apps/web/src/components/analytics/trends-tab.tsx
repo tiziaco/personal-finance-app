@@ -76,11 +76,19 @@ export function TrendsTab({
       </header>
 
       <Section {...flow} title="Spending trend">
-        {(d) => <SpendingTrendChart points={toTrendsPoints(d.months)} />}
+        {(d) => (
+          <SpendingTrendChart
+            points={toTrendsPoints(d.months, d.month_to_date?.month)}
+          />
+        )}
       </Section>
 
       <Section {...flow} title="Month-over-month change">
-        {(d) => <MonthChangeChart points={toTrendsPoints(d.months)} />}
+        {(d) => (
+          <MonthChangeChart
+            points={toTrendsPoints(d.months, d.month_to_date?.month)}
+          />
+        )}
       </Section>
 
       <Section {...flow} title="Savings rate">
@@ -98,7 +106,9 @@ export function TrendsTab({
                   </span>
                 )}
               </p>
-              <SavingsRateChart points={toTrendsPoints(d.months)} />
+              <SavingsRateChart
+                points={toTrendsPoints(d.months, d.month_to_date?.month)}
+              />
             </div>
           )
         }}
@@ -108,7 +118,10 @@ export function TrendsTab({
         {(d) => (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">{CAPTION}</p>
-            <CategoryMovers rows={d.top_growing} empty="Nothing grew" />
+            <CategoryMovers
+              rows={d.top_growing}
+              empty="No category grew between the two halves of the period."
+            />
           </div>
         )}
       </Section>
@@ -117,7 +130,10 @@ export function TrendsTab({
         {(d) => (
           <div className="flex flex-col gap-3">
             <p className="text-sm text-muted-foreground">{CAPTION}</p>
-            <CategoryMovers rows={d.top_declining} empty="Nothing declined" />
+            <CategoryMovers
+              rows={d.top_declining}
+              empty="No category declined between the two halves of the period."
+            />
           </div>
         )}
       </Section>

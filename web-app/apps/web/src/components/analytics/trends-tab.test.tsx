@@ -149,6 +149,7 @@ describe("TrendsTab", () => {
     expect(growing.getByText("Food & Groceries")).toBeInTheDocument()
     const pct = growing.getByText(formatPct(28.1))
     expect(pct).toHaveAttribute("data-tone", "bad")
+    expect(pct).toHaveTextContent("▲")
     expect(growing.getByText("new")).toBeInTheDocument()
     expect(
       growing.getByText(
@@ -158,7 +159,8 @@ describe("TrendsTab", () => {
     expect(growing.getByText(formatAmount("90.00"))).toBeInTheDocument()
 
     const declining = within(card("Declining"))
-    expect(declining.getByText("stopped")).toHaveAttribute("data-tone", "good")
+    expect(declining.getByText(/stopped/)).toHaveAttribute("data-tone", "good")
+    expect(declining.getByText(/stopped/)).toHaveTextContent("▼")
     expect(declining.getByText(formatAmount("-80.00"))).toBeInTheDocument()
     expect(
       screen.getAllByText("Earlier half vs later half of the period, per month")
@@ -174,7 +176,7 @@ describe("TrendsTab", () => {
       },
     })
     renderTab()
-    expect(within(card("Declining")).getByText(formatPct(-25))).toHaveAttribute(
+    expect(within(card("Declining")).getByText(formatPct(25))).toHaveAttribute(
       "data-tone",
       "good",
     )
@@ -194,13 +196,24 @@ describe("TrendsTab", () => {
     expect(within(card("Savings rate")).getByText("—")).toBeInTheDocument()
   })
 
-  it("says nothing grew or declined for empty lists", () => {
+  it("explains empty mover lists without claiming nothing changed", () => {
     categories({
       data: { ...CATEGORIES, top_growing: [], top_declining: [] },
     })
     renderTab()
-    expect(screen.getByText("Nothing grew")).toBeInTheDocument()
-    expect(screen.getByText("Nothing declined")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "No category grew between the two halves of the period.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "No category declined between the two halves of the period.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText("Needs at least two whole months."),
+    ).toHaveLength(2)
   })
 
   it("shows the empty state", () => {

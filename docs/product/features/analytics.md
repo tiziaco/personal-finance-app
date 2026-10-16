@@ -66,8 +66,11 @@ user's own transactions on request; nothing is entered.
   and the month of year as an average, with its index against a typical month (35% above)
   and the number of years the average covers. A month with no data yet has no bar.
 
-Every tab keeps the open tab and its range in the URL, so a reload or the back button
-returns to the same view; a value the tab does not offer falls back to its default.
+The open tab and, where a tab has one, its range are kept in the URL, so a reload or the
+back button returns to the same view; a value the tab does not offer falls back to its default.
+
+A partial month is named "so far" only when it is the month in progress (the month-to-date
+month); any other partial month, such as a first month of data that starts late, reads "partial".
 
 Every range is made of **finished months**: the last N months before the one in progress,
 and never earlier than the first month of data. The month in progress is shown apart, as
