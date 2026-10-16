@@ -14,9 +14,9 @@ import type { RecurringMerchantResponse } from "./recurringMerchantResponse"
 export interface RecurringResponse {
   amount_share_pct: number
   count_share_pct: number
-  /** The first day covered; null when the period is empty */
+  /** First day of the resolved period; null when empty */
   date_from: string | null
-  /** The last day covered; null when the period is empty */
+  /** Last day of the resolved period; null when empty */
   date_to: string | null
   hidden_subscriptions: HiddenSubscriptionResponse[]
   merchants: RecurringMerchantResponse[]

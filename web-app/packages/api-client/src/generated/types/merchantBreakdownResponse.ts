@@ -13,9 +13,9 @@ import type { MerchantSpendResponse } from "./merchantSpendResponse"
  */
 export interface MerchantBreakdownResponse {
   concentration: MerchantConcentrationResponse
-  /** The first day covered; null when the period is empty */
+  /** First day of the resolved period; null when empty */
   date_from: string | null
-  /** The last day covered; null when the period is empty */
+  /** Last day of the resolved period; null when empty */
   date_to: string | null
   top_by_frequency: MerchantSpendResponse[]
   top_by_spend: MerchantSpendResponse[]

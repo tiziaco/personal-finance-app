@@ -39,13 +39,13 @@ export interface SpendingResponse {
    */
   average_monthly_net: string
   /**
-   * Average monthly expenses minus average monthly income; negative while saving
+   * (Total expenses − total income) ÷ the period's months; negative while saving
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   burn_rate: string
-  /** The first day covered; null when the period is empty */
+  /** First day of the resolved period; null when empty */
   date_from: string | null
-  /** The last day covered; null when the period is empty */
+  /** Last day of the resolved period; null when empty */
   date_to: string | null
   /** The period's last whole month; null when it has none */
   latest_month: LatestMonthResponse | null

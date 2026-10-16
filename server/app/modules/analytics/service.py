@@ -65,7 +65,7 @@ class AnalyticsService:
     async def dashboard(session: AsyncSession, user_id: uuid.UUID) -> DashboardResponse:
         """The home dashboard figures."""
         today = _today()
-        rows = usable_rows(await _rows(session, user_id, DateRange()), today)
+        rows = await _rows(session, user_id, DateRange())
         return DashboardResponse.model_validate(build_dashboard(rows, today=today), from_attributes=True)
 
     @staticmethod

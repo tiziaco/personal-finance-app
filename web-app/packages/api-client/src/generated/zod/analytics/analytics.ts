@@ -8,7 +8,7 @@
 import * as zod from "zod"
 
 /**
- * Expenses far above their trailing window, and categories spending more than usual lately.
+ * Expenses far above their trailing window, and categories spending more than usual lately. Over the last `months` finished months or inclusive bounds.
  * @summary Unusual spending
  */
 export const getAnomaliesQueryStdThresholdDefault = 2.5
@@ -67,10 +67,10 @@ export const GetAnomaliesResponse = zod
   .object({
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     outliers: zod
       .array(
         zod
@@ -95,11 +95,11 @@ export const GetAnomaliesResponse = zod
       .describe("The top 20 by z-score"),
     spike_window_end: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The period's last day; null when spikes were not checked"),
+      .describe("Last day of the period; null when spikes were not checked"),
     spike_window_start: zod
       .union([zod.iso.date(), zod.null()])
       .describe(
-        "The period's last 30 days; null when spikes were not checked (under 30 days before them)",
+        "First day of the period's last 30 days; null when spikes were not checked",
       ),
     spikes: zod.array(
       zod
@@ -133,7 +133,7 @@ export const GetAnomaliesResponse = zod
   )
 
 /**
- * By weekday, weekday against weekend, by calendar month, and how steady each category is.
+ * By weekday, weekday against weekend, by calendar month, and how steady each category is. Over the last `months` finished months or inclusive bounds.
  * @summary Spending patterns
  */
 export const getBehaviourQueryMonthsOneMax = 120
@@ -202,15 +202,15 @@ export const GetBehaviourResponse = zod
           weekday: zod.int().describe("0 is Monday"),
         })
         .describe(
-          "One weekday's spend in the range: total, count, average and share of all expenses.",
+          "One weekday's spend in the period: total, count, average and share of all expenses.",
         ),
     ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     expense_change_pct: zod
       .union([zod.number(), zod.null()])
       .describe("Between the period's last two whole months"),
@@ -252,30 +252,30 @@ export const GetBehaviourResponse = zod
     volatile_share_pct: zod.number(),
     weekday: zod
       .object({
-        days: zod.int().describe("Calendar days of this kind in the range"),
+        days: zod.int().describe("Calendar days of this kind in the period"),
         per_day: zod.string().regex(getBehaviourResponseWeekdayPerDayRegExp),
         total: zod.string().regex(getBehaviourResponseWeekdayTotalRegExp),
       })
       .describe(
-        "Spend on weekdays or on weekends in the range: calendar days, total and spend per day.",
+        "Spend on weekdays or on weekends in the period: calendar days, total and spend per day.",
       ),
     weekend: zod
       .object({
-        days: zod.int().describe("Calendar days of this kind in the range"),
+        days: zod.int().describe("Calendar days of this kind in the period"),
         per_day: zod.string().regex(getBehaviourResponseWeekendPerDayRegExp),
         total: zod.string().regex(getBehaviourResponseWeekendTotalRegExp),
       })
       .describe(
-        "Spend on weekdays or on weekends in the range: calendar days, total and spend per day.",
+        "Spend on weekdays or on weekends in the period: calendar days, total and spend per day.",
       ),
     weekend_bias_pct: zod.union([zod.number(), zod.null()]),
   })
   .describe(
-    "Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability.",
+    "Spending patterns over the period: by weekday, weekday against weekend, seasonality and category stability.",
   )
 
 /**
- * Categories ranked by spend and by count, and the fastest growing and declining.
+ * Categories ranked by spend and by count, and the fastest growing and declining. Over the last `months` finished months or inclusive bounds.
  * @summary Spend by category
  */
 export const getCategoryBreakdownQueryTopNDefault = 10
@@ -373,10 +373,10 @@ export const GetCategoryBreakdownResponse = zod
     ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     previous_date_from: zod
       .union([zod.iso.date(), zod.null()])
       .describe(
@@ -486,7 +486,7 @@ export const GetCategoryBreakdownResponse = zod
   )
 
 /**
- * Figures for the latest month holding an active transaction, and the six months up to it.
+ * Figures for the latest finished month holding a transaction (else the month in progress, marked partial), up to six months to it, and month-to-date.
  * @summary The home dashboard
  */
 export const getDashboardResponseAverageCashflowRegExp = new RegExp(
@@ -632,7 +632,7 @@ export const GetDashboardResponse = zod
   )
 
 /**
- * Merchants ranked by spend and by count, and how concentrated spending is.
+ * Merchants ranked by spend and by count, and how concentrated spending is. Over the last `months` finished months or inclusive bounds.
  * @summary Spend by merchant
  */
 export const getMerchantBreakdownQueryTopNDefault = 15
@@ -693,10 +693,10 @@ export const GetMerchantBreakdownResponse = zod
       ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     top_by_frequency: zod.array(
       zod
         .object({
@@ -713,7 +713,7 @@ export const GetMerchantBreakdownResponse = zod
             .regex(getMerchantBreakdownResponseTopByFrequencyItemTotalRegExp),
         })
         .describe(
-          "One merchant's spend in the range: total, count, average, first and last date, and share.",
+          "One merchant's spend in the period: total, count, average, first and last date, and share.",
         ),
     ),
     top_by_spend: zod.array(
@@ -732,7 +732,7 @@ export const GetMerchantBreakdownResponse = zod
             .regex(getMerchantBreakdownResponseTopBySpendItemTotalRegExp),
         })
         .describe(
-          "One merchant's spend in the range: total, count, average, first and last date, and share.",
+          "One merchant's spend in the period: total, count, average, first and last date, and share.",
         ),
     ),
     total_expenses: zod
@@ -744,7 +744,7 @@ export const GetMerchantBreakdownResponse = zod
   )
 
 /**
- * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges.
+ * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges. Over the last `months` finished months or inclusive bounds.
  * @summary Recurring spend
  */
 export const getRecurringQueryMonthsOneMax = 120
@@ -788,10 +788,10 @@ export const GetRecurringResponse = zod
     count_share_pct: zod.number(),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     hidden_subscriptions: zod.array(
       zod
         .object({
@@ -855,7 +855,7 @@ export const GetRecurringResponse = zod
   )
 
 /**
- * Totals, averages and a zero-filled per-month series. Bounds are inclusive and optional.
+ * Totals, averages and a zero-filled per-month series. Over the last `months` finished months or inclusive bounds; all time when neither is given.
  * @summary Income, expenses and net
  */
 export const getSpendingQueryMonthsOneMax = 120
@@ -963,14 +963,14 @@ export const GetSpendingResponse = zod
       .string()
       .regex(getSpendingResponseBurnRateRegExp)
       .describe(
-        "Average monthly expenses minus average monthly income; negative while saving",
+        "(Total expenses − total income) ÷ the period's months; negative while saving",
       ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The first day covered; null when the period is empty"),
+      .describe("First day of the resolved period; null when empty"),
     date_to: zod
       .union([zod.iso.date(), zod.null()])
-      .describe("The last day covered; null when the period is empty"),
+      .describe("Last day of the resolved period; null when empty"),
     latest_month: zod
       .union([
         zod

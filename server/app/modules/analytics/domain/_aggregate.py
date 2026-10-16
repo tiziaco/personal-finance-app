@@ -105,17 +105,6 @@ def month_range(first: dt.date, last: dt.date) -> list[dt.date]:
     return months
 
 
-def span(
-    rows: Sequence[Row], date_from: Optional[dt.date], date_to: Optional[dt.date]
-) -> Optional[tuple[dt.date, dt.date]]:
-    """The days a result covers: the given bounds, else the data's first and last day; None when unknown."""
-    start = date_from or min((r.date for r in rows), default=None)
-    end = date_to or max((r.date for r in rows), default=None)
-    if start is None or end is None or end < start:
-        return None
-    return start, end
-
-
 def group_by(rows: Iterable[R], key: Callable[[R], K]) -> dict[K, list[R]]:
     """Rows grouped by key, groups in first-seen order."""
     groups: dict[K, list[R]] = {}

@@ -11,13 +11,13 @@ import type { WeekdaySpendResponse } from "./weekdaySpendResponse"
 import type { WeekPartResponse } from "./weekPartResponse"
 
 /**
- * Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability.
+ * Spending patterns over the period: by weekday, weekday against weekend, seasonality and category stability.
  */
 export interface BehaviourResponse {
   by_weekday: WeekdaySpendResponse[]
-  /** The first day covered; null when the period is empty */
+  /** First day of the resolved period; null when empty */
   date_from: string | null
-  /** The last day covered; null when the period is empty */
+  /** Last day of the resolved period; null when empty */
   date_to: string | null
   /** Between the period's last two whole months */
   expense_change_pct: number | null

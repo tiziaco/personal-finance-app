@@ -18,7 +18,6 @@ from app.modules.analytics.domain._aggregate import (
     monthly_totals,
     pct_change,
     share_pct,
-    span,
     spend,
     total_spend,
 )
@@ -60,15 +59,6 @@ def test_months():
         D(2026, 2, 1),
     ]
     assert month_range(D(2026, 3, 1), D(2026, 2, 1)) == []
-
-
-def test_span_prefers_given_bounds_then_the_data():
-    rows = [row("2026-01-05", "-1.00"), row("2026-03-28", "-1.00")]
-    assert span(rows, None, None) == (D(2026, 1, 5), D(2026, 3, 28))
-    assert span(rows, D(2025, 12, 1), None) == (D(2025, 12, 1), D(2026, 3, 28))
-    assert span([], D(2026, 1, 1), D(2026, 1, 31)) == (D(2026, 1, 1), D(2026, 1, 31))
-    assert span([], None, None) is None
-    assert span([], D(2026, 1, 1), None) is None
 
 
 def test_group_by_keeps_first_seen_order():

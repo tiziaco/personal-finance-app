@@ -136,8 +136,8 @@ class LatestMonthResponse(_Out):
 class SpendingResponse(_Out):
     """Income, expenses and net over the period, with weighted monthly averages, a monthly series and month-to-date."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     total_income: Decimal
     total_expenses: Decimal
     net: Decimal
@@ -154,7 +154,7 @@ class SpendingResponse(_Out):
         ..., description="Net ÷ the period's months, a partial month counting for the share of it covered"
     )
     burn_rate: Decimal = Field(
-        ..., description="Average monthly expenses minus average monthly income; negative while saving"
+        ..., description="(Total expenses − total income) ÷ the period's months; negative while saving"
     )
     savings_rate_pct: Optional[float] = Field(..., description="Net ÷ income × 100; null when income is 0")
     months: List[MonthFlowResponse]
@@ -201,8 +201,8 @@ class CategoryTrendResponse(_Out):
 class CategoryBreakdownResponse(_Out):
     """Spend by category over the period: the biggest, most frequent, growing and declining."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     previous_date_from: Optional[dt.date] = Field(
         ..., description="The first day of the previous period of the same length; null when it holds no transaction"
     )
@@ -218,7 +218,7 @@ class CategoryBreakdownResponse(_Out):
 
 
 class MerchantSpendResponse(_Out):
-    """One merchant's spend in the range: total, count, average, first and last date, and share."""
+    """One merchant's spend in the period: total, count, average, first and last date, and share."""
 
     merchant: str
     total: Decimal
@@ -241,8 +241,8 @@ class MerchantConcentrationResponse(_Out):
 class MerchantBreakdownResponse(_Out):
     """Spend by merchant over the period: the top by spend and by frequency, and the concentration."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     total_expenses: Decimal
     top_by_spend: List[MerchantSpendResponse]
     top_by_frequency: List[MerchantSpendResponse]
@@ -286,8 +286,8 @@ class HiddenSubscriptionResponse(_Out):
 class RecurringResponse(_Out):
     """Recurring spend over the period: totals, monthly cost, each recurring merchant and hidden subscriptions."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     total_expenses: Decimal
     recurring_total: Decimal
     recurring_count: int
@@ -302,7 +302,7 @@ class RecurringResponse(_Out):
 
 
 class WeekdaySpendResponse(_Out):
-    """One weekday's spend in the range: total, count, average and share of all expenses."""
+    """One weekday's spend in the period: total, count, average and share of all expenses."""
 
     weekday: int = Field(..., description="0 is Monday")
     name: str
@@ -315,9 +315,9 @@ class WeekdaySpendResponse(_Out):
 
 
 class WeekPartResponse(_Out):
-    """Spend on weekdays or on weekends in the range: calendar days, total and spend per day."""
+    """Spend on weekdays or on weekends in the period: calendar days, total and spend per day."""
 
-    days: int = Field(..., description="Calendar days of this kind in the range")
+    days: int = Field(..., description="Calendar days of this kind in the period")
     total: Decimal
     per_day: Decimal
 
@@ -342,10 +342,10 @@ class CategoryStabilityResponse(_Out):
 
 
 class BehaviourResponse(_Out):
-    """Spending patterns over the range: by weekday, weekday against weekend, seasonality and category stability."""
+    """Spending patterns over the period: by weekday, weekday against weekend, seasonality and category stability."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     by_weekday: List[WeekdaySpendResponse]
     weekday: WeekPartResponse
     weekend: WeekPartResponse
@@ -388,15 +388,15 @@ class CategorySpikeResponse(_Out):
 class AnomaliesResponse(_Out):
     """Outlier expenses and category spikes over the period, with the thresholds used."""
 
-    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
-    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
+    date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
+    date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     std_threshold: float
     window_days: int
     outliers: List[OutlierResponse] = Field(..., description="The top 20 by z-score")
     spikes: List[CategorySpikeResponse]
     spike_window_start: Optional[dt.date] = Field(
-        ..., description="The period's last 30 days; null when spikes were not checked (under 30 days before them)"
+        ..., description="First day of the period's last 30 days; null when spikes were not checked"
     )
     spike_window_end: Optional[dt.date] = Field(
-        ..., description="The period's last day; null when spikes were not checked"
+        ..., description="Last day of the period; null when spikes were not checked"
     )

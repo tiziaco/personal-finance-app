@@ -13,9 +13,9 @@ import type { CategoryTrendResponse } from "./categoryTrendResponse"
  */
 export interface CategoryBreakdownResponse {
   by_frequency: CategorySpendResponse[]
-  /** The first day covered; null when the period is empty */
+  /** First day of the resolved period; null when empty */
   date_from: string | null
-  /** The last day covered; null when the period is empty */
+  /** Last day of the resolved period; null when empty */
   date_to: string | null
   /** The first day of the previous period of the same length; null when it holds no transaction */
   previous_date_from: string | null
