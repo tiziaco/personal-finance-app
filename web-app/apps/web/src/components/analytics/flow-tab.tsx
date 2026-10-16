@@ -22,7 +22,6 @@ import {
 
 import { Change, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
-import { showMonthToDate, toFlowPoints } from "./flow-points"
 import {
   changeTone,
   formatPeriod,
@@ -30,6 +29,7 @@ import {
   partialLabel,
   type PartialLabel,
 } from "./format"
+import { monthToDate, toMonthPoints } from "./month-points"
 import { MonthToDateStrip } from "./month-to-date-strip"
 import { PeriodSelect } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
@@ -150,15 +150,14 @@ export function FlowTab({
       >
         {(d) => {
           const latest = d.latest_month
+          const mtd = monthToDate(d)
           return (
             <>
-              {showMonthToDate(d) ? (
-                <MonthToDateStrip data={d.month_to_date!} />
-              ) : null}
+              {mtd ? <MonthToDateStrip data={mtd} /> : null}
 
               <Section title="Income and expenses">
                 <FlowChart
-                  points={toFlowPoints(d.months, d.month_to_date?.month)}
+                  points={toMonthPoints(d.months, d.month_to_date?.month)}
                 />
               </Section>
 

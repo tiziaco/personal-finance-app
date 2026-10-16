@@ -19,27 +19,23 @@ import {
   type ChartConfig,
 } from "@app/ui/chart"
 import { formatAmount } from "@/components/transactions/format"
-import { formatMonth } from "@/components/dashboard/month"
 import { TONE_FILL } from "./change"
 import { ChartLegend } from "./chart-legend"
-import { BAR_TOOLTIP, LINE_TOOLTIP } from "./chart-tooltip"
+import {
+  BAR_TOOLTIP,
+  GRID,
+  LINE_TOOLTIP,
+  MARGIN,
+  MONEY_Y_AXIS,
+  PCT_Y_AXIS,
+  TooltipBox,
+  X_AXIS,
+  monthTooltipLabel,
+  partialOpacity,
+  pointOf,
+} from "./chart-parts"
 import { changeTone, formatPct } from "./format"
-import type { TrendsPoint } from "./trends-points"
-
-const compact = new Intl.NumberFormat(undefined, {
-  notation: "compact",
-  maximumFractionDigits: 1,
-})
-
-const MARGIN = { left: 4, right: 8, top: 8 }
-
-const monthLabel = (point?: TrendsPoint) =>
-  point
-    ? `${formatMonth(point.month)}${point.partialLabel ? ` (${point.partialLabel})` : ""}`
-    : undefined
-
-const pointOf = (payload?: readonly { payload?: unknown }[]) =>
-  payload?.[0]?.payload as TrendsPoint | undefined
+import type { MonthPoint } from "./month-points"
 
 const spendingConfig: ChartConfig = {
   expenses: { label: "Expenses", color: "var(--chart-expense)" },
@@ -47,32 +43,22 @@ const spendingConfig: ChartConfig = {
 }
 
 /** Expense bars per month (a partial month lighter) with the 3-month average as a line that breaks at gaps. */
-export function SpendingTrendChart({ points }: { points: TrendsPoint[] }) {
+export function SpendingTrendChart({ points }: { points: MonthPoint[] }) {
   return (
     <div className="flex flex-col gap-3">
       <ChartLegend config={spendingConfig} />
       <ChartContainer config={spendingConfig} className="aspect-[2/1] w-full">
         <ComposedChart data={points} margin={MARGIN}>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
-          <XAxis
-            dataKey="label"
-            tickLine={false}
-            axisLine={false}
-            tickMargin={8}
-          />
-          <YAxis
-            tickLine={false}
-            axisLine={false}
-            width={48}
-            tickFormatter={(v: number) => compact.format(v)}
-          />
+          <CartesianGrid {...GRID} />
+          <XAxis {...X_AXIS} />
+          <YAxis {...MONEY_Y_AXIS} />
           <ChartTooltip
-            {...LINE_TOOLTIP}
+            {...BAR_TOOLTIP}
             content={({ active, payload }) => (
               <ChartTooltipContent
                 active={active}
                 payload={payload}
-                label={monthLabel(pointOf(payload))}
+                label={monthTooltipLabel(pointOf<MonthPoint>(payload))}
                 formatter={(value) =>
                   value === null || value === undefined
                     ? "—"
@@ -88,7 +74,7 @@ export function SpendingTrendChart({ points }: { points: TrendsPoint[] }) {
             isAnimationActive={false}
           >
             {points.map((p) => (
-              <Cell key={p.month} fillOpacity={p.partial ? 0.4 : 1} />
+              <Cell key={p.month} fillOpacity={partialOpacity(p)} />
             ))}
           </Bar>
           <Line
@@ -112,36 +98,26 @@ const changeConfig: ChartConfig = {
 }
 
 /** The change in expenses on the month before, around a zero line; more spending is bad. */
-export function MonthChangeChart({ points }: { points: TrendsPoint[] }) {
+export function MonthChangeChart({ points }: { points: MonthPoint[] }) {
   return (
     <ChartContainer config={changeConfig} className="aspect-[2/1] w-full">
       <BarChart data={points} margin={MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis
-          dataKey="label"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          width={48}
-          tickFormatter={(v: number) => `${v}%`}
-        />
+        <CartesianGrid {...GRID} />
+        <XAxis {...X_AXIS} />
+        <YAxis {...PCT_Y_AXIS} />
         <ReferenceLine y={0} className="stroke-muted-foreground" />
         <ChartTooltip
           {...BAR_TOOLTIP}
           content={({ active, payload }) => {
-            const point = pointOf(payload)
+            const point = pointOf<MonthPoint>(payload)
             if (!active || !point) return null
             return (
-              <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-                <p className="font-medium">{monthLabel(point)}</p>
+              <TooltipBox>
+                <p className="font-medium">{monthTooltipLabel(point)}</p>
                 <p className="tabular-nums text-muted-foreground">
                   {point.change === null ? "—" : formatPct(point.change)}
                 </p>
-              </div>
+              </TooltipBox>
             )
           }}
         />
@@ -150,7 +126,7 @@ export function MonthChangeChart({ points }: { points: TrendsPoint[] }) {
             <Cell
               key={p.month}
               className={TONE_FILL[changeTone(p.change, "spend")]}
-              fillOpacity={p.partial ? 0.4 : 1}
+              fillOpacity={partialOpacity(p)}
             />
           ))}
         </Bar>
@@ -164,38 +140,28 @@ const rateConfig: ChartConfig = {
 }
 
 /** The savings rate per month as a line that breaks where there is no income. */
-export function SavingsRateChart({ points }: { points: TrendsPoint[] }) {
+export function SavingsRateChart({ points }: { points: MonthPoint[] }) {
   return (
     <ChartContainer config={rateConfig} className="aspect-[2/1] w-full">
       <LineChart data={points} margin={MARGIN}>
-        <CartesianGrid vertical={false} strokeDasharray="3 3" />
-        <XAxis
-          dataKey="label"
-          tickLine={false}
-          axisLine={false}
-          tickMargin={8}
-        />
-        <YAxis
-          tickLine={false}
-          axisLine={false}
-          width={48}
-          tickFormatter={(v: number) => `${v}%`}
-        />
+        <CartesianGrid {...GRID} />
+        <XAxis {...X_AXIS} />
+        <YAxis {...PCT_Y_AXIS} />
         <ReferenceLine y={0} className="stroke-muted-foreground" />
         <ChartTooltip
           {...LINE_TOOLTIP}
           content={({ active, payload }) => {
-            const point = pointOf(payload)
+            const point = pointOf<MonthPoint>(payload)
             if (!active || !point) return null
             return (
-              <div className="rounded-lg border bg-background px-2.5 py-1.5 text-xs shadow-xl">
-                <p className="font-medium">{monthLabel(point)}</p>
+              <TooltipBox>
+                <p className="font-medium">{monthTooltipLabel(point)}</p>
                 <p className="tabular-nums text-muted-foreground">
                   {point.savingsRate === null
                     ? "—"
                     : formatPct(point.savingsRate)}
                 </p>
-              </div>
+              </TooltipBox>
             )
           }}
         />

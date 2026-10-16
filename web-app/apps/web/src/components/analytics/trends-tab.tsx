@@ -22,7 +22,7 @@ import {
   SavingsRateChart,
   SpendingTrendChart,
 } from "./trends-charts"
-import { toTrendsPoints } from "./trends-points"
+import { toMonthPoints } from "./month-points"
 import { PERIODS } from "./use-analytics-params"
 
 const EMPTY = "No transactions in this period."
@@ -94,7 +94,7 @@ export function TrendsTab({
         }
       >
         {(d) => {
-          const points = toTrendsPoints(d.months, d.month_to_date?.month)
+          const points = toMonthPoints(d.months, d.month_to_date?.month)
           const pct = d.savings_rate_pct
           const tone = pct === null ? null : changeTone(pct, "income")
           return (
