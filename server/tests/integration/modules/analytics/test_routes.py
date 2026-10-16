@@ -151,6 +151,16 @@ async def test_anomalies_echo_their_parameters(authenticated_client):
     assert (await authenticated_client.get(f"{BASE}/anomalies", params={"window_days": 6})).status_code == 422
 
 
+async def test_anomalies_over_three_months_echo_the_period(authenticated_client, test_user, add, today):
+    await add(test_user, "2026-06-05", "-10.00")
+    await add(test_user, "2026-09-05", "-10.00")
+
+    body = (await authenticated_client.get(f"{BASE}/anomalies", params={"months": 3})).json()
+
+    assert (body["date_from"], body["date_to"]) == ("2026-07-01", "2026-09-30")
+    assert (body["spike_window_start"], body["spike_window_end"]) == ("2026-09-01", "2026-09-30")
+
+
 async def test_rows_outside_1900_2100_are_left_out(authenticated_client, test_user, add, today):
     await add(test_user, "2026-03-15", "-40.00")
     await add(test_user, "9999-12-31", "-10.00")

@@ -7,7 +7,9 @@
  */
 
 /**
- * One expense far above the expenses of its trailing window, with its z-score and the window's mean.
+ * One expense in the period far above the earlier expenses of its category in its trailing window.
+ *
+ * Recurring-flagged expenses are never outliers and never in a window; a window may reach before the period.
  */
 export interface OutlierResponse {
   /**
@@ -18,7 +20,10 @@ export interface OutlierResponse {
   category: string
   date: string
   merchant: string
-  /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
+  /**
+   * The mean of the category's expenses in the window
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
   window_mean: string
   z_score: number
 }

@@ -56,54 +56,80 @@ export const getAnomaliesResponseOutliersItemWindowMeanRegExp = new RegExp(
 export const getAnomaliesResponseSpikesItemBaseline30dRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getAnomaliesResponseSpikesItemIncreaseAmountRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getAnomaliesResponseSpikesItemRecentTotalRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 
 export const GetAnomaliesResponse = zod
   .object({
-    outliers: zod.array(
-      zod
-        .object({
-          amount: zod
-            .string()
-            .regex(getAnomaliesResponseOutliersItemAmountRegExp)
-            .describe("The expense, positive"),
-          category: zod.string(),
-          date: zod.iso.date(),
-          merchant: zod.string(),
-          window_mean: zod
-            .string()
-            .regex(getAnomaliesResponseOutliersItemWindowMeanRegExp),
-          z_score: zod.number(),
-        })
-        .describe(
-          "One expense far above the expenses of its trailing window, with its z-score and the window's mean.",
-        ),
-    ),
-    spike_window_end: zod.union([zod.iso.date(), zod.null()]),
-    spike_window_start: zod.union([zod.iso.date(), zod.null()]),
+    date_from: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The first day covered; null when the period is empty"),
+    date_to: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The last day covered; null when the period is empty"),
+    outliers: zod
+      .array(
+        zod
+          .object({
+            amount: zod
+              .string()
+              .regex(getAnomaliesResponseOutliersItemAmountRegExp)
+              .describe("The expense, positive"),
+            category: zod.string(),
+            date: zod.iso.date(),
+            merchant: zod.string(),
+            window_mean: zod
+              .string()
+              .regex(getAnomaliesResponseOutliersItemWindowMeanRegExp)
+              .describe("The mean of the category's expenses in the window"),
+            z_score: zod.number(),
+          })
+          .describe(
+            "One expense in the period far above the earlier expenses of its category in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
+          ),
+      )
+      .describe("The top 20 by z-score"),
+    spike_window_end: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe("The period's last day; null when spikes were not checked"),
+    spike_window_start: zod
+      .union([zod.iso.date(), zod.null()])
+      .describe(
+        "The period's last 30 days; null when spikes were not checked (under 30 days before them)",
+      ),
     spikes: zod.array(
       zod
         .object({
           baseline_30d: zod
             .string()
-            .regex(getAnomaliesResponseSpikesItemBaseline30dRegExp),
+            .regex(getAnomaliesResponseSpikesItemBaseline30dRegExp)
+            .describe(
+              "Average 30 days' spend from the period's first day to the window",
+            ),
           category: zod.string(),
+          increase_amount: zod
+            .string()
+            .regex(getAnomaliesResponseSpikesItemIncreaseAmountRegExp)
+            .describe("recent_total − baseline_30d; spikes are ranked by it"),
           recent_total: zod
             .string()
-            .regex(getAnomaliesResponseSpikesItemRecentTotalRegExp),
+            .regex(getAnomaliesResponseSpikesItemRecentTotalRegExp)
+            .describe("Spend in the spike window"),
           spike_pct: zod.number(),
         })
         .describe(
-          "One category whose last 30 days spend well above its average 30 days over the rest of the range.",
+          "One category whose spend in the period's last 30 days is well above its average 30 days before them.",
         ),
     ),
     std_threshold: zod.number(),
     window_days: zod.int(),
   })
   .describe(
-    "Outlier expenses and category spikes over the range, with the thresholds used.",
+    "Outlier expenses and category spikes over the period, with the thresholds used.",
   )
 
 /**

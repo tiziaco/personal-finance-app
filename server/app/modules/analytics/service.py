@@ -107,10 +107,9 @@ class AnalyticsService:
     async def anomalies(
         session: AsyncSession, user_id: uuid.UUID, date_range: DateRange, std_threshold: float, window_days: int
     ) -> AnomaliesResponse:
-        """Outliers and category spikes over the range."""
-        rows = await _rows(session, user_id, date_range)
-        result = find_anomalies(rows, std_threshold, window_days, date_range.date_from, date_range.date_to)
-        return AnomaliesResponse.model_validate(result)
+        """Outliers and category spikes over the period."""
+        rows, period, _ = await _context(session, user_id, date_range)
+        return AnomaliesResponse.model_validate(find_anomalies(rows, period, std_threshold, window_days))
 
 
 analytics_service = AnalyticsService()

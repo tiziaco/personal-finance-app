@@ -23,9 +23,36 @@
         "type": "object"
       },
       "AnomaliesResponse": {
-        "description": "Outlier expenses and category spikes over the range, with the thresholds used.",
+        "description": "Outlier expenses and category spikes over the period, with the thresholds used.",
         "properties": {
+          "date_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The first day covered; null when the period is empty",
+            "title": "Date From"
+          },
+          "date_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "The last day covered; null when the period is empty",
+            "title": "Date To"
+          },
           "outliers": {
+            "description": "The top 20 by z-score",
             "items": {
               "$ref": "#/components/schemas/OutlierResponse"
             },
@@ -42,6 +69,7 @@
                 "type": "null"
               }
             ],
+            "description": "The period's last day; null when spikes were not checked",
             "title": "Spike Window End"
           },
           "spike_window_start": {
@@ -54,6 +82,7 @@
                 "type": "null"
               }
             ],
+            "description": "The period's last 30 days; null when spikes were not checked (under 30 days before them)",
             "title": "Spike Window Start"
           },
           "spikes": {
@@ -73,6 +102,8 @@
           }
         },
         "required": [
+          "date_from",
+          "date_to",
           "std_threshold",
           "window_days",
           "outliers",
@@ -546,9 +577,10 @@
         "type": "object"
       },
       "CategorySpikeResponse": {
-        "description": "One category whose last 30 days spend well above its average 30 days over the rest of the range.",
+        "description": "One category whose spend in the period's last 30 days is well above its average 30 days before them.",
         "properties": {
           "baseline_30d": {
+            "description": "Average 30 days' spend from the period's first day to the window",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Baseline 30D",
             "type": "string"
@@ -557,7 +589,14 @@
             "title": "Category",
             "type": "string"
           },
+          "increase_amount": {
+            "description": "recent_total \u2212 baseline_30d; spikes are ranked by it",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Increase Amount",
+            "type": "string"
+          },
           "recent_total": {
+            "description": "Spend in the spike window",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Recent Total",
             "type": "string"
@@ -571,6 +610,7 @@
           "category",
           "recent_total",
           "baseline_30d",
+          "increase_amount",
           "spike_pct"
         ],
         "title": "CategorySpikeResponse",
@@ -1762,7 +1802,7 @@
         "type": "object"
       },
       "OutlierResponse": {
-        "description": "One expense far above the expenses of its trailing window, with its z-score and the window's mean.",
+        "description": "One expense in the period far above the earlier expenses of its category in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
         "properties": {
           "amount": {
             "description": "The expense, positive",
@@ -1784,6 +1824,7 @@
             "type": "string"
           },
           "window_mean": {
+            "description": "The mean of the category's expenses in the window",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Window Mean",
             "type": "string"

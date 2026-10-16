@@ -355,31 +355,41 @@ class BehaviourResponse(_Out):
 
 
 class OutlierResponse(_Out):
-    """One expense far above the expenses of its trailing window, with its z-score and the window's mean."""
+    """One expense in the period far above the earlier expenses of its category in its trailing window.
+
+    Recurring-flagged expenses are never outliers and never in a window; a window may reach before the period.
+    """
 
     date: dt.date
     merchant: str
     category: str
     amount: Decimal = Field(..., description="The expense, positive")
     z_score: float
-    window_mean: Decimal
+    window_mean: Decimal = Field(..., description="The mean of the category's expenses in the window")
 
 
 class CategorySpikeResponse(_Out):
-    """One category whose last 30 days spend well above its average 30 days over the rest of the range."""
+    """One category whose spend in the period's last 30 days is well above its average 30 days before them."""
 
     category: str
-    recent_total: Decimal
-    baseline_30d: Decimal
+    recent_total: Decimal = Field(..., description="Spend in the spike window")
+    baseline_30d: Decimal = Field(..., description="Average 30 days' spend from the period's first day to the window")
+    increase_amount: Decimal = Field(..., description="recent_total − baseline_30d; spikes are ranked by it")
     spike_pct: float
 
 
 class AnomaliesResponse(_Out):
-    """Outlier expenses and category spikes over the range, with the thresholds used."""
+    """Outlier expenses and category spikes over the period, with the thresholds used."""
 
+    date_from: Optional[dt.date] = Field(..., description="The first day covered; null when the period is empty")
+    date_to: Optional[dt.date] = Field(..., description="The last day covered; null when the period is empty")
     std_threshold: float
     window_days: int
-    outliers: List[OutlierResponse]
+    outliers: List[OutlierResponse] = Field(..., description="The top 20 by z-score")
     spikes: List[CategorySpikeResponse]
-    spike_window_start: Optional[dt.date]
-    spike_window_end: Optional[dt.date]
+    spike_window_start: Optional[dt.date] = Field(
+        ..., description="The period's last 30 days; null when spikes were not checked (under 30 days before them)"
+    )
+    spike_window_end: Optional[dt.date] = Field(
+        ..., description="The period's last day; null when spikes were not checked"
+    )
