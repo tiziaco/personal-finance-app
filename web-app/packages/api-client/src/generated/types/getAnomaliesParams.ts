@@ -27,4 +27,8 @@ export type GetAnomaliesParams = {
    * On or before this day
    */
   date_to?: string | null
+  /**
+   * The last N finished months; not with date_from/date_to
+   */
+  months?: number | null
 }

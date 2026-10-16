@@ -18,6 +18,8 @@ export const getAnomaliesQueryWindowDaysDefault = 30
 export const getAnomaliesQueryWindowDaysMin = 7
 export const getAnomaliesQueryWindowDaysMax = 90
 
+export const getAnomaliesQueryMonthsOneMax = 120
+
 export const GetAnomaliesQueryParams = zod.object({
   std_threshold: zod
     .number()
@@ -39,6 +41,10 @@ export const GetAnomaliesQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([zod.int().min(1).max(getAnomaliesQueryMonthsOneMax), zod.null()])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getAnomaliesResponseOutliersItemAmountRegExp = new RegExp(
@@ -104,6 +110,8 @@ export const GetAnomaliesResponse = zod
  * By weekday, weekday against weekend, by calendar month, and how steady each category is.
  * @summary Spending patterns
  */
+export const getBehaviourQueryMonthsOneMax = 120
+
 export const GetBehaviourQueryParams = zod.object({
   date_from: zod
     .union([zod.iso.date(), zod.null()])
@@ -113,6 +121,10 @@ export const GetBehaviourQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([zod.int().min(1).max(getBehaviourQueryMonthsOneMax), zod.null()])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getBehaviourResponseByWeekdayItemAverageRegExp = new RegExp(
@@ -223,6 +235,8 @@ export const GetBehaviourResponse = zod
 export const getCategoryBreakdownQueryTopNDefault = 10
 export const getCategoryBreakdownQueryTopNMax = 50
 
+export const getCategoryBreakdownQueryMonthsOneMax = 120
+
 export const GetCategoryBreakdownQueryParams = zod.object({
   top_n: zod
     .int()
@@ -238,6 +252,13 @@ export const GetCategoryBreakdownQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([
+      zod.int().min(1).max(getCategoryBreakdownQueryMonthsOneMax),
+      zod.null(),
+    ])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getCategoryBreakdownResponseByFrequencyItemAverageRegExp =
@@ -446,6 +467,8 @@ export const GetDashboardResponse = zod
 export const getMerchantBreakdownQueryTopNDefault = 15
 export const getMerchantBreakdownQueryTopNMax = 50
 
+export const getMerchantBreakdownQueryMonthsOneMax = 120
+
 export const GetMerchantBreakdownQueryParams = zod.object({
   top_n: zod
     .int()
@@ -461,6 +484,13 @@ export const GetMerchantBreakdownQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([
+      zod.int().min(1).max(getMerchantBreakdownQueryMonthsOneMax),
+      zod.null(),
+    ])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getMerchantBreakdownResponseTopByFrequencyItemAverageRegExp =
@@ -541,6 +571,8 @@ export const GetMerchantBreakdownResponse = zod
  * Spend flagged recurring, its monthly cost per merchant, and unflagged small regular charges.
  * @summary Recurring spend
  */
+export const getRecurringQueryMonthsOneMax = 120
+
 export const GetRecurringQueryParams = zod.object({
   date_from: zod
     .union([zod.iso.date(), zod.null()])
@@ -550,6 +582,10 @@ export const GetRecurringQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([zod.int().min(1).max(getRecurringQueryMonthsOneMax), zod.null()])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getRecurringResponseHiddenSubscriptionsItemAverageChargeRegExp =
@@ -626,6 +662,8 @@ export const GetRecurringResponse = zod
  * Totals, averages and a zero-filled per-month series. Bounds are inclusive and optional.
  * @summary Income, expenses and net
  */
+export const getSpendingQueryMonthsOneMax = 120
+
 export const GetSpendingQueryParams = zod.object({
   date_from: zod
     .union([zod.iso.date(), zod.null()])
@@ -635,6 +673,10 @@ export const GetSpendingQueryParams = zod.object({
     .union([zod.iso.date(), zod.null()])
     .optional()
     .describe("On or before this day"),
+  months: zod
+    .union([zod.int().min(1).max(getSpendingQueryMonthsOneMax), zod.null()])
+    .optional()
+    .describe("The last N finished months; not with date_from\/date_to"),
 })
 
 export const getSpendingResponseAverageExpenseRegExp = new RegExp(

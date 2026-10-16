@@ -35,6 +35,18 @@ async def test_a_date_outside_1900_2100_is_422(authenticated_client, route, para
     assert response.json()["error"] == "INVALID_DATE_RANGE"
 
 
+@pytest.mark.parametrize("route", ROUTES[1:])
+async def test_months_with_a_bound_is_422(authenticated_client, route):
+    response = await authenticated_client.get(f"{BASE}/{route}", params={"months": 3, "date_to": "2026-09-30"})
+    assert response.status_code == 422
+    assert response.json()["error"] == "INVALID_DATE_RANGE"
+
+
+@pytest.mark.parametrize("route", ROUTES[1:])
+async def test_months_alone_is_200(authenticated_client, route):
+    assert (await authenticated_client.get(f"{BASE}/{route}", params={"months": 3})).status_code == 200
+
+
 async def test_empty_dashboard(authenticated_client):
     body = (await authenticated_client.get(f"{BASE}/dashboard")).json()
     assert body == {

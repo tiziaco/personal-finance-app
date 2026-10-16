@@ -2381,6 +2381,26 @@
               "description": "On or before this day",
               "title": "Date To"
             }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
+            }
           }
         ],
         "responses": {
@@ -2457,6 +2477,26 @@
               ],
               "description": "On or before this day",
               "title": "Date To"
+            }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
             }
           }
         ],
@@ -2548,6 +2588,26 @@
               ],
               "description": "On or before this day",
               "title": "Date To"
+            }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
             }
           }
         ],
@@ -2667,6 +2727,26 @@
               "description": "On or before this day",
               "title": "Date To"
             }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
+            }
           }
         ],
         "responses": {
@@ -2744,6 +2824,26 @@
               "description": "On or before this day",
               "title": "Date To"
             }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
+            }
           }
         ],
         "responses": {
@@ -2820,6 +2920,26 @@
               ],
               "description": "On or before this day",
               "title": "Date To"
+            }
+          },
+          {
+            "description": "The last N finished months; not with date_from/date_to",
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 120,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The last N finished months; not with date_from/date_to",
+              "title": "Months"
             }
           }
         ],

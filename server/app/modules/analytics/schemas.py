@@ -4,10 +4,12 @@ import datetime as dt
 from decimal import Decimal
 from typing import List, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.modules.analytics.domain.behaviour import Stability
 from app.modules.analytics.domain.merchants import Risk
+from app.modules.analytics.exceptions import InvalidDateRangeError
+from app.modules.transaction import MAX_DATE, MIN_DATE
 
 
 class _Out(BaseModel):
@@ -15,10 +17,27 @@ class _Out(BaseModel):
 
 
 class DateRange(BaseModel):
-    """Inclusive, optional bounds; omitted means all time, MIN_DATE to MAX_DATE."""
+    """Inclusive, optional bounds (omitted means all time), or the last `months` finished months, not both."""
 
     date_from: Optional[dt.date] = None
     date_to: Optional[dt.date] = None
+    months: Optional[int] = None
+
+    @model_validator(mode="after")
+    def _check(self) -> "DateRange":
+        context = {"date_from": str(self.date_from), "date_to": str(self.date_to), "months": self.months}
+        for name in ("date_from", "date_to"):
+            value = getattr(self, name)
+            if value is not None and not MIN_DATE <= value <= MAX_DATE:
+                raise InvalidDateRangeError(f"{name} must be between {MIN_DATE} and {MAX_DATE}", **context)
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise InvalidDateRangeError("date_from is after date_to", **context)
+        if self.months is not None:
+            if not 1 <= self.months <= 120:
+                raise InvalidDateRangeError("months must be between 1 and 120", **context)
+            if self.date_from or self.date_to:
+                raise InvalidDateRangeError("months cannot be combined with date_from or date_to", **context)
+        return self
 
 
 # Dashboard
