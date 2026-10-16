@@ -29,6 +29,7 @@ Links are relative to `docs/`.
 | **4 CSV import** — upload, mapping review and import, each row categorised by the AI labeler; the recurring-detection rule that sets `is_recurring` | complete — [PR #14](https://github.com/tiziaco/personal-finance-app/pull/14) into `template-base`; reaches `main` at Cutover | `feat/csv-import` | [`csv-import.md`](./product/features/csv-import.md), [`categorisation.md`](./product/features/categorisation.md), [`data-model/transaction.md`](./data-model/transaction.md) D6–D9 |
 | **5a Analytics dashboard** — the whole computation library and the home dashboard | complete — [PR #13](https://github.com/tiziaco/personal-finance-app/pull/13) into `template-base`; reaches `main` at Cutover | `feat/analytics-dashboard` | [`analytics.md`](./product/features/analytics.md) |
 | **Fixes before wave 3** — the 401 race after sign-in; `LLMService`'s shared fallback state; the import rejects dates analytics cannot read; fixed income and expense chart colours | complete — [PR #15](https://github.com/tiziaco/personal-finance-app/pull/15) into `template-base`; reaches `main` at Cutover | `fix/pre-wave-3` | [`authentication.md`](./architecture/authentication.md) §2–3, [`web-app.md`](./architecture/web-app.md) §4–5, [`server.md`](./architecture/server.md) (the error table), [`csv-import.md`](./product/features/csv-import.md) |
+| **Analytics figures** — the category-growth fix and every derived figure the `/analytics` page shows, computed by the server | in progress | `feat/analytics-figures` | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **5b Analytics page** — the four `/analytics` views | in progress | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md). No spec yet |
 | **6 Insights** — generation, the `/insights` page and the dashboard callout | in progress | `feat/insights` | [`insights.md`](./product/features/insights.md). No spec yet |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money | in progress | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md). No spec yet |
@@ -46,7 +47,7 @@ here when someone picks it up.
 |---|---|---|
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
 | 2 | 4 CSV import ∥ 5a Analytics dashboard | done — #13, #14 merged into `template-base` |
-| 3 | 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | in progress — launched 16 Oct 2026 |
+| 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | in progress — launched 16 Oct 2026 |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -84,6 +85,11 @@ not wait for 4.
 - **7 wraps only the analytics library, not the stored insights** (product; 16 Oct 2026).
   `conversation` does not import `insights`, so 7 does not wait for 6. A tool that reads
   insights is a follow-up.
+- **Analytics figures is its own step, ahead of 5b's page** (product; 16 Oct 2026). The
+  page computes nothing: every figure it shows comes from the server, and the category
+  growth measure is fixed there (earlier half of the range against the later half, not
+  first month against last). 6 and 7 build on the same module, so one step owns it and
+  merges first; the others merge `template-base` after it.
 
 ### Running a wave in parallel
 
