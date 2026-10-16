@@ -17,16 +17,22 @@ import { InsightTabs } from "./insight-tabs"
 import { InsightsHeader } from "./insights-header"
 
 /**
- * A new or out-of-date set generates once per mount. A ref guards it: a failed
- * run must not loop, and Retry is the user's explicit second attempt.
+ * Each staleness generates once: a set that is new or out of date runs `generate`
+ * a single time, keyed by the stored set's `generated_at`. A failed run leaves
+ * the key unchanged, so it cannot loop; Retry is the user's explicit second
+ * attempt. A set that goes stale again after a success has a new key and runs
+ * once more.
  */
-export function useGenerateOnArrival(needed: boolean, generate: () => void) {
-  const fired = useRef(false)
+export function useGenerateOnArrival(
+  staleKey: string | null,
+  generate: () => void,
+) {
+  const attempted = useRef<string | null>(null)
   useEffect(() => {
-    if (!needed || fired.current) return
-    fired.current = true
+    if (staleKey === null || attempted.current === staleKey) return
+    attempted.current = staleKey
     generate()
-  }, [needed, generate])
+  }, [staleKey, generate])
 }
 
 function CardsSkeleton() {
@@ -53,7 +59,7 @@ export function InsightsView() {
   const { mutate } = generate
   const run = () => mutate()
 
-  useGenerateOnArrival(stale, run)
+  useGenerateOnArrival(stale ? (data?.generated_at ?? "none") : null, run)
 
   if (!data) {
     return (
@@ -94,8 +100,9 @@ export function InsightsView() {
 
   const cards = data.insights ?? []
   const failed = generate.isError
-  // Until the arrival run starts (or after it fails) the stored set is shown as is.
-  const working = generate.isPending || (stale && !failed)
+  // Working means a run is in flight, never merely that the set is stale: a stale
+  // set the page has already tried (and failed) must not look busy.
+  const working = generate.isPending
 
   return (
     <div className="space-y-6">
@@ -113,7 +120,7 @@ export function InsightsView() {
             monthToDateThrough={data.month_to_date_through}
           />
         </div>
-      ) : working ? (
+      ) : working || (stale && !failed) ? (
         <CardsSkeleton />
       ) : failed ? (
         <Card>

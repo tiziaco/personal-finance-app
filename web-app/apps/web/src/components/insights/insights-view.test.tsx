@@ -146,4 +146,46 @@ describe("InsightsView", () => {
       screen.getByText("Nothing stands out this month."),
     ).toBeInTheDocument()
   })
+
+  it("generates again once when the set goes stale after an earlier run settled", () => {
+    const client = new QueryClient()
+    const wrap = () => (
+      <QueryClientProvider client={client}>
+        <InsightsView />
+      </QueryClientProvider>
+    )
+    insights(response("fresh", [CARD]))
+    const { rerender } = render(wrap())
+    expect(mutate).not.toHaveBeenCalled()
+    insights({
+      ...response("stale", [CARD]),
+      generated_at: "2026-10-14T09:30:00Z",
+    })
+    rerender(wrap())
+    rerender(wrap())
+    expect(mutate).toHaveBeenCalledTimes(1)
+    // Not stuck: the run is not pending, so Regenerate is usable.
+    expect(screen.getByRole("button", { name: "Regenerate" })).toBeEnabled()
+  })
+
+  it("does not loop when the run for a later staleness fails", () => {
+    const client = new QueryClient()
+    const wrap = () => (
+      <QueryClientProvider client={client}>
+        <InsightsView />
+      </QueryClientProvider>
+    )
+    insights(response("fresh", [CARD]))
+    const { rerender } = render(wrap())
+    insights(response("stale", [CARD]))
+    generating({ isError: true })
+    rerender(wrap())
+    rerender(wrap())
+    rerender(wrap())
+    expect(mutate).toHaveBeenCalledTimes(1)
+    expect(screen.getByRole("button", { name: "Regenerate" })).toBeEnabled()
+    expect(
+      screen.getByText("Couldn't regenerate insights."),
+    ).toBeInTheDocument()
+  })
 })

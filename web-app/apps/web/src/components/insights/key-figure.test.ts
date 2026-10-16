@@ -37,4 +37,26 @@ describe("formatKeyFigure", () => {
       "4",
     )
   })
+
+  it("decides decimals from the rounded value", () => {
+    expect(
+      formatKeyFigure({ kind: "percent", value: "9.96", qualifier: "" }),
+    ).toBe("+10%")
+    expect(
+      formatKeyFigure({ kind: "percent", value: "-9.96", qualifier: "" }),
+    ).toBe("−10%")
+  })
+
+  it("renders the qualifier alone for a non-numeric percent", () => {
+    expect(
+      formatKeyFigure({
+        kind: "percent",
+        value: "abc",
+        qualifier: "vs August",
+      }),
+    ).toBe("vs August")
+    expect(
+      formatKeyFigure({ kind: "percent", value: "abc", qualifier: "" }),
+    ).toBe("")
+  })
 })
