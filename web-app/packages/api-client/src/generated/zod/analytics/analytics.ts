@@ -270,7 +270,11 @@ export const GetBehaviourResponse = zod
       .describe(
         "Spend on weekdays or on weekends in the period: calendar days, total and spend per day.",
       ),
-    weekend_bias_pct: zod.union([zod.number(), zod.null()]),
+    weekend_bias_pct: zod
+      .union([zod.number(), zod.null()])
+      .describe(
+        "Weekend spend per day against weekday spend per day; null when the period has no weekend or no weekday days, or weekday spend is 0",
+      ),
   })
   .describe(
     "Spending patterns over the period: by weekday, weekday against weekend, seasonality and category stability.",
@@ -382,7 +386,7 @@ export const GetCategoryBreakdownResponse = zod
     previous_date_from: zod
       .union([zod.iso.date(), zod.null()])
       .describe(
-        "The first day of the previous period of the same length; null when it holds no transaction",
+        "The first day of the previous period of the same length; null when it holds no transaction or the data does not reach back over all of it",
       ),
     previous_date_to: zod
       .union([zod.iso.date(), zod.null()])
@@ -540,13 +544,17 @@ export const GetDashboardResponse = zod
               .regex(getDashboardResponseMonthToDateOneExpensesRegExp),
             expenses_change_pct: zod
               .union([zod.number(), zod.null()])
-              .describe("Against previous_expenses; null when it is 0"),
+              .describe(
+                "Against previous_expenses; null when it is 0 or the data starts after the previous month's 1st",
+              ),
             income: zod
               .string()
               .regex(getDashboardResponseMonthToDateOneIncomeRegExp),
             income_change_pct: zod
               .union([zod.number(), zod.null()])
-              .describe("Against previous_income; null when it is 0"),
+              .describe(
+                "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
+              ),
             month: zod.string().describe("YYYY-MM, the current month"),
             previous_expenses: zod
               .string()
@@ -823,7 +831,7 @@ export const GetRecurringResponse = zod
           interval_days: zod
             .union([zod.int(), zod.null()])
             .describe(
-              "Median gap in days between consecutive charges; null with one charge",
+              "Median gap in days between billing days (same-day charges are one bill), read from every flagged charge up to the period's last day, before the period too; null with one billing day",
             ),
           last_charge: zod.iso.date(),
           median_charge: zod
@@ -834,7 +842,7 @@ export const GetRecurringResponse = zod
             .string()
             .regex(getRecurringResponseMerchantsItemMonthlyCostRegExp)
             .describe(
-              "Median charge ÷ the whole months between charges when they are 25 days or more apart, else × 30.436875 ÷ interval_days; with one charge, ÷ the period's months",
+              "The period's median bill ÷ the whole months between bills when they are 25 days or more apart, else × 30.436875 ÷ interval_days; with one bill in all the history, ÷ the period's months (at least 1)",
             ),
           months_charged: zod.int(),
         })
@@ -1010,13 +1018,17 @@ export const GetSpendingResponse = zod
               .regex(getSpendingResponseMonthToDateOneExpensesRegExp),
             expenses_change_pct: zod
               .union([zod.number(), zod.null()])
-              .describe("Against previous_expenses; null when it is 0"),
+              .describe(
+                "Against previous_expenses; null when it is 0 or the data starts after the previous month's 1st",
+              ),
             income: zod
               .string()
               .regex(getSpendingResponseMonthToDateOneIncomeRegExp),
             income_change_pct: zod
               .union([zod.number(), zod.null()])
-              .describe("Against previous_income; null when it is 0"),
+              .describe(
+                "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
+              ),
             month: zod.string().describe("YYYY-MM, the current month"),
             previous_expenses: zod
               .string()

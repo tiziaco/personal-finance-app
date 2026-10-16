@@ -172,16 +172,33 @@ def test_no_previous_period_before_the_data_or_without_rows():
     assert previous_period(september, gap, TODAY) is None  # August is inside the data's months, but empty
 
 
+def test_a_previous_period_clipped_by_the_data_is_none():
+    # Asked for April-June, the data starts in May: two months would be compared with three.
+    rows = [row(f"2026-{m:02d}-05", "-100.00") for m in range(5, 10)]
+    period = resolve_period(rows, TODAY, months=3)
+    assert period is not None
+    assert previous_period(period, rows, TODAY) is None
+
+
+def test_a_previous_period_cut_by_a_late_first_row_is_none():
+    # 36 days back from 15 April ask for 10 March; rule 3 starts March at its first row, the 12th.
+    rows = [row("2026-03-12", "-10.00")] + [row(f"2026-{m:02d}-15", "-100.00") for m in range(4, 10)]
+    period = resolve_period(rows, TODAY, date_from=D(2026, 4, 15), date_to=D(2026, 5, 20))
+    assert period is not None
+    assert previous_period(period, rows, TODAY) is None
+
+
 def test_months_and_the_previous_period_step_across_a_year():
     today = D(2026, 1, 20)
-    rows = [row(day, "-1.00") for day in ("2025-09-03", "2025-10-03", "2025-11-03", "2025-12-03", "2026-01-03")]
+    rows = [row(f"{month}-03", "-1.00") for month in ("2025-07", "2025-08", "2025-09", "2025-10", "2025-11")]
+    rows += [row("2025-12-03", "-1.00"), row("2026-01-03", "-1.00")]
     period = resolve_period(rows, today, months=3)
     assert period is not None
     assert [m.start for m in period.months] == [D(2025, 10, 1), D(2025, 11, 1), D(2025, 12, 1)]
     previous = previous_period(period, rows, today)
     assert previous is not None
-    assert [m.start for m in previous.months] == [D(2025, 9, 1)]
-    assert (previous.first_day, previous.last_day) == (D(2025, 9, 1), D(2025, 9, 30))
+    assert [m.start for m in previous.months] == [D(2025, 7, 1), D(2025, 8, 1), D(2025, 9, 1)]
+    assert (previous.first_day, previous.last_day) == (D(2025, 7, 1), D(2025, 9, 30))
 
 
 def test_calendar_month_is_the_month_as_the_data_sees_it():

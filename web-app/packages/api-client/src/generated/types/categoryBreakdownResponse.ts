@@ -17,7 +17,7 @@ export interface CategoryBreakdownResponse {
   date_from: string | null
   /** Last day of the resolved period; null when empty */
   date_to: string | null
-  /** The first day of the previous period of the same length; null when it holds no transaction */
+  /** The first day of the previous period of the same length; null when it holds no transaction or the data does not reach back over all of it */
   previous_date_from: string | null
   /** The last day of the previous period; null as above */
   previous_date_to: string | null

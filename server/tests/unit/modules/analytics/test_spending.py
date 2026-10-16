@@ -109,15 +109,29 @@ def test_only_this_months_data_is_one_partial_month():
 def test_month_to_date_on_the_31st_clamps_to_a_shorter_month():
     # Review Focus 2.
     today = dt.date(2026, 3, 31)
-    result = summary(rows=[row("2026-02-28", "-10.00"), row("2026-03-31", "-20.00")], today=today)
+    rows = [row("2026-02-01", "-5.00"), row("2026-02-28", "-10.00"), row("2026-03-31", "-20.00")]
+    result = summary(rows=rows, today=today)
     mtd = result.month_to_date
     assert (mtd.month, mtd.through) == ("2026-03", dt.date(2026, 3, 31))
-    assert (mtd.previous_month, mtd.previous_expenses) == ("2026-02", Decimal("10.00"))
-    assert mtd.expenses_change_pct == 100.0
+    assert (mtd.previous_month, mtd.previous_expenses) == ("2026-02", Decimal("15.00"))
+    assert mtd.expenses_change_pct == 33.33
 
 
 def test_month_to_date_is_none_without_a_row_this_month():
     assert summary(rows=ROWS[:-1]).month_to_date is None
+
+
+def test_month_to_date_has_no_change_when_the_month_before_is_partly_before_the_data():
+    # €20 a day from 12 September: 1-16 September holds only five days of it.
+    days = [dt.date(2026, 9, 12) + dt.timedelta(days=i) for i in range(35)]
+    mtd = summary(rows=[row(d.isoformat(), "-20.00") for d in days]).month_to_date
+    assert mtd is not None
+    assert (mtd.previous_month, mtd.previous_expenses, mtd.expenses) == (
+        "2026-09",
+        Decimal("100.00"),
+        Decimal("320.00"),
+    )
+    assert (mtd.income_change_pct, mtd.expenses_change_pct) == (None, None)
 
 
 def test_month_steps_cross_the_year_boundary():

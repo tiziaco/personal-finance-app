@@ -114,7 +114,10 @@ def resolve_period(
 
 
 def previous_period(period: Period, rows: Iterable[R], today: dt.date) -> Optional[Period]:
-    """The span before period: as many months when it is month-aligned, else as many days; None without rows."""
+    """The span before period: as many months when it is month-aligned, else as many days.
+
+    None without rows in it, or when the data cuts it short: a shorter span would not compare like with like.
+    """
     rows = list(rows)
     first, last = period.first_day, period.last_day
     if first.day == 1 and last == month_end(last):
@@ -123,9 +126,9 @@ def previous_period(period: Period, rows: Iterable[R], today: dt.date) -> Option
         date_to = first - ONE_DAY
         date_from = date_to - (last - first)
     previous = resolve_period(rows, today, date_from=date_from, date_to=date_to)
-    if previous is None or not previous.rows(rows):
+    if previous is None or (previous.first_day, previous.last_day) != (date_from, date_to):
         return None
-    return previous
+    return previous if previous.rows(rows) else None
 
 
 def _month(

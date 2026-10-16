@@ -95,6 +95,14 @@ def test_no_previous_period_leaves_the_previous_figures_null():
     assert all(i.previous_total is None and i.change_pct is None for i in result.top_categories)
 
 
+def test_a_previous_period_shorter_than_the_period_leaves_the_previous_figures_null():
+    rows = [row(f"2026-{m:02d}-05", "-100.00", category="groceries") for m in range(5, 10)]
+    result = breakdown(3, rows=rows)  # Jul-Sep; April-June would hold only May and June
+    assert (result.previous_date_from, result.previous_date_to) == (None, None)
+    (groceries,) = result.top_categories
+    assert (groceries.previous_total, groceries.change_pct) == (None, None)
+
+
 def test_the_period_echo_and_total():
     result = breakdown(2)
     assert (result.date_from, result.date_to) == (dt.date(2026, 8, 1), dt.date(2026, 9, 30))

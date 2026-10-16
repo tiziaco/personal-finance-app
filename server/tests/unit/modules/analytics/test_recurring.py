@@ -123,10 +123,31 @@ def test_active_is_measured_from_the_periods_last_day():
     assert gym_result.active is True  # 19 Apr is 45 days after 5 Mar: not more than 1.5 × 30
 
 
-def test_charges_on_one_day_have_no_rhythm_to_divide_by():
-    rows = NETFLIX + [row("2026-09-10", "-60.00", merchant="Club", recurring=True)] * 2
-    club = next(m for m in analyse(rows).merchants if m.merchant == "Club")
-    assert (club.interval_days, club.monthly_cost, club.active) == (0, Decimal("6.67"), True)  # 60 ÷ 9 months
+def test_a_first_charge_this_month_costs_itself():
+    rows = [row("2026-10-02", "-10.00", merchant="Netflix", recurring=True), row("2026-10-02", "-50.00")]
+    result = analyse(rows, months=None)  # the fallback: 1-2 October
+    netflix = result.merchants[0]
+    assert (netflix.interval_days, netflix.monthly_cost) == (None, Decimal("10.00"))  # not 10 ÷ 2/31
+    assert result.monthly_recurring_cost == Decimal("10.00")
+
+
+@pytest.mark.parametrize("months", [1, 3, 6])
+def test_a_yearly_charge_reads_its_rhythm_from_before_the_period(months):
+    rows = NETFLIX + [
+        row("2025-09-05", "-600.00", merchant="Insurance", recurring=True),
+        row("2026-09-05", "-600.00", merchant="Insurance", recurring=True),
+    ]
+    insurance = next(m for m in analyse(rows, months=months).merchants if m.merchant == "Insurance")
+    assert (insurance.charges, insurance.months_charged) == (1, 1)  # scoped to the period
+    assert (insurance.interval_days, insurance.monthly_cost, insurance.active) == (365, Decimal("50.00"), True)
+
+
+def test_charges_on_one_day_are_one_billing_event():
+    rows = monthly(5, "2026-01", "2026-09", "-10.00", "Club") + monthly(5, "2026-01", "2026-09", "-10.00", "Club")
+    club = analyse(rows).merchants[0]
+    assert (club.charges, club.months_charged, club.median_charge) == (18, 9, Decimal("10.00"))
+    assert club.interval_days == 31  # between billing days, not the 0 between the two charges of one day
+    assert club.monthly_cost == Decimal("20.00")
 
 
 def test_rows_outside_the_period_are_ignored():

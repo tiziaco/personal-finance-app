@@ -186,7 +186,7 @@ def behaviour_analysis(rows: Sequence[Row], period: Optional[Period]) -> Behavio
         by_weekday=weekdays,
         weekday=weekday,
         weekend=weekend,
-        weekend_bias_pct=pct_change(unrounded[0], unrounded[1]),
+        weekend_bias_pct=pct_change(unrounded[0], unrounded[1]) if weekday.days and weekend.days else None,
         seasonality=_seasonality(spent, whole),
         stability=tuple(s for s, _ in classified),
         stable_share_pct=share_pct(by_class["stable"], judged),

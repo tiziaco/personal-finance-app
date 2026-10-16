@@ -79,6 +79,14 @@ def test_weekend_bias_uses_unrounded_per_day_spend():
     assert result.weekend_bias_pct == 650.0
 
 
+def test_weekend_bias_is_none_without_weekend_days():
+    rows = [row("2026-10-01", "-10.00"), row("2026-10-02", "-20.00")]  # Thursday and Friday, the month so far
+    result = analyse(rows)
+    assert (result.date_from, result.date_to) == (dt.date(2026, 10, 1), dt.date(2026, 10, 2))
+    assert result.weekend.days == 0
+    assert result.weekend_bias_pct is None
+
+
 def test_seasonality_uses_whole_months_only():
     rows = daily("2026-03-12", "2026-10-03")  # March and October are partial
     result = analyse(rows)

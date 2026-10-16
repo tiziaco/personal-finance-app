@@ -68,8 +68,13 @@ class MonthToDateResponse(_Out):
     previous_month: str = Field(..., description="YYYY-MM")
     previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
     previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
-    income_change_pct: Optional[float] = Field(..., description="Against previous_income; null when it is 0")
-    expenses_change_pct: Optional[float] = Field(..., description="Against previous_expenses; null when it is 0")
+    income_change_pct: Optional[float] = Field(
+        ..., description="Against previous_income; null when it is 0 or the data starts after the previous month's 1st"
+    )
+    expenses_change_pct: Optional[float] = Field(
+        ...,
+        description="Against previous_expenses; null when it is 0 or the data starts after the previous month's 1st",
+    )
 
 
 class DashboardResponse(_Out):
@@ -204,7 +209,9 @@ class CategoryBreakdownResponse(_Out):
     date_from: Optional[dt.date] = Field(..., description="First day of the resolved period; null when empty")
     date_to: Optional[dt.date] = Field(..., description="Last day of the resolved period; null when empty")
     previous_date_from: Optional[dt.date] = Field(
-        ..., description="The first day of the previous period of the same length; null when it holds no transaction"
+        ...,
+        description="The first day of the previous period of the same length; null when it holds no transaction "
+        "or the data does not reach back over all of it",
     )
     previous_date_to: Optional[dt.date] = Field(..., description="The last day of the previous period; null as above")
     total_expenses: Decimal
@@ -260,13 +267,16 @@ class RecurringMerchantResponse(_Out):
     months_charged: int
     median_charge: Decimal
     interval_days: Optional[int] = Field(
-        ..., description="Median gap in days between consecutive charges; null with one charge"
+        ...,
+        description="Median gap in days between billing days (same-day charges are one bill), read from every "
+        "flagged charge up to the period's last day, before the period too; null with one billing day",
     )
     monthly_cost: Decimal = Field(
         ...,
         description=(
-            "Median charge ÷ the whole months between charges when they are 25 days or more apart, "
-            "else × 30.436875 ÷ interval_days; with one charge, ÷ the period's months"
+            "The period's median bill ÷ the whole months between bills when they are 25 days or more apart, "
+            "else × 30.436875 ÷ interval_days; with one bill in all the history, ÷ the period's months "
+            "(at least 1)"
         ),
     )
     last_charge: dt.date
@@ -351,7 +361,11 @@ class BehaviourResponse(_Out):
     by_weekday: List[WeekdaySpendResponse]
     weekday: WeekPartResponse
     weekend: WeekPartResponse
-    weekend_bias_pct: Optional[float]
+    weekend_bias_pct: Optional[float] = Field(
+        ...,
+        description="Weekend spend per day against weekday spend per day; null when the period has no weekend "
+        "or no weekday days, or weekday spend is 0",
+    )
     seasonality: List[MonthOfYearResponse]
     stability: List[CategoryStabilityResponse]
     stable_share_pct: float

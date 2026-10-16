@@ -138,7 +138,10 @@ def monthly_flows(rows: Sequence[Row], months: Sequence[PeriodMonth], *, today: 
 
 
 def month_to_date(rows: Sequence[Row], today: dt.date) -> Optional[MonthToDate]:
-    """Today's month up to its last row against the month before over the same day numbers; None without a row."""
+    """Today's month up to its last row against the month before over the same day numbers; None without a row.
+
+    The changes are None when the data starts after the month before's first day: its figures cover fewer days.
+    """
     current = month_start(today)
     days = _between(rows, current, month_end(current))
     if not days:
@@ -149,6 +152,8 @@ def month_to_date(rows: Sequence[Row], today: dt.date) -> Optional[MonthToDate]:
     before = _between(rows, previous, previous_through)
     income, out = total_amount(incomes(days)), total_spend(expenses(days))
     previous_income, previous_out = total_amount(incomes(before)), total_spend(expenses(before))
+    seen = calendar_month(previous, rows, today)
+    comparable = seen is not None and seen.first_day == previous
     return MonthToDate(
         month=month_key(current),
         through=through,
@@ -157,8 +162,8 @@ def month_to_date(rows: Sequence[Row], today: dt.date) -> Optional[MonthToDate]:
         previous_month=month_key(previous),
         previous_income=previous_income,
         previous_expenses=previous_out,
-        income_change_pct=pct_change(previous_income, income),
-        expenses_change_pct=pct_change(previous_out, out),
+        income_change_pct=pct_change(previous_income, income) if comparable else None,
+        expenses_change_pct=pct_change(previous_out, out) if comparable else None,
     )
 
 

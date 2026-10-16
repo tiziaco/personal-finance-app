@@ -280,6 +280,7 @@
                 "type": "null"
               }
             ],
+            "description": "Weekend spend per day against weekday spend per day; null when the period has no weekend or no weekday days, or weekday spend is 0",
             "title": "Weekend Bias Pct"
           }
         },
@@ -401,7 +402,7 @@
                 "type": "null"
               }
             ],
-            "description": "The first day of the previous period of the same length; null when it holds no transaction",
+            "description": "The first day of the previous period of the same length; null when it holds no transaction or the data does not reach back over all of it",
             "title": "Previous Date From"
           },
           "previous_date_to": {
@@ -1756,7 +1757,7 @@
                 "type": "null"
               }
             ],
-            "description": "Against previous_expenses; null when it is 0",
+            "description": "Against previous_expenses; null when it is 0 or the data starts after the previous month's 1st",
             "title": "Expenses Change Pct"
           },
           "income": {
@@ -1773,7 +1774,7 @@
                 "type": "null"
               }
             ],
-            "description": "Against previous_income; null when it is 0",
+            "description": "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
             "title": "Income Change Pct"
           },
           "month": {
@@ -1926,7 +1927,7 @@
                 "type": "null"
               }
             ],
-            "description": "Median gap in days between consecutive charges; null with one charge",
+            "description": "Median gap in days between billing days (same-day charges are one bill), read from every flagged charge up to the period's last day, before the period too; null with one billing day",
             "title": "Interval Days"
           },
           "last_charge": {
@@ -1944,7 +1945,7 @@
             "type": "string"
           },
           "monthly_cost": {
-            "description": "Median charge \u00f7 the whole months between charges when they are 25 days or more apart, else \u00d7 30.436875 \u00f7 interval_days; with one charge, \u00f7 the period's months",
+            "description": "The period's median bill \u00f7 the whole months between bills when they are 25 days or more apart, else \u00d7 30.436875 \u00f7 interval_days; with one bill in all the history, \u00f7 the period's months (at least 1)",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Monthly Cost",
             "type": "string"

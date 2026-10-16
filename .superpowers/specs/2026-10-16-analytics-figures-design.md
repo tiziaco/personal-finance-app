@@ -140,7 +140,7 @@ New and changed fields:
 
 - Response gains `date_from`, `date_to`, `previous_date_from`, `previous_date_to`. The **previous period** is
   the same length immediately before: N months for `months=N`, the same number of days for explicit bounds;
-  null when no usable row falls in it.
+  null when no usable row falls in it, or when the data cuts it short (it would be shorter than the period).
 - Each item of `top_categories` and `by_frequency` gains `previous_total` (that category's spend in the previous
   period; null when there is no previous period) and `change_pct` (null when `previous_total` is 0 or null).
   Categories present only in the previous period are not listed here.
@@ -165,15 +165,20 @@ thresholds; rent alone makes anyone "high"); `top_5_share_pct`, `top_10_share_pc
 
 Gains `months` and the echo. Per merchant (still keyed by the stored flag, grouped by merchant key):
 
-- `interval_days` (**new**, nullable): the median gap in days between consecutive charges, rounded half-up to whole
-  days; null with one charge.
-- `monthly_cost` (**changed**), by billing rhythm: with `interval_days` ≥ 25, median charge ÷ `cadence`, where
-  `cadence` = max(1, round(`interval_days` ÷ 30.436875)) months (€10 every 28–31 days is €10.00; €600 every 365
-  days is €50.00); below 25 days, median charge × 30.436875 ÷ `interval_days`; with one charge, the charge ÷ the
-  period's month weights. A median gap of 0 (same-day charges) uses the single-charge formula, and the merchant
-  counts as active.
+- **Rhythm from history** (final review): a merchant is listed when it has a flagged charge in the period, and
+  `charges`, `months_charged` and `median_charge` count the period's charges; its rhythm is read from every
+  flagged charge up to the period's last day, before the period too, so `months=1` still sees a yearly bill's
+  year. Same-day charges are summed into one **bill** first.
+- `interval_days` (**new**, nullable): the median gap in days between consecutive billing days, rounded half-up
+  to whole days; null with one billing day in all that history.
+- `monthly_cost` (**changed**), by billing rhythm, on the median bill in the period: with `interval_days` ≥ 25,
+  median bill ÷ `cadence`, where `cadence` = max(1, round(`interval_days` ÷ 30.436875)) months (€10 every
+  28–31 days is €10.00; €600 every 365 days is €50.00; two €10 charges on one day each month is €20.00); below
+  25 days, median bill × 30.436875 ÷ `interval_days`; with one bill in all the history, the bill ÷
+  max(1, the period's month weights) — a first €10 charge this month costs €10.00, not €10 ÷ 2/31.
 - `last_charge` (**new**) and `active` (**new**): active unless the period's last day is more than
-  1.5 × `interval_days` after `last_charge`. A single charge is active.
+  1.5 × `interval_days` after `last_charge`, the latest flagged charge up to the period's last day. A single
+  bill is active.
 - `monthly_recurring_cost` (**changed**) sums active merchants only.
 
 `hidden_subscriptions` keeps its item shape, with a **new rule**: an unflagged merchant charged in at least 3
@@ -186,7 +191,8 @@ Gains `months` and the echo.
 
 - `by_weekday[]` gains `days` (occurrences of that weekday in the period) and `per_day` (total ÷ days). `total`,
   `count`, `average` (per transaction) and `share_pct` stay.
-- `weekend_bias_pct` (**fixed**): computed from unrounded per-day spend.
+- `weekend_bias_pct` (**fixed**): computed from unrounded per-day spend; null when the period has no weekend
+  (or no weekday) days.
 - `seasonality[]` (**changed**): built from whole months only. Each item gains `years` (how many whole months of
   that calendar month the period holds). `average_spend` is their mean; `index` is that ÷ the mean of all whole
   months × 100; null when `years` is 0 or the mean is 0. Shown with less than a year of data; `years` lets the
@@ -219,7 +225,8 @@ Gains `months` and the echo.
 `{month, through, income, expenses, previous_month, previous_income, previous_expenses, income_change_pct,
 expenses_change_pct}` — the current month from day 1 to `through` (the last usable row's day in it), against
 the previous month's days 1 to the same day number (clamped to that month's length). Each pct is null when its
-previous figure is 0.
+previous figure is 0, and both are null when the previous month is outside the data or the data starts after its
+1st (its figures would cover fewer days); the previous figures are still given.
 
 ### 4.8 `GET /analytics/dashboard`
 

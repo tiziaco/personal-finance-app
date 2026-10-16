@@ -28,5 +28,6 @@ export interface BehaviourResponse {
   volatile_share_pct: number
   weekday: WeekPartResponse
   weekend: WeekPartResponse
+  /** Weekend spend per day against weekday spend per day; null when the period has no weekend or no weekday days, or weekday spend is 0 */
   weekend_bias_pct: number | null
 }

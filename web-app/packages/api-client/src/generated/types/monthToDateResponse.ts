@@ -12,11 +12,11 @@
 export interface MonthToDateResponse {
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   expenses: string
-  /** Against previous_expenses; null when it is 0 */
+  /** Against previous_expenses; null when it is 0 or the data starts after the previous month's 1st */
   expenses_change_pct: number | null
   /** @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$ */
   income: string
-  /** Against previous_income; null when it is 0 */
+  /** Against previous_income; null when it is 0 or the data starts after the previous month's 1st */
   income_change_pct: number | null
   /** YYYY-MM, the current month */
   month: string

@@ -5,7 +5,7 @@ subscriptions are candidates for the user to flag, never counted as recurring.
 """
 
 import datetime as dt
-from collections.abc import Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from decimal import ROUND_HALF_UP, Decimal
 from itertools import pairwise
@@ -85,17 +85,24 @@ def _half_up(value: Decimal) -> int:
     return int(value.quantize(Decimal(1), rounding=ROUND_HALF_UP))
 
 
-def _interval_days(group: Sequence[Row]) -> Optional[int]:
-    """The median gap in days between consecutive charges, half-up; None with one charge."""
-    days = sorted(r.date for r in group)
-    gaps = [Decimal((later - earlier).days) for earlier, later in pairwise(days)]
+def _interval_days(days: Iterable[dt.date]) -> Optional[int]:
+    """The median gap in days between consecutive days, half-up; None with one day."""
+    gaps = [Decimal((later - earlier).days) for earlier, later in pairwise(sorted(days))]
     return _half_up(median(gaps)) if gaps else None
 
 
+def _billing_events(group: Sequence[Row]) -> dict[dt.date, Decimal]:
+    """The charges of one merchant summed per day: two charges on one day are one bill."""
+    events: dict[dt.date, Decimal] = {}
+    for r in group:
+        events[r.date] = events.get(r.date, ZERO) + spend(r)
+    return events
+
+
 def _monthly_cost(charge: Decimal, interval: Optional[int], period: Period) -> Decimal:
-    """The charge spread over its billing rhythm: whole months from 25 days up, else days; one charge, the period."""
-    if not interval:  # one charge, or every charge on one day: no rhythm to read
-        return money(charge / period.weight())
+    """The bill spread over its rhythm: whole months from 25 days up, else days; a first bill, the period."""
+    if interval is None:  # one bill in all the history: no rhythm to read yet
+        return money(charge / max(Decimal(1), period.weight()))
     if interval >= MONTHLY_GAP_DAYS:
         cadence = max(1, _half_up(Decimal(interval) / AVERAGE_MONTH_DAYS))
         return money(charge / cadence)
@@ -104,7 +111,7 @@ def _monthly_cost(charge: Decimal, interval: Optional[int], period: Period) -> D
 
 def _active(last_charge: dt.date, interval: Optional[int], period: Period) -> bool:
     """Active unless the period ends more than ACTIVE_GAP_FACTOR intervals after the last charge."""
-    if not interval:
+    if interval is None:
         return True
     return (period.last_day - last_charge).days <= ACTIVE_GAP_FACTOR * interval
 
@@ -113,7 +120,7 @@ def _looks_like_a_subscription(group: Sequence[Row]) -> bool:
     """Charged in HIDDEN_MIN_MONTHS months, about monthly, a steady amount of at most HIDDEN_MAX_CHARGE."""
     if _months(group) < HIDDEN_MIN_MONTHS:
         return False
-    interval = _interval_days(group)
+    interval = _interval_days(r.date for r in group)
     charge = median(spend(r) for r in group)
     low, high = HIDDEN_GAP_DAYS
     return (
@@ -125,28 +132,35 @@ def _looks_like_a_subscription(group: Sequence[Row]) -> bool:
 
 
 def recurring_analysis(rows: Sequence[Row], period: Optional[Period]) -> RecurringAnalysis:
-    """Flagged spend and share over the period; per flagged merchant, its rhythm and cost; hidden candidates."""
+    """Flagged spend and share over the period; per flagged merchant, its rhythm and cost; hidden candidates.
+
+    A merchant is listed for a flagged charge in the period; its rhythm is read from every flagged charge up to
+    the period's last day, so a yearly bill keeps its year when the period is a month.
+    """
     if period is None:
         return RecurringAnalysis(None, None, ZERO, ZERO, 0, 0.0, 0.0, ZERO, (), ())
     spent = expenses(period.rows(rows))
     flagged = [r for r in spent if r.is_recurring]
     ever_flagged = {r.merchant_key for r in expenses(rows) if r.is_recurring}  # all history, not only the period
     unflagged = [r for r in spent if r.merchant_key not in ever_flagged]
+    history = group_by(
+        (r for r in expenses(rows) if r.is_recurring and r.date <= period.last_day), lambda r: r.merchant_key
+    )
     names = display_names(spent)
 
     merchants: list[RecurringMerchant] = []
     for key, group in group_by(flagged, lambda r: r.merchant_key).items():
-        charge = money(median(spend(r) for r in group))
-        interval = _interval_days(group)
-        last_charge = max(r.date for r in group)
+        interval = _interval_days(_billing_events(history[key]))
+        bill = median(_billing_events(group).values())
+        last_charge = max(r.date for r in history[key])
         merchants.append(
             RecurringMerchant(
                 merchant=names[key],
                 charges=len(group),
                 months_charged=_months(group),
-                median_charge=charge,
+                median_charge=money(median(spend(r) for r in group)),
                 interval_days=interval,
-                monthly_cost=_monthly_cost(charge, interval, period),
+                monthly_cost=_monthly_cost(bill, interval, period),
                 last_charge=last_charge,
                 active=_active(last_charge, interval, period),
             )
