@@ -1,6 +1,11 @@
 "use client"
 
-import { ArrowLeftRightIcon, HomeIcon, MessageSquareIcon } from "lucide-react"
+import {
+  ArrowLeftRightIcon,
+  ChartColumnIcon,
+  HomeIcon,
+  MessageSquareIcon,
+} from "lucide-react"
 import type { NavItem } from "@app/core/types/nav"
 
 /**
@@ -9,5 +14,6 @@ import type { NavItem } from "@app/core/types/nav"
 export const HUB_NAV: NavItem[] = [
   { title: "Home", url: "/home", icon: HomeIcon },
   { title: "Transactions", url: "/transactions", icon: ArrowLeftRightIcon },
+  { title: "Analytics", url: "/analytics", icon: ChartColumnIcon },
   { title: "Chat", url: "/chat", icon: MessageSquareIcon },
 ]
