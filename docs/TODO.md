@@ -161,10 +161,11 @@ lives (the user row, or the browser).
 
 ## Web — a month picker on the dashboard
 
-The home dashboard shows the latest finished month with data (decided 15 Oct 2026 as the latest month with data;
-reversed on 16 Oct 2026). A picker would let
-the user look back; every analytics route already takes `date_from`/`date_to`, but
-`GET /analytics/dashboard` picks its own month, so it gains a `month` parameter. **Unblocks:**
+The home dashboard shows the latest finished month with data (decided 15 Oct 2026 as the
+latest month with data; reversed on 16 Oct 2026: partial months read as a collapse).
+A picker would let the user look back; every analytics route already takes
+`date_from`/`date_to`, but `GET /analytics/dashboard` picks its own month, so it gains a
+`month` parameter. **Unblocks:**
 looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
 
 ## Server — a merchant the user unflagged can be suggested as a hidden subscription

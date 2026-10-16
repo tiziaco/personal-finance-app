@@ -84,8 +84,9 @@ How they compute, so the numbers can be checked:
   total or count it comes from. Months with no transactions are zero-filled in every series.
 - Periods:
   - A period is whole calendar days over finished months. Without a range, it runs from the
-    first month of data to the latest finished month holding data. A row dated after the
-    current month is outside every period. With a number of months, it is the N months ending
+    first month of data to the latest finished month holding data (or to the month in
+    progress, when no finished month holds any). A row dated after the current month is
+    outside every period. With a number of months, it is the N months ending
     there, no earlier than the first month of data.
   - An explicit start or end is clipped to the months the data covers, and never goes past
     the current month. A range inside those months that holds no transactions is a period of
@@ -100,35 +101,47 @@ How they compute, so the numbers can be checked:
     Monthly averages are totals over the sum of the weights, so whole months divide by N and
     a partial month counts for the part it covers.
   - Month-over-month change, seasonality, stability and the growth halves use whole months
-    only; a change touching a partial month is null. Every monthly series is zero-filled and
-    marks partial months.
+    only; a change touching a partial month is null. The period's first month compares with
+    the month before it, outside the period, when the data reaches there. Every monthly
+    series is zero-filled and marks partial months.
+  - Each month also shows a 3-month rolling average of expenses: that month and the two
+    before it, reaching before the period; null when any of the three is partial or before
+    the data.
   - Month-to-date is the current month up to the last transaction in it, against days 1 to
-    the same day of the previous month; a percent is null when the previous figure is 0.
-    It does not depend on the period.
+    the same day of the previous month. It is absent when the current month has no
+    transaction. A percent is null when the previous figure is 0, and the comparison is blank
+    when the previous month is only partly in the data (the data starts after its 1st); the
+    previous figures are still shown. It does not depend on the period.
 - Money is rounded half-up to the cent. The monthly burn rate is expenses minus income per
   month, so it is negative while the user saves; it is exactly the average monthly net with
   the sign reversed. The savings rate is net over income; null with no income. The latest
-  month's percentages compare it with the period's average as shown, which includes it.
+  month is the period's last whole month (none when it has none); its percentages compare it
+  with the period's average as shown, which includes it.
 - A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
   outside it is left out of every analysis. The CSV import rejects such a row instead of
   saving it; the bounds are `MIN_DATE`/`MAX_DATE` in `transaction/domain/dates.py`.
 - The sign decides; a zero amount is ignored by every sum, count and average.
 - A merchant is its stored merchant key ([`data-model/transaction.md`](../../data-model/transaction.md)
   D7), so `PAYPAL *Spotify` and `Spotify` are one; it is shown under its latest spelling.
-- Recurring is the stored flag, grouped by merchant.
-  - A merchant's billing rhythm is the median gap between its charges, in whole days (half
-    rounded up).
+- Recurring is the stored flag, grouped by merchant. A merchant is listed when it has a
+  flagged charge in the period; its charge count, months and median charge are the period's.
+  - Charges on the same day are summed into one bill. A merchant's billing rhythm is the
+    median gap between its billing days, in whole days (half rounded up), read from every
+    flagged charge up to the period's last day — before the period too, so a one-month
+    period still sees a yearly bill's year.
   - From 25 days up, the cadence rounds to whole months, so 10 charged monthly costs 10.00 a
-    month and 600 charged yearly costs 50.00. Below 25 days, the median charge is scaled to
-    a month: charge × 30.436875 ÷ gap.
-  - A single charge, or charges on the same day, spread the charge over the period's months
-    and count as active.
+    month, two charges of 10 on the same day each month cost 20.00, and 600 charged yearly
+    costs 50.00. Below 25 days, the period's median bill is scaled to a month:
+    bill × 30.436875 ÷ gap.
+  - A merchant with one bill in all its history has no rhythm yet: the bill is spread over
+    the period's months, but never over less than one (a first 10 this month costs 10.00),
+    and it counts as active.
   - A merchant has stopped when more than 1.5 times its gap has passed since its last charge,
     measured at the period's last day. The monthly recurring cost adds up the active
     merchants only.
 - A likely hidden subscription is a merchant never flagged recurring anywhere in the user's
-  history that is charged in at least 3 different months, with a median gap of 25 to 35
-  days, every charge within 10% of the median, and a median of 50 or less. They are ranked
+  history that is charged in at least 3 different months of the period, with a median gap of
+  25 to 35 days, every charge within 10% of the median, and a median of 50 or less. They are ranked
   by median charge × charges per month.
 - Category growth compares the earlier half of the period with the later half, by each
   half's average monthly spend; with an odd number of whole months the middle one is left
@@ -136,7 +149,8 @@ How they compute, so the numbers can be checked:
   ranked by it. A category that falls to zero is -100%; one present only in the later half
   has no percent (it is new). The top five growing and top five declining are listed.
 - Each ranked category also shows its spend in the previous period — the same length
-  immediately before — and the change; both are null when no transaction falls there.
+  immediately before — and the change; both are null when no transaction falls there, or
+  when the data does not reach back over all of it (a shorter span would not compare).
   Categories present only in the previous period are not listed.
 - Stability is the coefficient of variation of a category's monthly totals, over whole months
   from its first month with spend; it needs 3 such months (stable below 0.3, moderate below
@@ -157,7 +171,8 @@ How they compute, so the numbers can be checked:
   Spikes still count recurring expenses.
 - Merchant concentration is the Herfindahl index over all merchants, 0–10000.
 - Weekday and weekend spend are per real calendar day in the period; the weekend bias is
-  computed from unrounded daily spend.
+  computed from unrounded daily spend, and is blank when the period has no weekend days (or
+  no weekdays).
 
 ## 4. Rules and edge cases
 
