@@ -5,8 +5,10 @@ import uuid
 from typing import Any, Optional
 
 from sqlalchemy import delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
+from uuid_utils.compat import uuid7
 
 from app.modules.insights.models import InsightSet
 
@@ -32,35 +34,32 @@ class InsightRepository:
         prompt_version: str,
         insights: list[dict[str, Any]],
     ) -> InsightSet:
-        """Insert the user's set, or overwrite the one they have."""
-        row = await InsightRepository.get(session, user_id)
-        if row is None:
-            row = InsightSet(user_id=user_id, **_fields(locals()))
-            session.add(row)
-        else:
-            for name, value in _fields(locals()).items():
-                setattr(row, name, value)
-        await session.flush()
-        await session.refresh(row)
-        return row
+        """Insert the user's set, or overwrite the one they have.
+
+        One INSERT ... ON CONFLICT, so two concurrent generations both succeed and the later write wins.
+        """
+        now = dt.datetime.now(dt.UTC)
+        values = {
+            "generated_at": generated_at,
+            "reference_month": reference_month,
+            "baseline_months": baseline_months,
+            "month_to_date_through": month_to_date_through,
+            "prompt_version": prompt_version,
+            "insights": insights,
+        }
+        statement = insert(InsightSet).values(id=uuid7(), user_id=user_id, created_at=now, updated_at=now, **values)
+        statement = statement.on_conflict_do_update(
+            index_elements=[InsightSet.user_id], set_={**values, "updated_at": now}
+        )
+        await session.execute(statement)
+        # populate_existing: a row already in the session must show the values just written.
+        refreshed = select(InsightSet).where(InsightSet.user_id == user_id).execution_options(populate_existing=True)
+        return (await session.execute(refreshed)).scalar_one()
 
     @staticmethod
     async def delete_for_user(session: AsyncSession, user_id: uuid.UUID) -> None:
         """Remove the user's set, if any."""
         await session.execute(delete(InsightSet).where(InsightSet.user_id == user_id))
-
-
-def _fields(local_vars: dict[str, Any]) -> dict[str, Any]:
-    """The replaceable columns, picked out of replace()'s locals."""
-    names = (
-        "generated_at",
-        "reference_month",
-        "baseline_months",
-        "month_to_date_through",
-        "prompt_version",
-        "insights",
-    )
-    return {name: local_vars[name] for name in names}
 
 
 insight_repository = InsightRepository()

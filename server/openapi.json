@@ -1339,6 +1339,214 @@
         "title": "ImportResult",
         "type": "object"
       },
+      "InsightLinkResponse": {
+        "description": "Where the card leads.",
+        "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "kind": {
+            "enum": [
+              "recurring",
+              "category",
+              "merchant"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "merchant": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Merchant"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "InsightLinkResponse",
+        "type": "object"
+      },
+      "InsightResponse": {
+        "description": "One insight.",
+        "properties": {
+          "key_figure": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/KeyFigureResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "link": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/InsightLinkResponse"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "narrative": {
+            "title": "Narrative",
+            "type": "string"
+          },
+          "period": {
+            "enum": [
+              "month",
+              "month_to_date"
+            ],
+            "title": "Period",
+            "type": "string"
+          },
+          "section": {
+            "enum": [
+              "spending",
+              "recurring",
+              "savings",
+              "anomalies",
+              "comparisons"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "info",
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ],
+            "title": "Severity",
+            "type": "string"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          }
+        },
+        "required": [
+          "section",
+          "severity",
+          "period",
+          "summary",
+          "narrative"
+        ],
+        "title": "InsightResponse",
+        "type": "object"
+      },
+      "InsightsResponse": {
+        "description": "The user's insights and how current they are.",
+        "properties": {
+          "generated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated At"
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/InsightResponse"
+            },
+            "title": "Insights",
+            "type": "array"
+          },
+          "month_to_date_through": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Month To Date Through"
+          },
+          "reference_month": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "YYYY-MM of the finished month the insights describe",
+            "title": "Reference Month"
+          },
+          "status": {
+            "description": "no_data: nothing to analyse; none: never generated; stale: data changed or the month rolled over since; fresh",
+            "enum": [
+              "no_data",
+              "none",
+              "stale",
+              "fresh"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "InsightsResponse",
+        "type": "object"
+      },
+      "KeyFigureResponse": {
+        "description": "The card's chip: a number the web formats, and a short qualifier.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "amount",
+              "percent",
+              "count"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "qualifier": {
+            "title": "Qualifier",
+            "type": "string"
+          },
+          "value": {
+            "description": "The figure, as a decimal string",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "value",
+          "qualifier"
+        ],
+        "title": "KeyFigureResponse",
+        "type": "object"
+      },
       "LatestMonthResponse": {
         "description": "The period's last whole month against the period's monthly averages, which include it.",
         "properties": {
@@ -3919,6 +4127,60 @@
         "summary": "List all user chat conversations",
         "tags": [
           "conversation"
+        ]
+      }
+    },
+    "/api/v1/insights": {
+      "get": {
+        "description": "The user's latest insights and their status: no_data, none, stale or fresh. Never calls the model.",
+        "operationId": "getInsights",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "The stored insights",
+        "tags": [
+          "insights"
+        ]
+      }
+    },
+    "/api/v1/insights/generate": {
+      "post": {
+        "description": "Writes a new set from the user's figures, replacing the stored one. 503 INSIGHTS_UNAVAILABLE when the model fails, leaving the stored set untouched.",
+        "operationId": "generateInsights",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InsightsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2AuthorizationCodeBearer": []
+          }
+        ],
+        "summary": "Generate insights",
+        "tags": [
+          "insights"
         ]
       }
     },
