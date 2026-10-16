@@ -21,6 +21,7 @@ import {
 import { formatAmount } from "@/components/transactions/format"
 import { formatMonth } from "@/components/dashboard/month"
 import { TONE_FILL } from "./change"
+import { BAR_TOOLTIP, LINE_TOOLTIP } from "./chart-tooltip"
 import { changeTone, formatPct } from "./format"
 import type { TrendsPoint } from "./trends-points"
 
@@ -63,23 +64,17 @@ export function SpendingTrendChart({ points }: { points: TrendsPoint[] }) {
           tickFormatter={(v: number) => compact.format(v)}
         />
         <ChartTooltip
+          {...LINE_TOOLTIP}
           content={({ active, payload }) => (
             <ChartTooltipContent
               active={active}
               payload={payload}
               label={monthLabel(pointOf(payload))}
-              formatter={(value, name) => (
-                <span className="flex w-full justify-between gap-4">
-                  <span className="text-muted-foreground">
-                    {spendingConfig[String(name)]?.label ?? name}
-                  </span>
-                  <span className="font-mono tabular-nums">
-                    {value === null || value === undefined
-                      ? "—"
-                      : formatAmount(String(value))}
-                  </span>
-                </span>
-              )}
+              formatter={(value) =>
+                value === null || value === undefined
+                  ? "—"
+                  : formatAmount(String(value))
+              }
             />
           )}
         />
@@ -131,6 +126,7 @@ export function MonthChangeChart({ points }: { points: TrendsPoint[] }) {
         />
         <ReferenceLine y={0} className="stroke-muted-foreground" />
         <ChartTooltip
+          {...BAR_TOOLTIP}
           content={({ active, payload }) => {
             const point = pointOf(payload)
             if (!active || !point) return null
@@ -182,6 +178,7 @@ export function SavingsRateChart({ points }: { points: TrendsPoint[] }) {
         />
         <ReferenceLine y={0} className="stroke-muted-foreground" />
         <ChartTooltip
+          {...LINE_TOOLTIP}
           content={({ active, payload }) => {
             const point = pointOf(payload)
             if (!active || !point) return null

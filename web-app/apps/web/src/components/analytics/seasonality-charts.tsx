@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@app/ui/chart"
+import { BAR_TOOLTIP } from "./chart-tooltip"
 import type { MonthOfYearPoint, WeekdayPoint } from "./seasonality-points"
 
 const compact = new Intl.NumberFormat(undefined, {
@@ -37,6 +38,7 @@ export function WeekdayChart({ points }: { points: WeekdayPoint[] }) {
           tickFormatter={(v: number) => compact.format(v)}
         />
         <ChartTooltip
+          {...BAR_TOOLTIP}
           content={({ active, payload }) => {
             const p = payload?.[0]?.payload as WeekdayPoint | undefined
             if (!active || !p) return null
@@ -84,6 +86,7 @@ export function MonthOfYearChart({ points }: { points: MonthOfYearPoint[] }) {
           tickFormatter={(v: number) => compact.format(v)}
         />
         <ChartTooltip
+          {...BAR_TOOLTIP}
           content={({ active, payload }) => {
             const p = payload?.[0]?.payload as MonthOfYearPoint | undefined
             if (!active || !p) return null

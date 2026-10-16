@@ -9,6 +9,7 @@ import {
 } from "@app/ui/chart"
 import { formatAmount } from "@/components/transactions/format"
 import { formatMonth } from "@/components/dashboard/month"
+import { BAR_TOOLTIP } from "./chart-tooltip"
 import type { FlowPoint } from "./flow-points"
 
 const config: ChartConfig = {
@@ -53,6 +54,7 @@ export function FlowChart({ points }: { points: FlowPoint[] }) {
             tickFormatter={(v: number) => compact.format(v)}
           />
           <ChartTooltip
+            {...BAR_TOOLTIP}
             content={({ active, payload }) => {
               const point = payload?.[0]?.payload as FlowPoint | undefined
               return (
