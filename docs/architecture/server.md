@@ -40,11 +40,14 @@ server/app/
 │   ├── analytics/            # every calculation over the user's transactions; stores nothing.
 │   │                         #   domain/ holds the pure functions (R9)
 │   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
+│   ├── insights/             # AI-written insights: gathers analytics figures, calls agents/insights,
+│   │                         #   stores one set per user
 │   └── transaction/          # the user's transactions and the category list
 ├── integrations/
 │   ├── clerk/                # client, exceptions, timestamps, webhooks/{verification,schemas} — the provider half
 │   └── llm/                  # a provider adapter, not a domain
-├── agents/                   # base/, shared/, chatbot/, plus messages.py (the Message type), graph.py, factory.py
+├── agents/                   # base/, shared/, chatbot/, the one-call agents (csv_mapping/, transaction_labeler/,
+│                             #   insights/), plus messages.py (the Message type), graph.py, factory.py
 ├── core/                     # config, logging, metrics, limiter, metadata, events.py (§8)
 ├── database/                 # engine, dependencies.py (DbSession, the transaction boundary — §6)
 ├── exceptions/               # the exception hierarchy and the handlers (§7)
@@ -356,12 +359,13 @@ there is no `DbSession`, so an entry point that publishes calls `events.begin()`
 handler that fails is lost ([`../TODO.md`](../TODO.md), **Server — events beyond the
 request**).
 
-**The events as they stand.** Both are inline.
+**The events as they stand.** All are inline.
 
 | Event | Published by | Payload | Subscribers | Why inline |
 | :---- | :---- | :---- | :---- | :---- |
 | `account.USER_SYNCED` | JIT provisioning; the `user.created` webhook handler | `user_id`, `metadata` (Clerk public metadata — merged from the API on JIT, the webhook's own on the webhook path) | none yet — the hook for seeding a new user's data on first sign-up | the seeding it is for runs in the request that provisions the user |
-| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `transaction` — hard-deletes every transaction the user owns; `transaction.imports` — hard-deletes the user's mapping profiles and held upload | the subscriber's identifiers are what `anonymize_user()` destroys |
+| `account.USER_ERASING` | `erase_user`, before `anonymize_user()` | `user_id` | `conversation` — soft-deletes the rows, blanks their names, deletes their checkpoints; `transaction` — hard-deletes every transaction the user owns; `transaction.imports` — hard-deletes the user's mapping profiles and held upload; `insights` — deletes the stored set | the subscriber's identifiers are what `anonymize_user()` destroys |
+| `transaction.TRANSACTIONS_ALL_DELETED` | `delete_all_on_request` (Settings' "delete all transactions"; not erasure, which `USER_ERASING` covers) | `user_id` | `insights` — deletes the stored set | the set quotes the deleted rows and must not outlive them in a half-committed request |
 
 `erase_user` logs `subscriber_count`: zero means the modules were never imported. Memory
 deletion during erasure is a direct call — `agents/` is an adapter, below every module.

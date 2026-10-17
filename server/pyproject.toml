@@ -174,7 +174,7 @@ layers = [
 name = "R6: modules form a DAG — a module imports only those listed below it"
 type = "layers"
 layers = [
-    "app.modules.conversation",
+    "app.modules.conversation | app.modules.insights",
     "app.modules.analytics",  # below conversation: step 7's chat tools call it
     "app.modules.transaction",
     "app.modules.account",
@@ -193,28 +193,60 @@ layers = [
 name = "R1: account reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.account"]
-forbidden_modules = ["app.modules.analytics.*", "app.modules.conversation.*", "app.modules.transaction.*"]
+forbidden_modules = [
+    "app.modules.analytics.*",
+    "app.modules.conversation.*",
+    "app.modules.insights.*",
+    "app.modules.transaction.*",
+]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: analytics reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.analytics"]
-forbidden_modules = ["app.modules.account.*", "app.modules.conversation.*", "app.modules.transaction.*"]
+forbidden_modules = [
+    "app.modules.account.*",
+    "app.modules.conversation.*",
+    "app.modules.insights.*",
+    "app.modules.transaction.*",
+]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: conversation reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.conversation"]
-forbidden_modules = ["app.modules.account.*", "app.modules.analytics.*", "app.modules.transaction.*"]
+forbidden_modules = [
+    "app.modules.account.*",
+    "app.modules.analytics.*",
+    "app.modules.insights.*",
+    "app.modules.transaction.*",
+]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]
 name = "R1: transaction reaches other modules only through their package roots"
 type = "forbidden"
 source_modules = ["app.modules.transaction"]
-forbidden_modules = ["app.modules.account.*", "app.modules.analytics.*", "app.modules.conversation.*"]
+forbidden_modules = [
+    "app.modules.account.*",
+    "app.modules.analytics.*",
+    "app.modules.conversation.*",
+    "app.modules.insights.*",
+]
+allow_indirect_imports = true
+
+[[tool.importlinter.contracts]]
+name = "R1: insights reaches other modules only through their package roots"
+type = "forbidden"
+source_modules = ["app.modules.insights"]
+forbidden_modules = [
+    "app.modules.account.*",
+    "app.modules.analytics.*",
+    "app.modules.conversation.*",
+    "app.modules.transaction.*",
+]
 allow_indirect_imports = true
 
 [[tool.importlinter.contracts]]

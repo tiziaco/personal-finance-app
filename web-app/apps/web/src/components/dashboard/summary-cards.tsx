@@ -55,13 +55,19 @@ function SummaryCard({
 }
 
 /** The four cards for the reference month: two by two on a phone, one row from md up. */
-export function SummaryCards({ dashboard }: { dashboard: DashboardResponse }) {
+export function SummaryCards({
+  dashboard,
+  className,
+}: {
+  dashboard: DashboardResponse
+  className?: string
+}) {
   const month = dashboard.reference_month
     ? formatMonth(dashboard.reference_month)
     : ""
   const netNegative = isExpense(dashboard.net_balance)
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+    <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-4", className)}>
       <SummaryCard
         title="Total Spent"
         value={dashboard.total_spent}

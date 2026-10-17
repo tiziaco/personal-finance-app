@@ -78,8 +78,8 @@ the route. The pool connection sits idle in transaction for that long. Fine at o
 traffic; under concurrent chats it starves other requests of connections. The fix is to
 read what the call needs, release the session before the model call, and write with a
 short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). The import routes already release it
-(`_release_connection` in `transaction/imports/service.py`). **Unblocks:** chat under concurrent load.
+must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insights/generate` already release it
+(`_release_connection` in `transaction/imports/service.py` and `insights/service.py`). **Unblocks:** chat under concurrent load.
 
 ## Server — a transaction added by hand is not held to the date bounds
 
@@ -114,6 +114,16 @@ answered" hint on the service and start unpinned calls there.
   for 3,000 rows × 12 columns). Move them to `run_in_threadpool` if traffic grows.
 - A short DKB export whose preamble lines outnumber its transactions is refused as
   `unnamed_column`, because the most common line width is the preamble's.
+
+## Server — a per-user cap on insight generation
+
+Every `POST /insights/generate` is a paid model call over the user's figures, and opening
+`/insights` on a stale set calls it too. Today only the per-user rate limit of 10 a minute
+guards it — a runaway-click guard, not a budget — and step 6 deliberately set no cooldown or
+daily cap (16 Oct 2026). Before public sign-up, cap generations per user (a daily count, or a
+cooldown when the set is fresh), answered with an error the page can show by the Regenerate
+button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
+[`product/features/insights.md`](./product/features/insights.md) §4–5.
 
 ## Web — tests the suite does not have yet
 

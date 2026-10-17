@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import type { ReactNode } from "react"
 import { getListTransactionsQueryKey } from "@app/api-client/endpoints/transactions"
 import { getGetDashboardQueryKey } from "@app/api-client/endpoints/analytics"
+import { getGetInsightsQueryKey } from "@app/api-client/endpoints/insights"
 import { useInvalidateTransactions } from "./use-invalidate-transactions"
 
 const setup = () => {
@@ -13,8 +14,9 @@ const setup = () => {
   const list = getListTransactionsQueryKey({ limit: 10 })
   const dashboard = getGetDashboardQueryKey()
   const spending = ["/api/v1/analytics/spending", { date_from: "2026-01-01" }]
+  const insights = getGetInsightsQueryKey()
   const unrelated = ["/api/v1/conversation"]
-  for (const key of [list, dashboard, spending, unrelated]) {
+  for (const key of [list, dashboard, spending, insights, unrelated]) {
     client.setQueryData(key, {})
   }
   const wrapper = ({ children }: { children: ReactNode }) => (
@@ -31,11 +33,18 @@ const setup = () => {
     list,
     dashboard,
     spending,
+    insights,
     unrelated,
   }
 }
 
 describe("useInvalidateTransactions", () => {
+  it("a transaction write invalidates the insights query", async () => {
+    const { invalidate, stale, insights } = setup()
+    await act(() => invalidate())
+    expect(stale(insights)).toBe(true)
+  })
+
   it("marks the list and every analytics query stale, and nothing else", async () => {
     const { invalidate, stale, list, dashboard, spending, unrelated } = setup()
     await act(() => invalidate())

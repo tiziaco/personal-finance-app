@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo } from "react"
 import { useQueryClient, type Query } from "@tanstack/react-query"
+import { getGetInsightsQueryKey } from "@app/api-client/endpoints/insights"
 import { getListTransactionsQueryKey } from "@app/api-client/endpoints/transactions"
 
 /**
@@ -16,7 +17,7 @@ const isAnalyticsQuery = (query: Query) => {
 }
 
 /**
- * Refetch every page of the list, and every analytics figure, after a write.
+ * Refetch every page of the list, every analytics figure, and the insights, after a write.
  * The list key without params is a prefix of each page's key.
  */
 export function useInvalidateTransactions() {
@@ -28,14 +29,16 @@ export function useInvalidateTransactions() {
           queryKey: getListTransactionsQueryKey(),
         }),
         queryClient.invalidateQueries({ predicate: isAnalyticsQuery }),
+        // The stored insights turn stale on a write; refetch so the home callout says so.
+        queryClient.invalidateQueries({ queryKey: getGetInsightsQueryKey() }),
       ]),
     [queryClient],
   )
 }
 
 /**
- * Hook-level mutation options that refetch the list and every analytics
- * figure on success. Hook-level
+ * Hook-level mutation options that refetch the list, every analytics figure
+ * and the insights on success. Hook-level
  * callbacks run even after the component unmounts — a per-call
  * `mutate(…, { onSuccess })` is skipped then — and the mutation stays
  * pending while the refetch runs.
