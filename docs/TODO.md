@@ -187,7 +187,7 @@ the rules may be wrong for the user:
 ## Wave 3 cleanup — shared analytics plumbing (roadmap row "Wave 3 cleanup")
 
 Found by the code reviews of 5b (#17) and 6 (#18), and by 5b's browser check. Each crossed
-another step's ownership during the wave, so it waits until #17 and #18 have merged.
+another step's ownership during the wave, so it waited until #17 and #18 had merged.
 
 **Web**
 - Export `useQueryStates` and the number-literal parser from `@app/data-table/url-state`,
