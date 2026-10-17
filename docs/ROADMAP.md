@@ -32,8 +32,8 @@ Links are relative to `docs/`.
 | **Analytics figures** — the category-growth fix and every derived figure the `/analytics` page shows, computed by the server | complete — [PR #16](https://github.com/tiziaco/personal-finance-app/pull/16) into `template-base`; reaches `main` at Cutover | `feat/analytics-figures` | [`analytics.md`](./product/features/analytics.md) §2–3 |
 | **5b Analytics page** — the four `/analytics` views | complete — [PR #17](https://github.com/tiziaco/personal-finance-app/pull/17) into `template-base`; reaches `main` at Cutover | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md) §2 |
 | **6 Insights** — generation, the `/insights` page, the dashboard callout and the home month-to-date card | complete — [PR #18](https://github.com/tiziaco/personal-finance-app/pull/18) into `template-base`; reaches `main` at Cutover | `feat/insights` | [`insights.md`](./product/features/insights.md), [`data-model/insight.md`](./data-model/insight.md), [`transaction.md`](./data-model/transaction.md) D4 (the delete-all event) |
-| **7 Chat finance tools** — the assistant answers questions about the user's own money | in progress | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md). No spec yet |
 | **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place | not started — after #17 and #18 merge | — | [`TODO.md`](./TODO.md) **Wave 3 cleanup** |
+| **7 Chat finance tools** — the assistant answers questions about the user's own money | not started — after Wave 3 cleanup merges | — | [`chat.md`](./product/features/chat.md). No spec yet |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -48,7 +48,9 @@ here when someone picks it up.
 |---|---|---|
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
 | 2 | 4 CSV import ∥ 5a Analytics dashboard | done — #13, #14 merged into `template-base` |
-| 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights ∥ 7 Chat finance tools | in progress — launched 16 Oct 2026 |
+| 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights | in progress — launched 16 Oct 2026; #16, #18 merged |
+| 4 | Wave 3 cleanup | after #17 and #18 merge |
+| 5 | 7 Chat finance tools | after Wave 3 cleanup merges |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -86,6 +88,10 @@ not wait for 4.
 - **7 wraps only the analytics library, not the stored insights** (product; 16 Oct 2026).
   `conversation` does not import `insights`, so 7 does not wait for 6. A tool that reads
   insights is a follow-up.
+- **7 waits for the Wave 3 cleanup** (decision on 17 Oct 2026). It launched with wave 3 but
+  was closed before its spec. The cleanup adds one analytics method that loads a user's
+  history once and returns a typed bundle; 7's tools build on that, rather than on methods
+  that each reload the whole history.
 - **Analytics figures is its own step, ahead of 5b's page** (product; 16 Oct 2026). The
   page computes nothing: every figure it shows comes from the server, and the category
   growth measure is fixed there (earlier half of the range against the later half, not
