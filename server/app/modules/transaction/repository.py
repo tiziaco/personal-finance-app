@@ -266,5 +266,17 @@ class TransactionRepository:
         logger.info("all_user_transactions_deleted", user_id=user_id, count=result.rowcount)
         return result.rowcount
 
+    @staticmethod
+    async def activity_for_user(session: AsyncSession, user_id: uuid.UUID) -> tuple[bool, Optional[datetime]]:
+        """(any row with deleted_at NULL, max updated_at over every row), soft-deleted included."""
+        result = await session.execute(
+            select(
+                func.count(Transaction.id).filter(Transaction.deleted_at.is_(None)),
+                func.max(Transaction.updated_at),
+            ).where(Transaction.user_id == user_id)
+        )
+        active_count, last_changed_at = result.one()
+        return active_count > 0, last_changed_at
+
 
 transaction_repository = TransactionRepository()

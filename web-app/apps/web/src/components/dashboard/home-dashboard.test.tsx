@@ -23,6 +23,12 @@ vi.mock("@app/auth", () => ({ useAppAuth: vi.fn() }))
 vi.mock("./category-chart", () => ({
   CategoryChart: () => <div>category chart</div>,
 }))
+vi.mock("./insights-callout", () => ({
+  InsightsCallout: () => <div>insights callout</div>,
+}))
+vi.mock("./month-to-date-card", () => ({
+  MonthToDateCard: () => <div>month to date card</div>,
+}))
 vi.mock("./trend-chart", () => ({ TrendChart: () => <div>trend chart</div> }))
 
 const dashboardRefetch = vi.fn()
@@ -104,11 +110,46 @@ describe("HomeDashboard", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("category chart")).toBeInTheDocument()
     expect(screen.getByText("trend chart")).toBeInTheDocument()
+    expect(screen.getByText("insights callout")).toBeInTheDocument()
     expect(screen.getAllByText("REWE").length).toBeGreaterThan(0)
     expect(screen.getByRole("link", { name: "View all" })).toHaveAttribute(
       "href",
       "/transactions",
     )
+  })
+
+  it("home renders the card beside the summary when month_to_date is present", () => {
+    dashboard({ data: { ...DATA, month_to_date: { month: "2026-10" } } })
+    render(<HomeDashboard />)
+    expect(screen.getByText("month to date card")).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
+  })
+
+  it("a first month in progress shows the four cards alone, not the month twice", () => {
+    dashboard({
+      data: {
+        ...DATA,
+        reference_month: "2026-10",
+        reference_partial: true,
+        month_to_date: { month: "2026-10" },
+      },
+    })
+    render(<HomeDashboard />)
+    expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
+  })
+
+  it("home renders the four cards alone when it is null", () => {
+    dashboard({ data: { ...DATA, month_to_date: null } })
+    render(<HomeDashboard />)
+    expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "Total Spent" }),
+    ).toBeInTheDocument()
   })
 
   it("shows the empty state, linking to /transactions, for a user with no data", () => {
@@ -121,6 +162,7 @@ describe("HomeDashboard", () => {
     expect(
       screen.queryByRole("group", { name: "Total Spent" }),
     ).not.toBeInTheDocument()
+    expect(screen.queryByText("insights callout")).not.toBeInTheDocument()
     expect(screen.queryByText("Recent transactions")).not.toBeInTheDocument()
   })
 

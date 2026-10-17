@@ -1,7 +1,7 @@
 # Data model
 
 **Status:** draft — each area's doc carries its own status · **Owner:** Tiziano ·
-**Last updated:** 15 Oct 2026
+**Last updated:** 16 Oct 2026
 **Scope:** what the platform stores, one doc per server module, and the conventions every
 table follows. How a feature *behaves* is in [`../product/features/`](../product/features/).
 
@@ -13,6 +13,7 @@ table follows. How a feature *behaves* is in [`../product/features/`](../product
 |---|---|---|---|---|
 | [`account.md`](./account.md) | [`account`](../product/features/account.md) | `account` | `"user"` | built |
 | [`conversation.md`](./conversation.md) | [`chat`](../product/features/chat.md) | `conversation` | `conversation` | built |
+| [`insight.md`](./insight.md) | [`insights`](../product/features/insights.md) | `insights` | `insight_set` | built |
 | [`transaction.md`](./transaction.md) | [`transactions`](../product/features/transactions.md), [`categorisation`](../product/features/categorisation.md), [`csv-import`](../product/features/csv-import.md) | `transaction` | `transaction`, `csv_mapping_profile`, `csv_upload` | built |
 
 **A feature doc is named for the product area** (`transactions.md`), **a data-model doc for

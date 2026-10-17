@@ -76,6 +76,7 @@ describe("AnalyticsPage", () => {
       "Home",
       "Transactions",
       "Analytics",
+      "Insights",
       "Chat",
     ])
   })
