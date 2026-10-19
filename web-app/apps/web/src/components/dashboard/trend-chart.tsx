@@ -9,6 +9,12 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@app/ui/chart"
+import {
+  GRID,
+  MARGIN,
+  MONEY_Y_AXIS,
+  X_AXIS,
+} from "@/components/analytics/chart-parts"
 import { formatMonth } from "./month"
 import { toTrendPoints, type TrendPoint } from "./trend-points"
 
@@ -16,11 +22,6 @@ const config: ChartConfig = {
   income: { label: "Income", color: "var(--chart-income)" },
   expenses: { label: "Expenses", color: "var(--chart-expense)" },
 }
-
-const compact = new Intl.NumberFormat(undefined, {
-  notation: "compact",
-  maximumFractionDigits: 1,
-})
 
 /** Income and expenses over the six months to the reference month. */
 export function TrendChart({ points }: { points: TrendPointResponse[] }) {
@@ -44,20 +45,11 @@ export function TrendChart({ points }: { points: TrendPointResponse[] }) {
       </CardHeader>
       <CardContent>
         <ChartContainer config={config} className="aspect-[2/1] w-full">
-          <LineChart data={data} margin={{ left: 4, right: 8, top: 8 }}>
-            <CartesianGrid vertical={false} strokeDasharray="3 3" />
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-            />
-            <YAxis
-              tickLine={false}
-              axisLine={false}
-              width={48}
-              tickFormatter={(v: number) => compact.format(v)}
-            />
+          <LineChart data={data} margin={MARGIN}>
+            <CartesianGrid {...GRID} />
+            <XAxis {...X_AXIS} />
+            <YAxis {...MONEY_Y_AXIS} />
+            {/* No LINE_TOOLTIP: the home chart keeps recharts' default cursor. */}
             <ChartTooltip
               content={({ active, payload }) => {
                 // payload[i].payload is the hovered row: show its exact text, not the plotted float.
