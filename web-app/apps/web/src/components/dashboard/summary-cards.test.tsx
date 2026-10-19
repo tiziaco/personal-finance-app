@@ -30,11 +30,11 @@ const card = (title: string) => screen.getByRole("group", { name: title })
 describe("SummaryCards", () => {
   it("shows each figure with its subtitle", () => {
     render(<SummaryCards dashboard={dashboard()} />)
-    expect(card("Total Spent")).toHaveTextContent(formatAmount("1395.00"))
-    expect(card("Total Spent")).toHaveTextContent(formatMonth("2026-09"))
-    expect(card("Recurring Costs")).toHaveTextContent("2 recurring payments")
-    expect(card("Net Balance")).toHaveTextContent(formatSignedAmount("705.00"))
-    expect(card("Average Cashflow")).toHaveTextContent("average of 3 months")
+    expect(card("Total spent")).toHaveTextContent(formatAmount("1395.00"))
+    expect(card("Total spent")).toHaveTextContent(formatMonth("2026-09"))
+    expect(card("Recurring costs")).toHaveTextContent("2 recurring payments")
+    expect(card("Net balance")).toHaveTextContent(formatSignedAmount("705.00"))
+    expect(card("Average cashflow")).toHaveTextContent("average of 3 months")
   })
 
   it("uses the singular for one", () => {
@@ -43,9 +43,9 @@ describe("SummaryCards", () => {
         dashboard={dashboard({ recurring_count: 1, cashflow_months: 1 })}
       />,
     )
-    expect(card("Recurring Costs")).toHaveTextContent("1 recurring payment")
-    expect(card("Recurring Costs")).not.toHaveTextContent("payments")
-    expect(card("Average Cashflow")).toHaveTextContent("average of 1 month")
+    expect(card("Recurring costs")).toHaveTextContent("1 recurring payment")
+    expect(card("Recurring costs")).not.toHaveTextContent("payments")
+    expect(card("Average cashflow")).toHaveTextContent("average of 1 month")
   })
 
   it("signs a net and cashflow, red when negative", () => {

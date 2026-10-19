@@ -33,7 +33,7 @@ function setup(
 }
 
 describe("AnalyticsPage", () => {
-  it("opens By Category by default", () => {
+  it("opens By category by default", () => {
     setup("")
     expect(
       screen.getByRole("heading", { level: 1, name: "Analytics" }),

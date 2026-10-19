@@ -75,26 +75,26 @@ export function SummaryCards({
   return (
     <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-4", className)}>
       <SummaryCard
-        title="Total Spent"
+        title="Total spent"
         value={dashboard.total_spent}
         subtitle={month}
         icon={CreditCard}
       />
       <SummaryCard
-        title="Recurring Costs"
+        title="Recurring costs"
         value={dashboard.recurring_spent}
         subtitle={plural(dashboard.recurring_count, "recurring payment")}
         icon={RefreshCw}
       />
       <SummaryCard
-        title="Net Balance"
+        title="Net balance"
         value={dashboard.net_balance}
         subtitle={month}
         icon={netNegative ? TrendingDown : TrendingUp}
         signed
       />
       <SummaryCard
-        title="Average Cashflow"
+        title="Average cashflow"
         value={dashboard.average_cashflow}
         subtitle={`average of ${plural(dashboard.cashflow_months, "month")}`}
         icon={PiggyBank}

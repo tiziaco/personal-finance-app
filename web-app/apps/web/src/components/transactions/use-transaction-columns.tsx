@@ -91,7 +91,7 @@ export function useTransactionColumns(
             <span
               className={
                 isLowConfidence(c)
-                  ? "text-amber-600 dark:text-amber-400"
+                  ? "text-(--warning-text)"
                   : "text-muted-foreground"
               }
             >

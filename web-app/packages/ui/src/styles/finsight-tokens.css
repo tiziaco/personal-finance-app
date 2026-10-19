@@ -58,6 +58,8 @@
   --logo-dot: var(--navy-700);
   --positive: var(--income-500);
   --negative: var(--expense-500);
+  /* Warning text on a surface: the design system's warning badge foreground. */
+  --warning-text: var(--gold-700);
 
   /* Charts */
   --chart-1: #1c2447;
@@ -99,6 +101,7 @@
   --logo-dot: #1c2447;
   --positive: #3cc594;
   --negative: #f2766e;
+  --warning-text: var(--gold-500);
 
   --chart-1: #8b97d1;
   --chart-2: #f2b53e;
