@@ -159,6 +159,7 @@ class TransactionRepository:
                 Transaction.amount,
                 Transaction.category,
                 Transaction.is_recurring,
+                Transaction.recurring_source,
             )
             .where(*conditions)
             .order_by(Transaction.date, Transaction.created_at, Transaction.id)

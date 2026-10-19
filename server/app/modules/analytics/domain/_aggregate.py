@@ -35,6 +35,11 @@ class Row(Protocol):
     @property
     def is_recurring(self) -> bool: ...
 
+    @property
+    def recurring_source(self) -> str:
+        """Who set is_recurring: the user's own choice, or the detector (data-model/transaction.md, D6)."""
+        ...
+
 
 R = TypeVar("R", bound=Row)
 K = TypeVar("K", bound=Hashable)
