@@ -63,7 +63,7 @@ export function ServerStatusIndicator({
         <div
           className={cn("size-2 rounded-full transition-colors", statusColor)}
         />
-        {status?.status === "healthy" && (
+        {!error && status?.status === "healthy" && (
           <div
             className={cn(
               "absolute inset-0 size-2 rounded-full animate-ping",
