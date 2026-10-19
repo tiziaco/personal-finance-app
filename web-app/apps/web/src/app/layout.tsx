@@ -13,12 +13,25 @@ const onest = Onest({
   variable: "--font-sans",
 })
 
+// The tab icon is app/icon.svg, the Finsight app tile.
 export const metadata: Metadata = {
-  title: "Personal Finance",
+  title: "Finsight",
   description:
-    "Personal Finance — track your spending, understand where it goes, and save more.",
-  icons: {
-    icon: [{ url: "/icons/favicon.ico", sizes: "any", type: "image/x-icon" }],
+    "Finsight shows where your money goes, month by month, so you can decide what to change.",
+}
+
+// Clerk's sign-in and sign-up cards in the Finsight tokens; they follow the theme.
+const CLERK_APPEARANCE = {
+  variables: {
+    colorPrimary: "var(--primary)",
+    colorText: "var(--foreground)",
+    colorTextSecondary: "var(--muted-foreground)",
+    colorBackground: "var(--card)",
+    colorInputBackground: "var(--card)",
+    colorInputText: "var(--foreground)",
+    colorDanger: "var(--negative)",
+    fontFamily: "var(--font-sans)",
+    borderRadius: "0.75rem",
   },
 }
 
@@ -28,7 +41,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <ClerkProvider>
+    <ClerkProvider appearance={CLERK_APPEARANCE}>
       <html lang="en" suppressHydrationWarning className={onest.variable}>
         <body className="antialiased min-h-screen bg-background">
           <AuthProvider signOutUrl="/sign-in">

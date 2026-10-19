@@ -1,9 +1,10 @@
 import { SignUp } from "@clerk/nextjs"
+import { AuthLockup } from "@/components/layout/auth-lockup"
 
 export default function SignUpPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center">
+    <AuthLockup>
       <SignUp />
-    </div>
+    </AuthLockup>
   )
 }

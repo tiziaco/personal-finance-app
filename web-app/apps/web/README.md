@@ -1,6 +1,6 @@
 # Web
 
-The Personal Finance app — what a signed-in person uses to track their money. Finance
+The Finsight app — what a signed-in person uses to track their money. Finance
 screens are not built yet.
 
 Runs on **http://localhost:3000** in the main checkout; `make dev-web` from the repo

@@ -1,6 +1,6 @@
-# Personal Finance — Monorepo Guide
+# Finsight — Monorepo Guide
 
-Personal Finance is a B2C app for tracking and understanding one person's money: a Next.js
+Finsight (this repo: `personal-finance-app`) is a B2C app for tracking and understanding one person's money: a Next.js
 app (`web-app/apps/web`) backed by a FastAPI server. The user is the tenant — data is keyed
 by `user_id`; there are no organisations and no roles.
 
