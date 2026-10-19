@@ -30,7 +30,7 @@ class AnalyticsHistory:
     """One user's usable rows and today, loaded once; every analysis over any window, in memory.
 
     Every row is held, not only a period's: months=N, the month before the period and the rolling
-    average need rows outside it (spec §3.4).
+    average need rows outside it (the period rules in `docs/product/features/analytics.md`).
     """
 
     rows: tuple[AnalysisRow, ...]

@@ -52,6 +52,8 @@ async def test_reference_month_is_the_last_finished_month(db_session, test_user,
     assert "categories_month_to_date" in gathered.figures
     assert "categories_month_to_date_previous" in gathered.figures
     assert gathered.figures["month_to_date"]["through"] == "2026-10-12"
+    previous = gathered.figures["categories_month_to_date_previous"]
+    assert (previous["date_from"], previous["date_to"]) == ("2026-09-01", "2026-09-12")
     assert "seasonality" not in gathered.figures["behaviour"]
     assert ("food_groceries", "Food & Groceries") in gathered.categories
 
@@ -120,6 +122,11 @@ async def test_first_month_only_is_partial(db_session, test_user, add):
     assert "categories_month_to_date" not in gathered.figures
     assert gathered.figures["reference_through"] == "2026-10-12"
     assert "month_to_date" not in gathered.figures["spending"]
+    spending = gathered.figures["spending"]
+    assert spending["average_monthly_income"] is None
+    assert spending["average_monthly_expenses"] is None
+    assert spending["average_monthly_net"] is None
+    assert spending["burn_rate"] is None
 
 
 async def test_a_category_spike_in_the_reference_month_reaches_the_figures(db_session, test_user, add):

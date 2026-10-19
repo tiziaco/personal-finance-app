@@ -26,7 +26,7 @@ def _today() -> dt.date:
 
 
 class AnalyticsService:
-    """Every analysis over one user's active transactions. Steps 6 and 7 call these directly."""
+    """Every analysis over one user's active transactions. A caller that needs several windows takes one `history()` and calls it."""
 
     @staticmethod
     async def history(session: AsyncSession, user_id: uuid.UUID) -> AnalyticsHistory:
