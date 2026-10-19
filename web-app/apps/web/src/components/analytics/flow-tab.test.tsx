@@ -187,6 +187,29 @@ describe("FlowTab", () => {
     expect(el).not.toHaveClass("text-muted-foreground")
   })
 
+  it('shows "No full month yet" when the period has no whole month', () => {
+    spending({
+      data: {
+        ...DATA,
+        average_monthly_income: null,
+        average_monthly_expenses: null,
+        average_monthly_net: null,
+        burn_rate: null,
+      },
+    })
+    renderTab()
+    const cash = within(card("Cash flow"))
+    const notes = cash.getAllByText("No full month yet")
+    expect(notes).toHaveLength(3)
+    for (const note of notes) {
+      expect(note).toHaveClass("text-muted-foreground")
+      expect(note).not.toHaveClass("text-destructive")
+    }
+    expect(cash.queryByText(/\/ month/)).not.toBeInTheDocument()
+    expect(cash.getByText(formatAmount("19200.00"))).toBeInTheDocument()
+    expect(cash.getByText(formatAmount("12840.00"))).toBeInTheDocument()
+  })
+
   it("shows a dash when there is no savings rate", () => {
     spending({ data: { ...DATA, savings_rate_pct: null } })
     renderTab()

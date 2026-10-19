@@ -54,7 +54,8 @@ function Figure({
 }: {
   label: string
   amount: string
-  average: string
+  /** Null when the period has no whole month to average over. */
+  average: string | null
   /** Colour a negative amount and a negative average as bad. */
   signed?: boolean
 }) {
@@ -72,12 +73,14 @@ function Figure({
       <p
         className={cn(
           "text-xs",
-          signed && isExpense(average)
+          average !== null && signed && isExpense(average)
             ? amountClass(average)
             : "text-muted-foreground",
         )}
       >
-        {`${formatAmount(average)} / month`}
+        {average === null
+          ? "No full month yet"
+          : `${formatAmount(average)} / month`}
       </p>
     </div>
   )
