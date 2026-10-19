@@ -85,7 +85,6 @@ _AMOUNT_PATTERNS = {
     DOT_DECIMAL: (re.compile(r"^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?$"), ",", "."),
 }
 _TRUE = frozenset({"true", "yes", "ja", "si", "sì", "1", "x"})
-_FALSE = frozenset({"false", "no", "nein", "0"})
 _SHOWN = 40
 
 
@@ -138,7 +137,7 @@ class ColumnProfile:
 
 @dataclass(frozen=True)
 class ImportRow:
-    """A row to save, read through a confirmed mapping. is_recurring None leaves it to the rule."""
+    """A row to save, read through a confirmed mapping. An unticked is_recurring leaves it to the rule."""
 
     number: int
     date: dt.date
@@ -146,7 +145,7 @@ class ImportRow:
     amount: Decimal
     description: Optional[str]
     original_category: Optional[str]
-    is_recurring: Optional[bool]
+    is_recurring: bool
 
 
 @dataclass(frozen=True)
@@ -290,14 +289,9 @@ def parse_amount(value: str, style: str) -> Optional[Decimal]:
     return -amount if negative else amount
 
 
-def parse_recurring(value: str) -> Optional[bool]:
-    """A recurring cell as the user's assertion, or None — blank or unrecognised — to let the rule decide."""
-    folded = value.strip().casefold()
-    if folded in _TRUE:
-        return True
-    if folded in _FALSE:
-        return False
-    return None
+def parse_recurring(value: str) -> bool:
+    """True when a recurring cell asserts it; otherwise False — false, blank or unrecognised — to let the rule decide."""
+    return value.strip().casefold() in _TRUE
 
 
 def best_date_format(values: list[str]) -> tuple[str, float]:
@@ -448,9 +442,7 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, ImportField]) -> tuple[list[
                 amount=amount,
                 description=cell(row, ImportField.DESCRIPTION)[:1000] or None,
                 original_category=cell(row, ImportField.ORIGINAL_CATEGORY)[:255] or None,
-                is_recurring=parse_recurring(cell(row, ImportField.RECURRING))
-                if ImportField.RECURRING in index
-                else None,
+                is_recurring=parse_recurring(cell(row, ImportField.RECURRING)),
             )
         )
     return rows, rejected

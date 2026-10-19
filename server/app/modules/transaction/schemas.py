@@ -7,7 +7,9 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated, List, Literal, Optional
 
-from pydantic import BaseModel, Field, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, Field, StringConstraints, field_validator, model_validator
+
+from app.modules.transaction.domain.dates import MAX_DATE, MIN_DATE
 
 # The category list: the only copy. Order is display order; slugs are what is
 # stored and sent, labels what the web shows (served by GET /categories).
@@ -55,10 +57,20 @@ def _blank_to_none(value: Optional[str]) -> Optional[str]:
     return value or None
 
 
+def _within_bounds(value: dt.date) -> dt.date:
+    if not MIN_DATE <= value <= MAX_DATE:
+        raise ValueError(f"must be between {MIN_DATE} and {MAX_DATE}")
+    return value
+
+
+# A date analytics covers: a hand-entered one outside the bounds would drop out of every analysis.
+AnalysableDate = Annotated[dt.date, AfterValidator(_within_bounds)]
+
+
 class TransactionCreate(BaseModel):
     """A transaction added by hand. Confidence is 1; no original category."""
 
-    date: dt.date = Field(..., description="The day the transaction happened")
+    date: AnalysableDate = Field(..., description="The day the transaction happened")
     merchant: Merchant = Field(..., description="Who was paid, or who paid")
     amount: Amount = Field(..., description="Money out is negative, money in positive; a decimal string")
     description: Optional[Description] = Field(None, description="Free text; blank is stored as null")
@@ -74,7 +86,7 @@ class TransactionCreate(BaseModel):
 class TransactionUpdate(BaseModel):
     """A partial edit. An omitted field is untouched; `description: null` clears it."""
 
-    date: Optional[dt.date] = Field(None, description="The day the transaction happened")
+    date: Optional[AnalysableDate] = Field(None, description="The day the transaction happened")
     merchant: Optional[Merchant] = Field(None, description="Who was paid, or who paid")
     amount: Optional[Amount] = Field(None, description="A decimal string")
     description: Optional[Description] = Field(None, description="Free text; null or blank clears it")
@@ -100,8 +112,8 @@ class TransactionImport(BaseModel):
     description: Optional[Description] = None
     category: Category
     confidence: float = Field(..., ge=0, le=1)
-    is_recurring: Optional[bool] = Field(
-        None, description="The importer's own value, kept as the user's; None lets the recurring rule decide"
+    is_recurring: bool = Field(
+        False, description="The importer's tick, kept as the user's; False lets the recurring rule decide"
     )
     original_category: Optional[Annotated[str, StringConstraints(max_length=255)]] = None
 
@@ -127,7 +139,7 @@ class TransactionResponse(BaseModel):
 
 
 class AnalysisRow(BaseModel):
-    """One active transaction as analytics reads it: the six fields every calculation uses."""
+    """One active transaction as analytics reads it: the fields every calculation uses."""
 
     date: dt.date
     merchant: str
@@ -135,6 +147,7 @@ class AnalysisRow(BaseModel):
     amount: Decimal
     category: str
     is_recurring: bool
+    recurring_set_by_user: bool = False  # recurring_source is `user`: is_recurring is the user's own choice (D6)
 
     model_config = {"frozen": True}
 

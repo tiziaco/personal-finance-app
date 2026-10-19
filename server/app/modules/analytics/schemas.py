@@ -2,10 +2,11 @@
 
 import datetime as dt
 from decimal import Decimal
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from app.modules.analytics.domain.anomalies import MIN_WINDOW_EXPENSES, ComparedWith
 from app.modules.analytics.domain.behaviour import Stability
 from app.modules.analytics.exceptions import InvalidDateRangeError
 from app.modules.transaction import MAX_DATE, MIN_DATE
@@ -394,7 +395,7 @@ class BehaviourResponse(_Out):
 
 
 class OutlierResponse(_Out):
-    """One expense in the period far above the earlier expenses of its category in its trailing window.
+    """One expense in the period far above the earlier expenses in its trailing window.
 
     Recurring-flagged expenses are never outliers and never in a window; a window may reach before the period.
     """
@@ -404,7 +405,12 @@ class OutlierResponse(_Out):
     category: str
     amount: Decimal = Field(..., description="The expense, positive")
     z_score: float
-    window_mean: Decimal = Field(..., description="The mean of the category's expenses in the window")
+    window_mean: Decimal = Field(..., description="The mean of the window it was compared with")
+    compared_with: ComparedWith = Field(
+        ...,
+        description="What the expense was compared with: its category's window, or all one-off spending"
+        f" when the category's window held fewer than {MIN_WINDOW_EXPENSES}",
+    )
 
 
 class CategorySpikeResponse(_Out):

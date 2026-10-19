@@ -6,7 +6,11 @@ from decimal import Decimal
 import pytest
 
 from app.modules.analytics.domain.period import resolve_period
-from app.modules.analytics.domain.recurring import HiddenSubscription, RecurringMerchant, recurring_analysis
+from app.modules.analytics.domain.recurring import (
+    HiddenSubscription,
+    RecurringMerchant,
+    recurring_analysis,
+)
 from tests.unit.modules.analytics.rows import row
 
 pytestmark = pytest.mark.unit
@@ -210,3 +214,17 @@ def test_a_recurring_merchant_is_its_merchant_key():
 
 def _weekly(start: dt.date, count: int) -> list[dt.date]:
     return [start + dt.timedelta(weeks=i) for i in range(count)]
+
+
+def test_a_merchant_the_user_unticked_is_never_a_hidden_subscription():
+    spotify = monthly(3, "2026-06", "2026-09", "-9.99", "Spotify", recurring=False)
+    assert [h.merchant for h in analyse(spotify).hidden_subscriptions] == ["Spotify"]
+    unticked = [row("2026-06-03", "-9.99", merchant="Spotify", by_user=True)] + spotify[1:]
+    assert analyse(unticked).hidden_subscriptions == ()
+
+
+def test_an_untick_before_the_period_still_excludes_the_merchant():
+    spotify = monthly(3, "2026-07", "2026-09", "-9.99", "Spotify", recurring=False)
+    unticked = row("2026-01-03", "-9.99", merchant="Spotify", by_user=True)
+    assert [h.merchant for h in analyse(spotify, months=3).hidden_subscriptions] == ["Spotify"]
+    assert analyse([unticked, *spotify], months=3).hidden_subscriptions == ()
