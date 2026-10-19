@@ -1,7 +1,6 @@
 # Web
 
-The Finsight app — what a signed-in person uses to track their money. Finance
-screens are not built yet.
+The Finsight app — what a signed-in person uses to track their money.
 
 Runs on **http://localhost:3000** in the main checkout; `make dev-web` from the repo
 root follows the checkout's own port, which differs in a git worktree.
@@ -16,7 +15,11 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 
 | Route | Description |
 |---|---|
-| `/home` | Placeholder page in `src/app/(dashboard)/` — finance screens are not built yet. `/` redirects here |
+| `/home` | The month at a glance: totals, trend, categories, recent transactions. `/` redirects here |
+| `/transactions` | The transaction table: filters, edits, the CSV import |
+| `/analytics` | The four analytics views |
+| `/insights` | The generated insights |
+| `/chat` | The assistant |
 | `/sign-in` | Clerk's sign-in — public |
 | `/sign-up` | Clerk's sign-up — public; the first request provisions the account |
 
@@ -119,7 +122,7 @@ Where its identity lives:
 
 | File | Carries |
 |---|---|
-| `packages/ui/src/styles/finsight-tokens.css` | every colour, both themes, plus shadows; `globals.css` maps shadcn's variables onto them |
+| `packages/ui/src/styles/finsight-tokens.css` | every colour, both themes; `globals.css` maps shadcn's variables onto them and holds the radius, type and shadow scales |
 | `packages/components/src/layout/finsight-mark.tsx` | the wallet mark (inline SVG on the `--logo-*` tokens), used by the rail and the sign-in lockup |
 | `src/app/icon.svg` | the browser tab icon, the navy app tile (Next's icon file convention) |
 | `src/app/layout.tsx` | `metadata.title`, the Onest font and Clerk's `appearance` |

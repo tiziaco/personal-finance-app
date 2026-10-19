@@ -23,13 +23,15 @@ import {
   type LucideIcon,
 } from "lucide-react"
 import { createElement } from "react"
+import type { Category } from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
 
 /**
- * One icon per category slug. The list lives on the server (`CATEGORIES`);
- * a slug added there needs a row here, and until it has one it shows Tag.
+ * One icon per category slug. Keyed by the generated `Category`, so a slug the
+ * server adds fails the build here until it has a row; Tag is only for a
+ * string that names no category at all.
  */
-export const CATEGORY_ICONS: Record<string, LucideIcon> = {
+export const CATEGORY_ICONS: Record<Category, LucideIcon> = {
   income: ArrowDownLeftIcon,
   salary: BanknoteIcon,
   transportation: CarIcon,
@@ -53,7 +55,9 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 }
 
 export const categoryIcon = (slug: string): LucideIcon =>
-  Object.hasOwn(CATEGORY_ICONS, slug) ? CATEGORY_ICONS[slug] : TagIcon
+  Object.hasOwn(CATEGORY_ICONS, slug)
+    ? CATEGORY_ICONS[slug as Category]
+    : TagIcon
 
 /** The design system's neutral tile that leads a transaction row. */
 export function CategoryTile({

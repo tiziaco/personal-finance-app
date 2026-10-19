@@ -42,9 +42,9 @@ pins, watch it go red, revert.
 
 ### 1. Sidebar primitives need a `SidebarProvider` — and it needs `matchMedia`
 
-Every export of `packages/ui/src/primitives/sidebar.tsx` calls `useSidebar()`, which throws outside
-a `SidebarProvider` — including `Sidebar collapsible="none"`. `AppSidebar` and the `SidebarMenuItem` inside
-`UserDetailsPanel` call it;
+Most exports of `packages/ui/src/primitives/sidebar.tsx` call `useSidebar()`, which throws outside
+a `SidebarProvider` — including `Sidebar collapsible="none"` and `SidebarMenuButton` (plain wrappers
+such as `SidebarMenuItem` do not). `AppSidebar` and `MenuNavigator` call it;
 `SettingsDialog`'s tab rail is sidebar primitives borrowing the page's provider. Render them with
 `render(ui, { wrapper: SidebarProvider })`. The provider calls `useIsMobile()` → `window.matchMedia`,
 which jsdom lacks: `vitest.setup.ts` stubs it. Do not delete the stub.

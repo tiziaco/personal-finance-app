@@ -1,21 +1,17 @@
 import type { ComponentProps } from "react"
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { SidebarProvider } from "@app/ui/sidebar"
 import { describe, expect, it, vi } from "vitest"
 
 import { UserDetailsPanel, type UserPanelUser } from "./user-panel"
 
 const ada: UserPanelUser = { name: "Ada Lovelace", email: "ada@test.dev" }
 
-// useSidebar() throws outside a SidebarProvider.
 function renderPanel(
   props: Partial<ComponentProps<typeof UserDetailsPanel>> = {},
 ) {
   const onSignOut = vi.fn()
-  render(<UserDetailsPanel user={ada} onSignOut={onSignOut} {...props} />, {
-    wrapper: SidebarProvider,
-  })
+  render(<UserDetailsPanel user={ada} onSignOut={onSignOut} {...props} />)
   return { onSignOut }
 }
 

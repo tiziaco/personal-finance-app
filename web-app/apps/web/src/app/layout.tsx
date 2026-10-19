@@ -27,6 +27,8 @@ export const metadata: Metadata = {
 const CLERK_APPEARANCE = {
   variables: {
     colorPrimary: "var(--primary)",
+    // Clerk's default is white, which on dark mode's gold primary reads at 1.8:1.
+    colorPrimaryForeground: "var(--primary-foreground)",
     colorForeground: "var(--foreground)",
     colorMutedForeground: "var(--muted-foreground)",
     colorBackground: "var(--card)",
@@ -35,7 +37,7 @@ const CLERK_APPEARANCE = {
     colorNeutral: "var(--foreground)",
     colorDanger: "var(--negative)",
     fontFamily: "var(--font-sans)",
-    borderRadius: "0.75rem",
+    borderRadius: "var(--radius)",
   },
 }
 

@@ -83,13 +83,15 @@ The app is **Finsight**, styled by the design system in the `finsight-design` sk
 (`.claude/skills/finsight-design/`): its `readme.md` holds the rules, `tokens/` the values.
 It was made in Claude Design and adopted on 19 Oct 2026; the repo copy is the reference.
 
-- **Tokens have one home in code:** `packages/ui/src/styles/finsight-tokens.css`, the design
+- **Colours have one home in code:** `packages/ui/src/styles/finsight-tokens.css`, the design
   system's names and values, light in `:root` and dark under `.dark` (next-themes' class).
-  `globals.css` maps shadcn's semantic variables (`--primary`, `--muted`, `--sidebar-*`, …)
-  onto them and pins the radius scale (6/8/12/16), the type scale (`text-h1`,
+  Change a colour there, never in a component.
+- **The scales live in `globals.css`**, because Tailwind only builds utilities from its
+  `@theme`: it maps shadcn's semantic variables (`--primary`, `--muted`, `--sidebar-*`, …)
+  onto the tokens and pins the radius scale (6/8/12/16), the type scale (`text-h1`,
   `text-caption`, …) and the elevation, so `shadow-sm/md/lg` are the design system's
-  shadows (a token of the same name in the tokens file would not reach the utility).
-  Change a colour in the tokens file, never in a component.
+  shadows. `cn()` (`@app/core/lib/utils`) is told the type scale's names; a size added to
+  the scale goes in both places, or `cn` merges it as a colour.
 - **The sidebar** is a fixed 104px rail (`w-26`, the primitive's `SIDEBAR_WIDTH`): the mark,
   the pages with their label under the icon (the menu button's `rail` size), then Settings
   and the avatar. It never collapses on a computer; on a phone it is a rail-width slide-out.
@@ -100,7 +102,8 @@ It was made in Claude Design and adopted on 19 Oct 2026; the repo copy is the re
   (`signedAmountClass`). Totals under a label that already says the direction stay unsigned
   (`formatAmount`).
 - **Category icons** are presentation only: `apps/web/src/components/transactions/category-icon.tsx`
-  maps each server slug to a Lucide icon and falls back to `Tag`.
+  maps each `Category` in the contract to a Lucide icon, so a new slug fails the type
+  check until it has one; a string that names no category gets `Tag`.
 
 ## 3. Who gets in
 
