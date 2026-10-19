@@ -112,9 +112,7 @@ class TransactionImport(BaseModel):
     description: Optional[Description] = None
     category: Category
     confidence: float = Field(..., ge=0, le=1)
-    is_recurring: Optional[bool] = Field(
-        None, description="The importer's own value, kept as the user's; None lets the recurring rule decide"
-    )
+    is_recurring: bool = Field(False, description="The importer's tick, kept as the user's; False lets the recurring rule decide")
     original_category: Optional[Annotated[str, StringConstraints(max_length=255)]] = None
 
     _description = field_validator("description")(_blank_to_none)

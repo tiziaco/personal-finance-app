@@ -62,7 +62,7 @@ def test_a_true_cell_is_the_users_tick_and_anything_else_is_left_to_the_rule(tmp
         "2026-10-01,C,-3.00,,food_groceries,0.9,,\n",
     )
     rows, _ = load_rows(path, today=date(2026, 10, 13))
-    assert [r.is_recurring for r in rows] == [True, None, None]
+    assert [r.is_recurring for r in rows] == [True, False, False]
 
 
 def test_an_unknown_slug_becomes_miscellaneous_and_is_counted(tmp_path):

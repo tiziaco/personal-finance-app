@@ -47,7 +47,7 @@ def months_to_current(newest: date, today: date) -> int:
 def load_rows(path: Path, today: date) -> tuple[list[TransactionImport], Counter]:
     """The seed rows, dates shifted, rows after today dropped; plus a count of unknown slugs.
 
-    Only a `true` is_recurring cell is the user's tick; anything else is None, left to the recurring rule.
+    Only a `true` is_recurring cell is the user's tick; anything else is left to the recurring rule.
     """
     with path.open(encoding="utf-8", newline="") as f:
         raw = list(csv.DictReader(f))
@@ -72,7 +72,7 @@ def load_rows(path: Path, today: date) -> tuple[list[TransactionImport], Counter
                 description=r["description"] or None,
                 category=category,
                 confidence=float(r["confidence"]),
-                is_recurring=True if r["is_recurring"] == "true" else None,
+                is_recurring=r["is_recurring"] == "true",
                 original_category=r["original_category"] or None,
             )
         )

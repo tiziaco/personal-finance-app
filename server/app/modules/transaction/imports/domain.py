@@ -137,7 +137,7 @@ class ColumnProfile:
 
 @dataclass(frozen=True)
 class ImportRow:
-    """A row to save, read through a confirmed mapping. is_recurring None leaves it to the rule."""
+    """A row to save, read through a confirmed mapping. An unticked is_recurring leaves it to the rule."""
 
     number: int
     date: dt.date
@@ -145,7 +145,7 @@ class ImportRow:
     amount: Decimal
     description: Optional[str]
     original_category: Optional[str]
-    is_recurring: Optional[bool]
+    is_recurring: bool
 
 
 @dataclass(frozen=True)
@@ -289,9 +289,9 @@ def parse_amount(value: str, style: str) -> Optional[Decimal]:
     return -amount if negative else amount
 
 
-def parse_recurring(value: str) -> Optional[bool]:
-    """True when a recurring cell asserts it; otherwise None — false, blank or unrecognised — to let the rule decide."""
-    return True if value.strip().casefold() in _TRUE else None
+def parse_recurring(value: str) -> bool:
+    """True when a recurring cell asserts it; otherwise False — false, blank or unrecognised — to let the rule decide."""
+    return value.strip().casefold() in _TRUE
 
 
 def best_date_format(values: list[str]) -> tuple[str, float]:
@@ -442,9 +442,7 @@ def read_rows(parsed: ParsedCsv, mapping: dict[str, ImportField]) -> tuple[list[
                 amount=amount,
                 description=cell(row, ImportField.DESCRIPTION)[:1000] or None,
                 original_category=cell(row, ImportField.ORIGINAL_CATEGORY)[:255] or None,
-                is_recurring=parse_recurring(cell(row, ImportField.RECURRING))
-                if ImportField.RECURRING in index
-                else None,
+                is_recurring=parse_recurring(cell(row, ImportField.RECURRING)),
             )
         )
     return rows, rejected
