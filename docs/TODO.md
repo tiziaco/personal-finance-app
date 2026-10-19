@@ -155,18 +155,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
-## Web — legacy's theme
-
-Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
-floating bulk bar, the sort control — but not its theme: the teal accent, the grey-green page
-background and the font. The theme changes every page, so it is a decision of its own, made
-once for the whole app, not per screen. Corners are already decided, against legacy's pills:
-one radius scale, in the `web-app-patterns` skill's `references/components.md`. Legacy's
-calendar date-range picker is out too; the date filter uses the shared single-day picker. Reference screenshots of both apps were taken with the same
-data on 14 Oct 2026.
-
-**Unblocks:** nothing; the app is usable with the template's theme.
-
 ## Server — analytics loads the whole history on every request
 
 Every `AnalyticsService` method loads the user's entire transaction history
