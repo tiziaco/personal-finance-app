@@ -1,4 +1,4 @@
-"""Anomalies: expenses far above their category's trailing window, and categories spending more than usual lately."""
+"""Anomalies: expenses far above their trailing window (their category's, or all one-off spending when it is thin), and categories spending more than usual lately."""
 
 import datetime as dt
 from bisect import bisect_left
@@ -37,7 +37,7 @@ class Outlier:
 
 @dataclass(frozen=True)
 class _Score:
-    """An expense against its window: None z and mean when the window held too few expenses or no spread."""
+    """An expense against its window: z and window_mean are None with fewer than MIN_WINDOW_EXPENSES in it; z alone is None with no spread."""
 
     row: Row
     n: int

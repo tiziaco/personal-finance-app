@@ -1,4 +1,4 @@
-"""Anomalies: single expenses far above their category's trailing window, and categories spiking lately."""
+"""Anomalies: single expenses far above their trailing window (their category's, or all spending's), and categories spiking lately."""
 
 import datetime as dt
 import random
@@ -262,7 +262,7 @@ def test_an_expense_near_the_earliest_date_does_not_overflow():
     assert result.spike_window_start is None
 
 
-def _brute_force_outliers(rows, first_day, std_threshold, window_days, cap=20):
+def _brute_force_outliers(rows, first_day, std_threshold, window_days):
     """The straightforward O(n²) reading of the rule, to pin the prefix-sum version against."""
     spent = sorted((r for r in rows if r.amount < 0 and not r.is_recurring), key=lambda r: r.date)
     in_period = [r for r in rows if r.amount < 0 and first_day <= r.date <= LAST_DAY]
@@ -288,7 +288,7 @@ def _brute_force_outliers(rows, first_day, std_threshold, window_days, cap=20):
         z = z_against(current, window)
         if z is not None and z > std_threshold:
             found.append((current.date, current.merchant, round(z, 2), compared_with))
-    return sorted(found, key=lambda t: (-t[2], t[0], t[1]))[:cap]
+    return sorted(found, key=lambda t: (-t[2], t[0], t[1]))
 
 
 @pytest.mark.parametrize("window_days", [7, 30, 90])
@@ -309,11 +309,16 @@ def test_outliers_match_a_brute_force_reference_over_two_years(window_days, monk
         for i in range(5000)
     ]
     period = resolve_period(rows, TODAY, months=12)  # 2025: windows in early January reach into 2024
-    expected = _brute_force_outliers(rows, period.first_day, 2.5, window_days, cap=10_000)
+    expected = _brute_force_outliers(rows, period.first_day, 2.5, window_days)
     got = [
         (o.date, o.merchant, o.z_score, o.compared_with)
         for o in find_anomalies(rows, period, 2.5, window_days).outliers
     ]
     assert expected and got == expected
+    monkeypatch.undo()
+    assert [
+        (o.date, o.merchant, o.z_score, o.compared_with)
+        for o in find_anomalies(rows, period, 2.5, window_days).outliers
+    ] == expected[:20]
     if window_days == 7:  # only a 7-day window leaves media_electronics (~3 rows) thin
         assert any(t[3] == "all" for t in expected)
