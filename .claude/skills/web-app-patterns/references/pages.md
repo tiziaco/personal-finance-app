@@ -42,7 +42,8 @@ No auth check in the page: `proxy.ts` already sent anyone without a session to s
 ```
 
 - `title` is the display label; `icon` a `lucide-react` component.
-- `items` nests one level of sub-entries, rendered collapsible.
+- The sidebar is a 104px rail (`w-26`) with the label under the icon: a new entry's `title` must
+  fit there unwrapped. There are no sub-entries.
 - The active entry is an exact match on `pathname`: `/transactions/123` highlights nothing. A detail page
   under a list page does not light up its parent.
 

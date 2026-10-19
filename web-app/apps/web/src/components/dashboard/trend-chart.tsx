@@ -23,6 +23,9 @@ const config: ChartConfig = {
   expenses: { label: "Expenses", color: "var(--chart-expense)" },
 }
 
+/** The series drawn dashed, in the chart and in its legend alike. */
+const DASHED = new Set(["expenses"])
+
 /** Income and expenses over the six months to the reference month. */
 export function TrendChart({ points }: { points: TrendPointResponse[] }) {
   const data = toTrendPoints(points)
@@ -33,11 +36,19 @@ export function TrendChart({ points }: { points: TrendPointResponse[] }) {
         <ul className="flex gap-4 text-xs text-muted-foreground">
           {Object.entries(config).map(([key, item]) => (
             <li key={key} className="flex items-center gap-1.5">
-              <span
-                aria-hidden
-                className="h-0.5 w-3 rounded-full"
-                style={{ backgroundColor: item.color }}
-              />
+              {DASHED.has(key) ? (
+                <span
+                  aria-hidden
+                  className="w-3 border-t-2 border-dashed"
+                  style={{ borderColor: item.color }}
+                />
+              ) : (
+                <span
+                  aria-hidden
+                  className="h-0.5 w-3 rounded-full"
+                  style={{ backgroundColor: item.color }}
+                />
+              )}
               {item.label}
             </li>
           ))}

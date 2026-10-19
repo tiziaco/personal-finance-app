@@ -114,15 +114,17 @@ new component goes".
 
 ### Branding
 
-Two files carry the visual identity — swap them for your own:
+The app is **Finsight**, styled by the `finsight-design` skill (`.claude/skills/finsight-design/`).
+Where its identity lives:
 
-| File | Used by |
+| File | Carries |
 |---|---|
-| `public/images/logo-small.png` | the sidebar mark, via `logoSrc` on `AppSidebar` (`@app/components`, `packages/components/src/layout/company-logo.tsx`) |
-| `public/icons/favicon.ico` | the browser tab, via `metadata.icons` in `src/app/layout.tsx` |
+| `packages/ui/src/styles/finsight-tokens.css` | every colour, both themes, plus shadows; `globals.css` maps shadcn's variables onto them |
+| `packages/components/src/layout/finsight-mark.tsx` | the wallet mark (inline SVG on the `--logo-*` tokens), used by the rail and the sign-in lockup |
+| `src/app/icon.svg` | the browser tab icon, the navy app tile (Next's icon file convention) |
+| `src/app/layout.tsx` | `metadata.title`, the Onest font and Clerk's `appearance` |
 
-The accompanying `logoAlt` and `metadata.title` strings live in
-`src/app/(dashboard)/layout.tsx` and `src/app/layout.tsx`.
+More in [`docs/architecture/web-app.md`](../../../docs/architecture/web-app.md) §2, "The design system".
 
 ---
 
