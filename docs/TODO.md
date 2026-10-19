@@ -90,6 +90,17 @@ wording: the prompt (`server/app/agents/insights/prompts/v1.md`, the `anomalies`
 against all one-off spending, to be worded "above your usual spending" rather than "above its
 category". Owned by whoever next touches the insights prompt.
 
+## Server — a fixed cost not yet flagged recurring is an outlier
+
+An expense whose category's window holds fewer than 5 expenses is compared with all one-off
+spending (`analytics/domain/anomalies.py`, since 19 Oct 2026). Rent the recurring rule has not
+flagged yet — two months imported, when the monthly cadence needs three rows, or a payee whose
+merchant key changes each month — is such an expense: €1,200 against daily groceries scores
+a z of about 170. Ticking the row recurring clears it, and so does a third month. Left as is
+because, until then, rent looks exactly like a one-off; excluding `household_utilities` from
+the fallback would also hide a large furniture or appliance purchase. Revisit if users report
+it, for instance by not falling back for a charge the same merchant made about a month earlier.
+
 ## Server — the chatbot names the default model after a fallback
 
 After an LLM fallback, the chatbot's inference-time metric label and its stored model name
