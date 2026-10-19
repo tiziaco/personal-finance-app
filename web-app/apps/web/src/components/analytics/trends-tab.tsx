@@ -8,14 +8,12 @@ import type {
   CategoryBreakdownResponse,
   SpendingResponse,
 } from "@app/api-client/types"
-import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
 
 import { CategoryMovers } from "./category-movers"
 import { SavingsHeadline } from "./change"
-import { formatPeriod } from "./format"
 import { toMonthPoints } from "./month-points"
-import { PeriodSelect } from "./period-select"
+import { PeriodHeader } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
 import { Section } from "./section"
@@ -59,28 +57,15 @@ export function TrendsTab({
     { months, top_n: 1 },
     ANALYTICS_QUERY,
   )
-  const period =
-    spending.data &&
-    formatPeriod(spending.data.date_from, spending.data.date_to)
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <PeriodSelect
-          choices={PERIODS.trends.choices}
-          value={months}
-          onChange={onMonthsChange}
-        />
-        {period ? (
-          <p
-            className={cn(
-              "text-sm text-muted-foreground",
-              spending.isPlaceholderData && "opacity-60",
-            )}
-          >
-            {period}
-          </p>
-        ) : null}
-      </header>
+      <PeriodHeader
+        choices={PERIODS.trends.choices}
+        value={months}
+        onChange={onMonthsChange}
+        range={spending.data}
+        dimmed={spending.isPlaceholderData}
+      />
 
       <QueryGate
         query={spending}

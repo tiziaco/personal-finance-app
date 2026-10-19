@@ -33,7 +33,6 @@ export function MonthToDateCard({
   const mon = formatMonth(monthToDate.month, "short")
   const prevMon = formatMonth(monthToDate.previous_month, "short")
 
-  const spent = monthToDate.expenses
   const comparison = formatChange(
     monthToDate.expenses_change_pct,
     monthToDate.previous_expenses,
@@ -62,7 +61,7 @@ export function MonthToDateCard({
         <div className="space-y-1">
           <p className="text-xs text-muted-foreground">Spent</p>
           <p className="text-3xl font-semibold tabular-nums">
-            {formatAmount(spent)}
+            {formatAmount(monthToDate.expenses)}
           </p>
           {comparison && (
             <p className="text-sm text-muted-foreground">{comparison}</p>

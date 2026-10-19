@@ -28,14 +28,13 @@ import { Change, SavingsHeadline, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
 import {
   changeTone,
-  formatPeriod,
   formatPct,
   partialLabel,
   type PartialLabel,
 } from "./format"
 import { monthToDate, toMonthPoints } from "./month-points"
 import { MonthToDateStrip } from "./month-to-date-strip"
-import { PeriodSelect } from "./period-select"
+import { PeriodHeader } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
 import { Section } from "./section"
@@ -110,36 +109,28 @@ export function FlowTab({
 }) {
   const query = useGetSpending({ months }, ANALYTICS_QUERY)
   const data = query.data
-  const period = data && formatPeriod(data.date_from, data.date_to)
   // Before the first response, the cached dashboard says which blocks the
-  // period will lack: the latest-month section when the reference month is
-  // the one in progress, and the strip too when there is no month to date
-  // (same call as spending's). With nothing cached, assume both are present.
+  // period will lack. The latest-month section is missing when the reference
+  // month is the one in progress, or is the data's first month (a one-month
+  // trend): a first month that starts after day 7 is not whole, and most do.
+  // The strip is missing too when there is no month to date (same call as
+  // spending's). With nothing cached, assume both are present.
   const dash = useQueryClient().getQueryData<DashboardResponse>(
     getGetDashboardQueryKey(),
   )
   const inProgress = dash?.reference_partial === true
+  const noLatest = inProgress || dash?.monthly_trend.length === 1
   const noStrip = inProgress || dash?.month_to_date === null
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <PeriodSelect
-          choices={PERIODS.flow.choices}
-          value={months}
-          onChange={onMonthsChange}
-        />
-        {period ? (
-          <p
-            className={cn(
-              "text-sm text-muted-foreground",
-              query.isPlaceholderData && "opacity-60",
-            )}
-          >
-            {period}
-          </p>
-        ) : null}
-      </header>
+      <PeriodHeader
+        choices={PERIODS.flow.choices}
+        value={months}
+        onChange={onMonthsChange}
+        range={data}
+        dimmed={query.isPlaceholderData}
+      />
 
       <QueryGate
         query={query}
@@ -161,7 +152,7 @@ export function FlowTab({
             <Section title="Cash flow">
               <Skeleton className="h-32 w-full" />
             </Section>
-            {inProgress ? null : (
+            {noLatest ? null : (
               <Skeleton
                 data-testid="latest-skeleton"
                 className="h-[162px] w-full sm:h-[110px]"

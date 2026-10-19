@@ -306,6 +306,12 @@ describe("FlowTab", () => {
 
   describe("while loading", () => {
     const loading = () => spending({ data: undefined })
+    const trend = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        month: `2026-0${i + 1}`,
+        income: "0.00",
+        expenses: "0.00",
+      }))
 
     it("holds the strip and the latest-month block, in the rendered order", () => {
       loading()
@@ -328,6 +334,7 @@ describe("FlowTab", () => {
       const client = new QueryClient()
       client.setQueryData(getGetDashboardQueryKey(), {
         reference_partial: true,
+        monthly_trend: trend(2),
       } as DashboardResponse)
       renderTab(vi.fn(), client)
       expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
@@ -340,6 +347,7 @@ describe("FlowTab", () => {
       client.setQueryData(getGetDashboardQueryKey(), {
         reference_partial: false,
         month_to_date: null,
+        monthly_trend: trend(2),
       } as DashboardResponse)
       renderTab(vi.fn(), client)
       expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
@@ -351,10 +359,23 @@ describe("FlowTab", () => {
       const client = new QueryClient()
       client.setQueryData(getGetDashboardQueryKey(), {
         reference_partial: false,
+        monthly_trend: trend(2),
       } as DashboardResponse)
       renderTab(vi.fn(), client)
       expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
       expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
+    })
+
+    it("drops the latest-month block when the cached dashboard's reference is the data's first month", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+        monthly_trend: trend(1),
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
+      expect(screen.queryByTestId("latest-skeleton")).not.toBeInTheDocument()
     })
   })
 

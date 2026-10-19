@@ -48,14 +48,14 @@ export function ServerStatusIndicator({
     )
   }
 
+  // One reading drives both the colour and the ring, so they cannot disagree.
+  const health = error || !status ? "down" : status.status
   const statusColor =
-    error || !status
-      ? "bg-red-500"
-      : status.status === "healthy"
-        ? "bg-green-500"
-        : status.status === "degraded"
-          ? "bg-yellow-500"
-          : "bg-red-500"
+    health === "healthy"
+      ? "bg-green-500"
+      : health === "degraded"
+        ? "bg-yellow-500"
+        : "bg-red-500"
 
   const statusIndicator = (
     <div className="flex items-center gap-2 px-3 py-2 cursor-default">
@@ -63,7 +63,7 @@ export function ServerStatusIndicator({
         <div
           className={cn("size-2 rounded-full transition-colors", statusColor)}
         />
-        {!error && status?.status === "healthy" && (
+        {health === "healthy" && (
           <div
             className={cn(
               "absolute inset-0 size-2 rounded-full animate-ping",

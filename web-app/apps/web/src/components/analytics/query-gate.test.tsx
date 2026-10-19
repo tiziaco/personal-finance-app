@@ -93,6 +93,19 @@ describe("QueryGate", () => {
     expect(wrapper?.className).toContain("opacity-60")
   })
 
+  it("dims the empty card too while placeholder data shows", () => {
+    const { container } = renderGate({
+      data: [],
+      isError: false,
+      isPlaceholderData: true,
+      refetch: vi.fn(),
+    })
+    const wrapper = container.firstElementChild
+    expect(screen.getByText("Nothing here.")).toBeTruthy()
+    expect(wrapper?.getAttribute("aria-busy")).toBe("true")
+    expect(wrapper?.className).toContain("opacity-60")
+  })
+
   it("is not busy or dimmed once the data is real", () => {
     const { container } = renderGate({
       data: ["a"],

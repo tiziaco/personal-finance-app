@@ -89,7 +89,6 @@ describe("ServerStatusIndicator", () => {
     expect(dotClasses()).toContain("bg-red-500")
   })
 
-  // BUGS.md: "The server-status dot pings 'healthy' while it shows an error".
   it("no pulsing ring when a healthy status is stale behind an error", () => {
     render(
       <ServerStatusIndicator
