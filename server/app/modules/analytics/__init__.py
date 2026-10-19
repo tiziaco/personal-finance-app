@@ -5,6 +5,7 @@ deeper (docs/architecture/server.md, R1).
 """
 
 from app.modules.analytics.exceptions import InvalidDateRangeError
+from app.modules.analytics.history import AnalyticsHistory
 from app.modules.analytics.router import router
 from app.modules.analytics.schemas import (
     AnomaliesResponse,
@@ -21,6 +22,7 @@ from app.modules.analytics.schemas import (
 from app.modules.analytics.service import analytics_service
 
 __all__ = [
+    "AnalyticsHistory",
     "AnomaliesResponse",
     "BehaviourResponse",
     "CategoryBreakdownResponse",
