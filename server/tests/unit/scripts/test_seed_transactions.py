@@ -54,6 +54,17 @@ def test_rows_move_so_the_newest_lands_this_month_and_future_rows_drop(tmp_path)
     assert not unknown
 
 
+def test_a_true_cell_is_the_users_tick_and_anything_else_is_left_to_the_rule(tmp_path):
+    path = _csv(
+        tmp_path,
+        "2026-10-01,A,-1.00,,food_groceries,0.9,true,\n"
+        "2026-10-01,B,-2.00,,food_groceries,0.9,false,\n"
+        "2026-10-01,C,-3.00,,food_groceries,0.9,,\n",
+    )
+    rows, _ = load_rows(path, today=date(2026, 10, 13))
+    assert [r.is_recurring for r in rows] == [True, None, None]
+
+
 def test_an_unknown_slug_becomes_miscellaneous_and_is_counted(tmp_path):
     path = _csv(tmp_path, "2026-10-01,X,-1.00,,retired_slug,0.9,true,\n")
     rows, unknown = load_rows(path, today=date(2026, 10, 13))
