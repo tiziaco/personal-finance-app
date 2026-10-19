@@ -1,0 +1,27 @@
+:root{
+  --navy-900:#121833;--navy-800:#182040;--navy-700:#1C2447;--navy-500:#34417A;--navy-300:#8B97D1;--navy-100:#E1E5F7;--navy-50:#F1F3FB;
+  --gold-700:#8F5E00;--gold-600:#C98A10;--gold-500:#F2B53E;--gold-200:#F9DB9E;--gold-50:#FDF4E0;
+  --ink-900:#11152B;--ink-600:#3A4160;--ink-400:#68708C;--ink-300:#9AA2C0;--ink-200:#DCE0EC;--ink-100:#EEF0F6;--ink-50:#F7F8FB;--white:#FFFFFF;
+  --income-500:#2FA37A;--income-700:#1B7556;--income-50:#E3F5EE;
+  --expense-500:#E5584F;--expense-700:#B3362E;--expense-50:#FCE9E8;
+  --warning-500:#F2B53E;--info-500:#4C7DD9;--info-50:#E6EEFB;
+
+  --bg-page:var(--ink-50);--bg-surface:var(--white);--bg-sidebar:var(--white);--bg-subtle:var(--ink-100);
+  --border-default:var(--ink-200);--border-subtle:var(--ink-100);
+  --text-primary:var(--ink-900);--text-secondary:var(--ink-600);--text-muted:var(--ink-400);--text-on-brand:var(--white);
+  --brand:var(--navy-700);--brand-hover:var(--navy-500);--brand-soft:var(--navy-100);
+  --accent:var(--gold-500);--accent-soft:var(--gold-50);
+  --logo-body:var(--navy-700);--logo-clasp:var(--gold-500);--logo-dot:var(--navy-700);
+  --positive:var(--income-500);--negative:var(--expense-500);
+  --focus-ring:0 0 0 3px rgba(52,65,122,.35);
+}
+[data-theme="dark"]{
+  --bg-page:#0F1328;--bg-surface:#161C3A;--bg-sidebar:#121833;--bg-subtle:#232A4D;
+  --border-default:#262E54;--border-subtle:#1D2446;
+  --text-primary:#F4F6FD;--text-secondary:#C3C9E3;--text-muted:#9AA2C0;--text-on-brand:#11152B;
+  --brand:var(--gold-500);--brand-hover:#F6C763;--brand-soft:#232A4D;
+  --accent-soft:#2A2A35;
+  --logo-body:#F4F6FD;--logo-dot:#1C2447;
+  --positive:#3CC594;--negative:#F2766E;
+  --focus-ring:0 0 0 3px rgba(242,181,62,.4);
+}

@@ -1,0 +1,11 @@
+:root{
+  --chart-1:#1C2447;--chart-2:#F2B53E;--chart-3:#2A9D8F;--chart-4:#E76F51;--chart-5:#6FA8DC;--chart-6:#8E5AA8;
+  --chart-other:#B8BED3;
+  --chart-income:var(--income-500);--chart-expense:var(--expense-500);--chart-net:var(--navy-700);
+  --chart-grid:var(--ink-100);--chart-axis:var(--ink-400);--chart-gap:#FFFFFF;
+}
+[data-theme="dark"]{
+  --chart-1:#8B97D1;--chart-2:#F2B53E;--chart-3:#3CC5B3;--chart-4:#F2876B;--chart-5:#7DB8F0;--chart-6:#B885D1;
+  --chart-other:#4A5380;
+  --chart-net:#F4F6FD;--chart-grid:#232A4D;--chart-axis:#9AA2C0;--chart-gap:#161C3A;
+}

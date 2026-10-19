@@ -1,0 +1,2 @@
+export interface TransactionRowProps { name: string; category: string; date: string; /** Negative = expense. */ amount: number; icon?: string; }
+export declare function TransactionRow(props: TransactionRowProps): JSX.Element;
