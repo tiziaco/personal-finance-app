@@ -33,15 +33,15 @@ def verdicts(rows: list[RecurringRow]) -> list[bool]:
 @pytest.mark.parametrize(
     ("gaps", "expected"),
     [
-        ([7, 7], True),  # weekly
-        ([6, 6], True),  # weekly, lower edge
-        ([8, 8], True),  # weekly, upper edge
-        ([5, 5], False),  # just under weekly
-        ([9, 9], False),  # just over weekly
-        ([12, 12], True),  # weekly, one skipped period, lower edge
-        ([16, 16], True),  # weekly, one skipped period, upper edge
-        ([11, 11], False),  # just under weekly, one skipped period
-        ([17, 17], False),  # just over weekly, one skipped period
+        ([7, 7, 7], True),  # weekly
+        ([6, 6, 6], True),  # weekly, lower edge
+        ([8, 8, 8], True),  # weekly, upper edge
+        ([5, 5, 5], False),  # just under weekly
+        ([9, 9, 9], False),  # just over weekly
+        ([12, 12, 12], True),  # weekly, one skipped period, lower edge
+        ([16, 16, 16], True),  # weekly, one skipped period, upper edge
+        ([11, 11, 11], False),  # just under weekly, one skipped period
+        ([17, 17, 17], False),  # just over weekly, one skipped period
         ([30, 31], True),  # monthly
         ([26, 35], True),  # monthly, both edges
         ([25, 25], False),  # under monthly, over weekly
@@ -60,12 +60,106 @@ def verdicts(rows: list[RecurringRow]) -> list[bool]:
         ([349, 349], False),  # just under yearly
         ([381, 381], False),  # just over yearly
         ([365, 366], True),  # yearly, three rows
-        ([365], False),  # yearly needs three rows
+        ([365], True),  # yearly, two rows at one amount
         ([30], False),  # two rows are never a series
     ],
 )
 def test_cadences(gaps, expected):
     assert set(verdicts(series(gaps))) == {expected}
+
+
+LIDL_AMOUNTS = [
+    "38.20",
+    "41.50",
+    "39.90",
+    "44.10",
+    "40.30",
+    "38.80",
+    "45.60",
+    "42.00",
+    "39.10",
+    "43.70",
+    "40.80",
+    "46.00",
+]
+LIDL_GAPS = [7, 6, 8, 5, 9, 7, 6, 8, 7, 6, 8]
+
+
+def test_frequent_shopping_with_varying_baskets_is_not_recurring():
+    dates = [START]
+    for gap in LIDL_GAPS:
+        dates.append(dates[-1] + dt.timedelta(days=gap))
+    rows = [RecurringRow(uuid7(), d, -Decimal(a), DETECTED) for d, a in zip(dates, LIDL_AMOUNTS, strict=True)]
+    assert set(detect_recurring(rows).values()) == {False}
+
+
+def test_a_fixed_weekly_charge_needs_four_rows():
+    assert set(verdicts(series([7, 7, 7]))) == {True}
+    assert set(verdicts(series([7, 7]))) == {False}
+
+
+def test_a_fixed_weekly_charge_may_skip_a_week():
+    assert set(verdicts(series([7, 14, 7]))) == {True}
+
+
+def test_a_weekly_charge_must_hold_its_amount():
+    def weekly(amounts: list[str]) -> list[RecurringRow]:
+        return [
+            RecurringRow(uuid7(), START + dt.timedelta(days=7 * i), Decimal(a), DETECTED)
+            for i, a in enumerate(amounts)
+        ]
+
+    assert set(verdicts(weekly(["-10.00", "-10.15", "-10.00", "-10.10"]))) == {True}
+    assert set(verdicts(weekly(["-10.00", "-10.80", "-10.00", "-10.40"]))) == {False}
+
+
+def test_a_weekly_charge_with_an_odd_purchase_in_its_cluster_is_not_weekly():
+    rows = [
+        *series([7, 7, 7], amount="-9.99"),
+        RecurringRow(uuid7(), START + dt.timedelta(days=10), Decimal("-10.50"), DETECTED),
+    ]
+    assert set(detect_recurring(rows).values()) == {False}
+
+
+def test_two_yearly_charges_at_one_amount_are_recurring():
+    assert set(verdicts(series([365], amount="-89.90"))) == {True}
+
+
+def test_two_yearly_charges_that_differ_are_not_recurring():
+    rows = [
+        RecurringRow(uuid7(), START, Decimal("-89.90"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=365), Decimal("-98.90"), DETECTED),
+    ]
+    assert set(detect_recurring(rows).values()) == {False}
+
+
+def test_two_yearly_charges_with_other_charges_between_are_not_recurring():
+    def yearly(between: Decimal) -> tuple[list[RecurringRow], list[RecurringRow]]:
+        charges = [
+            RecurringRow(uuid7(), START, Decimal("-7.42"), DETECTED),
+            RecurringRow(uuid7(), START + dt.timedelta(days=372), Decimal("-7.42"), DETECTED),
+        ]
+        return charges, [RecurringRow(uuid7(), START + dt.timedelta(days=100), between, DETECTED)]
+
+    charges, others = yearly(Decimal("-23.10"))
+    others.append(RecurringRow(uuid7(), START + dt.timedelta(days=200), Decimal("-15.80"), DETECTED))
+    result = detect_recurring([*charges, *others])
+    assert [result[r.id] for r in charges] == [False, False]
+
+    charges, others = yearly(Decimal("5.00"))
+    result = detect_recurring([*charges, *others])
+    assert [result[r.id] for r in charges] == [True, True]
+
+
+def test_small_yearly_amounts_get_ten_cents_of_slack_not_fifty():
+    def pair(second: str) -> list[RecurringRow]:
+        return [
+            RecurringRow(uuid7(), START, Decimal("-5.68"), DETECTED),
+            RecurringRow(uuid7(), START + dt.timedelta(days=365), Decimal(second), DETECTED),
+        ]
+
+    assert set(detect_recurring(pair("-5.94")).values()) == {False}
+    assert set(detect_recurring(pair("-5.76")).values()) == {True}
 
 
 def test_one_skipped_period_still_fits():
