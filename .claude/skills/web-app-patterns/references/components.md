@@ -83,15 +83,16 @@ Every primitive goes in `packages/ui`, even one only a single screen uses.
 
 ### Corner radius
 
-Three levels, by what the element is. `--radius` is 10px (`lg`); the tokens are in `globals.css`.
+The Finsight design system's scale (`.claude/skills/finsight-design/tokens/spacing.css`):
+6 / 8 / 12 / 16px, pinned as `--radius-sm/md/lg/xl` in `packages/ui/src/styles/globals.css`.
 
 | Element | Radius |
 |---|---|
-| A control — button (every size), input, textarea, select trigger, sidebar menu button | `rounded-lg` |
-| A floating list — popover, select and dropdown content, hover card | `rounded-lg`, its items `rounded-md` |
-| A surface — dialog, alert dialog, card, the table frame, the bulk-action pill | `rounded-xl` |
-| A badge or a filter chip | `rounded-md` |
-| Round by nature — avatar, switch, status dot, a count bubble | `rounded-full` |
+| A control — button (every size), input, textarea, select trigger, sidebar menu button | `rounded-lg` (12px) |
+| A floating list — popover, select and dropdown content, hover card | `rounded-lg`, its items `rounded-md` (8px) |
+| A surface — dialog, alert dialog, card, the table frame, the bulk-action bar | `rounded-xl` (16px) |
+| A badge or a filter chip | `rounded-full` (a pill) |
+| Round by nature — avatar, switch, status dot, a count bubble | `rounded-full` (the sidebar's avatar is `rounded-lg`, per the design system) |
 
 An item inside a list is one step smaller than the list, so the two corners nest.
 

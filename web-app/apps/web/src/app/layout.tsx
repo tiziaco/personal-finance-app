@@ -1,4 +1,4 @@
-import { Inter } from "next/font/google"
+import { Onest } from "next/font/google"
 import { ThemeProvider } from "@app/ui/theme-provider"
 import { Toaster } from "@app/ui/sonner"
 import { ClerkProvider } from "@clerk/nextjs"
@@ -7,7 +7,11 @@ import { AuthProvider } from "@app/auth"
 import type { Metadata } from "next"
 import "@/styles/globals.css"
 
-const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
+const onest = Onest({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-sans",
+})
 
 export const metadata: Metadata = {
   title: "Personal Finance",
@@ -25,7 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <ClerkProvider>
-      <html lang="en" suppressHydrationWarning className={inter.variable}>
+      <html lang="en" suppressHydrationWarning className={onest.variable}>
         <body className="antialiased min-h-screen bg-background">
           <AuthProvider signOutUrl="/sign-in">
             <ThemeProvider
