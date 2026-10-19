@@ -60,7 +60,9 @@ def verdicts(rows: list[RecurringRow]) -> list[bool]:
         ([349, 349], False),  # just under yearly
         ([381, 381], False),  # just over yearly
         ([365, 366], True),  # yearly, three rows
+        ([365, 730], True),  # yearly, three rows, one skipped period
         ([365], True),  # yearly, two rows at one amount
+        ([730], False),  # yearly, two rows may not skip a period
         ([30], False),  # two rows are never a series
     ],
 )
@@ -150,22 +152,25 @@ def test_two_yearly_charges_that_differ_are_not_recurring():
     assert set(detect_recurring(rows).values()) == {False}
 
 
-def test_two_yearly_charges_with_other_charges_between_are_not_recurring():
-    def yearly(between: Decimal) -> tuple[list[RecurringRow], list[RecurringRow]]:
-        charges = [
-            RecurringRow(uuid7(), START, Decimal("-7.42"), DETECTED),
-            RecurringRow(uuid7(), START + dt.timedelta(days=372), Decimal("-7.42"), DETECTED),
-        ]
-        return charges, [RecurringRow(uuid7(), START + dt.timedelta(days=100), between, DETECTED)]
-
-    charges, others = yearly(Decimal("-23.10"))
-    others.append(RecurringRow(uuid7(), START + dt.timedelta(days=200), Decimal("-15.80"), DETECTED))
+@pytest.mark.parametrize(
+    ("between", "expected"),
+    [
+        (["-23.10", "-15.80"], False),  # other purchases at the venue
+        (["-7.80"], False),  # within ±15 % of the charge, so in its cluster, but another run
+        (["5.00"], True),  # money in is judged apart
+    ],
+)
+def test_two_yearly_charges_are_recurring_only_with_nothing_between(between, expected):
+    charges = [
+        RecurringRow(uuid7(), START, Decimal("-7.42"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=372), Decimal("-7.42"), DETECTED),
+    ]
+    others = [
+        RecurringRow(uuid7(), START + dt.timedelta(days=100 * (i + 1)), Decimal(amount), DETECTED)
+        for i, amount in enumerate(between)
+    ]
     result = detect_recurring([*charges, *others])
-    assert [result[r.id] for r in charges] == [False, False]
-
-    charges, others = yearly(Decimal("5.00"))
-    result = detect_recurring([*charges, *others])
-    assert [result[r.id] for r in charges] == [True, True]
+    assert [result[r.id] for r in charges] == [expected, expected]
 
 
 def test_three_yearly_charges_within_fifteen_percent_are_recurring():

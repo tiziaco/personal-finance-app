@@ -153,14 +153,14 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
   seed does not drift the way a running median does). Inside each cluster, the same rule
   clusters again at the fixed band below, giving **same-amount runs**. A cluster or a run is a
   series when at least 75 % of the gaps between its sorted dates fit one cadence — the window,
-  or twice it, for one skipped period — and it has the rows the cadence needs:
+  or twice it, for one skipped period (not for two yearly rows) — and it has the rows the cadence needs:
 
   | Cadence | Window (days) | Minimum rows |
   |---|---|---|
   | weekly | 6–8 | 4 in a run only |
   | monthly | 26–35 | 3 in a cluster |
   | quarterly | 84–98 | 3 in a cluster |
-  | yearly | 350–380 | 3 in a cluster, or 2 in a run with no other row between them |
+  | yearly | 350–380 | 3 in a cluster, or 2 in a run one window apart with no other row between them |
 
   A **run** holds the rows within 2 % of its seed, with at least €0.10 of slack; its seeds are
   chosen as a cluster's are. "Nothing between them" means no other row of the same merchant
@@ -182,8 +182,12 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
   moved from the whole cluster to each run inside it, so one odd row no longer undoes a series
   beside it: a weekly €3.00 that rises to €3.20 is recurring at both amounts, and thirty weekly
   €60 charges stay recurring while one €65 purchase among them does not. Lidl's baskets still
-  form no run of four weekly rows at one amount. Flags already stored were not re-judged,
-  because only dev data existed; re-seed or re-import to see the new rules.
+  form no run of four weekly rows at one amount. Two rows at one amount may not skip a year:
+  two €100 withdrawals two years apart are a coincidence of round amounts, not a series. Flags
+  already stored were not re-judged, because only dev data existed; re-seed or re-import to see
+  the new rules. A database seeded or imported earlier also stored every `false` cell as the
+  user's, which now reads as an untick and keeps those merchants out of hidden subscriptions
+  until then.
 
   The rule runs in `transaction_service`, in the writing session, before the flush, and updates
   only `detected` rows whose value changed: one `UPDATE` per new value, so at most two
