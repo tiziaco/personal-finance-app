@@ -48,7 +48,7 @@ make it the bootstrap for the new roles or delete it.
 
 ### Every rate limit collapses into one shared bucket behind a proxy
 
-`server/app/core/limiter.py:14` keys on `get_remote_address`, which reads
+`server/app/core/limiter.py:15` keys on `get_remote_address`, which reads
 `request.client.host`. `server/Dockerfile:98` starts uvicorn with no
 `--forwarded-allow-ips`, and no proxy-headers middleware is registered, so forwarded
 headers are not trusted and `request.client.host` is whatever connected to the server.
@@ -70,7 +70,7 @@ host the proxy is on `dokploy-network`, so the value belongs with the other
 deploy-environment settings rather than baked into the Dockerfile's `CMD`.
 
 Related, and worth settling in the same change: `SlowAPIMiddleware` is never registered —
-`server/app/main.py:88` sets `app.state.limiter` and nothing else — so
+`server/app/main.py:90` sets `app.state.limiter` and nothing else — so
 `settings.rate_limits.DEFAULT` is inert and only routes with an explicit
 `@limiter.limit(...)` are limited at all. Either register the middleware or drop
 `default_limits`, so the config stops implying a limit that doesn't exist.

@@ -66,8 +66,8 @@ Ownership is enforced in the query layer: every user-owned repository method fil
 `test_owned_tables.py` checking that every table uses `UserOwnedMixin` — not that its
 queries filter. Postgres RLS keyed on a per-transaction user id would make the database
 refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS.md): a
-role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the first
-finance table.
+role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the finance
+tables.
 
 ## Server — a model call holds the request's DB connection
 
@@ -191,7 +191,7 @@ whenever that user's transactions change. **Decide first:**
   stale chart right after an edit.
 
 **Unblocks:** analytics and chat that stay fast as a user's history grows. **After:**
-nothing; `AnalyticsHistory` is the one load to cache. Found while scoping it (19 Oct 2026).
+nothing; `AnalyticsHistory` is the one load to cache. Found while scoping the Wave 3 cleanup (19 Oct 2026).
 
 ## Web — analytics page parts
 

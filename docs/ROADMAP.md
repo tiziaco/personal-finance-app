@@ -90,9 +90,9 @@ not wait for 4.
   `conversation` does not import `insights`, so 7 does not wait for 6. A tool that reads
   insights is a follow-up.
 - **7 waits for the Wave 3 cleanup** (decision on 17 Oct 2026). It launched with wave 3 but
-  was closed before its spec. The cleanup adds one analytics method that loads a user's
-  history once and returns a typed bundle; 7's tools build on that, rather than on methods
-  that each reload the whole history.
+  was closed before its spec. The cleanup added `AnalyticsService.history`, which loads a
+  user's history once and returns a typed `AnalyticsHistory`; 7's tools build on that, rather
+  than on methods that each reload the whole history.
 - **Analytics rules is its own step, beside the cleanup** (product and technical; decision
   on 19 Oct 2026). The cleanup changes no behaviour; the rules step changes what the library
   reports, and may re-judge stored recurring flags, so the two are reviewed apart. They run
