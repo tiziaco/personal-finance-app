@@ -164,16 +164,15 @@ class TransactionService:
     async def import_many(session: AsyncSession, user_id: uuid.UUID, rows: list[TransactionImport]) -> int:
         """Insert rows that carry their own confidence and original category (the import; the seed).
 
-        A row's own is_recurring is the user's; None leaves it to the rule, which re-runs for every merchant.
+        A ticked row is the user's, as in `create`; an unticked one is left to the rule, which re-runs for every merchant.
         """
         transactions = [
             Transaction(
                 user_id=user_id,
                 fingerprint=fingerprint(user_id, row.date, row.merchant, row.amount, row.description),
                 merchant_key=normalise_merchant(row.merchant),
-                recurring_source=DETECTED if row.is_recurring is None else USER,
-                is_recurring=bool(row.is_recurring),
-                **row.model_dump(exclude={"is_recurring"}),
+                recurring_source=USER if row.is_recurring else DETECTED,
+                **row.model_dump(),
             )
             for row in rows
         ]

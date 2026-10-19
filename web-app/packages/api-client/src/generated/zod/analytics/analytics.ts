@@ -82,16 +82,21 @@ export const GetAnomaliesResponse = zod
               .regex(getAnomaliesResponseOutliersItemAmountRegExp)
               .describe("The expense, positive"),
             category: zod.string(),
+            compared_with: zod
+              .enum(["category", "all"])
+              .describe(
+                "What the expense was compared with: its category's window, or all one-off spending when the category's window held fewer than 5",
+              ),
             date: zod.iso.date(),
             merchant: zod.string(),
             window_mean: zod
               .string()
               .regex(getAnomaliesResponseOutliersItemWindowMeanRegExp)
-              .describe("The mean of the category's expenses in the window"),
+              .describe("The mean of the window it was compared with"),
             z_score: zod.number(),
           })
           .describe(
-            "One expense in the period far above the earlier expenses of its category in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
+            "One expense in the period far above the earlier expenses in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
           ),
       )
       .describe("The top 20 by z-score"),

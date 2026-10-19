@@ -1,7 +1,8 @@
 """Recurring: spend the stored is_recurring flag marks, its run-rate, and unflagged subscription look-alikes.
 
 No detection here: the flag is the one source of truth (docs/ROADMAP.md, decision of 15 Oct 2026). Hidden
-subscriptions are candidates for the user to flag, never counted as recurring.
+subscriptions are candidates for the user to flag, never counted as recurring, and never a merchant the
+user unticked.
 """
 
 import datetime as dt
@@ -52,7 +53,7 @@ class RecurringMerchant:
 
 @dataclass(frozen=True)
 class HiddenSubscription:
-    """A merchant never flagged, charging like a subscription: a steady, small amount about once a month."""
+    """A merchant never flagged and never unticked, charging like a subscription: a steady, small amount monthly."""
 
     merchant: str
     charges: int
@@ -142,7 +143,9 @@ def recurring_analysis(rows: Sequence[Row], period: Optional[Period]) -> Recurri
     spent = expenses(period.rows(rows))
     flagged = [r for r in spent if r.is_recurring]
     ever_flagged = {r.merchant_key for r in expenses(rows) if r.is_recurring}  # all history, not only the period
-    unflagged = [r for r in spent if r.merchant_key not in ever_flagged]
+    unticked = {r.merchant_key for r in expenses(rows) if r.recurring_set_by_user and not r.is_recurring}
+    excluded = ever_flagged | unticked
+    unflagged = [r for r in spent if r.merchant_key not in excluded]
     history = group_by(
         (r for r in expenses(rows) if r.is_recurring and r.date <= period.last_day), lambda r: r.merchant_key
     )

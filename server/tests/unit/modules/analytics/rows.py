@@ -1,4 +1,4 @@
-"""Plain rows for the analytics domain tests: AnalysisRow's six fields, nothing else."""
+"""Plain rows for the analytics domain tests: AnalysisRow's seven fields, nothing else."""
 
 import datetime as dt
 from dataclasses import dataclass
@@ -16,6 +16,7 @@ class Row:
     amount: Decimal
     category: str
     is_recurring: bool
+    recurring_set_by_user: bool = False
 
 
 def row(
@@ -25,10 +26,11 @@ def row(
     category: str = "shopping",
     recurring: bool = False,
     key: Optional[str] = None,
+    by_user: bool = False,
 ) -> Row:
     """`row("2026-03-01", "-12.50")` — a day in ISO form and a signed decimal string.
 
     The merchant key is the stored one, `normalise_merchant(merchant)`, unless `key` is given.
     """
     merchant_key = normalise_merchant(merchant) if key is None else key
-    return Row(dt.date.fromisoformat(day), merchant, merchant_key, Decimal(amount), category, recurring)
+    return Row(dt.date.fromisoformat(day), merchant, merchant_key, Decimal(amount), category, recurring, by_user)

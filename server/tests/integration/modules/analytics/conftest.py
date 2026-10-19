@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 
 from app.modules.account.models import User
-from app.modules.transaction.domain import USER, fingerprint, normalise_merchant
+from app.modules.transaction.domain import DETECTED, USER, fingerprint, normalise_merchant
 from app.modules.transaction.models import Transaction
 
 
@@ -35,7 +35,7 @@ def add(db_session):
             category=category,
             confidence=1.0,
             is_recurring=recurring,
-            recurring_source=USER,
+            recurring_source=USER if recurring else DETECTED,
             original_category=None,
             fingerprint=fingerprint(user.id, date, merchant, value, None),
             merchant_key=normalise_merchant(merchant),

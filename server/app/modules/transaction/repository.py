@@ -10,7 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from app.core.logging import logger
-from app.modules.transaction.domain import DETECTED
+from app.modules.transaction.domain import DETECTED, USER
 from app.modules.transaction.models import Transaction
 from app.modules.transaction.schemas import AnalysisRow, TransactionFilters, TransactionOrdering
 
@@ -159,6 +159,7 @@ class TransactionRepository:
                 Transaction.amount,
                 Transaction.category,
                 Transaction.is_recurring,
+                (Transaction.recurring_source == USER).label("recurring_set_by_user"),
             )
             .where(*conditions)
             .order_by(Transaction.date, Transaction.created_at, Transaction.id)

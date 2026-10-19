@@ -275,11 +275,11 @@ class TestConfirm:
     async def test_a_mapped_recurring_column_is_the_users(
         self, authenticated_client, propose, labeller, db_session, test_user
     ):
-        content = "Datum;Empfaenger;Betrag;Abo\n15.01.2026;Gym;-20,00;x\n16.01.2026;Kiosk;-2,00;\n"
+        content = "Datum;Empfaenger;Betrag;Abo\n15.01.2026;Gym;-20,00;x\n16.01.2026;Kiosk;-2,00;\n17.01.2026;Bar;-3,00;nein\n"
         mapping = {"Datum": "date", "Empfaenger": "merchant", "Betrag": "amount", "Abo": "recurring"}
         await confirm(authenticated_client, await upload_id(authenticated_client, content), mapping)
         saved = {t.merchant: (t.is_recurring, t.recurring_source) for t in await rows(db_session, test_user.id)}
-        assert saved == {"Gym": (True, "user"), "Kiosk": (False, "detected")}
+        assert saved == {"Gym": (True, "user"), "Kiosk": (False, "detected"), "Bar": (False, "detected")}
 
     async def test_the_eleventh_confirm_in_a_minute_is_429(self, authenticated_client, monkeypatch):
         monkeypatch.setattr(app.state, "limiter", limiter, raising=False)

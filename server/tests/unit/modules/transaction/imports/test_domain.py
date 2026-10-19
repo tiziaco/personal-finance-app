@@ -176,8 +176,9 @@ class TestValues:
             ("1", True),
             ("nein", False),
             ("FALSE", False),
-            ("", None),
-            ("monthly", None),
+            ("no", False),
+            ("", False),
+            ("monthly", False),
         ],
     )
     def test_recurring_cells(self, value, expected):
@@ -242,14 +243,14 @@ class TestReadRows:
             (7, "unreadable amount “abc”"),
         ]
 
-    def test_recurring_is_none_unless_mapped(self):
+    def test_recurring_is_unticked_unless_mapped(self):
         rows, _ = read_rows(parse(GERMAN), GERMAN_MAPPING)
-        assert {r.is_recurring for r in rows} == {None}
+        assert {r.is_recurring for r in rows} == {False}
         rows, _ = read_rows(
             parse("d,m,a,r\n2026-01-01,X,1,x\n2026-01-02,Y,1,\n"),
             {"d": "date", "m": "merchant", "a": "amount", "r": "recurring"},
         )
-        assert [r.is_recurring for r in rows] == [True, None]
+        assert [r.is_recurring for r in rows] == [True, False]
 
     def test_a_row_wider_than_the_header_is_rejected_not_cut(self):
         text = "d,a,m,desc\n2026-01-01,-12.00,Foo, Inc,desc\n2026-01-02,-1.00,Bar,x,\n2026-01-03,-2.00,Baz,y\n"

@@ -81,13 +81,25 @@ short-lived session from `request.app.state.session_factory`, as a streaming bod
 must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insights/generate` already release it
 (`_release_connection` in `transaction/imports/service.py` and `insights/service.py`). **Unblocks:** chat under concurrent load.
 
-## Server — a transaction added by hand is not held to the date bounds
+## Insights — word an outlier by what it was compared with
 
-The import rejects a row dated outside `MIN_DATE`/`MAX_DATE`
-(`transaction/domain/dates.py`), but a transaction added or edited by hand is not held to
-them, so a typo year drops out of every chart without a word, as the import's did. Validate
-the date on create and update against the same bounds. Found while fixing the import's
-(15 Oct 2026).
+Since 19 Oct 2026 an outlier carries `compared_with`, and the insights agent already receives
+it (`insights/figures.py` passes the anomalies through `model_dump`). What is missing is the
+wording: the prompt (`server/app/agents/insights/prompts/v1.md`, the `anomalies` section line,
+"a single unusual charge") never tells the model that `"all"` means the expense was scored
+against all one-off spending, to be worded "above your usual spending" rather than "above its
+category". Owned by whoever next touches the insights prompt.
+
+## Server — a fixed cost not yet flagged recurring is an outlier
+
+An expense whose category's window holds fewer than 5 expenses is compared with all one-off
+spending (`analytics/domain/anomalies.py`, since 19 Oct 2026). Rent the recurring rule has not
+flagged yet — two months imported, when the monthly cadence needs three rows, or a payee whose
+merchant key changes each month — is such an expense: €1,200 against daily groceries scores
+a z of about 170. Ticking the row recurring clears it, and so does a third month. Left as is
+because, until then, rent looks exactly like a one-off; excluding `household_utilities` from
+the fallback would also hide a large furniture or appliance purchase. Revisit if users report
+it, for instance by not falling back for a charge the same merchant made about a month earlier.
 
 ## Server — the chatbot names the default model after a fallback
 
@@ -158,15 +170,6 @@ calendar date-range picker is out too; the date filter uses the shared single-da
 data on 14 Oct 2026.
 
 **Unblocks:** nothing; the app is usable with the template's theme.
-
-## Server — a yearly charge is recurring only after three years (roadmap row "Analytics rules")
-
-Surfaced by step 6's insights run. Correct by the current rule, but the rule may be wrong
-for the user. `CADENCES` in `server/app/modules/transaction/domain/recurring.py` gives
-`yearly` a `min_rows` of 3, so an annual subscription (Amazon Prime) seen once or twice is
-not flagged. `analytics` recurring can already price one (`interval_days`, €600 a year shows
-as €50 a month) once it is flagged. Decide whether two yearly charges at one amount are
-enough, or whether only the user's flag marks one.
 
 ## Server — analytics loads the whole history on every request
 
@@ -275,14 +278,6 @@ A picker would let the user look back; every analytics route already takes
 `date_from`/`date_to`, but `GET /analytics/dashboard` picks its own month, so it gains a
 `month` parameter. **Unblocks:**
 looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
-
-## Server — a merchant the user unflagged can be suggested as a hidden subscription
-
-A hidden subscription is a merchant never flagged recurring in the user's history. Analytics'
-rows do not carry `recurring_source`, so a merchant the user explicitly unflagged
-(`recurring_source = USER`) can still be suggested. Fixing it needs the transaction module's
-`AnalysisRow` to expose `recurring_source`. **Unblocks:** a hidden-subscription list that
-respects the user's "not recurring". Reasoning: `analytics.md` §3.
 
 ## Chat — free-form questions over the user's data
 

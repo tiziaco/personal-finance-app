@@ -66,9 +66,10 @@ Date, merchant and amount must be mapped; the rest are optional.
   the fingerprint rule in [`transactions.md`](./transactions.md). Counting matters: two
   identical rows in one file are two transactions, and importing the same file again adds
   nothing.
-- **A mapped recurring column is the user's assertion.** Its value is kept and the
-  recurring rule never changes it; a blank cell lets the rule decide
-  ([`transaction.md`](../../data-model/transaction.md) D6).
+- **A true cell in a mapped recurring column is the user's assertion.** The row is kept
+  recurring and the rule never changes it; a false, blank or unrecognised cell lets the rule
+  decide ([`transaction.md`](../../data-model/transaction.md) D6). Unticking in the app is the
+  one way to keep a merchant out of hidden subscriptions.
 - **Importing refreshes the insights** the next time the user opens them
   ([`insights.md`](./insights.md)).
 - Upload and confirm are limited to 10 uploads and 10 confirms a minute **per user**.
