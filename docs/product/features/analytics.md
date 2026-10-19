@@ -148,15 +148,15 @@ How they compute, so the numbers can be checked:
   - Month-to-date is the current month up to the last transaction in it, against days 1 to
     the same day of the previous month. The response carries that day as `previous_through`
     (clamped to the previous month's length) and the month's `net`; the web shows them and
-    works out neither. It is absent when the current month has no
-    transaction. A percent is null when the previous figure is 0, and the comparison is blank
-    when the previous month is only partly in the data (the data starts after its 1st); the
-    previous figures are still shown. It does not depend on the period.
+    works out neither. It is absent when the current month has no transaction. A percent is
+    null when the previous figure is 0, and the comparison is blank when the previous month
+    is only partly in the data (the data starts after its 1st); the previous figures are
+    still shown. It does not depend on the period.
 - Money is rounded half-up to the cent. The monthly burn rate is expenses minus income per
   month, so it is negative while the user saves; it is exactly the average monthly net with
-  the sign reversed, and null when that is. The savings rate is net over income; null with no income. The latest
-  month is the period's last whole month (none when it has none); its percentages compare it
-  with the period's average as shown, which includes it.
+  the sign reversed, and null when that is. The savings rate is net over income; null with
+  no income. The latest month is the period's last whole month (none when it has none); its
+  percentages compare it with the period's average as shown, which includes it.
 - A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated
   outside it is left out of every analysis. The CSV import rejects such a row instead of
   saving it; the bounds are `MIN_DATE`/`MAX_DATE` in `transaction/domain/dates.py`.

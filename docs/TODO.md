@@ -168,7 +168,8 @@ enough, or whether only the user's flag marks one.
 
 Every `AnalyticsService` method loads the user's entire transaction history
 (`transaction_service.list_for_analysis` from `MIN_DATE` to `MAX_DATE`, in `_context`/`_rows`
-in `analytics/service.py`), whatever period it was asked for. `AnalyticsHistory` fixes the fan-out inside one caller — an insights generation, a chat turn — but not across
+in `analytics/service.py`), whatever period it was asked for. `AnalyticsHistory` fixes the
+fan-out inside one caller that needs several windows (an insights generation) but not across
 requests: the home dashboard, each `/analytics` tab and each period change are separate
 requests, and each reads every row again. Fine at one user's data; it grows with the history
 and with every caller step 7 adds.
@@ -186,8 +187,8 @@ whenever that user's transactions change. **Decide first:**
   each user carries a data version that the cache key includes. A TTL alone would show a
   stale chart right after an edit.
 
-**Unblocks:** analytics and chat that stay fast as a user's history grows. **After:** the Wave 3 cleanup;
-`AnalyticsHistory` is the one load to cache. Found while scoping it (19 Oct 2026).
+**Unblocks:** analytics and chat that stay fast as a user's history grows. **After:**
+nothing; `AnalyticsHistory` is the one load to cache. Found while scoping it (19 Oct 2026).
 
 ## Web — analytics page parts
 
