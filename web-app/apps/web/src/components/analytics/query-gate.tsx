@@ -8,7 +8,8 @@ import { SectionError } from "@/components/dashboard/section-error"
  * One request's loading, error and empty state. A skeleton while nothing has
  * loaded, one error card with a retry when nothing loaded and the request
  * failed, one empty card when the data holds nothing to show, and the
- * children otherwise. A failed background refetch keeps showing the data.
+ * children otherwise, dimmed and aria-busy while they are the previous
+ * query's placeholder data. A failed background refetch keeps showing the data.
  */
 export function QueryGate<T>({
   query,
@@ -18,14 +19,19 @@ export function QueryGate<T>({
   empty,
   children,
 }: {
-  query: { data: T | undefined; isError: boolean; refetch: () => unknown }
+  query: {
+    data: T | undefined
+    isError: boolean
+    isPlaceholderData?: boolean
+    refetch: () => unknown
+  }
   what: string
   skeleton: ReactNode
   isEmpty: (data: T) => boolean
   empty: ReactNode | ((data: T) => ReactNode)
   children: (data: T) => ReactNode
 }) {
-  const { data, isError, refetch } = query
+  const { data, isError, isPlaceholderData, refetch } = query
   if (data === undefined) {
     return isError ? (
       <SectionError what={what} onRetry={() => void refetch()} />
@@ -47,5 +53,14 @@ export function QueryGate<T>({
       </Card>
     )
   }
-  return <>{children(data)}</>
+  return (
+    <div
+      aria-busy={isPlaceholderData === true}
+      className={
+        isPlaceholderData ? "opacity-60 transition-opacity" : undefined
+      }
+    >
+      {children(data)}
+    </div>
+  )
 }

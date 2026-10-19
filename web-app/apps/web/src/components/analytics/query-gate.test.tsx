@@ -8,6 +8,7 @@ import { Section } from "./section"
 type Query = {
   data: string[] | undefined
   isError: boolean
+  isPlaceholderData?: boolean
   refetch: () => unknown
 }
 
@@ -78,5 +79,39 @@ describe("QueryGate", () => {
       (d) => `Got ${d.length} things.`,
     )
     expect(screen.getByText("Got 0 things.")).toBeTruthy()
+  })
+
+  it("dims and marks busy while placeholder data shows", () => {
+    renderGate({
+      data: ["a"],
+      isError: false,
+      isPlaceholderData: true,
+      refetch: vi.fn(),
+    })
+    const wrapper = screen.getByText("a").parentElement
+    expect(wrapper?.getAttribute("aria-busy")).toBe("true")
+    expect(wrapper?.className).toContain("opacity-60")
+  })
+
+  it("is not busy or dimmed once the data is real", () => {
+    renderGate({
+      data: ["a"],
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    })
+    const wrapper = screen.getByText("a").parentElement
+    expect(wrapper?.getAttribute("aria-busy")).toBe("false")
+    expect(wrapper?.className).not.toContain("opacity-60")
+  })
+
+  it("a first load still shows the skeleton", () => {
+    renderGate({
+      data: undefined,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    })
+    expect(screen.getByText("loading")).toBeTruthy()
   })
 })

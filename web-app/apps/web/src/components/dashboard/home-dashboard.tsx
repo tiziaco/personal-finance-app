@@ -1,6 +1,7 @@
 "use client"
 
 import { useGetDashboard } from "@app/api-client/endpoints/analytics"
+import { ANALYTICS_STALE_TIME } from "@/components/analytics/stale-time"
 import { CategoryChart } from "./category-chart"
 import { DashboardSkeleton } from "./dashboard-skeleton"
 import { EmptyDashboard } from "./empty-dashboard"
@@ -11,9 +12,6 @@ import { SectionError } from "./section-error"
 import { SummaryCards } from "./summary-cards"
 import { TrendChart } from "./trend-chart"
 import { WelcomeHeader } from "./welcome-header"
-
-/** Analytics are costlier than a list; any transaction write invalidates them sooner (use-invalidate-transactions). */
-export const ANALYTICS_STALE_TIME = 2 * 60 * 1000
 
 export function HomeDashboard() {
   const query = useGetDashboard({
