@@ -119,6 +119,8 @@ async def test_spending_over_the_last_three_finished_months(authenticated_client
     assert body["latest_month"]["month"] == "2026-09"
     assert body["month_to_date"]["through"] == "2026-10-02"
     assert body["month_to_date"]["expenses"] == "100.00"
+    assert body["month_to_date"]["previous_through"] == "2026-09-02"
+    assert body["month_to_date"]["net"] == "-100.00"
 
 
 async def test_spending_respects_the_range(authenticated_client, test_user, add, today):

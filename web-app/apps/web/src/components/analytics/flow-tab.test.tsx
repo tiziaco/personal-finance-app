@@ -1,12 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useGetSpending } from "@app/api-client/endpoints/analytics"
-import type { MonthFlowResponse, SpendingResponse } from "@app/api-client/types"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  getGetDashboardQueryKey,
+  useGetSpending,
+} from "@app/api-client/endpoints/analytics"
+import type {
+  DashboardResponse,
+  MonthFlowResponse,
+  SpendingResponse,
+} from "@app/api-client/types"
 import { formatMonth } from "@/components/dashboard/month"
 import { formatAmount } from "@/components/transactions/format"
 import { FlowTab } from "./flow-tab"
-import { formatDayRange, formatPct } from "./format"
+import { formatDayRange, formatPct, formatPeriod } from "./format"
 
 vi.mock("@app/api-client/endpoints/analytics", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/analytics")>()),
@@ -57,6 +65,8 @@ const DATA: SpendingResponse = {
     month: "2026-10",
     through: "2026-10-16",
     previous_month: "2026-09",
+    previous_through: "2026-09-16",
+    net: "2180.00",
     expenses: "1020.00",
     expenses_change_pct: -8.2,
     income: "3200.00",
@@ -79,8 +89,12 @@ beforeEach(() => {
   spending({ data: DATA })
 })
 
-const renderTab = (onMonthsChange = vi.fn()) =>
-  render(<FlowTab months={6} onMonthsChange={onMonthsChange} />)
+const renderTab = (onMonthsChange = vi.fn(), client = new QueryClient()) =>
+  render(
+    <QueryClientProvider client={client}>
+      <FlowTab months={6} onMonthsChange={onMonthsChange} />
+    </QueryClientProvider>,
+  )
 
 const card = (title: string | RegExp) =>
   screen.getByText(title).closest('[data-slot="card"]') as HTMLElement
@@ -185,6 +199,29 @@ describe("FlowTab", () => {
     expect(el).not.toHaveClass("text-muted-foreground")
   })
 
+  it('shows "No full month yet" when the period has no whole month', () => {
+    spending({
+      data: {
+        ...DATA,
+        average_monthly_income: null,
+        average_monthly_expenses: null,
+        average_monthly_net: null,
+        burn_rate: null,
+      },
+    })
+    renderTab()
+    const cash = within(card("Cash flow"))
+    const notes = cash.getAllByText("No full month yet")
+    expect(notes).toHaveLength(3)
+    for (const note of notes) {
+      expect(note).toHaveClass("text-muted-foreground")
+      expect(note).not.toHaveClass("text-destructive")
+    }
+    expect(cash.queryByText(/\/ month/)).not.toBeInTheDocument()
+    expect(cash.getByText(formatAmount("19200.00"))).toBeInTheDocument()
+    expect(cash.getByText(formatAmount("12840.00"))).toBeInTheDocument()
+  })
+
   it("shows a dash when there is no savings rate", () => {
     spending({ data: { ...DATA, savings_rate_pct: null } })
     renderTab()
@@ -265,5 +302,93 @@ describe("FlowTab", () => {
     expect(
       screen.getAllByText(/Couldn't load your income and expenses/),
     ).toHaveLength(1)
+  })
+
+  describe("while loading", () => {
+    const loading = () => spending({ data: undefined })
+    const trend = (n: number) =>
+      Array.from({ length: n }, (_, i) => ({
+        month: `2026-0${i + 1}`,
+        income: "0.00",
+        expenses: "0.00",
+      }))
+
+    it("holds the strip and the latest-month block, in the rendered order", () => {
+      loading()
+      renderTab()
+      const ids = ["mtd-skeleton", "latest-skeleton"]
+      for (const id of ids) {
+        expect(screen.getByTestId(id)).toBeInTheDocument()
+      }
+      const before = (a: HTMLElement, b: HTMLElement) =>
+        a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
+      const strip = screen.getByTestId("mtd-skeleton")
+      const latest = screen.getByTestId("latest-skeleton")
+      expect(before(strip, card("Income and expenses"))).toBeTruthy()
+      expect(before(card("Cash flow"), latest)).toBeTruthy()
+      expect(before(latest, card("Month by month"))).toBeTruthy()
+    })
+
+    it("drops the strip block when the cached dashboard's reference is the month in progress", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: true,
+        monthly_trend: trend(2),
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("latest-skeleton")).not.toBeInTheDocument()
+    })
+
+    it("drops only the strip block when the cached dashboard has no month to date", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+        month_to_date: null,
+        monthly_trend: trend(2),
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
+      expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
+    })
+
+    it("keeps both blocks when the cached dashboard's reference is a finished month", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+        monthly_trend: trend(2),
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
+      expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
+    })
+
+    it("drops the latest-month block when the cached dashboard's reference is the data's first month", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+        monthly_trend: trend(1),
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
+      expect(screen.queryByTestId("latest-skeleton")).not.toBeInTheDocument()
+    })
+  })
+
+  it("dims the period line while the figures are the previous period's", () => {
+    spending({ data: DATA, isPlaceholderData: true })
+    renderTab()
+    const line = rawText(formatPeriod(DATA.date_from, DATA.date_to) as string)
+    expect(line.className).toContain("opacity-60")
+  })
+
+  it("does not dim the period line once the new period has loaded", () => {
+    renderTab()
+    const line = rawText(formatPeriod(DATA.date_from, DATA.date_to) as string)
+    expect(line.className).not.toContain("opacity-60")
   })
 })

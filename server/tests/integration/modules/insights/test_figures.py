@@ -6,8 +6,9 @@ from decimal import Decimal
 
 import pytest
 
-from app.modules.analytics import analytics_service, service
+from app.modules.analytics import AnalyticsHistory, service
 from app.modules.insights.figures import gather_figures
+from app.modules.transaction import transaction_service
 
 pytestmark = pytest.mark.integration
 
@@ -23,13 +24,13 @@ def today(monkeypatch):
 def anomaly_windows(monkeypatch):
     """The `months` each anomalies call was asked for: the spike window it covers is not in the output."""
     seen: list[int | None] = []
-    real = analytics_service.anomalies
+    real = AnalyticsHistory.anomalies
 
-    def spy(session, user_id, date_range, *args):
+    def spy(self, date_range, *args):
         seen.append(date_range.months)
-        return real(session, user_id, date_range, *args)
+        return real(self, date_range, *args)
 
-    monkeypatch.setattr(analytics_service, "anomalies", spy)
+    monkeypatch.setattr(AnalyticsHistory, "anomalies", spy)
     return seen
 
 
@@ -51,6 +52,8 @@ async def test_reference_month_is_the_last_finished_month(db_session, test_user,
     assert "categories_month_to_date" in gathered.figures
     assert "categories_month_to_date_previous" in gathered.figures
     assert gathered.figures["month_to_date"]["through"] == "2026-10-12"
+    previous = gathered.figures["categories_month_to_date_previous"]
+    assert (previous["date_from"], previous["date_to"]) == ("2026-09-01", "2026-09-12")
     assert "seasonality" not in gathered.figures["behaviour"]
     assert ("food_groceries", "Food & Groceries") in gathered.categories
 
@@ -63,6 +66,29 @@ async def test_no_month_to_date_without_october_rows(db_session, test_user, add)
     assert gathered.month_to_date_through is None
     assert "categories_month_to_date" not in gathered.figures
     assert "categories_month_to_date_previous" not in gathered.figures
+
+
+async def test_a_generation_loads_rows_once(db_session, test_user, add, monkeypatch):
+    for day in ("2026-07-02", "2026-08-02", "2026-09-02", "2026-10-05"):
+        await add(test_user, day, "-300.00")
+    loads: list[str] = []
+    real_rows = transaction_service.list_for_analysis
+
+    async def rows(*args, **kwargs):
+        loads.append("rows")
+        return await real_rows(*args, **kwargs)
+
+    def today():
+        loads.append("today")
+        return TODAY
+
+    monkeypatch.setattr(transaction_service, "list_for_analysis", rows)
+    monkeypatch.setattr(service, "_today", today)
+
+    gathered = await gather_figures(db_session, test_user.id)
+
+    assert gathered.month_to_date_through == dt.date(2026, 10, 5)
+    assert sorted(loads) == ["rows", "today"]
 
 
 async def test_merchants_are_collected_from_the_figures(db_session, test_user, add):
@@ -96,6 +122,11 @@ async def test_first_month_only_is_partial(db_session, test_user, add):
     assert "categories_month_to_date" not in gathered.figures
     assert gathered.figures["reference_through"] == "2026-10-12"
     assert "month_to_date" not in gathered.figures["spending"]
+    spending = gathered.figures["spending"]
+    assert spending["average_monthly_income"] is None
+    assert spending["average_monthly_expenses"] is None
+    assert spending["average_monthly_net"] is None
+    assert spending["burn_rate"] is None
 
 
 async def test_a_category_spike_in_the_reference_month_reaches_the_figures(db_session, test_user, add):

@@ -2,12 +2,15 @@ import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 import type { MonthToDateResponse } from "@app/api-client/types"
 import { formatAmount } from "@/components/transactions/format"
+import { formatDayRange } from "./format"
 import { MonthToDateStrip } from "./month-to-date-strip"
 
 const DATA: MonthToDateResponse = {
   month: "2026-10",
   through: "2026-10-16",
   previous_month: "2026-09",
+  previous_through: "2026-09-16",
+  net: "2180.00",
   expenses: "1020.00",
   expenses_change_pct: -8.2,
   income: "3200.00",
@@ -19,7 +22,13 @@ const DATA: MonthToDateResponse = {
 describe("MonthToDateStrip", () => {
   it("without a parseable date shows no day range and no comparison", () => {
     const { container } = render(
-      <MonthToDateStrip data={{ ...DATA, through: "2026-02-30" }} />,
+      <MonthToDateStrip
+        data={{
+          ...DATA,
+          through: "2026-02-30",
+          previous_through: "2026-01-32",
+        }}
+      />,
     )
     const month = new Intl.DateTimeFormat(undefined, { month: "long" }).format(
       new Date(2026, 9, 1),
@@ -29,5 +38,20 @@ describe("MonthToDateStrip", () => {
     expect(screen.getAllByText("no comparison yet")).toHaveLength(2)
     expect(container.textContent).toContain(formatAmount("1020.00"))
     expect(container.textContent).toContain(formatAmount("3200.00"))
+  })
+
+  it("names the previous month's range from previous_through", () => {
+    const { container } = render(
+      <MonthToDateStrip
+        data={{
+          ...DATA,
+          through: "2026-10-31",
+          previous_through: "2026-09-15",
+        }}
+      />,
+    )
+    expect(container.textContent).toContain(
+      `less than ${formatDayRange("2026-09", 15)}`,
+    )
   })
 })

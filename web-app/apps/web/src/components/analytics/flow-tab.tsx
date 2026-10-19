@@ -1,9 +1,13 @@
 "use client"
 
-import { useGetSpending } from "@app/api-client/endpoints/analytics"
-import type { SpendingResponse } from "@app/api-client/types"
+import {
+  getGetDashboardQueryKey,
+  useGetSpending,
+} from "@app/api-client/endpoints/analytics"
+import type { DashboardResponse, SpendingResponse } from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Table,
   TableBody,
@@ -24,14 +28,13 @@ import { Change, SavingsHeadline, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
 import {
   changeTone,
-  formatPeriod,
   formatPct,
   partialLabel,
   type PartialLabel,
 } from "./format"
 import { monthToDate, toMonthPoints } from "./month-points"
 import { MonthToDateStrip } from "./month-to-date-strip"
-import { PeriodSelect } from "./period-select"
+import { PeriodHeader } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
 import { Section } from "./section"
@@ -54,7 +57,8 @@ function Figure({
 }: {
   label: string
   amount: string
-  average: string
+  /** Null when the period has no whole month to average over. */
+  average: string | null
   /** Colour a negative amount and a negative average as bad. */
   signed?: boolean
 }) {
@@ -72,12 +76,14 @@ function Figure({
       <p
         className={cn(
           "text-xs",
-          signed && isExpense(average)
+          average !== null && signed && isExpense(average)
             ? amountClass(average)
             : "text-muted-foreground",
         )}
       >
-        {`${formatAmount(average)} / month`}
+        {average === null
+          ? "No full month yet"
+          : `${formatAmount(average)} / month`}
       </p>
     </div>
   )
@@ -103,20 +109,28 @@ export function FlowTab({
 }) {
   const query = useGetSpending({ months }, ANALYTICS_QUERY)
   const data = query.data
-  const period = data && formatPeriod(data.date_from, data.date_to)
+  // Before the first response, the cached dashboard says which blocks the
+  // period will lack. The latest-month section is missing when the reference
+  // month is the one in progress, or is the data's first month (a one-month
+  // trend): a first month that starts after day 7 is not whole, and most do.
+  // The strip is missing too when there is no month to date (same call as
+  // spending's). With nothing cached, assume both are present.
+  const dash = useQueryClient().getQueryData<DashboardResponse>(
+    getGetDashboardQueryKey(),
+  )
+  const inProgress = dash?.reference_partial === true
+  const noLatest = inProgress || dash?.monthly_trend.length === 1
+  const noStrip = inProgress || dash?.month_to_date === null
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <PeriodSelect
-          choices={PERIODS.flow.choices}
-          value={months}
-          onChange={onMonthsChange}
-        />
-        {period ? (
-          <p className="text-sm text-muted-foreground">{period}</p>
-        ) : null}
-      </header>
+      <PeriodHeader
+        choices={PERIODS.flow.choices}
+        value={months}
+        onChange={onMonthsChange}
+        range={data}
+        dimmed={query.isPlaceholderData}
+      />
 
       <QueryGate
         query={query}
@@ -125,12 +139,26 @@ export function FlowTab({
         empty={EMPTY}
         skeleton={
           <>
+            {/* Heights of the real blocks, measured with the seed data: the strip 142px while its lines wrap,
+                else 102px; the latest-month card 184px stacked, 110px in two columns, 130px beside the sidebar. */}
+            {noStrip ? null : (
+              <Skeleton
+                data-testid="mtd-skeleton"
+                className="h-[142px] w-full sm:h-[102px]"
+              />
+            )}
             <Section title="Income and expenses">
               <Skeleton className="aspect-[2/1] w-full" />
             </Section>
             <Section title="Cash flow">
               <Skeleton className="h-32 w-full" />
             </Section>
+            {noLatest ? null : (
+              <Skeleton
+                data-testid="latest-skeleton"
+                className="h-[184px] w-full sm:h-[110px] md:h-[130px] lg:h-[110px]"
+              />
+            )}
             <Section title="Month by month">
               <Skeleton className="h-40 w-full" />
             </Section>

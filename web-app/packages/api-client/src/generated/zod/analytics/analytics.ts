@@ -519,6 +519,9 @@ export const getDashboardResponseMonthToDateOneExpensesRegExp = new RegExp(
 export const getDashboardResponseMonthToDateOneIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getDashboardResponseMonthToDateOneNetRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getDashboardResponseMonthToDateOnePreviousExpensesRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getDashboardResponseMonthToDateOnePreviousIncomeRegExp =
@@ -571,6 +574,10 @@ export const GetDashboardResponse = zod
                 "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
               ),
             month: zod.string().describe("YYYY-MM, the current month"),
+            net: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOneNetRegExp)
+              .describe("income − expenses"),
             previous_expenses: zod
               .string()
               .regex(getDashboardResponseMonthToDateOnePreviousExpensesRegExp)
@@ -584,6 +591,11 @@ export const GetDashboardResponse = zod
                 "Income in the previous month's days 1 to through's day",
               ),
             previous_month: zod.string().describe("YYYY-MM"),
+            previous_through: zod.iso
+              .date()
+              .describe(
+                "The last day of the previous month's comparison window: through's day, clamped to that month's length",
+              ),
             through: zod.iso
               .date()
               .describe("The day of the current month's last transaction"),
@@ -912,16 +924,16 @@ export const getSpendingResponseAverageExpenseRegExp = new RegExp(
 export const getSpendingResponseAverageIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyExpensesRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyExpensesOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyIncomeRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyIncomeOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyNetRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyNetOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseBurnRateRegExp = new RegExp(
+export const getSpendingResponseBurnRateOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 export const getSpendingResponseLatestMonthOneExpensesRegExp = new RegExp(
@@ -934,6 +946,9 @@ export const getSpendingResponseMonthToDateOneExpensesRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 export const getSpendingResponseMonthToDateOneIncomeRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
+export const getSpendingResponseMonthToDateOneNetRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 export const getSpendingResponseMonthToDateOnePreviousExpensesRegExp =
@@ -973,28 +988,36 @@ export const GetSpendingResponse = zod
       .regex(getSpendingResponseAverageIncomeRegExp)
       .describe("Per transaction"),
     average_monthly_expenses: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyExpensesRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyExpensesOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Total expenses ÷ the period's months, a partial month counting for the share of it covered",
+        "Total expenses ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     average_monthly_income: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyIncomeRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyIncomeOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Total income ÷ the period's months, a partial month counting for the share of it covered",
+        "Total income ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     average_monthly_net: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyNetRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyNetOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Net ÷ the period's months, a partial month counting for the share of it covered",
+        "Net ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     burn_rate: zod
-      .string()
-      .regex(getSpendingResponseBurnRateRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseBurnRateOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "(Total expenses − total income) ÷ the period's months; negative while saving",
+        "(Total expenses − total income) ÷ the period's months; negative while saving; null when the period has no whole month",
       ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])
@@ -1051,6 +1074,10 @@ export const GetSpendingResponse = zod
                 "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
               ),
             month: zod.string().describe("YYYY-MM, the current month"),
+            net: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOneNetRegExp)
+              .describe("income − expenses"),
             previous_expenses: zod
               .string()
               .regex(getSpendingResponseMonthToDateOnePreviousExpensesRegExp)
@@ -1064,6 +1091,11 @@ export const GetSpendingResponse = zod
                 "Income in the previous month's days 1 to through's day",
               ),
             previous_month: zod.string().describe("YYYY-MM"),
+            previous_through: zod.iso
+              .date()
+              .describe(
+                "The last day of the previous month's comparison window: through's day, clamped to that month's length",
+              ),
             through: zod.iso
               .date()
               .describe("The day of the current month's last transaction"),

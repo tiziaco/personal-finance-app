@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
+from app.core.config import settings
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
@@ -160,6 +161,18 @@ class TestRenameConversation:
             data={"name": "Hijacked"},
         )
         assert response.status_code == 404
+
+    async def test_a_rename_past_the_chat_limit_is_429(self, authenticated_client, user_conversation):
+        """A tripped limit answers 429 (not a 500), after exactly the configured count."""
+        limit = int(settings.rate_limits.endpoints.CHAT[0].split()[0])
+        url = f"/api/v1/conversation/conversation/{user_conversation.id}/name"
+
+        for _ in range(limit):
+            response = await authenticated_client.patch(url, data={"name": "n"})
+            assert response.status_code == 200
+
+        response = await authenticated_client.patch(url, data={"name": "n"})
+        assert response.status_code == 429
 
 
 class TestDeleteConversation:

@@ -7,8 +7,10 @@ export {
   parseAsBoolean,
   parseAsInteger,
   parseAsIsoDate,
+  parseAsNumberLiteral,
   parseAsString,
   parseAsStringLiteral,
+  useQueryStates,
   type Values,
 } from "nuqs"
 export {

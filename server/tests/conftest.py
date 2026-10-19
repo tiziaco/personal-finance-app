@@ -26,6 +26,7 @@ from dotenv import load_dotenv
 load_dotenv(".env.test", override=True)
 
 from app.core.config import settings
+from app.core.limiter import limiter
 from app.database.dependencies import get_db_session
 from app.main import app
 
@@ -210,6 +211,18 @@ def reset_app_state():
 
     # Cleanup after test
     app.dependency_overrides.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_rate_limits():
+    """Give the app its limiter and zero its counts before each test.
+
+    No lifespan runs under test, so nothing sets app.state.limiter: without it a
+    tripped limit answers 500 instead of 429. Counts live in the process-wide
+    limiter, so they would also leak from one test into the next.
+    """
+    app.state.limiter = limiter
+    limiter.reset()
 
 
 # ============================================================================

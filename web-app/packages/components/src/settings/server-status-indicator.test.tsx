@@ -89,6 +89,19 @@ describe("ServerStatusIndicator", () => {
     expect(dotClasses()).toContain("bg-red-500")
   })
 
+  it("no pulsing ring when a healthy status is stale behind an error", () => {
+    render(
+      <ServerStatusIndicator
+        status={readiness("healthy")}
+        isLoading={false}
+        error={new Error("down")}
+      />,
+    )
+
+    expect(dotClasses()).toContain("bg-red-500")
+    expect(document.querySelector(".animate-ping")).toBeNull()
+  })
+
   it("has no hover card without showDetail", () => {
     render(
       <ServerStatusIndicator

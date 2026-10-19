@@ -1,6 +1,11 @@
 "use client"
 
-import { usePathname, useSearchParams } from "next/navigation"
+import {
+  createParser,
+  parseAsNumberLiteral,
+  parseAsStringLiteral,
+  useQueryStates,
+} from "@app/data-table/url-state/params"
 
 export const ANALYTICS_TABS = [
   "category",
@@ -22,42 +27,44 @@ export function isAnalyticsTab(v: unknown): v is AnalyticsTab {
   return ANALYTICS_TABS.some((tab) => tab === v)
 }
 
-const DEFAULT_TAB: AnalyticsTab = "category"
+// parseAsNumberLiteral reads "12abc" as 12 (it goes through parseFloat); a
+// period is a whole-number string and nothing else.
+function parseAsPeriod<T extends number>(choices: readonly T[]) {
+  const literal = parseAsNumberLiteral(choices)
+  return createParser<T>({
+    parse: (query) => (/^\d+$/.test(query) ? literal.parse(query) : null),
+    serialize: literal.serialize,
+  })
+}
+
+// The tab and each ranged tab's period, in the URL. A value outside the offered
+// choices reads as the default; writing the default removes its key.
+const analyticsParsers = {
+  tab: parseAsStringLiteral(ANALYTICS_TABS).withDefault("category"),
+  [PERIODS.category.key]: parseAsPeriod(PERIODS.category.choices).withDefault(
+    PERIODS.category.fallback,
+  ),
+  [PERIODS.flow.key]: parseAsPeriod(PERIODS.flow.choices).withDefault(
+    PERIODS.flow.fallback,
+  ),
+  [PERIODS.trends.key]: parseAsPeriod(PERIODS.trends.choices).withDefault(
+    PERIODS.trends.fallback,
+  ),
+}
 
 export function useAnalyticsParams() {
-  const params = useSearchParams()
-  const pathname = usePathname()
-
-  const rawTab = params.get("tab")
-  const tab = isAnalyticsTab(rawTab) ? rawTab : DEFAULT_TAB
-
-  function months(forTab: RangedTab): number {
-    const { key, choices, fallback } = PERIODS[forTab]
-    const raw = params.get(key)
-    if (raw === null || !/^\d+$/.test(raw)) return fallback
-    const value = Number(raw)
-    return (choices as readonly number[]).includes(value) ? value : fallback
-  }
-
-  function write(key: string, value: string, fallback: string) {
-    const next = new URLSearchParams(params.toString())
-    if (value === fallback) next.delete(key)
-    else next.set(key, value)
-    const qs = next.toString()
-    // Update the URL without fetching the page again from the server; Next
-    // keeps useSearchParams in sync with history.replaceState.
-    window.history.replaceState(null, "", qs ? `${pathname}?${qs}` : pathname)
-  }
+  // Replace history and skip the server round trip: the tabs fetch their own data.
+  const [params, setParams] = useQueryStates(analyticsParsers, {
+    history: "replace",
+    shallow: true,
+    clearOnDefault: true,
+  })
 
   return {
-    tab,
-    setTab: (next: AnalyticsTab) => write("tab", next, DEFAULT_TAB),
-    months,
+    tab: params.tab,
+    setTab: (next: AnalyticsTab) => setParams({ tab: next }),
+    months: (forTab: RangedTab): number => params[PERIODS[forTab].key],
     setMonths: (forTab: RangedTab, value: number) =>
-      write(
-        PERIODS[forTab].key,
-        String(value),
-        String(PERIODS[forTab].fallback),
-      ),
+      setParams({ [PERIODS[forTab].key]: value }),
   }
 }

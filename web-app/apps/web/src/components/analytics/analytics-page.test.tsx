@@ -1,16 +1,10 @@
-import { fireEvent, render, screen } from "@testing-library/react"
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
-import type { MockInstance } from "vitest"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
+import { withNuqsTestingAdapter } from "@app/data-table/url-state/testing"
+import { describe, expect, it, vi } from "vitest"
 
 import { HUB_NAV } from "@/lib/hub-nav"
 
 import { AnalyticsPage } from "./analytics-page"
-
-const mocks = vi.hoisted(() => ({ current: "" }))
-vi.mock("next/navigation", () => ({
-  useSearchParams: () => new URLSearchParams(mocks.current),
-  usePathname: () => "/analytics",
-}))
 
 type Props = { months: number }
 vi.mock("./category-tab", () => ({
@@ -26,24 +20,19 @@ vi.mock("./seasonality-tab", () => ({
   SeasonalityTab: () => <div>seasonality</div>,
 }))
 
-function setup(current: string) {
-  mocks.current = current
-  return render(<AnalyticsPage />)
+function setup(
+  searchParams: string,
+  onUrlUpdate?: (searchParams: URLSearchParams) => void,
+) {
+  return render(<AnalyticsPage />, {
+    wrapper: withNuqsTestingAdapter({
+      searchParams,
+      onUrlUpdate: (update) => onUrlUpdate?.(update.searchParams),
+    }),
+  })
 }
 
 describe("AnalyticsPage", () => {
-  let replaceState: MockInstance<History["replaceState"]>
-
-  beforeEach(() => {
-    replaceState = vi
-      .spyOn(window.history, "replaceState")
-      .mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    replaceState.mockRestore()
-  })
-
   it("opens By Category by default", () => {
     setup("")
     expect(
@@ -54,21 +43,19 @@ describe("AnalyticsPage", () => {
   })
 
   it("opens the tab in the URL with its period", () => {
-    setup("tab=trends&trend_months=12")
+    setup("?tab=trends&trend_months=12")
     expect(screen.getByText("trends 12")).toBeTruthy()
     expect(screen.queryByText(/^category/)).toBeNull()
     expect(screen.queryByText(/^flow/)).toBeNull()
     expect(screen.queryByText(/^seasonality/)).toBeNull()
   })
 
-  it("switching tab writes the URL", () => {
-    setup("")
+  it("switching tab writes the URL", async () => {
+    const onUrlUpdate = vi.fn()
+    setup("", onUrlUpdate)
     fireEvent.click(screen.getByRole("tab", { name: "Seasonality" }))
-    expect(replaceState).toHaveBeenCalledWith(
-      null,
-      "",
-      "/analytics?tab=seasonality",
-    )
+    await waitFor(() => expect(onUrlUpdate).toHaveBeenCalled())
+    expect(onUrlUpdate.mock.lastCall?.[0].get("tab")).toBe("seasonality")
   })
 
   it("lists Analytics after Transactions", () => {

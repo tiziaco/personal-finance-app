@@ -75,27 +75,6 @@ Related, and worth settling in the same change: `SlowAPIMiddleware` is never reg
 `@limiter.limit(...)` are limited at all. Either register the middleware or drop
 `default_limits`, so the config stops implying a limit that doesn't exist.
 
-### A test that trips a rate limit gets a 500, and limits leak between tests
-
-slowapi's 429 handler (`_rate_limit_exceeded_handler`) reads `request.app.state.limiter`,
-which only `lifespan()` sets (`server/app/main.py:88`). No client fixture in
-`server/tests/conftest.py` runs the lifespan — they call the app through
-`ASGITransport` — so under test the handler raises `AttributeError: 'State' object has
-no attribute 'limiter'` and a tripped limit answers 500. The limiter's in-memory storage
-is also a module-level singleton, and every test client has the same address, so requests
-from one test count against the next test's limit.
-
-**Reproduce:** a test that calls a decorated route once more than its limit allows —
-31 calls to `renameConversation`, whose `CHAT` limit is 30 a minute — and asserts 429.
-
-**Why it has gone unnoticed:** no test asserts a 429, and no single test sends enough
-requests to trip a limit. The carry-over surfaces only once the suite is large enough
-for one route's calls to add up within a minute.
-
-**Fixing it** is an autouse fixture in `server/tests/conftest.py` that sets
-`app.state.limiter = limiter` and calls `limiter.reset()` before every test, whichever
-client fixture it uses — plus the reproduce test above, which fails first.
-
 ---
 
 ## Web app
@@ -123,22 +102,3 @@ stack the rail above the content as a row of tabs (`flex-col sm:flex-row` on the
 `flex-row sm:flex-col` on `SidebarMenu`, the footer slot hidden). Keep the sidebar
 primitives — the app renders the dialog inside a `SidebarProvider`. A layout test that
 asserts the class contract (jsdom has no layout) fails first.
-
-### The server-status dot pings "healthy" while it shows an error
-
-`ServerStatusIndicator` (`web-app/packages/components/src/settings/server-status-indicator.tsx`)
-picks the dot's colour from `error` first — any error is red — but draws the pulsing ring
-whenever `status?.status === "healthy"`, without looking at `error`. During an outage that
-is not a degraded 503 (a 500, an expired token, the server gone), `useServerStatus` keeps
-the error and TanStack Query keeps the last healthy `data`, so the dot is red **and**
-pulsing, in red: a live-looking signal on a dead server.
-
-**Reproduce:** with the app open and the settings dialog showing the indicator, stop the
-API server and wait for the next 30-second refetch.
-
-**Why it has gone unnoticed:** it needs the API to die after a healthy load, and the
-colour is right; only the ring is wrong. The component's test covers each state alone,
-not stale healthy data with an error.
-
-**Fixing it** is gating the ring on the same condition as green — no `error` and a
-healthy status — with a test for the combination that fails first.

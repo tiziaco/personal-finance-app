@@ -16,7 +16,7 @@ import { useCategories } from "@/components/transactions/use-categories"
 
 import { CategoryRanking } from "./category-ranking"
 import { formatPeriod, purchases } from "./format"
-import { PeriodSelect } from "./period-select"
+import { PeriodHeader } from "./period-select"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
 import { Section } from "./section"
@@ -40,22 +40,18 @@ export function CategoryTab({
   const { label } = useCategories()
   const query = useGetCategoryBreakdown({ months, top_n: 50 }, ANALYTICS_QUERY)
   const data = query.data
-  const period = data && formatPeriod(data.date_from, data.date_to)
   const previous =
     data && formatPeriod(data.previous_date_from, data.previous_date_to)
 
   return (
     <div className="flex flex-col gap-6">
-      <header className="flex flex-col gap-3">
-        <PeriodSelect
-          choices={PERIODS.category.choices}
-          value={months}
-          onChange={onMonthsChange}
-        />
-        {period ? (
-          <p className="text-sm text-muted-foreground">{period}</p>
-        ) : null}
-      </header>
+      <PeriodHeader
+        choices={PERIODS.category.choices}
+        value={months}
+        onChange={onMonthsChange}
+        range={data}
+        dimmed={query.isPlaceholderData}
+      />
 
       <QueryGate
         query={query}

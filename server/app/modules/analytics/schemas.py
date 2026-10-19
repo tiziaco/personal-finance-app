@@ -69,7 +69,12 @@ class MonthToDateResponse(_Out):
     through: dt.date = Field(..., description="The day of the current month's last transaction")
     income: Decimal
     expenses: Decimal
+    net: Decimal = Field(..., description="income − expenses")
     previous_month: str = Field(..., description="YYYY-MM")
+    previous_through: dt.date = Field(
+        ...,
+        description="The last day of the previous month's comparison window: through's day, clamped to that month's length",
+    )
     previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
     previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
     income_change_pct: Optional[float] = Field(
@@ -153,17 +158,25 @@ class SpendingResponse(_Out):
     transaction_count: int
     average_income: Decimal = Field(..., description="Per transaction")
     average_expense: Decimal = Field(..., description="Per transaction")
-    average_monthly_income: Decimal = Field(
-        ..., description="Total income ÷ the period's months, a partial month counting for the share of it covered"
+    average_monthly_income: Optional[Decimal] = Field(
+        ...,
+        description="Total income ÷ the period's months, a partial month counting for the share of it covered;"
+        " null when the period has no whole month",
     )
-    average_monthly_expenses: Decimal = Field(
-        ..., description="Total expenses ÷ the period's months, a partial month counting for the share of it covered"
+    average_monthly_expenses: Optional[Decimal] = Field(
+        ...,
+        description="Total expenses ÷ the period's months, a partial month counting for the share of it covered;"
+        " null when the period has no whole month",
     )
-    average_monthly_net: Decimal = Field(
-        ..., description="Net ÷ the period's months, a partial month counting for the share of it covered"
+    average_monthly_net: Optional[Decimal] = Field(
+        ...,
+        description="Net ÷ the period's months, a partial month counting for the share of it covered;"
+        " null when the period has no whole month",
     )
-    burn_rate: Decimal = Field(
-        ..., description="(Total expenses − total income) ÷ the period's months; negative while saving"
+    burn_rate: Optional[Decimal] = Field(
+        ...,
+        description="(Total expenses − total income) ÷ the period's months; negative while saving;"
+        " null when the period has no whole month",
     )
     savings_rate_pct: Optional[float] = Field(..., description="Net ÷ income × 100; null when income is 0")
     months: List[MonthFlowResponse]

@@ -23,26 +23,14 @@ export interface SpendingResponse {
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   average_income: string
-  /**
-   * Total expenses ÷ the period's months, a partial month counting for the share of it covered
-   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
-   */
-  average_monthly_expenses: string
-  /**
-   * Total income ÷ the period's months, a partial month counting for the share of it covered
-   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
-   */
-  average_monthly_income: string
-  /**
-   * Net ÷ the period's months, a partial month counting for the share of it covered
-   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
-   */
-  average_monthly_net: string
-  /**
-   * (Total expenses − total income) ÷ the period's months; negative while saving
-   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
-   */
-  burn_rate: string
+  /** Total expenses ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month */
+  average_monthly_expenses: string | null
+  /** Total income ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month */
+  average_monthly_income: string | null
+  /** Net ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month */
+  average_monthly_net: string | null
+  /** (Total expenses − total income) ÷ the period's months; negative while saving; null when the period has no whole month */
+  burn_rate: string | null
   /** First day of the resolved period; null when empty */
   date_from: string | null
   /** Last day of the resolved period; null when empty */

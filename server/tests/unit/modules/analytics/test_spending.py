@@ -70,12 +70,31 @@ def test_month_to_date_against_the_same_days_of_the_month_before():
         dt.date(2026, 10, 2),
         Decimal("0.00"),
         Decimal("100.00"),
+        Decimal("-100.00"),
         "2026-09",
+        dt.date(2026, 9, 2),
         Decimal("0.00"),
         Decimal("50.00"),
         None,
         100.0,
     )
+
+
+def test_month_to_date_names_the_previous_window_and_net():
+    mtd = summary(months=3).month_to_date
+    assert mtd.previous_through == dt.date(2026, 9, 2)
+    assert mtd.net == Decimal("-100.00")
+
+
+@pytest.mark.parametrize(
+    ("rows", "today", "expected"),
+    [
+        ([row("2026-02-10", "-10.00"), row("2026-03-31", "-10.00")], dt.date(2026, 3, 31), dt.date(2026, 2, 28)),
+        ([row("2026-09-10", "-10.00"), row("2026-10-31", "-10.00")], dt.date(2026, 10, 31), dt.date(2026, 9, 30)),
+    ],
+)
+def test_month_to_date_clamps_previous_through_to_the_month_s_length(rows, today, expected):
+    assert summary(rows=rows, today=today).month_to_date.previous_through == expected
 
 
 def test_a_bound_cutting_a_month_weights_it_by_the_days_covered():
@@ -98,12 +117,29 @@ def test_only_this_months_data_is_one_partial_month():
     assert october.partial and october.month == "2026-10"
     assert (result.date_from, result.date_to) == (dt.date(2026, 10, 1), dt.date(2026, 10, 2))
     assert result.latest_month is None
-    assert result.average_monthly_expenses == Decimal("1550.00")  # 100 ÷ 2/31
-    assert result.average_monthly_income == Decimal("0.00")
-    assert result.burn_rate == Decimal("1550.00")
+    assert result.average_monthly_expenses is None  # no whole month to average over
+    assert result.average_monthly_income is None and result.average_monthly_net is None
+    assert result.burn_rate is None
     assert result.savings_rate_pct is None
     assert october.savings_rate_pct is None and october.expense_change_pct is None
     assert result.month_to_date is not None and result.month_to_date.expenses_change_pct is None
+
+
+def test_one_partial_past_month_has_no_monthly_average():
+    rows = [row("2026-09-20", "-300.00"), row("2026-09-25", "1000.00", category="salary")]
+    result = summary(rows=rows, months=1)
+    (september,) = result.months
+    assert september.partial
+    assert (result.date_from, result.date_to) == (dt.date(2026, 9, 20), dt.date(2026, 9, 30))
+    assert result.average_monthly_income is None and result.average_monthly_expenses is None
+    assert result.average_monthly_net is None and result.burn_rate is None
+    assert result.total_expenses == Decimal("300.00")
+
+
+def test_a_range_shorter_than_a_month_has_no_monthly_average():
+    result = summary(date_from=dt.date(2026, 9, 1), date_to=dt.date(2026, 9, 15))
+    assert result.average_monthly_income is None and result.average_monthly_expenses is None
+    assert result.average_monthly_net is None and result.burn_rate is None
 
 
 def test_month_to_date_on_the_31st_clamps_to_a_shorter_month():
@@ -170,6 +206,8 @@ def test_empty_input_is_all_zero():
     assert result.months == ()
     assert result.date_from is None and result.date_to is None
     assert (result.total_income, result.total_expenses, result.net) == (Decimal("0.00"),) * 3
+    assert result.average_monthly_income == Decimal("0.00")
+    assert result.average_monthly_expenses == Decimal("0.00")
     assert result.average_monthly_net == Decimal("0.00")
     assert result.burn_rate == Decimal("0.00")
     assert result.savings_rate_pct is None

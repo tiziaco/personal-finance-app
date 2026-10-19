@@ -10,6 +10,8 @@ const mtd = (over: Partial<MonthToDateResponse> = {}): MonthToDateResponse => ({
   income: "2950.00",
   expenses: "1184.00",
   previous_month: "2026-09",
+  previous_through: "2026-09-16",
+  net: "1766.00",
   previous_income: "2800.00",
   previous_expenses: "1057.00",
   income_change_pct: 5.4,
@@ -27,11 +29,6 @@ describe("MonthToDateCard", () => {
     expect(card).toHaveTextContent(`Net ${formatAmount("1766.00")}`)
     expect(card).toHaveTextContent("1–16")
     expect(card).toHaveTextContent("vs 1–16")
-  })
-
-  it("renders spent positive even when the server sends it negative", () => {
-    render(<MonthToDateCard monthToDate={mtd({ expenses: "-1184.00" })} />)
-    expect(screen.getByText(formatAmount("1184.00"))).toBeInTheDocument()
   })
 
   it("a null change pct shows no comparison", () => {
@@ -74,14 +71,23 @@ describe("MonthToDateCard", () => {
     expect(card).not.toHaveTextContent("-5%")
   })
 
-  it("cuts the previous month's days at its length", () => {
+  it("names the previous range from the server's previous_through", () => {
     render(
       <MonthToDateCard
-        monthToDate={mtd({ month: "2026-10", through: "2026-10-31" })}
+        monthToDate={mtd({
+          through: "2026-10-31",
+          previous_through: "2026-09-30",
+        })}
       />,
     )
     const range = screen.getByText(/· vs 1–/)
     expect(range.textContent).toMatch(/^1–31 .+ · vs 1–30 /)
+  })
+
+  it("renders the server's net, not income minus expenses", () => {
+    render(<MonthToDateCard monthToDate={mtd({ net: "-123.45" })} />)
+    const card = screen.getByRole("group", { name: /so far/ })
+    expect(card).toHaveTextContent(`Net ${formatAmount("-123.45")}`)
   })
 
   it("shows days covered", () => {

@@ -8,6 +8,7 @@ import { Section } from "./section"
 type Query = {
   data: string[] | undefined
   isError: boolean
+  isPlaceholderData?: boolean
   refetch: () => unknown
 }
 
@@ -78,5 +79,68 @@ describe("QueryGate", () => {
       (d) => `Got ${d.length} things.`,
     )
     expect(screen.getByText("Got 0 things.")).toBeTruthy()
+  })
+
+  it("dims and marks busy while placeholder data shows", () => {
+    const { container } = renderGate({
+      data: ["a"],
+      isError: false,
+      isPlaceholderData: true,
+      refetch: vi.fn(),
+    })
+    const wrapper = container.firstElementChild
+    expect(wrapper?.getAttribute("aria-busy")).toBe("true")
+    expect(wrapper?.className).toContain("opacity-60")
+  })
+
+  it("dims the empty card too while placeholder data shows", () => {
+    const { container } = renderGate({
+      data: [],
+      isError: false,
+      isPlaceholderData: true,
+      refetch: vi.fn(),
+    })
+    const wrapper = container.firstElementChild
+    expect(screen.getByText("Nothing here.")).toBeTruthy()
+    expect(wrapper?.getAttribute("aria-busy")).toBe("true")
+    expect(wrapper?.className).toContain("opacity-60")
+  })
+
+  it("is not busy or dimmed once the data is real", () => {
+    const { container } = renderGate({
+      data: ["a"],
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    })
+    const wrapper = container.firstElementChild
+    expect(wrapper?.getAttribute("aria-busy")).toBe("false")
+    expect(wrapper?.className).not.toContain("opacity-60")
+  })
+
+  it("keeps the tabs' column spacing between its children", () => {
+    for (const isPlaceholderData of [false, true]) {
+      const { container, unmount } = renderGate({
+        data: ["a"],
+        isError: false,
+        isPlaceholderData,
+        refetch: vi.fn(),
+      })
+      const wrapper = container.firstElementChild
+      expect(wrapper?.classList.contains("flex")).toBe(true)
+      expect(wrapper?.classList.contains("flex-col")).toBe(true)
+      expect(wrapper?.classList.contains("gap-6")).toBe(true)
+      unmount()
+    }
+  })
+
+  it("a first load still shows the skeleton", () => {
+    renderGate({
+      data: undefined,
+      isError: false,
+      isPlaceholderData: false,
+      refetch: vi.fn(),
+    })
+    expect(screen.getByText("loading")).toBeTruthy()
   })
 })

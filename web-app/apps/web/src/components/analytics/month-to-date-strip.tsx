@@ -16,14 +16,20 @@ function monthName(month: string) {
 export function MonthToDateStrip({ data }: { data: MonthToDateResponse }) {
   // The day part of the server's date; no clock. Undefined only if the date is malformed.
   const day = parseIsoDay(data.through)?.getDate()
+  const previousDay = parseIsoDay(data.previous_through)?.getDate()
+  // Kept on one line: a wrapped strip breaks "1 – 19 Sept" after the 1.
   const against =
-    day === undefined ? null : formatDayRange(data.previous_month, day)
+    previousDay === undefined ? null : (
+      <span className="whitespace-nowrap">
+        {formatDayRange(data.previous_month, previousDay)}
+      </span>
+    )
   const comparison = (pct: number | null, kind: "spend" | "income") => (
     <Change
       pct={against === null ? null : pct}
       kind={kind}
-      up={`more than ${against}`}
-      down={`less than ${against}`}
+      up={<>more than {against}</>}
+      down={<>less than {against}</>}
       empty="no comparison yet"
     />
   )
