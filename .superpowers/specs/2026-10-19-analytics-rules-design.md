@@ -206,3 +206,8 @@ Each bug's reproduce case is written as a failing test before the fix:
 - BRIEF §3 conditions 1–6. `analytics/schemas.py` is shared with the cleanup (it owns
   `MonthToDateResponse`); this branch only touches `OutlierResponse` there.
 - Server conventions in `server/CLAUDE.md` and the `server-patterns` / `server-testing` skills.
+
+## Amendments after the final review (19 Oct 2026, decided by the user)
+
+- **Rules 2 and 3 — same-amount runs.** The fixed-amount form is judged on runs, not on the whole ±15 % cluster: inside each cluster, rows are re-clustered at the fixed band (2 %, at least €0.10, around fixed seeds chosen as `_clusters` chooses them) and each run is judged on its own for weekly (4 rows) and the 2-row yearly (with nothing of the merchant's side between). A row is recurring when its run is a fixed-amount series or its ±15 % cluster is a series by `min_rows`. So a weekly €3.00 that rises to €3.20 is recurring in both runs; thirty weekly €60 charges plus one €65 purchase keep the €60 run recurring and leave the €65 row out; Lidl's baskets still form no run of four weekly rows at one amount.
+- **Rule 4 on the import path.** A mapped recurring column's `false`/`no` cell is no answer: the row is `detected` and judged by the rule, as a blank cell is. Only a `true`/`yes` cell is the user's assertion. An untick in the app remains the only way a merchant is kept out of hidden subscriptions.
