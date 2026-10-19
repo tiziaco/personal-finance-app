@@ -140,6 +140,9 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
+- **The home trend chart's tooltip cursor.** It keeps recharts' default cursor, which
+  `chart-parts` documents as a bright band in dark mode; adopting `LINE_TOOLTIP`'s cursor is
+  a visible change to make on purpose.
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
@@ -167,9 +170,9 @@ enough, or whether only the user's flag marks one.
 ## Server — analytics loads the whole history on every request
 
 Every `AnalyticsService` method loads the user's entire transaction history
-(`transaction_service.list_for_analysis` from `MIN_DATE` to `MAX_DATE`, in `_context`/`_rows`
-in `analytics/service.py`), whatever period it was asked for. `AnalyticsHistory` fixes the
-fan-out inside one caller that needs several windows (an insights generation) but not across
+(`transaction_service.list_for_analysis` from `MIN_DATE` to `MAX_DATE`, in
+`AnalyticsService.history`, which builds `AnalyticsHistory`), whatever period it was asked
+for. `AnalyticsHistory` fixes the fan-out inside one caller that needs several windows (an insights generation) but not across
 requests: the home dashboard, each `/analytics` tab and each period change are separate
 requests, and each reads every row again. Fine at one user's data; it grows with the history
 and with every caller step 7 adds.

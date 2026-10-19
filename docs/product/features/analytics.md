@@ -1,6 +1,6 @@
 # Analytics
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 16 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 19 Oct 2026
 **Scope:** the numbers and charts computed from the user's transactions — the home
 dashboard and the analytics page. Legacy v1.0 shipped this; the port rebuilds it (the
 calculations and the dashboard in roadmap step 5a, the analytics page in step 5b).
@@ -78,7 +78,8 @@ month-to-date. A user with no finished month yet sees the month in progress, mar
 partial. Any whole number of months from 1 to 120 is accepted; the tabs offer the choices
 above.
 
-Every chart has a loading skeleton. Each request has one empty state and fails on its own:
+Every chart has a loading skeleton, and a period change keeps the old figures, dimmed, while
+the new period loads. Each request has one empty state and fails on its own:
 one error card with a retry, in place of the charts that request feeds, without taking the
 page down.
 
@@ -135,7 +136,8 @@ How they compute, so the numbers can be checked:
     Monthly averages are totals over the sum of the weights, so whole months divide by N and
     a partial month counts for the part it covers.
   - When the period has no whole month (the only data is the month in progress, or a part
-    of one), the average monthly income, expenses and net and the burn rate are null, and the
+    of one; a lone past month whose data starts after day 7; or an explicit date range
+    inside one month), the average monthly income, expenses and net and the burn rate are null, and the
     Flow tab says "No full month yet". A part-month is never scaled up to a whole month. An
     empty period keeps 0.00.
   - Month-over-month change, seasonality, stability and the growth halves use whole months
