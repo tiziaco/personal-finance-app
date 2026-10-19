@@ -156,14 +156,26 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
 
   | Cadence | Window (days) | Minimum rows |
   |---|---|---|
-  | weekly | 6–8 | 3 |
+  | weekly | 6–8 | 4, at a fixed amount only |
   | monthly | 26–35 | 3 |
   | quarterly | 84–98 | 3 |
-  | yearly | 350–380 | 3 |
+  | yearly | 350–380 | 3, or 2 at a fixed amount with no other row between them |
 
-  Every row of a series is `true`; every other row is `false`. **A yearly series needs three
-  rows, not two:** two similar shop purchases a year apart were false positives in the test
-  data, found in a dry run on 15 Oct. `user` rows are evidence — they count when judging a
+  A **fixed amount** is every row of the cluster within 2 % of its seed, with at least €0.10
+  of slack. "Nothing between them" means no other row of the same merchant and side falls
+  strictly between the cluster's first and last dates.
+
+  Every row of a series is `true`; every other row is `false`. **Weekly and yearly changed on
+  19 Oct 2026**, for three reasons found on test data. A weekly series used to need three rows
+  within ±15 %, and Lidl's weekly baskets, which vary but often land close, were flagged; they
+  now need four at a fixed amount, which a basket does not repeat. A yearly series used to need
+  three rows, so an annual subscription seen twice was missed; two rows at a fixed amount, a
+  year apart with nothing between them, now count. The "nothing between" condition exists
+  because two €7.42 visits to a leisure venue a year apart matched at a fixed amount while the
+  user went there in between. The 2 % / €0.10 band is tight on purpose: Regional Rail fares of
+  €5.68 and €5.94 would be admitted only by a €0.50 floor, and they are not one charge. Flags
+  already stored were not re-judged, because only dev data existed; re-seed or re-import to see
+  the new rules. `user` rows are evidence — they count when judging a
   cluster — and the rule never changes them.
 
   The rule runs in `transaction_service`, in the writing session, before the flush, and updates
@@ -182,7 +194,7 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
 
   Only a ticked Recurring box on a manual add is a `user` assertion; unticked is `detected`. In
   an import, a mapped recurring column is the user's assertion; a blank cell lets the rule
-  decide. The seed script passes a bool, so its rows are `user`. The migration followed the same
+  decide. In the seed script, a `true` cell is `user`; any other is left to the rule. The migration followed the same
   rule for rows that already existed: a recurring one became `user`, since only a ticked box or
   the seed could have set it, and every other row `detected`.
 - **D7 — `merchant_key`, a stored normalised merchant (15 Oct 2026).** The rule needs "the same

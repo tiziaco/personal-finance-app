@@ -96,51 +96,6 @@ for one route's calls to add up within a minute.
 `app.state.limiter = limiter` and calls `limiter.reset()` before every test, whichever
 client fixture it uses — plus the reproduce test above, which fails first.
 
-### A large one-off purchase in a sparse category is never flagged as an outlier
-
-`server/app/modules/analytics/domain/anomalies.py`, `_outliers`, scores each expense
-against the expenses in the same category over the trailing window before its day, and
-skips it unless that window holds at least `MIN_WINDOW_EXPENSES` (5) of them. Since #16
-the comparison is within the category, so a category the user rarely spends in is never
-scored at all: its single largest purchase, the one an outlier list exists to show, is
-the one it cannot see.
-
-**Reproduce:** a user with about 4 expenses in a category over the window, then one at
-€1,249 (a laptop under electronics). `getAnomalies` returns no outlier for it. Step 6's
-insights run hit exactly this on synthetic data.
-
-**Why it has gone unnoticed:** the unit tests build categories dense enough to clear the
-minimum, and nothing before step 6 read the outliers.
-
-**Fixing it** is a rule for a thin window. For example, fall back to the user's expenses
-across all categories, or flag an expense that is a large share of the period's spend.
-Settle in the same change whether a z-score is still the measure there; with very few
-rows one large value inflates the spread it is measured against.
-
-### Frequent shopping at one merchant is detected as recurring
-
-`server/app/modules/transaction/domain/recurring.py` clusters a merchant's rows by
-amount (±15 % of a seed, at least €1). A cluster counts as recurring when it has a
-cadence's `min_rows` and 75 % of its gaps fit that cadence, where `_fits` also accepts a
-gap of two periods. For `weekly` (6–8 days, 3 rows) that admits any gap of 6–8 or 12–16
-days. A household shopping at one supermarket once or twice a week, with baskets that
-vary but often land within 15 % of each other, produces clusters that pass, and those
-rows get `is_recurring = true`. Every reader trusts the flag: the dashboard's recurring
-card, `analytics` recurring cost, and step 6 and 7's insights and chat.
-
-**Reproduce:** step 6's insights run on synthetic data flagged Lidl (groceries, frequent,
-varying amounts and days) as recurring. A minimal case is a dozen rows at one merchant,
-€38–€46, on gaps of 5–9 days.
-
-**Why it has gone unnoticed:** the rule's tests cover subscriptions and bills with fixed
-amounts, and none covers a frequent variable-spend merchant that should come out
-negative.
-
-**Fixing it** probably means a stricter weekly cadence (more rows, a tighter amount band
-or no skipped period), or treating a merchant whose rows spread over several clusters as
-variable spending. A user's own flag already overrides the rule (`source = user`).
-Invert the reproduce case into a test first.
-
 ---
 
 ## Web app

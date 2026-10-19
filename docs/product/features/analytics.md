@@ -174,9 +174,10 @@ How they compute, so the numbers can be checked:
     measured at the period's last day. The monthly recurring cost adds up the active
     merchants only.
 - A likely hidden subscription is a merchant never flagged recurring anywhere in the user's
-  history that is charged in at least 3 different months of the period, with a median gap of
-  25 to 35 days, every charge within 10% of the median, and a median of 50 or less. They are ranked
-  by median charge × charges per month.
+  history, and not one the user has unticked on any charge, that is charged in at least 3
+  different months of the period, with a median gap of 25 to 35 days, every charge within 10%
+  of the median, and a median of 50 or less. They are ranked by median charge × charges per
+  month.
 - Category growth compares the earlier half of the period with the later half, by each
   half's average monthly spend; with an odd number of whole months the middle one is left
   out, and fewer than 2 whole months gives nothing. The change is in euros, and the list is
@@ -200,7 +201,12 @@ How they compute, so the numbers can be checked:
   and the response says so rather than reporting none.
 - An outlier is an expense whose z-score against the earlier expenses of its own category
   in the preceding `window_days` (its own day excluded) passes the threshold; it needs at
-  least 5 such expenses and a nonzero spread. Recurring expenses are neither candidates nor
+  least 5 such expenses and a nonzero spread. When the category's window holds fewer than 5,
+  the expense is scored against all one-off spending in the same window instead, so a large
+  purchase in a thin category is still seen. That fallback leaves out `atm` and
+  `savings_investments` (money moved, not spent) and any expense under 5% of the period's
+  average monthly spend, the same floor spikes use. Each outlier says which it was compared
+  with (`compared_with`: `category` or `all`). Recurring expenses are neither candidates nor
   part of a window, and a window may reach back before the period. The top 20 are returned.
   Spikes still count recurring expenses.
 - Merchant concentration is the Herfindahl index over all merchants, 0–10000.
