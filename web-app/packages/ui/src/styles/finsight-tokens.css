@@ -76,10 +76,8 @@
   --chart-axis: var(--ink-400);
   --chart-gap: #ffffff;
 
-  /* Elevation */
-  --shadow-sm: 0 1px 3px rgba(17, 21, 43, 0.06);
-  --shadow-md: 0 4px 16px -4px rgba(17, 21, 43, 0.12);
-  --shadow-lg: 0 16px 40px -12px rgba(17, 21, 43, 0.25);
+  /* Elevation (--shadow-sm/md/lg) is in globals.css's @theme, so Tailwind's
+     shadow-sm/md/lg utilities are the design system's. */
 }
 
 .dark {

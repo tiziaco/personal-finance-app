@@ -79,21 +79,6 @@ Related, and worth settling in the same change: `SlowAPIMiddleware` is never reg
 
 ## Web app
 
-### The Transactions header overflows a phone screen
-
-On a 375px phone the `/transactions` header row — the "Transactions" title, **Import CSV**
-and **Add transaction** — is about 100px wider than the screen, so **Add transaction** is
-cut off at the right edge. The row never wraps.
-
-**Reproduce:** open `/transactions` at 375px wide (or any phone); `Add transaction`'s right
-edge is past the viewport.
-
-**Why unnoticed:** the screen was built and checked at desktop width; found by the design
-system's browser sweep on 19 Oct 2026, which left layouts as they were.
-
-**Fix:** let the actions wrap under the title below `sm`, or collapse them into icon buttons
-there. A layout change, so check it against the design system's spacing.
-
 ### The settings dialog has no side gutter on a phone, and a fixed height
 
 `SettingsDialog` (`web-app/packages/components/src/settings/settings-dialog.tsx:60`)

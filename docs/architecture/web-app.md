@@ -86,8 +86,10 @@ It was made in Claude Design and adopted on 19 Oct 2026; the repo copy is the re
 - **Tokens have one home in code:** `packages/ui/src/styles/finsight-tokens.css`, the design
   system's names and values, light in `:root` and dark under `.dark` (next-themes' class).
   `globals.css` maps shadcn's semantic variables (`--primary`, `--muted`, `--sidebar-*`, …)
-  onto them and pins the radius scale (6/8/12/16) and the type scale (`text-h1`,
-  `text-caption`, …). Change a colour in the tokens file, never in a component.
+  onto them and pins the radius scale (6/8/12/16), the type scale (`text-h1`,
+  `text-caption`, …) and the elevation, so `shadow-sm/md/lg` are the design system's
+  shadows (a token of the same name in the tokens file would not reach the utility).
+  Change a colour in the tokens file, never in a component.
 - **The sidebar** is a fixed 104px rail (`w-26`, the primitive's `SIDEBAR_WIDTH`): the mark,
   the pages with their label under the icon (the menu button's `rail` size), then Settings
   and the avatar. It never collapses on a computer; on a phone it is a rail-width slide-out.

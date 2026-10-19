@@ -52,7 +52,7 @@ export function CategoryChart({ slices }: { slices: CategorySliceResponse[] }) {
                 nameKey="key"
                 innerRadius="58%"
                 outerRadius="100%"
-                stroke="var(--card)"
+                stroke="var(--chart-gap)"
                 strokeWidth={2}
                 isAnimationActive={false}
               />

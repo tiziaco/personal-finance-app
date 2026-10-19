@@ -53,7 +53,7 @@ export const CATEGORY_ICONS: Record<string, LucideIcon> = {
 }
 
 export const categoryIcon = (slug: string): LucideIcon =>
-  CATEGORY_ICONS[slug] ?? TagIcon
+  Object.hasOwn(CATEGORY_ICONS, slug) ? CATEGORY_ICONS[slug] : TagIcon
 
 /** The design system's neutral tile that leads a transaction row. */
 export function CategoryTile({

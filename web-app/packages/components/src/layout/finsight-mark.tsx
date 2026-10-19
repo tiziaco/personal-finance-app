@@ -3,12 +3,20 @@ import { cn } from "@app/core/lib/utils"
 /**
  * The Finsight wallet mark: body, folded flap at 45%, gold clasp with a dot.
  * Its fills read the --logo-* tokens, so it follows the theme on its own.
+ * `decorative` hides it from screen readers, for when "Finsight" is written beside it.
  */
-export function FinsightMark({ className }: { className?: string }) {
+export function FinsightMark({
+  className,
+  decorative = false,
+}: {
+  className?: string
+  decorative?: boolean
+}) {
   return (
     <svg
-      role="img"
-      aria-label="Finsight"
+      {...(decorative
+        ? { "aria-hidden": true }
+        : { role: "img", "aria-label": "Finsight" })}
       viewBox="6 8 56 48"
       className={cn("h-auto shrink-0", className)}
     >

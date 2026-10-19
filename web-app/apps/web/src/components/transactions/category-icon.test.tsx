@@ -34,6 +34,11 @@ describe("category icons", () => {
     expect(categoryIcon("not_a_category")).toBe(TagIcon)
   })
 
+  it("falls back to Tag for a slug that names an Object.prototype member", () => {
+    for (const s of ["constructor", "toString", "__proto__", "hasOwnProperty"])
+      expect(categoryIcon(s)).toBe(TagIcon)
+  })
+
   it("renders a tile for an unknown slug without throwing", () => {
     const { container } = render(<CategoryTile slug="not_a_category" />)
     expect(container.querySelector("svg")).not.toBeNull()

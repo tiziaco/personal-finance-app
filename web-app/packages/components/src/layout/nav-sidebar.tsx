@@ -7,12 +7,17 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@app/ui/sidebar"
 import type { NavItem } from "@app/core/types/nav"
 
-/** The rail's pages: each a link with its icon above its label. */
+/**
+ * The rail's pages: each a link with its icon above its label. On a phone the
+ * rail is a slide-out sheet, and tapping a page closes it.
+ */
 export function MenuNavigator({ items }: { items: NavItem[] }) {
   const pathname = usePathname() || "/"
+  const { setOpenMobile } = useSidebar()
 
   return (
     <SidebarGroup>
@@ -28,6 +33,7 @@ export function MenuNavigator({ items }: { items: NavItem[] }) {
                   <Link
                     href={item.url}
                     aria-current={isActive ? "page" : undefined}
+                    onClick={() => setOpenMobile(false)}
                   />
                 }
               >

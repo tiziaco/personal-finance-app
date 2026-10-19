@@ -129,14 +129,22 @@ export function TransactionsTable() {
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-2">
         <h1 className="text-2xl font-semibold">Transactions</h1>
+        {/* Below sm the actions are icon buttons, so the row fits a phone. */}
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setImporting(true)}>
+          <Button
+            variant="outline"
+            className="max-sm:w-8 max-sm:px-0"
+            onClick={() => setImporting(true)}
+          >
             <UploadIcon />
-            Import CSV
+            <span className="max-sm:sr-only">Import CSV</span>
           </Button>
-          <Button onClick={() => setDialog({ kind: "add" })}>
+          <Button
+            className="max-sm:w-8 max-sm:px-0"
+            onClick={() => setDialog({ kind: "add" })}
+          >
             <PlusIcon />
-            Add transaction
+            <span className="max-sm:sr-only">Add transaction</span>
           </Button>
         </div>
       </div>

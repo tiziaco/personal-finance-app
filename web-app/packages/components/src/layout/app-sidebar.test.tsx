@@ -1,5 +1,5 @@
 import type { ComponentProps } from "react"
-import { render, screen } from "@testing-library/react"
+import { render, screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import {
   ArrowLeftRightIcon,
@@ -85,6 +85,25 @@ describe("AppSidebar", () => {
       expect(sheet).toHaveAttribute("data-mobile", "true")
       expect(sheet.className).not.toContain("w-3/4")
       expect(sheet.className).toContain("data-[side=left]:w-(--sidebar-width)")
+    } finally {
+      window.innerWidth = width
+    }
+  })
+
+  it("closes the phone slide-out when a page is tapped", async () => {
+    const width = window.innerWidth
+    window.innerWidth = 375
+    try {
+      render(
+        <SidebarProvider>
+          <SidebarTrigger />
+          <AppSidebar items={ITEMS} />
+        </SidebarProvider>,
+      )
+      await userEvent.click(document.querySelector('[data-sidebar="trigger"]')!)
+      const sheet = await screen.findByRole("dialog")
+      await userEvent.click(within(sheet).getByRole("link", { name: "Home" }))
+      await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull())
     } finally {
       window.innerWidth = width
     }

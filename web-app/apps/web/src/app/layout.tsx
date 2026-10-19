@@ -21,14 +21,18 @@ export const metadata: Metadata = {
 }
 
 // Clerk's sign-in and sign-up cards in the Finsight tokens; they follow the theme.
+// No colorBorder: Clerk draws borders at ~11% of it, so the already-pale
+// --border vanishes. Left unset it falls back to colorNeutral, the foreground,
+// which also lifts the social buttons' labels in dark mode.
 const CLERK_APPEARANCE = {
   variables: {
     colorPrimary: "var(--primary)",
-    colorText: "var(--foreground)",
-    colorTextSecondary: "var(--muted-foreground)",
+    colorForeground: "var(--foreground)",
+    colorMutedForeground: "var(--muted-foreground)",
     colorBackground: "var(--card)",
-    colorInputBackground: "var(--card)",
-    colorInputText: "var(--foreground)",
+    colorInput: "var(--card)",
+    colorInputForeground: "var(--foreground)",
+    colorNeutral: "var(--foreground)",
     colorDanger: "var(--negative)",
     fontFamily: "var(--font-sans)",
     borderRadius: "0.75rem",
