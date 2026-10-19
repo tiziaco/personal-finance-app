@@ -11,6 +11,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@app/ui/dropdown-menu"
+import { CategoryGlyph } from "./category-icon"
 
 /** A transaction's category as a chip; clicking it picks another. */
 export function CategoryPicker({
@@ -42,6 +43,7 @@ export function CategoryPicker({
           {categories.map((c) => (
             // A radio item keeps the menu open by default; a pick closes it.
             <DropdownMenuRadioItem key={c.value} value={c.value} closeOnClick>
+              <CategoryGlyph slug={c.value} />
               {c.label}
             </DropdownMenuRadioItem>
           ))}

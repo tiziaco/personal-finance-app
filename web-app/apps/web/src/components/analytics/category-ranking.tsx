@@ -4,6 +4,7 @@ import type { CategorySpendResponse } from "@app/api-client/types"
 import { Badge } from "@app/ui/badge"
 
 import { formatAmount } from "@/components/transactions/format"
+import { CategoryGlyph } from "@/components/transactions/category-icon"
 import { useCategories } from "@/components/transactions/use-categories"
 
 import { Change } from "./change"
@@ -21,8 +22,9 @@ export function CategoryRanking({
       {categories.map((c) => (
         <li key={c.category} className="flex flex-col gap-1.5">
           <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate font-medium">
-              {label(c.category)}
+            <span className="flex min-w-0 items-center gap-2 font-medium">
+              <CategoryGlyph slug={c.category} />
+              <span className="truncate">{label(c.category)}</span>
             </span>
             <span className="shrink-0 tabular-nums">
               {formatAmount(c.total)}{" "}

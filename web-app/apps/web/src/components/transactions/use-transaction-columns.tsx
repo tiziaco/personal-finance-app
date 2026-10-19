@@ -22,6 +22,7 @@ import {
   formatDate,
   isLowConfidence,
 } from "./format"
+import { CategoryTile } from "./category-icon"
 
 export type TransactionRowActions = {
   categories: CategoryResponse[]
@@ -44,7 +45,17 @@ export function useTransactionColumns(
         meta: { width: "8rem" },
         cell: ({ row }) => formatDate(row.original.date),
       },
-      { accessorKey: "merchant", id: "merchant", header: "Merchant" },
+      {
+        accessorKey: "merchant",
+        id: "merchant",
+        header: "Merchant",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <CategoryTile slug={row.original.category} size="sm" />
+            <span className="min-w-0 truncate">{row.original.merchant}</span>
+          </div>
+        ),
+      },
       {
         accessorKey: "amount",
         id: "amount",
