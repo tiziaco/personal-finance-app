@@ -88,3 +88,76 @@ describe("QueryProvider — query errors", () => {
     expect(toastForError.mock.calls[0][0]).toMatchObject({ status: 500 })
   })
 })
+
+// These use the provider's own retry rule, so no `retry: false`. TanStack's
+// default retry delay is 1s for the first retry; waitFor timeouts sit above it.
+function CountingQuery({ queryFn }: { queryFn: () => Promise<unknown> }) {
+  useQuery({ queryKey: ["counting"], queryFn })
+  return null
+}
+
+function RefetchingQuery({
+  queryFn,
+  onRefetch,
+}: {
+  queryFn: () => Promise<unknown>
+  onRefetch: (refetch: () => Promise<unknown>) => void
+}) {
+  const { refetch } = useQuery({ queryKey: ["refetching"], queryFn })
+  useEffect(() => onRefetch(refetch), [refetch, onRefetch])
+  return null
+}
+
+describe("QueryProvider — retry rule", () => {
+  beforeEach(() => toastForError.mockClear())
+
+  it("does not retry a 4xx", async () => {
+    const queryFn = vi
+      .fn()
+      .mockRejectedValue(new ApiError("HTTP 404", 404, null, null))
+    render(
+      <QueryProvider>
+        <CountingQuery queryFn={queryFn} />
+      </QueryProvider>,
+    )
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce())
+    // Longer than the retry delay: a retry would have fired by now.
+    await new Promise((r) => setTimeout(r, 1500))
+    expect(queryFn).toHaveBeenCalledTimes(1)
+  })
+
+  it("retries a 5xx once", async () => {
+    const queryFn = vi
+      .fn()
+      .mockRejectedValue(new ApiError("HTTP 500", 500, null, null))
+    render(
+      <QueryProvider>
+        <CountingQuery queryFn={queryFn} />
+      </QueryProvider>,
+    )
+    await waitFor(() => expect(toastForError).toHaveBeenCalledOnce(), {
+      timeout: 3000,
+    })
+    expect(queryFn).toHaveBeenCalledTimes(2)
+  })
+
+  it("a failed refetch behind data already shown does not toast", async () => {
+    const queryFn = vi
+      .fn()
+      .mockResolvedValueOnce("data")
+      .mockRejectedValue(new ApiError("HTTP 500", 500, null, null))
+    let refetch: (() => Promise<unknown>) | undefined
+    render(
+      <QueryProvider>
+        <RefetchingQuery queryFn={queryFn} onRefetch={(r) => (refetch = r)} />
+      </QueryProvider>,
+    )
+    await waitFor(() => expect(queryFn).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(refetch).toBeDefined())
+
+    await refetch!()
+    // The refetch retried once (1s delay), then failed.
+    expect(queryFn).toHaveBeenCalledTimes(3)
+    expect(toastForError).not.toHaveBeenCalled()
+  })
+})
