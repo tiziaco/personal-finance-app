@@ -85,7 +85,6 @@ _AMOUNT_PATTERNS = {
     DOT_DECIMAL: (re.compile(r"^(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?$"), ",", "."),
 }
 _TRUE = frozenset({"true", "yes", "ja", "si", "sì", "1", "x"})
-_FALSE = frozenset({"false", "no", "nein", "0"})
 _SHOWN = 40
 
 
@@ -291,13 +290,8 @@ def parse_amount(value: str, style: str) -> Optional[Decimal]:
 
 
 def parse_recurring(value: str) -> Optional[bool]:
-    """A recurring cell as the user's assertion, or None — blank or unrecognised — to let the rule decide."""
-    folded = value.strip().casefold()
-    if folded in _TRUE:
-        return True
-    if folded in _FALSE:
-        return False
-    return None
+    """True when a recurring cell asserts it; otherwise None — false, blank or unrecognised — to let the rule decide."""
+    return True if value.strip().casefold() in _TRUE else None
 
 
 def best_date_format(values: list[str]) -> tuple[str, float]:
