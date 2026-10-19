@@ -1,9 +1,13 @@
 "use client"
 
-import { useGetSpending } from "@app/api-client/endpoints/analytics"
-import type { SpendingResponse } from "@app/api-client/types"
+import {
+  getGetDashboardQueryKey,
+  useGetSpending,
+} from "@app/api-client/endpoints/analytics"
+import type { DashboardResponse, SpendingResponse } from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Table,
   TableBody,
@@ -107,6 +111,12 @@ export function FlowTab({
   const query = useGetSpending({ months }, ANALYTICS_QUERY)
   const data = query.data
   const period = data && formatPeriod(data.date_from, data.date_to)
+  // Before the first response, the dashboard's cached reference month says
+  // whether the period is the month in progress: then the strip and the
+  // latest-month section are both absent. With nothing cached, assume present.
+  const inProgress =
+    useQueryClient().getQueryData<DashboardResponse>(getGetDashboardQueryKey())
+      ?.reference_partial === true
 
   return (
     <div className="flex flex-col gap-6">
@@ -128,12 +138,25 @@ export function FlowTab({
         empty={EMPTY}
         skeleton={
           <>
+            {/* Heights of the real blocks: strip 102px; latest-month card 162px stacked, 110px in two columns. */}
+            {inProgress ? null : (
+              <Skeleton
+                data-testid="mtd-skeleton"
+                className="h-[102px] w-full"
+              />
+            )}
             <Section title="Income and expenses">
               <Skeleton className="aspect-[2/1] w-full" />
             </Section>
             <Section title="Cash flow">
               <Skeleton className="h-32 w-full" />
             </Section>
+            {inProgress ? null : (
+              <Skeleton
+                data-testid="latest-skeleton"
+                className="h-[162px] w-full sm:h-[110px]"
+              />
+            )}
             <Section title="Month by month">
               <Skeleton className="h-40 w-full" />
             </Section>

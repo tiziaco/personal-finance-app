@@ -1,8 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { render, screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { useGetSpending } from "@app/api-client/endpoints/analytics"
-import type { MonthFlowResponse, SpendingResponse } from "@app/api-client/types"
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
+import {
+  getGetDashboardQueryKey,
+  useGetSpending,
+} from "@app/api-client/endpoints/analytics"
+import type {
+  DashboardResponse,
+  MonthFlowResponse,
+  SpendingResponse,
+} from "@app/api-client/types"
 import { formatMonth } from "@/components/dashboard/month"
 import { formatAmount } from "@/components/transactions/format"
 import { FlowTab } from "./flow-tab"
@@ -81,8 +89,12 @@ beforeEach(() => {
   spending({ data: DATA })
 })
 
-const renderTab = (onMonthsChange = vi.fn()) =>
-  render(<FlowTab months={6} onMonthsChange={onMonthsChange} />)
+const renderTab = (onMonthsChange = vi.fn(), client = new QueryClient()) =>
+  render(
+    <QueryClientProvider client={client}>
+      <FlowTab months={6} onMonthsChange={onMonthsChange} />
+    </QueryClientProvider>,
+  )
 
 const card = (title: string | RegExp) =>
   screen.getByText(title).closest('[data-slot="card"]') as HTMLElement
@@ -290,5 +302,47 @@ describe("FlowTab", () => {
     expect(
       screen.getAllByText(/Couldn't load your income and expenses/),
     ).toHaveLength(1)
+  })
+
+  describe("while loading", () => {
+    const loading = () => spending({ data: undefined })
+
+    it("holds the strip and the latest-month block, in the rendered order", () => {
+      loading()
+      renderTab()
+      const ids = ["mtd-skeleton", "latest-skeleton"]
+      for (const id of ids) {
+        expect(screen.getByTestId(id)).toBeInTheDocument()
+      }
+      const before = (a: HTMLElement, b: HTMLElement) =>
+        a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING
+      const strip = screen.getByTestId("mtd-skeleton")
+      const latest = screen.getByTestId("latest-skeleton")
+      expect(before(strip, card("Income and expenses"))).toBeTruthy()
+      expect(before(card("Cash flow"), latest)).toBeTruthy()
+      expect(before(latest, card("Month by month"))).toBeTruthy()
+    })
+
+    it("drops the strip block when the cached dashboard's reference is the month in progress", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: true,
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("latest-skeleton")).not.toBeInTheDocument()
+    })
+
+    it("keeps both blocks when the cached dashboard's reference is a finished month", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
+      expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
+    })
   })
 })
