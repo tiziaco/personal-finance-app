@@ -35,8 +35,6 @@ HIDDEN_MIN_MONTHS = 3
 HIDDEN_GAP_DAYS = (25, 35)
 HIDDEN_AMOUNT_TOLERANCE = Decimal("0.10")
 HIDDEN_MAX_CHARGE = Decimal("50.00")
-# transaction's recurring_source for the user's own choice (D6); the domain may not import transaction (R9).
-USER_SOURCE = "user"
 
 
 @dataclass(frozen=True)
@@ -145,8 +143,9 @@ def recurring_analysis(rows: Sequence[Row], period: Optional[Period]) -> Recurri
     spent = expenses(period.rows(rows))
     flagged = [r for r in spent if r.is_recurring]
     ever_flagged = {r.merchant_key for r in expenses(rows) if r.is_recurring}  # all history, not only the period
-    unticked = {r.merchant_key for r in expenses(rows) if r.recurring_source == USER_SOURCE and not r.is_recurring}
-    unflagged = [r for r in spent if r.merchant_key not in ever_flagged | unticked]
+    unticked = {r.merchant_key for r in expenses(rows) if r.recurring_set_by_user and not r.is_recurring}
+    excluded = ever_flagged | unticked
+    unflagged = [r for r in spent if r.merchant_key not in excluded]
     history = group_by(
         (r for r in expenses(rows) if r.is_recurring and r.date <= period.last_day), lambda r: r.merchant_key
     )

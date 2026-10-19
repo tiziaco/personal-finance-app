@@ -36,8 +36,8 @@ class Row(Protocol):
     def is_recurring(self) -> bool: ...
 
     @property
-    def recurring_source(self) -> str:
-        """Who set is_recurring: the user's own choice, or the detector (data-model/transaction.md, D6)."""
+    def recurring_set_by_user(self) -> bool:
+        """is_recurring is the user's own choice, not the detector's (data-model/transaction.md, D6)."""
         ...
 
 

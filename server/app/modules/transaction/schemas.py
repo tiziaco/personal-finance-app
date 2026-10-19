@@ -147,7 +147,7 @@ class AnalysisRow(BaseModel):
     amount: Decimal
     category: str
     is_recurring: bool
-    recurring_source: str = "detected"
+    recurring_set_by_user: bool = False  # recurring_source is `user`: is_recurring is the user's own choice (D6)
 
     model_config = {"frozen": True}
 

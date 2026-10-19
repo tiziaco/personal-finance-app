@@ -32,7 +32,7 @@ async def test_returns_plain_rows_in_date_order(db_session, test_user, make_tran
             amount=Decimal("-30.00"),
             category="food_groceries",
             is_recurring=False,
-            recurring_source="detected",
+            recurring_set_by_user=False,
         ),
         AnalysisRow(
             date=dt.date(2026, 2, 1),
@@ -41,7 +41,7 @@ async def test_returns_plain_rows_in_date_order(db_session, test_user, make_tran
             amount=Decimal("-900.00"),
             category="household_utilities",
             is_recurring=True,
-            recurring_source="user",
+            recurring_set_by_user=True,
         ),
     ]
 
