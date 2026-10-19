@@ -8,6 +8,7 @@ import type {
   CategoryBreakdownResponse,
   SpendingResponse,
 } from "@app/api-client/types"
+import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
 
 import { CategoryMovers } from "./category-movers"
@@ -70,7 +71,14 @@ export function TrendsTab({
           onChange={onMonthsChange}
         />
         {period ? (
-          <p className="text-sm text-muted-foreground">{period}</p>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              spending.isPlaceholderData && "opacity-60",
+            )}
+          >
+            {period}
+          </p>
         ) : null}
       </header>
 

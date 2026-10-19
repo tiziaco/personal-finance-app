@@ -14,7 +14,7 @@ import type {
 import { formatMonth } from "@/components/dashboard/month"
 import { formatAmount } from "@/components/transactions/format"
 import { FlowTab } from "./flow-tab"
-import { formatDayRange, formatPct } from "./format"
+import { formatDayRange, formatPct, formatPeriod } from "./format"
 
 vi.mock("@app/api-client/endpoints/analytics", async (orig) => ({
   ...(await orig<typeof import("@app/api-client/endpoints/analytics")>()),
@@ -334,6 +334,18 @@ describe("FlowTab", () => {
       expect(screen.queryByTestId("latest-skeleton")).not.toBeInTheDocument()
     })
 
+    it("drops only the strip block when the cached dashboard has no month to date", () => {
+      loading()
+      const client = new QueryClient()
+      client.setQueryData(getGetDashboardQueryKey(), {
+        reference_partial: false,
+        month_to_date: null,
+      } as DashboardResponse)
+      renderTab(vi.fn(), client)
+      expect(screen.queryByTestId("mtd-skeleton")).not.toBeInTheDocument()
+      expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
+    })
+
     it("keeps both blocks when the cached dashboard's reference is a finished month", () => {
       loading()
       const client = new QueryClient()
@@ -344,5 +356,18 @@ describe("FlowTab", () => {
       expect(screen.getByTestId("mtd-skeleton")).toBeInTheDocument()
       expect(screen.getByTestId("latest-skeleton")).toBeInTheDocument()
     })
+  })
+
+  it("dims the period line while the figures are the previous period's", () => {
+    spending({ data: DATA, isPlaceholderData: true })
+    renderTab()
+    const line = rawText(formatPeriod(DATA.date_from, DATA.date_to) as string)
+    expect(line.className).toContain("opacity-60")
+  })
+
+  it("does not dim the period line once the new period has loaded", () => {
+    renderTab()
+    const line = rawText(formatPeriod(DATA.date_from, DATA.date_to) as string)
+    expect(line.className).not.toContain("opacity-60")
   })
 })

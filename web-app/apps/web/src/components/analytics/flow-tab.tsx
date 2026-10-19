@@ -111,12 +111,15 @@ export function FlowTab({
   const query = useGetSpending({ months }, ANALYTICS_QUERY)
   const data = query.data
   const period = data && formatPeriod(data.date_from, data.date_to)
-  // Before the first response, the dashboard's cached reference month says
-  // whether the period is the month in progress: then the strip and the
-  // latest-month section are both absent. With nothing cached, assume present.
-  const inProgress =
-    useQueryClient().getQueryData<DashboardResponse>(getGetDashboardQueryKey())
-      ?.reference_partial === true
+  // Before the first response, the cached dashboard says which blocks the
+  // period will lack: the latest-month section when the reference month is
+  // the one in progress, and the strip too when there is no month to date
+  // (same call as spending's). With nothing cached, assume both are present.
+  const dash = useQueryClient().getQueryData<DashboardResponse>(
+    getGetDashboardQueryKey(),
+  )
+  const inProgress = dash?.reference_partial === true
+  const noStrip = inProgress || dash?.month_to_date === null
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,7 +130,14 @@ export function FlowTab({
           onChange={onMonthsChange}
         />
         {period ? (
-          <p className="text-sm text-muted-foreground">{period}</p>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              query.isPlaceholderData && "opacity-60",
+            )}
+          >
+            {period}
+          </p>
         ) : null}
       </header>
 
@@ -139,7 +149,7 @@ export function FlowTab({
         skeleton={
           <>
             {/* Heights of the real blocks: strip 102px; latest-month card 162px stacked, 110px in two columns. */}
-            {inProgress ? null : (
+            {noStrip ? null : (
               <Skeleton
                 data-testid="mtd-skeleton"
                 className="h-[102px] w-full"

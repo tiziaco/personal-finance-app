@@ -1,6 +1,7 @@
 "use client"
 
 import { useGetCategoryBreakdown } from "@app/api-client/endpoints/analytics"
+import { cn } from "@app/core/lib/utils"
 import { Skeleton } from "@app/ui/skeleton"
 import {
   Table,
@@ -53,7 +54,14 @@ export function CategoryTab({
           onChange={onMonthsChange}
         />
         {period ? (
-          <p className="text-sm text-muted-foreground">{period}</p>
+          <p
+            className={cn(
+              "text-sm text-muted-foreground",
+              query.isPlaceholderData && "opacity-60",
+            )}
+          >
+            {period}
+          </p>
         ) : null}
       </header>
 

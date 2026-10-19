@@ -49,7 +49,7 @@ export function TrendChart({ points }: { points: TrendPointResponse[] }) {
             <CartesianGrid {...GRID} />
             <XAxis {...X_AXIS} />
             <YAxis {...MONEY_Y_AXIS} />
-            {/* No LINE_TOOLTIP: the home chart keeps recharts' default cursor. */}
+            {/* No LINE_TOOLTIP, so this cleanup changes nothing visible: its cursor is a bright band in dark mode (see chart-parts). */}
             <ChartTooltip
               content={({ active, payload }) => {
                 // payload[i].payload is the hovered row: show its exact text, not the plotted float.
