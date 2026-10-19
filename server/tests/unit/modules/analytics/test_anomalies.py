@@ -3,10 +3,11 @@
 import datetime as dt
 import random
 from decimal import Decimal
-from statistics import mean
+from statistics import mean, pstdev
 
 import pytest
 
+from app.modules.analytics.domain import anomalies
 from app.modules.analytics.domain._aggregate import money
 from app.modules.analytics.domain.anomalies import CategorySpike, Outlier, find_anomalies
 from app.modules.analytics.domain.period import resolve_period
@@ -15,6 +16,7 @@ from tests.unit.modules.analytics.rows import row
 pytestmark = pytest.mark.unit
 
 TODAY = dt.date(2026, 10, 16)
+LAST_DAY = dt.date(2025, 12, 31)  # the last day of the 12-month period in the brute-force test
 
 BASE = [
     row(f"2026-03-0{d}", a)
@@ -38,14 +40,98 @@ def test_flags_an_expense_far_above_its_trailing_window():
     rows = BASE + [row("2026-03-06", "-100.00", merchant="Big"), row("2026-03-06", "-11.00", merchant="Small")]
     result = analyse(rows)
     assert result.outliers == (
-        Outlier(dt.date(2026, 3, 6), "Big", "shopping", Decimal("100.00"), 91.04, Decimal("10.80")),
+        Outlier(dt.date(2026, 3, 6), "Big", "shopping", Decimal("100.00"), 91.04, Decimal("10.80"), "category"),
     )
     assert (result.date_from, result.date_to) == (dt.date(2026, 3, 1), dt.date(2026, 3, 31))
 
 
-def test_fewer_than_five_prior_expenses_never_flag():
+def test_fewer_than_five_prior_expenses_in_the_whole_window_never_flag():
     rows = BASE[:4] + [row("2026-03-05", "-1000.00")]
     assert analyse(rows).outliers == ()
+
+
+def september_groceries():
+    """One food_groceries row a day through September 2026, €10 to €30 (mean about €20)."""
+    return [
+        row(day.isoformat(), f"-{10 + (i * 7) % 21}.00", merchant="Grocer", category="food_groceries")
+        for i, day in enumerate(days("2026-09-01", "2026-09-30"))
+    ]
+
+
+ELECTRONICS = [
+    row(day, amount, merchant="Saturn", category="media_electronics")
+    for day, amount in [
+        ("2026-09-03", "-19.99"),
+        ("2026-09-10", "-34.50"),
+        ("2026-09-17", "-12.00"),
+        ("2026-09-24", "-49.00"),
+    ]
+]
+
+
+def test_a_large_purchase_in_a_thin_category_is_compared_with_all_spending():
+    laptop = row("2026-09-28", "-1249.00", merchant="Apple Store", category="media_electronics")
+    rows = september_groceries() + ELECTRONICS + [laptop]
+    flagged = [o for o in analyse(rows).outliers if o.merchant == "Apple Store"]
+    assert len(flagged) == 1 and flagged[0].compared_with == "all"
+    window = [-r.amount for r in rows if dt.date(2026, 8, 29) <= r.date < laptop.date]
+    assert flagged[0].window_mean == money(mean(window))
+
+
+def test_a_thin_category_purchase_under_five_percent_of_monthly_spend_is_not_flagged():
+    purchase = row("2026-09-28", "-90.00", merchant="Gadget", category="media_electronics")
+    rent = row("2026-09-01", "-1500.00", merchant="Landlord", category="housing", recurring=True)
+    groceries = september_groceries()
+    window = [-r.amount for r in groceries if r.date < purchase.date]
+    z = (90 - mean(window)) / pstdev(window)
+    floor = Decimal("0.05") * sum((-r.amount for r in groceries + [rent, purchase]), Decimal(0))
+    assert z > 2.5  # clear of the threshold against all spending, so only the floor can stop it
+    assert floor > 90
+    assert analyse(groceries + [rent, purchase]).outliers == ()
+    # Without the rent the floor drops under €90 and the same purchase is flagged.
+    assert [o.merchant for o in analyse(groceries + [purchase]).outliers] == ["Gadget"]
+
+
+@pytest.mark.parametrize("category", ["atm", "savings_investments"])
+def test_moved_money_is_never_a_fallback_outlier(category):
+    groceries = september_groceries()
+    assert analyse(groceries + [row("2026-09-28", "-1249.00", merchant="Mover", category=category)]).outliers == ()
+    # The same row in a spending category is flagged, so the category is what stops it.
+    assert len(analyse(groceries + [row("2026-09-28", "-1249.00", category="media_electronics")]).outliers) == 1
+
+
+def test_a_dense_category_is_still_compared_with_itself():
+    dense = [row(f"2026-09-{d:02d}", "-100.00", category="media_electronics") for d in range(1, 6)]
+    dense[0] = row("2026-09-01", "-90.00", category="media_electronics")
+    big = row("2026-09-10", "-500.00", merchant="Big", category="media_electronics")
+    result = analyse(september_groceries() + dense + [big])
+    assert [(o.merchant, o.compared_with) for o in result.outliers] == [("Big", "category")]
+    assert result.outliers[0].window_mean == Decimal("98.00")
+
+
+def test_a_thin_window_with_too_little_spending_overall_is_not_scored():
+    thin = row("2026-03-06", "-1000.00", merchant="Big", category="media_electronics")
+    four = BASE[:2] + [
+        row("2026-03-03", "-20.00", category="food_groceries"),
+        row("2026-03-04", "-30.00", category="food_groceries"),
+    ]
+    assert analyse(four + [thin]).outliers == ()
+    five = four + [row("2026-03-05", "-25.00", category="food_groceries")]  # a fifth row makes the window scoreable
+    assert [o.compared_with for o in analyse(five + [thin]).outliers] == ["all"]
+
+    flat = [
+        row(f"2026-03-0{d}", "-10.00", category=c)
+        for d, c in zip(range(1, 6), ["shopping", "gifts"] * 3, strict=False)
+    ]
+    assert analyse(flat + [thin]).outliers == ()  # five rows, no spread
+    varied = flat[:4] + [row("2026-03-05", "-14.00", category="shopping")]
+    assert [o.compared_with for o in analyse(varied + [thin]).outliers] == ["all"]
+
+
+def test_twin_expenses_in_a_thin_category_are_both_judged():
+    twins = [row("2026-09-28", "-1249.00", merchant="Apple Store", category="media_electronics") for _ in range(2)]
+    result = analyse(september_groceries() + twins)
+    assert [(o.merchant, o.compared_with) for o in result.outliers] == [("Apple Store", "all")] * 2
 
 
 def test_the_window_ends_window_days_back():
@@ -176,27 +262,38 @@ def test_an_expense_near_the_earliest_date_does_not_overflow():
     assert result.spike_window_start is None
 
 
-def _brute_force_outliers(rows, first_day, std_threshold, window_days):
+def _brute_force_outliers(rows, first_day, std_threshold, window_days, cap=20):
     """The straightforward O(n²) reading of the rule, to pin the prefix-sum version against."""
-    from statistics import pstdev
-
     spent = sorted((r for r in rows if r.amount < 0 and not r.is_recurring), key=lambda r: r.date)
+    in_period = [r for r in rows if r.amount < 0 and first_day <= r.date <= LAST_DAY]
+    floor = Decimal("0.05") * sum((-r.amount for r in in_period), Decimal(0)) / 12
+
+    def z_against(current, window):
+        if len(window) < 5 or pstdev(window) == 0:
+            return None
+        return float((-current.amount - mean(window)) / pstdev(window))
+
     found = []
     for current in spent:
-        if current.date < first_day:
+        if not first_day <= current.date <= LAST_DAY:
             continue
         start = current.date - dt.timedelta(days=window_days)
-        window = [-r.amount for r in spent if r.category == current.category and start <= r.date < current.date]
-        if len(window) < 5 or pstdev(window) == 0:
-            continue
-        z = float((-current.amount - mean(window)) / pstdev(window))
-        if z > std_threshold:
-            found.append((current.date, current.merchant, round(z, 2)))
-    return sorted(found, key=lambda t: (-t[2], t[0], t[1]))[:20]
+        in_window = [r for r in spent if start <= r.date < current.date]
+        own = [-r.amount for r in in_window if r.category == current.category]
+        compared_with, window = "category", own
+        if len(own) < 5:
+            if current.category in ("atm", "savings_investments") or -current.amount < floor:
+                continue
+            compared_with, window = "all", [-r.amount for r in in_window]
+        z = z_against(current, window)
+        if z is not None and z > std_threshold:
+            found.append((current.date, current.merchant, round(z, 2), compared_with))
+    return sorted(found, key=lambda t: (-t[2], t[0], t[1]))[:cap]
 
 
 @pytest.mark.parametrize("window_days", [7, 30, 90])
-def test_outliers_match_a_brute_force_reference_over_two_years(window_days):
+def test_outliers_match_a_brute_force_reference_over_two_years(window_days, monkeypatch):
+    monkeypatch.setattr(anomalies, "MAX_OUTLIERS", 10_000)  # the top 20 would all be category outliers
     rng = random.Random(42)
     first = dt.date(2024, 1, 1)
     rows = [
@@ -204,12 +301,19 @@ def test_outliers_match_a_brute_force_reference_over_two_years(window_days):
             (first + dt.timedelta(days=rng.randrange(730))).isoformat(),
             f"-{rng.randint(200, 900) if rng.random() < 0.03 else rng.randint(5, 40)}.00",
             merchant=f"m{i:04d}",
-            category=rng.choice(["food_groceries", "shopping"]),
+            category=rng.choices(["food_groceries", "shopping", "media_electronics", "atm"], weights=[45, 45, 7, 3])[
+                0
+            ],
             recurring=rng.random() < 0.1,
         )
         for i in range(5000)
     ]
     period = resolve_period(rows, TODAY, months=12)  # 2025: windows in early January reach into 2024
-    expected = _brute_force_outliers(rows, period.first_day, 2.5, window_days)
-    got = [(o.date, o.merchant, o.z_score) for o in find_anomalies(rows, period, 2.5, window_days).outliers]
+    expected = _brute_force_outliers(rows, period.first_day, 2.5, window_days, cap=10_000)
+    got = [
+        (o.date, o.merchant, o.z_score, o.compared_with)
+        for o in find_anomalies(rows, period, 2.5, window_days).outliers
+    ]
     assert expected and got == expected
+    if window_days == 7:  # only a 7-day window leaves media_electronics (~3 rows) thin
+        assert any(t[3] == "all" for t in expected)

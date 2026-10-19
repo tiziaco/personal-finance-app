@@ -5,7 +5,7 @@ from bisect import bisect_left
 from collections.abc import Sequence
 from dataclasses import dataclass
 from decimal import Decimal, localcontext
-from typing import Optional
+from typing import Literal, Optional
 
 from app.modules.analytics.domain._aggregate import Row, expenses, group_by, money, spend, total_spend
 from app.modules.analytics.domain.period import Period
@@ -15,11 +15,16 @@ MAX_OUTLIERS = 20
 SPIKE_DAYS = 30
 SPIKE_MIN_PCT = 50.0
 SPIKE_MIN_SHARE_OF_MONTH = Decimal("0.05")
+FALLBACK_EXCLUDED = frozenset({"atm", "savings_investments"})  # money moved, not spent
 
 
 @dataclass(frozen=True)
 class Outlier:
-    """One expense far above the earlier expenses of its category in its trailing window."""
+    """One expense far above the earlier expenses in its trailing window: its category's, or all spending's.
+
+    compared_with is "category" when the category's window held at least MIN_WINDOW_EXPENSES expenses,
+    "all" when it held fewer and the expense was compared with all one-off spending instead.
+    """
 
     date: dt.date
     merchant: str
@@ -27,6 +32,17 @@ class Outlier:
     amount: Decimal
     z_score: float
     window_mean: Decimal
+    compared_with: Literal["category", "all"]
+
+
+@dataclass(frozen=True)
+class _Score:
+    """An expense against its window: None z and mean when the window held too few expenses or no spread."""
+
+    row: Row
+    n: int
+    z: Optional[float]
+    window_mean: Optional[Decimal]
 
 
 @dataclass(frozen=True)
@@ -62,17 +78,17 @@ def _days_before(day: dt.date, days: int) -> dt.date:
         return dt.date.min
 
 
-def _outliers(spent: Sequence[Row], period: Period, std_threshold: float, window_days: int) -> list[Outlier]:
-    """Each expense in the period against the expenses of the window_days days before its own day.
+def _scores(spent: Sequence[Row], period: Period, window_days: int) -> list[_Score]:
+    """Each in-period expense against the expenses of the window_days days before its own day.
 
-    spent is one category's expenses, earlier ones included: a window may reach before the period.
+    spent is the expenses to compare, earlier ones included: a window may reach before the period.
     Prefix sums of the amounts and their squares give each window's mean and spread in O(1),
     exactly: with n expenses summing to s, squares to q, the spread is √(nq − s²) ÷ n and an
     expense x scores (nx − s) ÷ √(nq − s²).
     """
     ordered = sorted(spent, key=lambda r: r.date)
     dates = [r.date for r in ordered]
-    found: list[Outlier] = []
+    scores: list[_Score] = []
     with localcontext() as ctx:
         ctx.prec = 60  # every sum below stays exact for 2-decimal amounts
         sums, squares = [Decimal(0)], [Decimal(0)]
@@ -86,24 +102,13 @@ def _outliers(spent: Sequence[Row], period: Period, std_threshold: float, window
             high = bisect_left(dates, current.date)
             n = high - low
             if n < MIN_WINDOW_EXPENSES:
+                scores.append(_Score(current, n, None, None))
                 continue
             s, q = sums[high] - sums[low], squares[high] - squares[low]
             spread = n * q - s * s
-            if spread <= 0:
-                continue
-            z = float((n * spend(current) - s) / spread.sqrt())
-            if z > std_threshold:
-                found.append(
-                    Outlier(
-                        current.date,
-                        current.merchant,
-                        current.category,
-                        money(spend(current)),
-                        round(z, 2),
-                        money(s / n),
-                    )
-                )
-    return found
+            z = None if spread <= 0 else float((n * spend(current) - s) / spread.sqrt())
+            scores.append(_Score(current, n, z, money(s / n)))
+    return scores
 
 
 def _spike_window(period: Period) -> Optional[tuple[dt.date, dt.date]]:
@@ -142,7 +147,11 @@ def find_anomalies(
     std_threshold: float = 2.5,
     window_days: int = 30,
 ) -> Anomalies:
-    """Outliers by trailing z-score within each category, and category spikes in the period's last 30 days.
+    """Outliers by trailing z-score, and category spikes in the period's last 30 days.
+
+    An expense is scored against its own category's window; when that holds fewer than MIN_WINDOW_EXPENSES
+    expenses, against all one-off spending's window instead, but only if it is not atm or savings_investments
+    and is worth SPIKE_MIN_SHARE_OF_MONTH of the period's average monthly spend.
 
     rows are all the usable rows: outlier windows draw on expenses before the period. Recurring-flagged
     expenses are left out of the outliers, as candidates and from every window.
@@ -150,11 +159,29 @@ def find_anomalies(
     if period is None:
         return Anomalies(None, None, std_threshold, window_days, (), (), None, None)
     one_off = [r for r in expenses(rows) if not r.is_recurring]
-    outliers = [
-        outlier
-        for group in group_by(one_off, lambda r: r.category).values()
-        for outlier in _outliers(group, period, std_threshold, window_days)
-    ]
+    overall = {id(score.row): score for score in _scores(one_off, period, window_days)}
+    floor = SPIKE_MIN_SHARE_OF_MONTH * total_spend(expenses(period.rows(rows))) / period.weight()
+    outliers: list[Outlier] = []
+    for category, group in group_by(one_off, lambda r: r.category).items():
+        for score in _scores(group, period, window_days):
+            compared_with: Literal["category", "all"] = "category"
+            if score.n < MIN_WINDOW_EXPENSES:
+                if category in FALLBACK_EXCLUDED or spend(score.row) < floor:
+                    continue
+                score, compared_with = overall[id(score.row)], "all"
+            if score.z is not None and score.window_mean is not None and score.z > std_threshold:
+                r = score.row
+                outliers.append(
+                    Outlier(
+                        r.date,
+                        r.merchant,
+                        r.category,
+                        money(spend(r)),
+                        round(score.z, 2),
+                        score.window_mean,
+                        compared_with,
+                    )
+                )
     outliers.sort(key=lambda o: (-o.z_score, o.date, o.category, o.merchant))
     window = _spike_window(period)
     spikes = _spikes(expenses(period.rows(rows)), period, window[0]) if window else []

@@ -2046,7 +2046,7 @@
         "type": "object"
       },
       "OutlierResponse": {
-        "description": "One expense in the period far above the earlier expenses of its category in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
+        "description": "One expense in the period far above the earlier expenses in its trailing window.\n\nRecurring-flagged expenses are never outliers and never in a window; a window may reach before the period.",
         "properties": {
           "amount": {
             "description": "The expense, positive",
@@ -2056,6 +2056,15 @@
           },
           "category": {
             "title": "Category",
+            "type": "string"
+          },
+          "compared_with": {
+            "description": "What the expense was compared with: its category's window, or all one-off spending when the category's window held fewer than 5",
+            "enum": [
+              "category",
+              "all"
+            ],
+            "title": "Compared With",
             "type": "string"
           },
           "date": {
@@ -2068,7 +2077,7 @@
             "type": "string"
           },
           "window_mean": {
-            "description": "The mean of the category's expenses in the window",
+            "description": "The mean of the window it was compared with",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Window Mean",
             "type": "string"
@@ -2084,7 +2093,8 @@
           "category",
           "amount",
           "z_score",
-          "window_mean"
+          "window_mean",
+          "compared_with"
         ],
         "title": "OutlierResponse",
         "type": "object"

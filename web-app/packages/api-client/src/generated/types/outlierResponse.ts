@@ -5,9 +5,10 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
+import type { OutlierResponseComparedWith } from "./outlierResponseComparedWith"
 
 /**
- * One expense in the period far above the earlier expenses of its category in its trailing window.
+ * One expense in the period far above the earlier expenses in its trailing window.
  *
  * Recurring-flagged expenses are never outliers and never in a window; a window may reach before the period.
  */
@@ -18,10 +19,12 @@ export interface OutlierResponse {
    */
   amount: string
   category: string
+  /** What the expense was compared with: its category's window, or all one-off spending when the category's window held fewer than 5 */
+  compared_with: OutlierResponseComparedWith
   date: string
   merchant: string
   /**
-   * The mean of the category's expenses in the window
+   * The mean of the window it was compared with
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
   window_mean: string
