@@ -134,6 +134,10 @@ How they compute, so the numbers can be checked:
   - Each month has a weight: 1 when whole, otherwise the days it covers over its length.
     Monthly averages are totals over the sum of the weights, so whole months divide by N and
     a partial month counts for the part it covers.
+  - When the period has no whole month (the only data is the month in progress, or a part
+    of one), the average monthly income, expenses and net and the burn rate are null, and the
+    Flow tab says "No full month yet". A part-month is never scaled up to a whole month. An
+    empty period keeps 0.00.
   - Month-over-month change, seasonality, stability and the growth halves use whole months
     only; a change touching a partial month is null. The period's first month compares with
     the month before it, outside the period, when the data reaches there. Every monthly
@@ -142,13 +146,15 @@ How they compute, so the numbers can be checked:
     before it, reaching before the period; null when any of the three is partial or before
     the data.
   - Month-to-date is the current month up to the last transaction in it, against days 1 to
-    the same day of the previous month. It is absent when the current month has no
+    the same day of the previous month. The response carries that day as `previous_through`
+    (clamped to the previous month's length) and the month's `net`; the web shows them and
+    works out neither. It is absent when the current month has no
     transaction. A percent is null when the previous figure is 0, and the comparison is blank
     when the previous month is only partly in the data (the data starts after its 1st); the
     previous figures are still shown. It does not depend on the period.
 - Money is rounded half-up to the cent. The monthly burn rate is expenses minus income per
   month, so it is negative while the user saves; it is exactly the average monthly net with
-  the sign reversed. The savings rate is net over income; null with no income. The latest
+  the sign reversed, and null when that is. The savings rate is net over income; null with no income. The latest
   month is the period's last whole month (none when it has none); its percentages compare it
   with the period's average as shown, which includes it.
 - A range covers 1900–2100. An explicit bound outside it is rejected; a transaction dated

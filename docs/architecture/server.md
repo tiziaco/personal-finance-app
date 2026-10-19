@@ -38,7 +38,10 @@ server/app/
 │   ├── account/              # the Clerk-backed identity: user row, CurrentUser, Clerk webhook handlers,
 │   │                         #   JIT provisioning, erasure
 │   ├── analytics/            # every calculation over the user's transactions; stores nothing.
-│   │                         #   domain/ holds the pure functions (R9)
+│   │                         #   domain/ holds the pure functions (R9); history.py is AnalyticsHistory:
+│   │                         #   one load of a user's rows and today, then any analysis over any
+│   │                         #   DateRange in memory — insights' figures use one per generation, and
+│   │                         #   chat's tools take the same object
 │   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
 │   ├── insights/             # AI-written insights: gathers analytics figures, calls agents/insights,
 │   │                         #   stores one set per user

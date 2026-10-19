@@ -134,10 +134,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 
 ## Web — tests the suite does not have yet
 
-- **`QueryProvider`'s retry rule, and the quiet refetch.** That a 4xx is not retried and a
-  5xx is retried once, and that a failed refetch behind data already shown does not toast.
-  `query-provider.test.tsx` covers the rest: a never-resolved query toasts, a mutation
-  toasts, and `silentError` (`true` or a predicate) opts either out.
 - **A failed conversation create.** In `ChatRuntimeProvider`, a create that answers 500
   clears the exchange and gives the text back to the composer if the user is still there.
   The provider restructure moved this into `ensureConversation`; no test exercises it.
@@ -172,8 +168,7 @@ enough, or whether only the user's flag marks one.
 
 Every `AnalyticsService` method loads the user's entire transaction history
 (`transaction_service.list_for_analysis` from `MIN_DATE` to `MAX_DATE`, in `_context`/`_rows`
-in `analytics/service.py`), whatever period it was asked for. The Wave 3 cleanup's bundle
-fixes the fan-out inside one caller — an insights generation, a chat turn — but not across
+in `analytics/service.py`), whatever period it was asked for. `AnalyticsHistory` fixes the fan-out inside one caller — an insights generation, a chat turn — but not across
 requests: the home dashboard, each `/analytics` tab and each period change are separate
 requests, and each reads every row again. Fine at one user's data; it grows with the history
 and with every caller step 7 adds.
@@ -191,64 +186,13 @@ whenever that user's transactions change. **Decide first:**
   each user carries a data version that the cache key includes. A TTL alone would show a
   stale chart right after an edit.
 
-**Unblocks:** analytics and chat that stay fast as a user's history grows. **After:** the
-Wave 3 cleanup, whose bundle is the one load to cache. Found while scoping it (19 Oct 2026).
+**Unblocks:** analytics and chat that stay fast as a user's history grows. **After:** the Wave 3 cleanup;
+`AnalyticsHistory` is the one load to cache. Found while scoping it (19 Oct 2026).
 
-## Wave 3 cleanup — shared analytics plumbing (roadmap row "Wave 3 cleanup")
+## Web — analytics page parts
 
-Found by the code reviews of 5b (#17) and 6 (#18), and by 5b's browser check. Each crossed
-another step's ownership during the wave, so it waited until #17 and #18 had merged.
-
-**Web**
-- Export `useQueryStates` and the number-literal parser from `@app/data-table/url-state`,
-  so `/analytics` stops reaching around them.
-- Move `ANALYTICS_STALE_TIME` out of `components/dashboard/home-dashboard.tsx` into a plain
-  module. Importing it from there may pull the home dashboard into `/analytics`'s bundle.
-- Share chart props between `components/analytics/` and `components/dashboard/trend-chart.tsx`.
 - Promote the analytics page's `Section`, `Change` and `PeriodSelect` to `@app/ui` if a
   second screen wants them.
-- **Income vs Expenses shifts on load** (about 100 px, CLS 0.15): its loading skeleton has
-  no block for the month-to-date strip or the latest-month card. Add blocks of the same
-  height, and hide the strip's block when the period is the month in progress, as the strip
-  itself is.
-- **Picking a period not yet cached flashes the whole tab's skeletons.** Add
-  `placeholderData: keepPreviousData` in `components/analytics/query.ts`, as
-  `components/transactions/transactions-table.tsx` does. While the new period loads, the old
-  period's figures sit under the new period's button, so the page needs a sign that it is
-  updating (dimmed cards, say). This and the `ANALYTICS_STALE_TIME` move both edit
-  `query.ts`.
-
-**Server**
-- **One history load per caller.** Every `AnalyticsService` method loads the user's whole
-  transaction history (`_context`/`_rows` in `analytics/service.py`), and each reads its own
-  `_today()`. `insights/figures.py` makes about 11 such calls per generation and reshapes
-  the results as untyped dicts. Add one analytics method that loads rows and today once and
-  returns a typed bundle of the windows insights needs, then delete `figures.py`'s dict
-  reshaping, `_same_days_previous_month`, `_month_index` and `_usual_months`. The last is a
-  workaround that asks only for months holding data; `resolve_period` already starts a
-  period at the first month with data (`analytics/domain/period.py`), so it is redundant.
-  Step 7's tools build on the same bundle.
-- **"Same days of the previous month" lives in four places:**
-  `analytics/domain/spending.py`, `insights/figures.py`, and the web's
-  `month-to-date-card.tsx` and `analytics/month-to-date-strip.tsx`. The card also computes
-  net in the browser with floating-point numbers, and the strip takes the day from `through`
-  without clamping it to the previous month's length. Add `previous_through` and `net` to
-  `MonthToDateResponse`, worked out by the `domain/spending.py` rule. Then delete the copy in
-  `insights/figures.py` and both web copies: the card's date arithmetic, its browser-side
-  net and the regex that strips the minus sign, and the strip's day range.
-- **A month-to-date-only period averages above its own total.** When the only data is the
-  month in progress, the period falls back to that partial month. Spending's
-  `average_monthly_*` then counts it by the days covered, so the figure is scaled up to a
-  whole month: "/ month" can exceed the period total (€4,118.25 / month against
-  €2,125.55, found by step 5b). Decide it in the spec: no monthly average until a month is
-  finished (a nullable field, and `flow-tab.tsx` changes), divide by whole months, or leave
-  it. It is in `domain/spending.py`, beside the month-to-date rule.
-
-Both server items change analytics, insights and the web together, so they are one step.
-
-**Folded in** (19 Oct 2026; small, and in files no other step touches): the server-status
-dot and the rate-limit 500 in tests from [`BUGS.md`](./BUGS.md), and the QueryProvider retry
-test from **Web — tests the suite does not have yet** above.
 
 ## Cutover (roadmap step 8)
 
