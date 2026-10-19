@@ -159,30 +159,40 @@ data on 14 Oct 2026.
 
 **Unblocks:** nothing; the app is usable with the template's theme.
 
-## Server — analytics: yearly charges, and empty months before the first data
+## Server — a yearly charge is recurring only after three years (roadmap row "Analytics rules")
 
-Two behaviours step 6's insights run surfaced. Both are correct by the current rules, but
-the rules may be wrong for the user:
+Surfaced by step 6's insights run. Correct by the current rule, but the rule may be wrong
+for the user. `CADENCES` in `server/app/modules/transaction/domain/recurring.py` gives
+`yearly` a `min_rows` of 3, so an annual subscription (Amazon Prime) seen once or twice is
+not flagged. `analytics` recurring can already price one (`interval_days`, €600 a year shows
+as €50 a month) once it is flagged. Decide whether two yearly charges at one amount are
+enough, or whether only the user's flag marks one.
 
-- **A yearly charge is recurring only after three years.** `CADENCES` in
-  `server/app/modules/transaction/domain/recurring.py` gives `yearly` a `min_rows` of 3, so
-  an annual subscription (Amazon Prime) seen once or twice is not flagged. `analytics`
-  recurring can already price one (`interval_days`, €600 a year shows as €50 a month) once
-  it is flagged. Decide whether two yearly charges at one amount are enough, or whether
-  only the user's flag marks one.
-- **A requested period zero-fills months before the user's first transaction.**
-  `months=7` for a user with five months of data averages over two empty months, so a new
-  user's monthly averages are understated. `analytics.md` says months without
-  transactions are zero-filled. That is right inside the data's span, but questionable
-  before its start. Step 6 works around it by asking only for months that hold data.
-  Decide whether the period should be clipped at the first month with data, and echo the
-  clipped span in `date_from`.
-- **A month-to-date-only period averages above its own total.** When the only data is the
-  month in progress, the period falls back to that partial month. Spending's
-  `average_monthly_*` then counts it by the days covered, so the figure is scaled up to a
-  whole month: "/ month" can exceed the period total (€4,118.25 / month against
-  €2,125.55, found by step 5b). Decide it with the clipping question above. One option is
-  to return no monthly average until a month is finished.
+## Server — analytics loads the whole history on every request
+
+Every `AnalyticsService` method loads the user's entire transaction history
+(`transaction_service.list_for_analysis` from `MIN_DATE` to `MAX_DATE`, in `_context`/`_rows`
+in `analytics/service.py`), whatever period it was asked for. The Wave 3 cleanup's bundle
+fixes the fan-out inside one caller — an insights generation, a chat turn — but not across
+requests: the home dashboard, each `/analytics` tab and each period change are separate
+requests, and each reads every row again. Fine at one user's data; it grows with the history
+and with every caller step 7 adds.
+
+**Fix:** cache a user's analysis rows on the server, keyed by `user_id`, and drop the entry
+whenever that user's transactions change. **Decide first:**
+
+- **Where it lives.** In-process (one uvicorn process today, no Redis in the stack) is
+  enough until there is more than one worker; a shared cache is then a new service.
+- **What is cached.** The rows (every method still computes, one invalidation rule) or each
+  response (cheaper hits, but keyed by period and today too).
+- **How it is invalidated.** `transaction` publishes only `TRANSACTIONS_ALL_DELETED`
+  today. A create, edit, delete, import or recurring refresh must drop the entry, so either
+  `transaction` publishes a "transactions changed" event that `analytics` subscribes to, or
+  each user carries a data version that the cache key includes. A TTL alone would show a
+  stale chart right after an edit.
+
+**Unblocks:** analytics and chat that stay fast as a user's history grows. **After:** the
+Wave 3 cleanup, whose bundle is the one load to cache. Found while scoping it (19 Oct 2026).
 
 ## Wave 3 cleanup — shared analytics plumbing (roadmap row "Wave 3 cleanup")
 
@@ -214,16 +224,31 @@ another step's ownership during the wave, so it waited until #17 and #18 had mer
   `_today()`. `insights/figures.py` makes about 11 such calls per generation and reshapes
   the results as untyped dicts. Add one analytics method that loads rows and today once and
   returns a typed bundle of the windows insights needs, then delete `figures.py`'s dict
-  reshaping, `_same_days_previous_month` and `_month_index`. Step 7's tools may want the
-  same bundle.
-- **"Same days of the previous month" lives in three places:**
+  reshaping, `_same_days_previous_month`, `_month_index` and `_usual_months`. The last is a
+  workaround that asks only for months holding data; `resolve_period` already starts a
+  period at the first month with data (`analytics/domain/period.py`), so it is redundant.
+  Step 7's tools build on the same bundle.
+- **"Same days of the previous month" lives in four places:**
   `analytics/domain/spending.py`, `insights/figures.py`, and the web's
-  `month-to-date-card.tsx`. The card also computes net in the browser with floating-point
-  numbers. Add `previous_through` and `net` to `MonthToDateResponse`, worked out by the
-  `domain/spending.py` rule. Then delete the copy in `insights/figures.py` and the card's
-  copy: its date arithmetic, its browser-side net, and the regex that strips the minus sign.
+  `month-to-date-card.tsx` and `analytics/month-to-date-strip.tsx`. The card also computes
+  net in the browser with floating-point numbers, and the strip takes the day from `through`
+  without clamping it to the previous month's length. Add `previous_through` and `net` to
+  `MonthToDateResponse`, worked out by the `domain/spending.py` rule. Then delete the copy in
+  `insights/figures.py` and both web copies: the card's date arithmetic, its browser-side
+  net and the regex that strips the minus sign, and the strip's day range.
+- **A month-to-date-only period averages above its own total.** When the only data is the
+  month in progress, the period falls back to that partial month. Spending's
+  `average_monthly_*` then counts it by the days covered, so the figure is scaled up to a
+  whole month: "/ month" can exceed the period total (€4,118.25 / month against
+  €2,125.55, found by step 5b). Decide it in the spec: no monthly average until a month is
+  finished (a nullable field, and `flow-tab.tsx` changes), divide by whole months, or leave
+  it. It is in `domain/spending.py`, beside the month-to-date rule.
 
 Both server items change analytics, insights and the web together, so they are one step.
+
+**Folded in** (19 Oct 2026; small, and in files no other step touches): the server-status
+dot and the rate-limit 500 in tests from [`BUGS.md`](./BUGS.md), and the QueryProvider retry
+test from **Web — tests the suite does not have yet** above.
 
 ## Cutover (roadmap step 8)
 

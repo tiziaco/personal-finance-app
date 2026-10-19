@@ -32,8 +32,9 @@ Links are relative to `docs/`.
 | **Analytics figures** — the category-growth fix and every derived figure the `/analytics` page shows, computed by the server | complete — [PR #16](https://github.com/tiziaco/personal-finance-app/pull/16) into `template-base`; reaches `main` at Cutover | `feat/analytics-figures` | [`analytics.md`](./product/features/analytics.md) §2–3 |
 | **5b Analytics page** — the four `/analytics` views | complete — [PR #17](https://github.com/tiziaco/personal-finance-app/pull/17) into `template-base`; reaches `main` at Cutover | `feat/analytics-page` | [`analytics.md`](./product/features/analytics.md) §2 |
 | **6 Insights** — generation, the `/insights` page, the dashboard callout and the home month-to-date card | complete — [PR #18](https://github.com/tiziaco/personal-finance-app/pull/18) into `template-base`; reaches `main` at Cutover | `feat/insights` | [`insights.md`](./product/features/insights.md), [`data-model/insight.md`](./data-model/insight.md), [`transaction.md`](./data-model/transaction.md) D4 (the delete-all event) |
-| **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place | not started — ready, #17 and #18 merged | — | [`TODO.md`](./TODO.md) **Wave 3 cleanup** |
-| **7 Chat finance tools** — the assistant answers questions about the user's own money | not started — after Wave 3 cleanup merges | — | [`chat.md`](./product/features/chat.md). No spec yet |
+| **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place; plus the status-dot ring, the rate-limit test fixture and the QueryProvider retry test | not started — ready, #17 and #18 merged | — | [`TODO.md`](./TODO.md) **Wave 3 cleanup**; [`BUGS.md`](./BUGS.md) the server-status dot, the rate-limit 500 in tests; [`TODO.md`](./TODO.md) **Web — tests** (the retry rule) |
+| **Analytics rules** — an outlier rule for a thin category, frequent shopping not flagged recurring, yearly charges, hidden subscriptions that respect the user's "not recurring", and date bounds on hand-added transactions | not started — ready, runs beside Wave 3 cleanup | — | [`BUGS.md`](./BUGS.md) the sparse-category outlier, frequent shopping as recurring; [`TODO.md`](./TODO.md) **a yearly charge**, **a merchant the user unflagged**, **date bounds**; [`analytics.md`](./product/features/analytics.md) §3, [`data-model/transaction.md`](./data-model/transaction.md) D6. No spec yet |
+| **7 Chat finance tools** — the assistant answers questions about the user's own money; names the model that answered after a fallback; releases the request's DB connection before a model call | not started — after Wave 3 cleanup merges | — | [`chat.md`](./product/features/chat.md); [`TODO.md`](./TODO.md) **the chatbot names the default model**, **a model call holds the request's DB connection**, **Web — tests** (a failed conversation create). No spec yet |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -49,7 +50,7 @@ here when someone picks it up.
 | 1 | 2 Transactions ∥ 3 Chat screen | done — #11, #12 merged into `template-base` |
 | 2 | 4 CSV import ∥ 5a Analytics dashboard | done — #13, #14 merged into `template-base` |
 | 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights | done — #16, #17, #18 merged into `template-base` |
-| 4 | Wave 3 cleanup | now — #17 and #18 merged |
+| 4 | Wave 3 cleanup ∥ Analytics rules | now — #17 and #18 merged |
 | 5 | 7 Chat finance tools | after Wave 3 cleanup merges |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
@@ -92,6 +93,20 @@ not wait for 4.
   was closed before its spec. The cleanup adds one analytics method that loads a user's
   history once and returns a typed bundle; 7's tools build on that, rather than on methods
   that each reload the whole history.
+- **Analytics rules is its own step, beside the cleanup** (product and technical; decision
+  on 19 Oct 2026). The cleanup changes no behaviour; the rules step changes what the library
+  reports, and may re-judge stored recurring flags, so the two are reviewed apart. They run
+  in parallel on these conditions: the rules step stays out of `analytics/service.py`,
+  `domain/spending.py`, `MonthToDateResponse` and `insights/`; the cleanup stays out of
+  `domain/anomalies.py`, `domain/recurring.py` and the whole `transaction` module; a new
+  `AnalysisRow` field has a default; only the cleanup edits `server/tests/conftest.py`. The
+  generated client, `analytics.md` and the TODO and BUGS lists merge mechanically. 7 does
+  not need the rules technically, but without them its answers repeat the wrong outliers
+  and flags.
+- **The chat-side TODOs ride in 7** (technical; decision on 19 Oct 2026). The model name
+  after a fallback and the DB connection held through a model call change the chat route
+  and graph that 7 changes. Releasing the request's session before the model call is the
+  same question as how 7's tools get a session, so one spec settles both.
 - **Analytics figures is its own step, ahead of 5b's page** (product; 16 Oct 2026). The
   page computes nothing: every figure it shows comes from the server, and the category
   growth measure is fixed there (earlier half of the range against the later half, not
