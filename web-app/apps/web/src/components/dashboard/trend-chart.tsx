@@ -79,6 +79,8 @@ export function TrendChart({ points }: { points: TrendPointResponse[] }) {
               type="monotone"
               stroke="var(--color-expenses)"
               strokeWidth={2}
+              // The design system dashes expenses beside income, so colour is never the only cue.
+              strokeDasharray="6 4"
               dot={false}
               isAnimationActive={false}
             />

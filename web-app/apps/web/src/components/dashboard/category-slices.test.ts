@@ -41,7 +41,7 @@ describe("toCategorySlices", () => {
         amount: 50,
         display: formatAmount("50.00"),
         share: 4.55,
-        fill: "var(--chart-6)",
+        fill: "var(--chart-other)",
       },
     ])
   })

@@ -23,7 +23,7 @@ export function toCategorySlices(
       amount: Number(slice.amount),
       display: formatAmount(slice.amount),
       share: slice.share_pct,
-      fill: category === null ? "var(--chart-6)" : `var(--chart-${i + 1})`,
+      fill: category === null ? "var(--chart-other)" : `var(--chart-${i + 1})`,
     }
   })
 }
