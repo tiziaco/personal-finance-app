@@ -1,13 +1,11 @@
 import type { CategoryTrendResponse } from "@app/api-client/types"
 import { Badge } from "@app/ui/badge"
 
-import {
-  formatAmount,
-  formatSignedAmount,
-} from "@/components/transactions/format"
+import { formatAmount } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 import { useCategories } from "@/components/transactions/use-categories"
 
-import { signedAmountClass, TONE_CLASS } from "./change"
+import { TONE_CLASS } from "./change"
 import { changeTone, formatPct } from "./format"
 
 /** "new" when there was no earlier spend, "stopped" when the later half is zero, else the percent. */
@@ -45,8 +43,8 @@ export function CategoryMovers({
             </p>
           </div>
           <div className="text-right tabular-nums">
-            <p className={signedAmountClass(r.change_amount, "down")}>
-              {formatSignedAmount(r.change_amount)}
+            <p>
+              <Money amount={r.change_amount} kind="spendChange" />
             </p>
             <p className="text-xs">
               <MoverPct pct={r.change_pct} />

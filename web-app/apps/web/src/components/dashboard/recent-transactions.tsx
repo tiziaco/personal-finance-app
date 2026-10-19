@@ -5,26 +5,14 @@ import { useListTransactions } from "@app/api-client/endpoints/transactions"
 import type { TransactionResponse } from "@app/api-client/types"
 import { buttonVariants } from "@app/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
-import { cn } from "@app/core/lib/utils"
-import {
-  transactionAmountClass,
-  formatSignedAmount,
-  formatDate,
-} from "@/components/transactions/format"
+import { formatDate } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 import { CategoryTile } from "@/components/transactions/category-icon"
 import { useCategories } from "@/components/transactions/use-categories"
 import { RecentSkeleton } from "./dashboard-skeleton"
 import { SectionError } from "./section-error"
 
 const RECENT = { limit: 10 } as const
-
-function Amount({ value }: { value: string }) {
-  return (
-    <span className={cn("tabular-nums", transactionAmountClass(value))}>
-      {formatSignedAmount(value)}
-    </span>
-  )
-}
 
 /** The ten newest transactions: a table from md up, a list on a phone. */
 export function RecentTransactions() {
@@ -77,7 +65,7 @@ export function RecentTransactions() {
                       {label(t.category)}
                     </td>
                     <td className="py-2 text-right">
-                      <Amount value={t.amount} />
+                      <Money amount={t.amount} kind="transaction" />
                     </td>
                   </tr>
                 ))}
@@ -93,7 +81,7 @@ export function RecentTransactions() {
                       {formatDate(t.date)} · {label(t.category)}
                     </p>
                   </div>
-                  <Amount value={t.amount} />
+                  <Money amount={t.amount} kind="transaction" />
                 </li>
               ))}
             </ul>

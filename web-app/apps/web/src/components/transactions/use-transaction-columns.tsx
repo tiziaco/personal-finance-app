@@ -16,12 +16,8 @@ import {
   DropdownMenuTrigger,
 } from "@app/ui/dropdown-menu"
 import { CategoryPicker } from "./category-picker"
-import {
-  transactionAmountClass,
-  formatSignedAmount,
-  formatDate,
-  isLowConfidence,
-} from "./format"
+import { formatDate, isLowConfidence } from "./format"
+import { Money } from "./money"
 import { CategoryTile } from "./category-icon"
 
 export type TransactionRowActions = {
@@ -62,9 +58,7 @@ export function useTransactionColumns(
         header: "Amount",
         meta: { align: "right", width: "8rem" },
         cell: ({ row }) => (
-          <span className={transactionAmountClass(row.original.amount)}>
-            {formatSignedAmount(row.original.amount)}
-          </span>
+          <Money amount={row.original.amount} kind="transaction" />
         ),
       },
       {

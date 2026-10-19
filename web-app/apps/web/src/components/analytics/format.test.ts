@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest"
 import { formatMonth } from "@/components/dashboard/month"
 import {
-  amountTone,
   changeTone,
   formatDayRange,
   formatIndex,
@@ -113,14 +112,5 @@ describe("partialLabel", () => {
     expect(partialLabel(true, "2026-04", "2026-10")).toBe("partial")
     expect(partialLabel(true, "2026-04", undefined)).toBe("partial")
     expect(partialLabel(false, "2026-10", "2026-10")).toBeNull()
-  })
-})
-
-describe("amountTone", () => {
-  it("tones a net and a spending change", () => {
-    expect(amountTone("-5.00", "up")).toBe("bad")
-    expect(amountTone("5.00", "up")).toBe("good")
-    expect(amountTone("5.00", "down")).toBe("bad")
-    expect(amountTone("0.00", "up")).toBe("neutral")
   })
 })

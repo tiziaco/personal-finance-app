@@ -1,6 +1,5 @@
 import { parseIsoDay } from "@app/core/lib/dates"
 import { formatMonth } from "@/components/dashboard/month"
-import { isExpense } from "@/components/transactions/format"
 
 export type Tone = "good" | "bad" | "neutral"
 
@@ -45,16 +44,6 @@ export function changeTone(pct: number | null, kind: "spend" | "income"): Tone {
   if (pct === null || pct === 0) return "neutral"
   const up = pct > 0
   return up === (kind === "income") ? "good" : "bad"
-}
-
-/**
- * Whether a signed amount is good news: a net is good when up, a change in
- * spending when down. Zero is neutral.
- */
-export function amountTone(amount: string, goodWhen: "up" | "down"): Tone {
-  if (!/[1-9]/.test(amount)) return "neutral"
-  const up = !isExpense(amount)
-  return up === (goodWhen === "up") ? "good" : "bad"
 }
 
 /** The seasonal index (100 = typical) as words. */

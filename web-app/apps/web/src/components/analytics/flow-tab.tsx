@@ -19,16 +19,13 @@ import {
 
 import { formatMonth } from "@/components/dashboard/month"
 import {
+  amountClass,
   formatAmount,
-  formatSignedAmount,
+  formatMoney,
 } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 
-import {
-  Change,
-  SavingsHeadline,
-  signedAmountClass,
-  TONE_CLASS,
-} from "./change"
+import { Change, SavingsHeadline, TONE_CLASS } from "./change"
 import { FlowChart } from "./flow-chart"
 import {
   changeTone,
@@ -49,44 +46,30 @@ const EMPTY = "No transactions in this period."
 
 const isEmpty = (data: SpendingResponse) => data.date_from === null
 
-/** A net: signed, green when up, red when down. */
-const netClass = (amount: string) => signedAmountClass(amount, "up")
-const formatNet = (amount: string) => formatSignedAmount(amount)
-
 function Figure({
   label,
   amount,
   average,
-  signed,
+  kind = "total",
 }: {
   label: string
   amount: string
   /** Null when the period has no whole month to average over. */
   average: string | null
-  /** A net: sign it, and colour it and its average good or bad. */
-  signed?: boolean
+  /** A net is signed, and it and its average toned; a total stays unsigned. */
+  kind?: "total" | "net"
 }) {
+  const averageClass = average === null ? "" : amountClass(average, kind)
   return (
     <div>
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p
-        className={cn(
-          "text-2xl font-semibold tabular-nums",
-          signed && netClass(amount),
-        )}
-      >
-        {signed ? formatNet(amount) : formatAmount(amount)}
+      <p className="text-2xl font-semibold">
+        <Money amount={amount} kind={kind} />
       </p>
-      <p
-        className={cn(
-          "text-xs",
-          (average !== null && signed && netClass(average)) ||
-            "text-muted-foreground",
-        )}
-      >
+      <p className={cn("text-xs", averageClass || "text-muted-foreground")}>
         {average === null
           ? "No full month yet"
-          : `${signed ? formatNet(average) : formatAmount(average)} / month`}
+          : `${formatMoney(average, kind)} / month`}
       </p>
     </div>
   )
@@ -198,7 +181,7 @@ export function FlowTab({
                       label="Net"
                       amount={d.net}
                       average={d.average_monthly_net}
-                      signed
+                      kind="net"
                     />
                   </div>
                   <p className="text-sm">
@@ -276,10 +259,8 @@ export function FlowTab({
                           <TableCell className="text-right tabular-nums">
                             {formatAmount(m.expenses)}
                           </TableCell>
-                          <TableCell
-                            className={`text-right tabular-nums ${netClass(m.net)}`}
-                          >
-                            {formatNet(m.net)}
+                          <TableCell className="text-right">
+                            <Money amount={m.net} kind="net" />
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             <Rate pct={m.savings_rate_pct} />
@@ -309,7 +290,9 @@ export function FlowTab({
                           </p>
                         </div>
                         <div className="text-right tabular-nums">
-                          <p className={netClass(m.net)}>{formatNet(m.net)}</p>
+                          <p>
+                            <Money amount={m.net} kind="net" />
+                          </p>
                           <p className="text-xs">
                             <Rate pct={m.savings_rate_pct} />
                           </p>

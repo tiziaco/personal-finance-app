@@ -4,12 +4,8 @@ import { useId } from "react"
 import type { TransactionResponse } from "@app/api-client/types"
 import { Card, CardContent } from "@app/ui/card"
 import { CategoryTile } from "./category-icon"
-import { cn } from "@app/core/lib/utils"
-import {
-  formatDate,
-  formatSignedAmount,
-  transactionAmountClass,
-} from "./format"
+import { formatDate } from "./format"
+import { Money } from "./money"
 
 /** A transaction on a phone: tapping it opens the edit dialog. */
 export function TransactionCard({
@@ -40,15 +36,11 @@ export function TransactionCard({
               {meta}
             </p>
           </div>
-          <span
+          <Money
             id={`${id}-amount`}
-            className={cn(
-              "tabular-nums",
-              transactionAmountClass(transaction.amount),
-            )}
-          >
-            {formatSignedAmount(transaction.amount)}
-          </span>
+            amount={transaction.amount}
+            kind="transaction"
+          />
         </CardContent>
       </Card>
     </button>
