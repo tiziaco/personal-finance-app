@@ -52,10 +52,16 @@ class TestCreate:
             {"description": "x" * 1001},
             {"category": "no_such_slug"},
             {"date": "2026-02-30"},
+            {"date": "1899-12-31"},
+            {"date": "2101-01-01"},
         ],
     )
     async def test_invalid_input_is_422(self, authenticated_client, patch):
         assert (await authenticated_client.post(BASE, json=VALID | patch)).status_code == 422
+
+    @pytest.mark.parametrize("day", ["1900-01-01", "2100-12-31"])
+    async def test_a_date_on_the_bounds_is_201(self, authenticated_client, day):
+        assert (await authenticated_client.post(BASE, json=VALID | {"date": day})).status_code == 201
 
     async def test_a_duplicate_is_409_with_the_existing_id(self, authenticated_client, test_user, make_transaction):
         existing = await make_transaction(test_user)
@@ -94,6 +100,21 @@ class TestUpdate:
     async def test_null_on_a_required_field_is_422(self, authenticated_client, test_user, make_transaction):
         txn = await make_transaction(test_user)
         assert (await authenticated_client.patch(f"{BASE}/{txn.id}", json={"merchant": None})).status_code == 422
+
+    @pytest.mark.parametrize("day", ["1899-12-31", "2101-01-01"])
+    async def test_a_date_outside_the_bounds_is_422(self, authenticated_client, test_user, make_transaction, day):
+        txn = await make_transaction(test_user)
+        assert (await authenticated_client.patch(f"{BASE}/{txn.id}", json={"date": day})).status_code == 422
+
+    async def test_a_date_on_the_bounds_is_200(self, authenticated_client, test_user, make_transaction):
+        txn = await make_transaction(test_user)
+        response = await authenticated_client.patch(f"{BASE}/{txn.id}", json={"date": "1900-01-01"})
+        assert response.status_code == 200
+        assert response.json()["date"] == "1900-01-01"
+
+    async def test_null_date_is_still_422(self, authenticated_client, test_user, make_transaction):
+        txn = await make_transaction(test_user)
+        assert (await authenticated_client.patch(f"{BASE}/{txn.id}", json={"date": None})).status_code == 422
 
     async def test_another_users_transaction_is_404(self, authenticated_client, other_user, make_transaction):
         txn = await make_transaction(other_user)
