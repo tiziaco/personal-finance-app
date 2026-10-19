@@ -22,6 +22,7 @@ import {
   UtensilsIcon,
   type LucideIcon,
 } from "lucide-react"
+import { createElement } from "react"
 import { cn } from "@app/core/lib/utils"
 
 /**
@@ -62,7 +63,6 @@ export function CategoryTile({
   slug: string
   size?: "md" | "sm"
 }) {
-  const Icon = categoryIcon(slug)
   return (
     <span
       aria-hidden="true"
@@ -71,13 +71,16 @@ export function CategoryTile({
         size === "md" ? "size-9 [&_svg]:size-4.5" : "size-8 [&_svg]:size-4",
       )}
     >
-      <Icon />
+      {createElement(categoryIcon(slug))}
     </span>
   )
 }
 
 /** The bare icon, inline before a category's name. */
 export function CategoryGlyph({ slug }: { slug: string }) {
-  const Icon = categoryIcon(slug)
-  return <Icon aria-hidden="true" className="size-4 shrink-0" />
+  // createElement, not <Icon />: the icon is looked up, not created, per render.
+  return createElement(categoryIcon(slug), {
+    "aria-hidden": true,
+    className: "size-4 shrink-0",
+  })
 }
