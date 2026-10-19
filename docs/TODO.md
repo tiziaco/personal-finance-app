@@ -140,9 +140,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
-- **The home trend chart's tooltip cursor.** It keeps recharts' default cursor, which
-  `chart-parts` documents as a bright band in dark mode; adopting `LINE_TOOLTIP`'s cursor is
-  a visible change to make on purpose.
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
 
@@ -195,8 +192,13 @@ nothing; `AnalyticsHistory` is the one load to cache. Found while scoping it (19
 
 ## Web — analytics page parts
 
-- Promote the analytics page's `Section`, `Change` and `PeriodSelect` to `@app/ui` if a
-  second screen wants them.
+- Promote the analytics page's `Section`, `Change` and `PeriodSelect`/`PeriodHeader` to
+  `@app/ui` if a second screen wants them. The home dashboard already reaches into
+  `components/analytics/` for `chart-parts.tsx` and `stale-time.ts`; move those to a
+  shared home when the parts move.
+- **The home trend chart's tooltip cursor.** It keeps recharts' default cursor, which
+  `chart-parts` documents as a bright band in dark mode; adopting `LINE_TOOLTIP`'s cursor is
+  a visible change to make on purpose.
 
 ## Cutover (roadmap step 8)
 
