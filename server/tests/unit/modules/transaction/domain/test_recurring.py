@@ -113,12 +113,29 @@ def test_a_weekly_charge_must_hold_its_amount():
     assert set(verdicts(weekly(["-10.00", "-10.80", "-10.00", "-10.40"]))) == {False}
 
 
-def test_a_weekly_charge_with_an_odd_purchase_in_its_cluster_is_not_weekly():
-    rows = [
-        *series([7, 7, 7], amount="-9.99"),
-        RecurringRow(uuid7(), START + dt.timedelta(days=10), Decimal("-10.50"), DETECTED),
+def test_an_odd_purchase_in_a_weekly_charges_cluster_is_left_out():
+    weekly = series([7, 7, 7], amount="-9.99")
+    odd = RecurringRow(uuid7(), START + dt.timedelta(days=10), Decimal("-10.50"), DETECTED)
+    result = detect_recurring([*weekly, odd])
+    assert [result[r.id] for r in weekly] == [True] * 4
+    assert result[odd.id] is False
+
+
+def test_a_weekly_charge_that_changes_price_is_recurring_at_both_amounts():
+    before = series([7] * 19, amount="-3.00")
+    after = [
+        RecurringRow(uuid7(), before[-1].date + dt.timedelta(days=7 * i), Decimal("-3.20"), DETECTED)
+        for i in range(1, 21)
     ]
-    assert set(detect_recurring(rows).values()) == {False}
+    assert set(verdicts([*before, *after])) == {True}
+
+
+def test_a_one_off_purchase_does_not_break_a_weekly_run():
+    weekly = series([7] * 29, amount="-60.00")
+    odd = RecurringRow(uuid7(), START + dt.timedelta(days=52), Decimal("-65.00"), DETECTED)
+    result = detect_recurring([*weekly, odd])
+    assert [result[r.id] for r in weekly] == [True] * 30
+    assert result[odd.id] is False
 
 
 def test_two_yearly_charges_at_one_amount_are_recurring():
@@ -149,6 +166,19 @@ def test_two_yearly_charges_with_other_charges_between_are_not_recurring():
     charges, others = yearly(Decimal("5.00"))
     result = detect_recurring([*charges, *others])
     assert [result[r.id] for r in charges] == [True, True]
+
+
+def test_three_yearly_charges_within_fifteen_percent_are_recurring():
+    """The ±15 % form: no two rows share an amount, and a purchase between rules out the fixed form."""
+    charges = [
+        RecurringRow(uuid7(), START, Decimal("-89.90"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=365), Decimal("-95.90"), DETECTED),
+        RecurringRow(uuid7(), START + dt.timedelta(days=731), Decimal("-98.90"), DETECTED),
+    ]
+    purchase = RecurringRow(uuid7(), START + dt.timedelta(days=200), Decimal("-12.00"), DETECTED)
+    result = detect_recurring([*charges, purchase])
+    assert [result[r.id] for r in charges] == [True, True, True]
+    assert result[purchase.id] is False
 
 
 def test_small_yearly_amounts_get_ten_cents_of_slack_not_fifty():

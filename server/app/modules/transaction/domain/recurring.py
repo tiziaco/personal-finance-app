@@ -1,7 +1,7 @@
 """The recurring rule: one merchant's rows judged as a series (docs/data-model/transaction.md, D6).
 
-A cadence accepts a +-15 % amount cluster with enough rows (monthly, quarterly, yearly), or a
-fixed-amount one (weekly, yearly) that is tighter but needs fewer rows.
+A cadence accepts a ±15 % amount cluster with enough rows (monthly, quarterly, yearly), or a
+same-amount run inside one (weekly, yearly) that is tighter but needs fewer rows.
 """
 
 import datetime as dt
@@ -26,9 +26,9 @@ class Cadence:
     """A period a series can follow: the days between two rows, and how many rows it needs.
 
     `min_rows` is the count needed in a ±15 % cluster; None means the cadence never
-    accepts one. `fixed_min_rows` is the count needed when every row is within the
-    fixed band of the seed; None means there is no fixed form. `fixed_alone` adds that
-    no other row of the same side falls strictly between the cluster's first and last dates.
+    accepts one. `fixed_min_rows` is the count needed in a same-amount run (2 % of its
+    seed, at least €0.10); None means there is no fixed form. `fixed_alone` adds that
+    no other row of the same side falls strictly between the run's first and last dates.
     """
 
     name: str
@@ -61,38 +61,44 @@ def detect_recurring(rows: list[RecurringRow]) -> dict[uuid.UUID, bool]:
     """is_recurring for every `detected` row among one merchant key's active rows.
 
     Money in and money out are judged apart; within each, rows are clustered by
-    amount and a cluster is a series when it follows a cadence. `user` rows
-    count as evidence and get no verdict, so they are never changed.
+    amount (±15 %) and each cluster re-clustered into same-amount runs (2 %). A row
+    is recurring when its cluster is a series by `min_rows` or its run is a series by
+    `fixed_min_rows`, so an odd purchase in a cluster does not undo the run beside it.
+    `user` rows count as evidence and get no verdict, so they are never changed.
     """
     verdict: dict[uuid.UUID, bool] = {}
     for incoming in (True, False):
         side = [r for r in rows if (r.amount > 0) is incoming]
-        for seed, cluster in _clusters(side):
-            recurring = _is_series(cluster, seed, side)
-            for row in cluster:
-                if row.source == DETECTED:
-                    verdict[row.id] = recurring
+        for cluster in _clusters(side):
+            series = _is_series(cluster)
+            for run in _clusters(cluster, _FIXED_BAND, _FIXED_SLACK):
+                recurring = series or _is_fixed_series(run, side)
+                for row in run:
+                    if row.source == DETECTED:
+                        verdict[row.id] = recurring
     return verdict
 
 
-def _clusters(rows: list[RecurringRow]) -> list[tuple[Decimal, list[RecurringRow]]]:
+def _clusters(
+    rows: list[RecurringRow], band: Decimal = _BAND, slack: Decimal = _MIN_SLACK
+) -> list[list[RecurringRow]]:
     """Rows grouped around fixed seeds: the most frequent amounts first, then the smallest.
 
-    A row joins the first cluster whose seed is within ±15 % of the seed (at
-    least €1); otherwise it seeds a cluster. A fixed seed does not drift the way
-    a running median does. Each cluster comes with its seed.
+    A row joins the first cluster whose seed it is within `band` of (at least
+    `slack`; by default ±15 %, at least €1); otherwise it seeds a cluster. A fixed
+    seed does not drift the way a running median does.
     """
     counts = Counter(abs(r.amount) for r in rows)
     clusters: list[tuple[Decimal, list[RecurringRow]]] = []
     for row in sorted(rows, key=lambda r: (-counts[abs(r.amount)], abs(r.amount), r.date)):
         size = abs(row.amount)
         for seed, members in clusters:
-            if abs(size - seed) <= max(seed * _BAND, _MIN_SLACK):
+            if abs(size - seed) <= max(seed * band, slack):
                 members.append(row)
                 break
         else:
             clusters.append((size, [row]))
-    return clusters
+    return [members for _, members in clusters]
 
 
 def _fits(gap: int, cadence: Cadence) -> bool:
@@ -100,30 +106,34 @@ def _fits(gap: int, cadence: Cadence) -> bool:
     return cadence.min_days <= gap <= cadence.max_days or 2 * cadence.min_days <= gap <= 2 * cadence.max_days
 
 
-def _is_fixed(cluster: list[RecurringRow], seed: Decimal, side: list[RecurringRow], cadence: Cadence) -> bool:
-    """Every row within 2 % of the seed (at least €0.10), and, for `fixed_alone`, nothing of the side between."""
-    if cadence.fixed_min_rows is None or len(cluster) < cadence.fixed_min_rows:
-        return False
-    if any(abs(abs(r.amount) - seed) > max(seed * _FIXED_BAND, _FIXED_SLACK) for r in cluster):
-        return False
-    if cadence.fixed_alone:
-        first, last = min(r.date for r in cluster), max(r.date for r in cluster)
-        members = {r.id for r in cluster}
-        return not any(r.id not in members and first < r.date < last for r in side)
-    return True
-
-
-def _is_series(cluster: list[RecurringRow], seed: Decimal, side: list[RecurringRow]) -> bool:
-    """A cluster follows a cadence when 75 % of its gaps fit and it has enough rows, or enough fixed ones."""
-    dates = sorted(r.date for r in cluster)
+def _follows(rows: list[RecurringRow], cadence: Cadence) -> bool:
+    """75 % of the gaps between the rows' dates fit the cadence; a single row has no gaps, so never follows one."""
+    dates = sorted(r.date for r in rows)
     gaps = [(later - earlier).days for earlier, later in zip(dates, dates[1:], strict=False)]
-    if not gaps:
-        return False
+    return bool(gaps) and sum(_fits(g, cadence) for g in gaps) >= _FIT_SHARE * len(gaps)
+
+
+def _is_series(cluster: list[RecurringRow]) -> bool:
+    """A ±15 % cluster follows a cadence that accepts one, with its `min_rows`."""
     return any(
-        sum(_fits(g, cadence) for g in gaps) >= _FIT_SHARE * len(gaps)
-        and (
-            (cadence.min_rows is not None and len(cluster) >= cadence.min_rows)
-            or _is_fixed(cluster, seed, side, cadence)
-        )
+        cadence.min_rows is not None and len(cluster) >= cadence.min_rows and _follows(cluster, cadence)
         for cadence in CADENCES
     )
+
+
+def _is_fixed_series(run: list[RecurringRow], side: list[RecurringRow]) -> bool:
+    """A same-amount run follows a cadence with a fixed form, and, for `fixed_alone`, nothing of the side is between."""
+    return any(
+        cadence.fixed_min_rows is not None
+        and len(run) >= cadence.fixed_min_rows
+        and _follows(run, cadence)
+        and (not cadence.fixed_alone or _alone(run, side))
+        for cadence in CADENCES
+    )
+
+
+def _alone(run: list[RecurringRow], side: list[RecurringRow]) -> bool:
+    """No row of the side outside the run falls strictly between the run's first and last dates."""
+    first, last = min(r.date for r in run), max(r.date for r in run)
+    members = {r.id for r in run}
+    return not any(r.id not in members and first < r.date < last for r in side)
