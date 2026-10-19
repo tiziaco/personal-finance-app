@@ -919,16 +919,16 @@ export const getSpendingResponseAverageExpenseRegExp = new RegExp(
 export const getSpendingResponseAverageIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyExpensesRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyExpensesOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyIncomeRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyIncomeOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseAverageMonthlyNetRegExp = new RegExp(
+export const getSpendingResponseAverageMonthlyNetOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
-export const getSpendingResponseBurnRateRegExp = new RegExp(
+export const getSpendingResponseBurnRateOneRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
 export const getSpendingResponseLatestMonthOneExpensesRegExp = new RegExp(
@@ -983,28 +983,36 @@ export const GetSpendingResponse = zod
       .regex(getSpendingResponseAverageIncomeRegExp)
       .describe("Per transaction"),
     average_monthly_expenses: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyExpensesRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyExpensesOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Total expenses ÷ the period's months, a partial month counting for the share of it covered",
+        "Total expenses ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     average_monthly_income: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyIncomeRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyIncomeOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Total income ÷ the period's months, a partial month counting for the share of it covered",
+        "Total income ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     average_monthly_net: zod
-      .string()
-      .regex(getSpendingResponseAverageMonthlyNetRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseAverageMonthlyNetOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "Net ÷ the period's months, a partial month counting for the share of it covered",
+        "Net ÷ the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
       ),
     burn_rate: zod
-      .string()
-      .regex(getSpendingResponseBurnRateRegExp)
+      .union([
+        zod.string().regex(getSpendingResponseBurnRateOneRegExp),
+        zod.null(),
+      ])
       .describe(
-        "(Total expenses − total income) ÷ the period's months; negative while saving",
+        "(Total expenses − total income) ÷ the period's months; negative while saving; null when the period has no whole month",
       ),
     date_from: zod
       .union([zod.iso.date(), zod.null()])

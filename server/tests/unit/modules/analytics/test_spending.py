@@ -117,12 +117,29 @@ def test_only_this_months_data_is_one_partial_month():
     assert october.partial and october.month == "2026-10"
     assert (result.date_from, result.date_to) == (dt.date(2026, 10, 1), dt.date(2026, 10, 2))
     assert result.latest_month is None
-    assert result.average_monthly_expenses == Decimal("1550.00")  # 100 ÷ 2/31
-    assert result.average_monthly_income == Decimal("0.00")
-    assert result.burn_rate == Decimal("1550.00")
+    assert result.average_monthly_expenses is None  # no whole month to average over
+    assert result.average_monthly_income is None and result.average_monthly_net is None
+    assert result.burn_rate is None
     assert result.savings_rate_pct is None
     assert october.savings_rate_pct is None and october.expense_change_pct is None
     assert result.month_to_date is not None and result.month_to_date.expenses_change_pct is None
+
+
+def test_one_partial_past_month_has_no_monthly_average():
+    rows = [row("2026-09-20", "-300.00"), row("2026-09-25", "1000.00", category="salary")]
+    result = summary(rows=rows, months=1)
+    (september,) = result.months
+    assert september.partial
+    assert (result.date_from, result.date_to) == (dt.date(2026, 9, 20), dt.date(2026, 9, 30))
+    assert result.average_monthly_income is None and result.average_monthly_expenses is None
+    assert result.average_monthly_net is None and result.burn_rate is None
+    assert result.total_expenses == Decimal("300.00")
+
+
+def test_a_range_shorter_than_a_month_has_no_monthly_average():
+    result = summary(date_from=dt.date(2026, 9, 1), date_to=dt.date(2026, 9, 15))
+    assert result.average_monthly_income is None and result.average_monthly_expenses is None
+    assert result.average_monthly_net is None and result.burn_rate is None
 
 
 def test_month_to_date_on_the_31st_clamps_to_a_shorter_month():
@@ -189,6 +206,8 @@ def test_empty_input_is_all_zero():
     assert result.months == ()
     assert result.date_from is None and result.date_to is None
     assert (result.total_income, result.total_expenses, result.net) == (Decimal("0.00"),) * 3
+    assert result.average_monthly_income == Decimal("0.00")
+    assert result.average_monthly_expenses == Decimal("0.00")
     assert result.average_monthly_net == Decimal("0.00")
     assert result.burn_rate == Decimal("0.00")
     assert result.savings_rate_pct is None

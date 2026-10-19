@@ -2355,28 +2355,56 @@
             "type": "string"
           },
           "average_monthly_expenses": {
-            "description": "Total expenses \u00f7 the period's months, a partial month counting for the share of it covered",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Average Monthly Expenses",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total expenses \u00f7 the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
+            "title": "Average Monthly Expenses"
           },
           "average_monthly_income": {
-            "description": "Total income \u00f7 the period's months, a partial month counting for the share of it covered",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Average Monthly Income",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Total income \u00f7 the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
+            "title": "Average Monthly Income"
           },
           "average_monthly_net": {
-            "description": "Net \u00f7 the period's months, a partial month counting for the share of it covered",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Average Monthly Net",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Net \u00f7 the period's months, a partial month counting for the share of it covered; null when the period has no whole month",
+            "title": "Average Monthly Net"
           },
           "burn_rate": {
-            "description": "(Total expenses \u2212 total income) \u00f7 the period's months; negative while saving",
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Burn Rate",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "(Total expenses \u2212 total income) \u00f7 the period's months; negative while saving; null when the period has no whole month",
+            "title": "Burn Rate"
           },
           "date_from": {
             "anyOf": [

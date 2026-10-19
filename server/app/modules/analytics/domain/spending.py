@@ -81,10 +81,10 @@ class SpendingSummary:
     transaction_count: int
     average_income: Decimal
     average_expense: Decimal
-    average_monthly_income: Decimal
-    average_monthly_expenses: Decimal
-    average_monthly_net: Decimal
-    burn_rate: Decimal
+    average_monthly_income: Optional[Decimal]
+    average_monthly_expenses: Optional[Decimal]
+    average_monthly_net: Optional[Decimal]
+    burn_rate: Optional[Decimal]
     savings_rate_pct: Optional[float]
     months: tuple[MonthFlow, ...]
     latest_month: Optional[LatestMonth]
@@ -191,8 +191,12 @@ def spending_summary(rows: Sequence[Row], period: Optional[Period], *, today: dt
     money_in, money_out = incomes(covered), expenses(covered)
     total_in, total_out = total_amount(money_in), total_spend(money_out)
     weight = period.weight() if period else Decimal(0)
-    monthly_in = money(total_in / weight) if weight else ZERO
-    monthly_out = money(total_out / weight) if weight else ZERO
+    # A part-month is never scaled up to a whole one: with no whole month there is no monthly average.
+    averaged = bool(period and period.whole_months())
+    monthly_in = money(total_in / weight) if averaged else None if period else ZERO
+    monthly_out = money(total_out / weight) if averaged else None if period else ZERO
+    monthly_net = money((total_in - total_out) / weight) if averaged else None if period else ZERO
+    burn = money((total_out - total_in) / weight) if averaged else None if period else ZERO
     flows = monthly_flows(rows, period.months, today=today) if period else ()
     return SpendingSummary(
         date_from=period.first_day if period else None,
@@ -205,10 +209,12 @@ def spending_summary(rows: Sequence[Row], period: Optional[Period], *, today: dt
         average_expense=average(total_out, len(money_out)),
         average_monthly_income=monthly_in,
         average_monthly_expenses=monthly_out,
-        average_monthly_net=money((total_in - total_out) / weight) if weight else ZERO,
-        burn_rate=money((total_out - total_in) / weight) if weight else ZERO,
+        average_monthly_net=monthly_net,
+        burn_rate=burn,
         savings_rate_pct=_savings_rate(total_in - total_out, total_in),
         months=flows,
-        latest_month=_latest_month(flows, monthly_in, monthly_out),
+        latest_month=_latest_month(flows, monthly_in, monthly_out)
+        if monthly_in is not None and monthly_out is not None
+        else None,
         month_to_date=month_to_date(rows, today),
     )
