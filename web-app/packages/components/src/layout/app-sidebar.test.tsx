@@ -8,7 +8,7 @@ import {
   MessageSquareIcon,
   SparklesIcon,
 } from "lucide-react"
-import { SidebarProvider } from "@app/ui/sidebar"
+import { SidebarProvider, SidebarTrigger } from "@app/ui/sidebar"
 import { describe, expect, it, vi } from "vitest"
 
 import { AppSidebar } from "./app-sidebar"
@@ -68,5 +68,25 @@ describe("AppSidebar", () => {
     expect(sidebar).toHaveAttribute("data-state", "expanded")
     await userEvent.keyboard("{Control>}b{/Control}")
     expect(sidebar).toHaveAttribute("data-state", "expanded")
+  })
+
+  it("slides out at the rail's width on a phone, not the sheet's default", async () => {
+    const width = window.innerWidth
+    window.innerWidth = 375
+    try {
+      render(
+        <SidebarProvider>
+          <SidebarTrigger />
+          <AppSidebar items={ITEMS} />
+        </SidebarProvider>,
+      )
+      await userEvent.click(document.querySelector('[data-sidebar="trigger"]')!)
+      const sheet = await screen.findByRole("dialog")
+      expect(sheet).toHaveAttribute("data-mobile", "true")
+      expect(sheet.className).not.toContain("w-3/4")
+      expect(sheet.className).toContain("data-[side=left]:w-(--sidebar-width)")
+    } finally {
+      window.innerWidth = width
+    }
   })
 })

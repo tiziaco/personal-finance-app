@@ -15,7 +15,7 @@ import {
 
 const LABELS: Record<AnalyticsTab, string> = {
   category: "By category",
-  flow: "Income vs Expenses",
+  flow: "Income vs expenses",
   trends: "Trends",
   seasonality: "Seasonality",
 }

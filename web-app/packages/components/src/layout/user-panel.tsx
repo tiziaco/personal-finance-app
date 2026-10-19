@@ -75,7 +75,8 @@ export function UserDetailsPanel({
           className="min-w-56 rounded-lg"
           side="right"
           align="end"
-          sideOffset={4}
+          // Clears the rail: half of w-26 minus half the avatar (34px), plus a gap.
+          sideOffset={42}
         >
           <DropdownMenuGroup>
             <DropdownMenuLabel className="p-0 font-normal">

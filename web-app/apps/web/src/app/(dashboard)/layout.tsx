@@ -64,7 +64,7 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
           />
           <SidebarInset className="flex flex-col overflow-hidden">
             <div className="flex-1 overflow-auto">
-              <div className="min-w-0 px-6 py-6 md:px-8 md:py-7">
+              <div className="min-w-0 px-4 py-4 md:px-8 md:py-7">
                 {children}
               </div>
             </div>

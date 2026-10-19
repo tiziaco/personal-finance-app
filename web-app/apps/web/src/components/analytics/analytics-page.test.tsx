@@ -42,6 +42,17 @@ describe("AnalyticsPage", () => {
     expect(screen.queryByText(/^flow/)).toBeNull()
   })
 
+  it("names its tabs in sentence case", () => {
+    setup("")
+    for (const name of [
+      "By category",
+      "Income vs expenses",
+      "Trends",
+      "Seasonality",
+    ])
+      expect(screen.getByRole("tab", { name })).toBeTruthy()
+  })
+
   it("opens the tab in the URL with its period", () => {
     setup("?tab=trends&trend_months=12")
     expect(screen.getByText("trends 12")).toBeTruthy()
