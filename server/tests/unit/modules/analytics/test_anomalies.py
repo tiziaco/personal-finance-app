@@ -9,14 +9,14 @@ import pytest
 
 from app.modules.analytics.domain import anomalies
 from app.modules.analytics.domain._aggregate import money
-from app.modules.analytics.domain.anomalies import CategorySpike, Outlier, find_anomalies
+from app.modules.analytics.domain.anomalies import FALLBACK_EXCLUDED, CategorySpike, Outlier, find_anomalies
 from app.modules.analytics.domain.period import resolve_period
+from app.modules.transaction import CATEGORIES
 from tests.unit.modules.analytics.rows import row
 
 pytestmark = pytest.mark.unit
 
 TODAY = dt.date(2026, 10, 16)
-LAST_DAY = dt.date(2025, 12, 31)  # the last day of the 12-month period in the brute-force test
 
 BASE = [
     row(f"2026-03-0{d}", a)
@@ -98,6 +98,11 @@ def test_moved_money_is_never_a_fallback_outlier(category):
     assert analyse(groceries + [row("2026-09-28", "-1249.00", merchant="Mover", category=category)]).outliers == ()
     # The same row in a spending category is flagged, so the category is what stops it.
     assert len(analyse(groceries + [row("2026-09-28", "-1249.00", category="media_electronics")]).outliers) == 1
+
+
+def test_the_moved_money_slugs_are_categories_transaction_has():
+    """The domain may not import transaction (contract R9), so it names the slugs itself; a rename must fail here."""
+    assert FALLBACK_EXCLUDED <= {slug for slug, _ in CATEGORIES}
 
 
 def test_a_dense_category_is_still_compared_with_itself():
@@ -262,11 +267,11 @@ def test_an_expense_near_the_earliest_date_does_not_overflow():
     assert result.spike_window_start is None
 
 
-def _brute_force_outliers(rows, first_day, std_threshold, window_days):
+def _brute_force_outliers(rows, period, std_threshold, window_days):
     """The straightforward O(n²) reading of the rule, to pin the prefix-sum version against."""
     spent = sorted((r for r in rows if r.amount < 0 and not r.is_recurring), key=lambda r: r.date)
-    in_period = [r for r in rows if r.amount < 0 and first_day <= r.date <= LAST_DAY]
-    floor = Decimal("0.05") * sum((-r.amount for r in in_period), Decimal(0)) / 12
+    in_period = [r for r in rows if r.amount < 0 and period.contains(r.date)]
+    floor = Decimal("0.05") * sum((-r.amount for r in in_period), Decimal(0)) / period.weight()
 
     def z_against(current, window):
         if len(window) < 5 or pstdev(window) == 0:
@@ -275,7 +280,7 @@ def _brute_force_outliers(rows, first_day, std_threshold, window_days):
 
     found = []
     for current in spent:
-        if not first_day <= current.date <= LAST_DAY:
+        if not period.contains(current.date):
             continue
         start = current.date - dt.timedelta(days=window_days)
         in_window = [r for r in spent if start <= r.date < current.date]
@@ -291,12 +296,10 @@ def _brute_force_outliers(rows, first_day, std_threshold, window_days):
     return sorted(found, key=lambda t: (-t[2], t[0], t[1]))
 
 
-@pytest.mark.parametrize("window_days", [7, 30, 90])
-def test_outliers_match_a_brute_force_reference_over_two_years(window_days, monkeypatch):
-    monkeypatch.setattr(anomalies, "MAX_OUTLIERS", 10_000)  # the top 20 would all be category outliers
+def _two_years_of_rows():
     rng = random.Random(42)
     first = dt.date(2024, 1, 1)
-    rows = [
+    return [
         row(
             (first + dt.timedelta(days=rng.randrange(730))).isoformat(),
             f"-{rng.randint(200, 900) if rng.random() < 0.03 else rng.randint(5, 40)}.00",
@@ -308,17 +311,30 @@ def test_outliers_match_a_brute_force_reference_over_two_years(window_days, monk
         )
         for i in range(5000)
     ]
-    period = resolve_period(rows, TODAY, months=12)  # 2025: windows in early January reach into 2024
-    expected = _brute_force_outliers(rows, period.first_day, 2.5, window_days)
-    got = [
+
+
+def _found(rows, period, window_days):
+    return [
         (o.date, o.merchant, o.z_score, o.compared_with)
         for o in find_anomalies(rows, period, 2.5, window_days).outliers
     ]
-    assert expected and got == expected
-    monkeypatch.undo()
-    assert [
-        (o.date, o.merchant, o.z_score, o.compared_with)
-        for o in find_anomalies(rows, period, 2.5, window_days).outliers
-    ] == expected[:20]
+
+
+@pytest.mark.parametrize("window_days", [7, 30, 90])
+def test_outliers_match_a_brute_force_reference_over_two_years(window_days, monkeypatch):
+    monkeypatch.setattr(anomalies, "MAX_OUTLIERS", 10_000)  # the top 20 would all be category outliers
+    rows = _two_years_of_rows()
+    period = resolve_period(rows, TODAY, months=12)  # 2025: windows in early January reach into 2024
+    expected = _brute_force_outliers(rows, period, 2.5, window_days)
+    assert expected and _found(rows, period, window_days) == expected
     if window_days == 7:  # only a 7-day window leaves media_electronics (~3 rows) thin
         assert any(t[3] == "all" for t in expected)
+
+
+@pytest.mark.parametrize("window_days", [7, 30, 90])
+def test_only_the_top_outliers_are_returned(window_days):
+    rows = _two_years_of_rows()
+    period = resolve_period(rows, TODAY, months=12)
+    expected = _brute_force_outliers(rows, period, 2.5, window_days)
+    assert len(expected) > anomalies.MAX_OUTLIERS
+    assert _found(rows, period, window_days) == expected[: anomalies.MAX_OUTLIERS]
