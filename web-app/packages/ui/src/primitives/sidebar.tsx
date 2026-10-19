@@ -23,10 +23,10 @@ import { PanelLeftIcon } from "lucide-react"
 
 const SIDEBAR_COOKIE_NAME = "sidebar_state"
 const SIDEBAR_COOKIE_MAX_AGE = 60 * 60 * 24 * 7
-const SIDEBAR_WIDTH = "16rem"
-const SIDEBAR_WIDTH_MOBILE = "18rem"
+// The Finsight rail: w-26 (6.5rem), on a computer and in the phone slide-out alike.
+const SIDEBAR_WIDTH = "6.5rem"
+const SIDEBAR_WIDTH_MOBILE = "6.5rem"
 const SIDEBAR_WIDTH_ICON = "4rem"
-const SIDEBAR_KEYBOARD_SHORTCUT = "b"
 
 type SidebarContextProps = {
   state: "expanded" | "collapsed"
@@ -89,21 +89,7 @@ function SidebarProvider({
     return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
   }, [isMobile, setOpen, setOpenMobile])
 
-  // Adds a keyboard shortcut to toggle the sidebar.
-  React.useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (
-        event.key === SIDEBAR_KEYBOARD_SHORTCUT &&
-        (event.metaKey || event.ctrlKey)
-      ) {
-        event.preventDefault()
-        toggleSidebar()
-      }
-    }
-
-    window.addEventListener("keydown", handleKeyDown)
-    return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [toggleSidebar])
+  // No keyboard shortcut: the rail never collapses on a computer.
 
   // We add a state so that we can do data-state="expanded" or "collapsed".
   // This makes it easier to style the sidebar with Tailwind classes.
@@ -507,6 +493,8 @@ const sidebarMenuButtonVariants = cva(
         default: "h-9 text-sm",
         sm: "h-8 text-xs",
         lg: "h-12 px-3 text-sm [&_svg]:!size-6",
+        // The rail: icon above a caption-sized label, as the design system's sidebar.
+        rail: "h-auto flex-col justify-center gap-1 px-0 py-2.5 text-center text-caption [&_svg]:size-5 [&>span:last-child]:overflow-visible [&>span:last-child]:text-clip",
       },
     },
     defaultVariants: {

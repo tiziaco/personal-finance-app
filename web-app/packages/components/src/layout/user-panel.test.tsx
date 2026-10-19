@@ -65,4 +65,11 @@ describe("UserDetailsPanel", () => {
     await userEvent.click(account)
     expect(onOpenProfile).toHaveBeenCalledOnce()
   })
+
+  it("shows only the avatar until opened, named for screen readers", () => {
+    renderPanel({ user: { name: "Ada", email: "ada@test.dev" } })
+
+    expect(screen.getByRole("button", { name: "Ada" })).toBeInTheDocument()
+    expect(screen.queryByText("ada@test.dev")).not.toBeInTheDocument()
+  })
 })
