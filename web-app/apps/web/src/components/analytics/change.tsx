@@ -1,18 +1,27 @@
 import type { ReactNode } from "react"
 
-import { changeTone, formatPct, type Tone } from "./format"
+import { amountTone, changeTone, formatPct, type Tone } from "./format"
 
 /** Text colour for a tone; shared so other tone-bearing text matches a Change. */
 export const TONE_CLASS: Record<Tone, string> = {
-  good: "text-emerald-600 dark:text-emerald-400",
-  bad: "text-destructive",
+  good: "text-positive",
+  bad: "text-negative",
   neutral: "text-muted-foreground",
+}
+
+/**
+ * Colour for an amount signed by nature (a net, a change in spending): good
+ * green, bad red, zero in the text colour. Home and Analytics both use it.
+ */
+export const signedAmountClass = (amount: string, goodWhen: "up" | "down") => {
+  const tone = amountTone(amount, goodWhen)
+  return tone === "neutral" ? "" : TONE_CLASS[tone]
 }
 
 /** Fill for a chart shape in a tone; mirrors TONE_CLASS, since a fill needs a fill class. */
 export const TONE_FILL: Record<Tone, string> = {
-  good: "fill-emerald-600 dark:fill-emerald-400",
-  bad: "fill-destructive",
+  good: "fill-positive",
+  bad: "fill-negative",
   neutral: "fill-muted-foreground",
 }
 

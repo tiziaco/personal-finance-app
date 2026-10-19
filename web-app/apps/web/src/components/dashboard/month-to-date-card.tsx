@@ -2,7 +2,12 @@ import { useId } from "react"
 import type { MonthToDateResponse } from "@app/api-client/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
 import { parseIsoDay } from "@app/core/lib/dates"
-import { formatAmount, formatPercent } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatPercent,
+  formatSignedAmount,
+} from "@/components/transactions/format"
+import { signedAmountClass } from "@/components/analytics/change"
 import { formatMonth } from "./month"
 
 /** "+12%" / "−5%" / "0%": the card shows a whole percent (the insight chips keep a decimal below 10). */
@@ -43,7 +48,7 @@ export function MonthToDateCard({
   )
   const range = `1–${day} ${mon} · vs 1–${previousDay} ${prevMon}`
   const income = `Income ${formatAmount(monthToDate.income)}`
-  const netText = `Net ${formatAmount(monthToDate.net)}`
+  const netText = `Net ${formatSignedAmount(monthToDate.net)}`
   const days = `${day} of ${daysInMonth} days`
 
   return (
@@ -74,7 +79,7 @@ export function MonthToDateCard({
               <span className="text-muted-foreground">{` · ${incomeComparison}`}</span>
             )}
           </p>
-          <p>{netText}</p>
+          <p className={signedAmountClass(monthToDate.net, "up")}>{netText}</p>
         </div>
         <div className="mt-auto space-y-1">
           <div

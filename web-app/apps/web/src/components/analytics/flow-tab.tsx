@@ -19,12 +19,16 @@ import {
 
 import { formatMonth } from "@/components/dashboard/month"
 import {
-  amountClass,
   formatAmount,
-  isExpense,
+  formatSignedAmount,
 } from "@/components/transactions/format"
 
-import { Change, SavingsHeadline, TONE_CLASS } from "./change"
+import {
+  Change,
+  SavingsHeadline,
+  signedAmountClass,
+  TONE_CLASS,
+} from "./change"
 import { FlowChart } from "./flow-chart"
 import {
   changeTone,
@@ -45,9 +49,9 @@ const EMPTY = "No transactions in this period."
 
 const isEmpty = (data: SpendingResponse) => data.date_from === null
 
-/** Red when negative; a positive amount keeps the text colour. */
-const netClass = (amount: string) =>
-  isExpense(amount) ? amountClass(amount) : ""
+/** A net: signed, green when up, red when down. */
+const netClass = (amount: string) => signedAmountClass(amount, "up")
+const formatNet = (amount: string) => formatSignedAmount(amount)
 
 function Figure({
   label,
@@ -59,7 +63,7 @@ function Figure({
   amount: string
   /** Null when the period has no whole month to average over. */
   average: string | null
-  /** Colour a negative amount and a negative average as bad. */
+  /** A net: sign it, and colour it and its average good or bad. */
   signed?: boolean
 }) {
   return (
@@ -71,19 +75,18 @@ function Figure({
           signed && netClass(amount),
         )}
       >
-        {formatAmount(amount)}
+        {signed ? formatNet(amount) : formatAmount(amount)}
       </p>
       <p
         className={cn(
           "text-xs",
-          average !== null && signed && isExpense(average)
-            ? amountClass(average)
-            : "text-muted-foreground",
+          (average !== null && signed && netClass(average)) ||
+            "text-muted-foreground",
         )}
       >
         {average === null
           ? "No full month yet"
-          : `${formatAmount(average)} / month`}
+          : `${signed ? formatNet(average) : formatAmount(average)} / month`}
       </p>
     </div>
   )
@@ -276,7 +279,7 @@ export function FlowTab({
                           <TableCell
                             className={`text-right tabular-nums ${netClass(m.net)}`}
                           >
-                            {formatAmount(m.net)}
+                            {formatNet(m.net)}
                           </TableCell>
                           <TableCell className="text-right tabular-nums">
                             <Rate pct={m.savings_rate_pct} />
@@ -306,9 +309,7 @@ export function FlowTab({
                           </p>
                         </div>
                         <div className="text-right tabular-nums">
-                          <p className={netClass(m.net)}>
-                            {formatAmount(m.net)}
-                          </p>
+                          <p className={netClass(m.net)}>{formatNet(m.net)}</p>
                           <p className="text-xs">
                             <Rate pct={m.savings_rate_pct} />
                           </p>

@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
 import type { MonthToDateResponse } from "@app/api-client/types"
-import { formatAmount } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+} from "@/components/transactions/format"
 import { MonthToDateCard } from "./month-to-date-card"
 
 const mtd = (over: Partial<MonthToDateResponse> = {}): MonthToDateResponse => ({
@@ -26,7 +29,7 @@ describe("MonthToDateCard", () => {
     expect(card).toHaveTextContent(formatAmount("1184.00"))
     expect(card).toHaveTextContent(`+12% vs ${formatAmount("1057.00")}`)
     expect(card).toHaveTextContent(`Income ${formatAmount("2950.00")}`)
-    expect(card).toHaveTextContent(`Net ${formatAmount("1766.00")}`)
+    expect(card).toHaveTextContent(`Net ${formatSignedAmount("1766.00")}`)
     expect(card).toHaveTextContent("1–16")
     expect(card).toHaveTextContent("vs 1–16")
   })
@@ -87,7 +90,7 @@ describe("MonthToDateCard", () => {
   it("renders the server's net, not income minus expenses", () => {
     render(<MonthToDateCard monthToDate={mtd({ net: "-123.45" })} />)
     const card = screen.getByRole("group", { name: /so far/ })
-    expect(card).toHaveTextContent(`Net ${formatAmount("-123.45")}`)
+    expect(card).toHaveTextContent(`Net ${formatSignedAmount("-123.45")}`)
   })
 
   it("shows days covered", () => {

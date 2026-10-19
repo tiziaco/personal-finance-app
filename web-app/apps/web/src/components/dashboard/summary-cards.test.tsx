@@ -3,7 +3,10 @@ import { render, screen } from "@testing-library/react"
 import type { DashboardResponse } from "@app/api-client/types"
 import { SummaryCards } from "./summary-cards"
 import { formatMonth } from "./month"
-import { formatAmount } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+} from "@/components/transactions/format"
 
 const dashboard = (
   over: Partial<DashboardResponse> = {},
@@ -30,7 +33,7 @@ describe("SummaryCards", () => {
     expect(card("Total Spent")).toHaveTextContent(formatAmount("1395.00"))
     expect(card("Total Spent")).toHaveTextContent(formatMonth("2026-09"))
     expect(card("Recurring Costs")).toHaveTextContent("2 recurring payments")
-    expect(card("Net Balance")).toHaveTextContent(formatAmount("705.00"))
+    expect(card("Net Balance")).toHaveTextContent(formatSignedAmount("705.00"))
     expect(card("Average Cashflow")).toHaveTextContent("average of 3 months")
   })
 
@@ -45,7 +48,7 @@ describe("SummaryCards", () => {
     expect(card("Average Cashflow")).toHaveTextContent("average of 1 month")
   })
 
-  it("marks a negative net and cashflow as destructive", () => {
+  it("signs a net and cashflow, red when negative", () => {
     render(
       <SummaryCards
         dashboard={dashboard({
@@ -54,14 +57,24 @@ describe("SummaryCards", () => {
         })}
       />,
     )
-    expect(screen.getByText(formatAmount("-40.00"))).toHaveClass(
-      "text-destructive",
+    expect(screen.getByText(formatSignedAmount("-40.00"))).toHaveClass(
+      "text-negative",
     )
-    expect(screen.getByText(formatAmount("-10.00"))).toHaveClass(
-      "text-destructive",
+    expect(screen.getByText(formatSignedAmount("-10.00"))).toHaveClass(
+      "text-negative",
     )
     expect(screen.getByText(formatAmount("1395.00"))).not.toHaveClass(
-      "text-destructive",
+      "text-negative",
+    )
+  })
+
+  it("greens a positive net and leaves the totals unsigned", () => {
+    render(<SummaryCards dashboard={dashboard()} />)
+    expect(screen.getByText(formatSignedAmount("705.00"))).toHaveClass(
+      "text-positive",
+    )
+    expect(screen.getByText(formatAmount("1395.00")).textContent).not.toMatch(
+      /^[+−]/,
     )
   })
 })

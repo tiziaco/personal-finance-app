@@ -9,7 +9,12 @@ import {
 import type { DashboardResponse } from "@app/api-client/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
 import { cn } from "@app/core/lib/utils"
-import { formatAmount, isExpense } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+  isExpense,
+} from "@/components/transactions/format"
+import { signedAmountClass } from "@/components/analytics/change"
 import { formatMonth } from "./month"
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
@@ -19,13 +24,14 @@ function SummaryCard({
   value,
   subtitle,
   icon: Icon,
-  negative = false,
+  signed = false,
 }: {
   title: string
   value: string
   subtitle: string
   icon: ComponentType<{ className?: string }>
-  negative?: boolean
+  /** A net: signed, green when up, red when down. A total stays unsigned. */
+  signed?: boolean
 }) {
   const id = useId()
   return (
@@ -43,10 +49,10 @@ function SummaryCard({
         <p
           className={cn(
             "text-2xl font-semibold tabular-nums",
-            negative && "text-destructive",
+            signed && signedAmountClass(value, "up"),
           )}
         >
-          {formatAmount(value)}
+          {signed ? formatSignedAmount(value) : formatAmount(value)}
         </p>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </CardContent>
@@ -85,14 +91,14 @@ export function SummaryCards({
         value={dashboard.net_balance}
         subtitle={month}
         icon={netNegative ? TrendingDown : TrendingUp}
-        negative={netNegative}
+        signed
       />
       <SummaryCard
         title="Average Cashflow"
         value={dashboard.average_cashflow}
         subtitle={`average of ${plural(dashboard.cashflow_months, "month")}`}
         icon={PiggyBank}
-        negative={isExpense(dashboard.average_cashflow)}
+        signed
       />
     </div>
   )

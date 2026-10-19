@@ -2,8 +2,10 @@ import { describe, it, expect } from "vitest"
 import {
   formatAmount,
   formatPercent,
+  formatSignedAmount,
   isExpense,
   isLowConfidence,
+  transactionAmountClass,
 } from "./format"
 
 describe("format", () => {
@@ -34,6 +36,27 @@ describe("format", () => {
       expect(formatPercent(-4.6, whole)).toBe("−5%")
       expect(formatPercent(0.3, whole)).toBe("0%")
       expect(formatPercent(0.3, { decimals: "whole" })).toBe("+0%")
+    })
+  })
+  describe("formatSignedAmount", () => {
+    it("signs with a true minus and a plus, no space", () => {
+      expect(formatSignedAmount("-84.20", "en-GB")).toBe("−€84.20")
+      expect(formatSignedAmount("3200", "en-GB")).toBe("+€3,200.00")
+    })
+    it("leads with the sign when the symbol trails", () => {
+      expect(formatSignedAmount("-84.20", "it-IT")).toMatch(/^−84,20\s€$/u)
+    })
+    it("never signs a zero and never emits a hyphen-minus", () => {
+      expect(formatSignedAmount("0.00", "en-GB")).toBe("€0.00")
+      expect(formatSignedAmount("-0.00", "en-GB")).toBe("€0.00")
+      expect(formatSignedAmount("-1.00")).not.toContain("-")
+    })
+  })
+  describe("transactionAmountClass", () => {
+    it("greens income only", () => {
+      expect(transactionAmountClass("12.00")).toBe("text-positive")
+      expect(transactionAmountClass("-12.00")).toBe("")
+      expect(transactionAmountClass("0.00")).toBe("")
     })
   })
 })

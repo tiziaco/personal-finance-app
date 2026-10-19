@@ -7,8 +7,8 @@ import { buttonVariants } from "@app/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
 import { cn } from "@app/core/lib/utils"
 import {
-  amountClass,
-  formatAmount,
+  transactionAmountClass,
+  formatSignedAmount,
   formatDate,
 } from "@/components/transactions/format"
 import { useCategories } from "@/components/transactions/use-categories"
@@ -19,8 +19,8 @@ const RECENT = { limit: 10 } as const
 
 function Amount({ value }: { value: string }) {
   return (
-    <span className={cn("tabular-nums", amountClass(value))}>
-      {formatAmount(value)}
+    <span className={cn("tabular-nums", transactionAmountClass(value))}>
+      {formatSignedAmount(value)}
     </span>
   )
 }

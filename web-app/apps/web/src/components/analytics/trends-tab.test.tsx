@@ -7,7 +7,10 @@ import {
 } from "@app/api-client/endpoints/analytics"
 import { useListTransactionCategories } from "@app/api-client/endpoints/transactions"
 import type { MonthFlowResponse, SpendingResponse } from "@app/api-client/types"
-import { formatAmount } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+} from "@/components/transactions/format"
 import { TrendsTab } from "./trends-tab"
 import { formatPct } from "./format"
 
@@ -200,12 +203,16 @@ describe("TrendsTab", () => {
         `${formatAmount("320.00")} → ${formatAmount("410.00")} per month`,
       ),
     ).toBeInTheDocument()
-    expect(growing.getByText(formatAmount("90.00"))).toBeInTheDocument()
+    expect(growing.getByText(formatSignedAmount("90.00"))).toHaveClass(
+      "text-negative",
+    )
 
     const declining = within(card("Declining"))
     expect(declining.getByText(/stopped/)).toHaveAttribute("data-tone", "good")
     expect(declining.getByText(/stopped/)).toHaveTextContent("▼")
-    expect(declining.getByText(formatAmount("-80.00"))).toBeInTheDocument()
+    expect(declining.getByText(formatSignedAmount("-80.00"))).toHaveClass(
+      "text-positive",
+    )
     expect(
       screen.getAllByText("Earlier half vs later half of the period, per month")
         .length,

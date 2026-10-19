@@ -15,11 +15,30 @@ export const formatAmount = (amount: string) =>
 export const isExpense = (amount: string) =>
   amount.trim().startsWith("-") && /[1-9]/.test(amount)
 
-/** Money out red, money in green. */
-export const amountClass = (amount: string) =>
-  isExpense(amount)
-    ? "text-destructive"
-    : "text-emerald-600 dark:text-emerald-400"
+const isIncome = (amount: string) =>
+  !amount.trim().startsWith("-") && /[1-9]/.test(amount)
+
+/**
+ * One transaction's amount, signed: "−€84.20", "+€3,200.00". A true minus and
+ * no space; the rest (symbol side, separators) is the locale's. Intl writes a
+ * hyphen-minus, so the absolute value is formatted and the sign prefixed. A
+ * zero carries no sign.
+ */
+export function formatSignedAmount(amount: string, locale?: string) {
+  const text = amount.trim()
+  const negative = text.startsWith("-")
+  const absolute = text.replace(/^[-+]/, "")
+  const formatter = locale
+    ? new Intl.NumberFormat(locale, { style: "currency", currency: "EUR" })
+    : eur
+  const body = formatter.format(absolute as unknown as number)
+  if (!/[1-9]/.test(text)) return body
+  return `${negative ? "−" : "+"}${body}`
+}
+
+/** Money in green; money out in the normal text colour. */
+export const transactionAmountClass = (amount: string) =>
+  isIncome(amount) ? "text-positive" : ""
 
 /** ISO YYYY-MM-DD → "3 Mar 2026", read as a local calendar date; "" if not a day. */
 export function formatDate(iso: string) {

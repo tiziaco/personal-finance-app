@@ -17,8 +17,8 @@ import {
 } from "@app/ui/dropdown-menu"
 import { CategoryPicker } from "./category-picker"
 import {
-  amountClass,
-  formatAmount,
+  transactionAmountClass,
+  formatSignedAmount,
   formatDate,
   isLowConfidence,
 } from "./format"
@@ -51,8 +51,8 @@ export function useTransactionColumns(
         header: "Amount",
         meta: { align: "right", width: "8rem" },
         cell: ({ row }) => (
-          <span className={amountClass(row.original.amount)}>
-            {formatAmount(row.original.amount)}
+          <span className={transactionAmountClass(row.original.amount)}>
+            {formatSignedAmount(row.original.amount)}
           </span>
         ),
       },

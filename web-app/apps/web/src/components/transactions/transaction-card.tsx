@@ -4,7 +4,11 @@ import { useId } from "react"
 import type { TransactionResponse } from "@app/api-client/types"
 import { Card, CardContent } from "@app/ui/card"
 import { cn } from "@app/core/lib/utils"
-import { amountClass, formatAmount, formatDate } from "./format"
+import {
+  formatDate,
+  formatSignedAmount,
+  transactionAmountClass,
+} from "./format"
 
 /** A transaction on a phone: tapping it opens the edit dialog. */
 export function TransactionCard({
@@ -36,9 +40,12 @@ export function TransactionCard({
           </div>
           <span
             id={`${id}-amount`}
-            className={cn("tabular-nums", amountClass(transaction.amount))}
+            className={cn(
+              "tabular-nums",
+              transactionAmountClass(transaction.amount),
+            )}
           >
-            {formatAmount(transaction.amount)}
+            {formatSignedAmount(transaction.amount)}
           </span>
         </CardContent>
       </Card>
