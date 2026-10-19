@@ -21,6 +21,11 @@ export interface MonthToDateResponse {
   /** YYYY-MM, the current month */
   month: string
   /**
+   * income − expenses
+   * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
+   */
+  net: string
+  /**
    * Expenses in the previous month's days 1 to through's day
    * @pattern ^(?!^[-+.]*$)[+-]?0*\d*\.?\d*$
    */
@@ -32,6 +37,8 @@ export interface MonthToDateResponse {
   previous_income: string
   /** YYYY-MM */
   previous_month: string
+  /** The last day of the previous month's comparison window: through's day, clamped to that month's length */
+  previous_through: string
   /** The day of the current month's last transaction */
   through: string
 }

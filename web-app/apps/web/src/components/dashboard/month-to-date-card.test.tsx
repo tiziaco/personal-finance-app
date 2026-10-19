@@ -10,6 +10,8 @@ const mtd = (over: Partial<MonthToDateResponse> = {}): MonthToDateResponse => ({
   income: "2950.00",
   expenses: "1184.00",
   previous_month: "2026-09",
+  previous_through: "2026-09-16",
+  net: "1766.00",
   previous_income: "2800.00",
   previous_expenses: "1057.00",
   income_change_pct: 5.4,

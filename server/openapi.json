@@ -2007,6 +2007,12 @@
             "title": "Month",
             "type": "string"
           },
+          "net": {
+            "description": "income \u2212 expenses",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Net",
+            "type": "string"
+          },
           "previous_expenses": {
             "description": "Expenses in the previous month's days 1 to through's day",
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -2024,6 +2030,12 @@
             "title": "Previous Month",
             "type": "string"
           },
+          "previous_through": {
+            "description": "The last day of the previous month's comparison window: through's day, clamped to that month's length",
+            "format": "date",
+            "title": "Previous Through",
+            "type": "string"
+          },
           "through": {
             "description": "The day of the current month's last transaction",
             "format": "date",
@@ -2036,7 +2048,9 @@
           "through",
           "income",
           "expenses",
+          "net",
           "previous_month",
+          "previous_through",
           "previous_income",
           "previous_expenses",
           "income_change_pct",

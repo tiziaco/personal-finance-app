@@ -70,12 +70,31 @@ def test_month_to_date_against_the_same_days_of_the_month_before():
         dt.date(2026, 10, 2),
         Decimal("0.00"),
         Decimal("100.00"),
+        Decimal("-100.00"),
         "2026-09",
+        dt.date(2026, 9, 2),
         Decimal("0.00"),
         Decimal("50.00"),
         None,
         100.0,
     )
+
+
+def test_month_to_date_names_the_previous_window_and_net():
+    mtd = summary(months=3).month_to_date
+    assert mtd.previous_through == dt.date(2026, 9, 2)
+    assert mtd.net == Decimal("-100.00")
+
+
+@pytest.mark.parametrize(
+    ("rows", "today", "expected"),
+    [
+        ([row("2026-02-10", "-10.00"), row("2026-03-31", "-10.00")], dt.date(2026, 3, 31), dt.date(2026, 2, 28)),
+        ([row("2026-09-10", "-10.00"), row("2026-10-31", "-10.00")], dt.date(2026, 10, 31), dt.date(2026, 9, 30)),
+    ],
+)
+def test_month_to_date_clamps_previous_through_to_the_month_s_length(rows, today, expected):
+    assert summary(rows=rows, today=today).month_to_date.previous_through == expected
 
 
 def test_a_bound_cutting_a_month_weights_it_by_the_days_covered():

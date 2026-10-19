@@ -514,6 +514,9 @@ export const getDashboardResponseMonthToDateOneExpensesRegExp = new RegExp(
 export const getDashboardResponseMonthToDateOneIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getDashboardResponseMonthToDateOneNetRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getDashboardResponseMonthToDateOnePreviousExpensesRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getDashboardResponseMonthToDateOnePreviousIncomeRegExp =
@@ -566,6 +569,10 @@ export const GetDashboardResponse = zod
                 "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
               ),
             month: zod.string().describe("YYYY-MM, the current month"),
+            net: zod
+              .string()
+              .regex(getDashboardResponseMonthToDateOneNetRegExp)
+              .describe("income − expenses"),
             previous_expenses: zod
               .string()
               .regex(getDashboardResponseMonthToDateOnePreviousExpensesRegExp)
@@ -579,6 +586,11 @@ export const GetDashboardResponse = zod
                 "Income in the previous month's days 1 to through's day",
               ),
             previous_month: zod.string().describe("YYYY-MM"),
+            previous_through: zod.iso
+              .date()
+              .describe(
+                "The last day of the previous month's comparison window: through's day, clamped to that month's length",
+              ),
             through: zod.iso
               .date()
               .describe("The day of the current month's last transaction"),
@@ -931,6 +943,9 @@ export const getSpendingResponseMonthToDateOneExpensesRegExp = new RegExp(
 export const getSpendingResponseMonthToDateOneIncomeRegExp = new RegExp(
   "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
 )
+export const getSpendingResponseMonthToDateOneNetRegExp = new RegExp(
+  "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+)
 export const getSpendingResponseMonthToDateOnePreviousExpensesRegExp =
   new RegExp("^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$")
 export const getSpendingResponseMonthToDateOnePreviousIncomeRegExp = new RegExp(
@@ -1046,6 +1061,10 @@ export const GetSpendingResponse = zod
                 "Against previous_income; null when it is 0 or the data starts after the previous month's 1st",
               ),
             month: zod.string().describe("YYYY-MM, the current month"),
+            net: zod
+              .string()
+              .regex(getSpendingResponseMonthToDateOneNetRegExp)
+              .describe("income − expenses"),
             previous_expenses: zod
               .string()
               .regex(getSpendingResponseMonthToDateOnePreviousExpensesRegExp)
@@ -1059,6 +1078,11 @@ export const GetSpendingResponse = zod
                 "Income in the previous month's days 1 to through's day",
               ),
             previous_month: zod.string().describe("YYYY-MM"),
+            previous_through: zod.iso
+              .date()
+              .describe(
+                "The last day of the previous month's comparison window: through's day, clamped to that month's length",
+              ),
             through: zod.iso
               .date()
               .describe("The day of the current month's last transaction"),

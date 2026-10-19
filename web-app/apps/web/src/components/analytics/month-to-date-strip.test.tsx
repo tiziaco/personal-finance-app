@@ -8,6 +8,8 @@ const DATA: MonthToDateResponse = {
   month: "2026-10",
   through: "2026-10-16",
   previous_month: "2026-09",
+  previous_through: "2026-09-16",
+  net: "2180.00",
   expenses: "1020.00",
   expenses_change_pct: -8.2,
   income: "3200.00",

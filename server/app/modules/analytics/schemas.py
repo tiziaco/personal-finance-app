@@ -68,7 +68,12 @@ class MonthToDateResponse(_Out):
     through: dt.date = Field(..., description="The day of the current month's last transaction")
     income: Decimal
     expenses: Decimal
+    net: Decimal = Field(..., description="income − expenses")
     previous_month: str = Field(..., description="YYYY-MM")
+    previous_through: dt.date = Field(
+        ...,
+        description="The last day of the previous month's comparison window: through's day, clamped to that month's length",
+    )
     previous_income: Decimal = Field(..., description="Income in the previous month's days 1 to through's day")
     previous_expenses: Decimal = Field(..., description="Expenses in the previous month's days 1 to through's day")
     income_change_pct: Optional[float] = Field(

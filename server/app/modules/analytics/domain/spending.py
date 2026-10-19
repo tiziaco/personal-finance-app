@@ -60,7 +60,9 @@ class MonthToDate:
     through: dt.date
     income: Decimal
     expenses: Decimal
+    net: Decimal
     previous_month: str
+    previous_through: dt.date
     previous_income: Decimal
     previous_expenses: Decimal
     income_change_pct: Optional[float]
@@ -159,7 +161,9 @@ def month_to_date(rows: Sequence[Row], today: dt.date) -> Optional[MonthToDate]:
         through=through,
         income=income,
         expenses=out,
+        net=money(income - out),
         previous_month=month_key(previous),
+        previous_through=previous_through,
         previous_income=previous_income,
         previous_expenses=previous_out,
         income_change_pct=pct_change(previous_income, income) if comparable else None,
