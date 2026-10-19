@@ -1,3 +1,5 @@
+import type { ReactNode } from "react"
+
 import { changeTone, formatPct, type Tone } from "./format"
 
 /** Text colour for a tone; shared so other tone-bearing text matches a Change. */
@@ -39,8 +41,8 @@ export function Change({
 }: {
   pct: number | null
   kind: "spend" | "income"
-  up: string
-  down: string
+  up: ReactNode
+  down: ReactNode
   empty?: string
 }) {
   const tone = changeTone(pct, kind)

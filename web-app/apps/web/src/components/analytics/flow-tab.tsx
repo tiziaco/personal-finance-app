@@ -139,11 +139,12 @@ export function FlowTab({
         empty={EMPTY}
         skeleton={
           <>
-            {/* Heights of the real blocks: strip 102px; latest-month card 162px stacked, 110px in two columns. */}
+            {/* Heights of the real blocks, measured with the seed data: the strip 142px while its lines wrap,
+                else 102px; the latest-month card 184px stacked, 110px in two columns, 130px beside the sidebar. */}
             {noStrip ? null : (
               <Skeleton
                 data-testid="mtd-skeleton"
-                className="h-[102px] w-full"
+                className="h-[142px] w-full sm:h-[102px]"
               />
             )}
             <Section title="Income and expenses">
@@ -155,7 +156,7 @@ export function FlowTab({
             {noLatest ? null : (
               <Skeleton
                 data-testid="latest-skeleton"
-                className="h-[162px] w-full sm:h-[110px]"
+                className="h-[184px] w-full sm:h-[110px] md:h-[130px] lg:h-[110px]"
               />
             )}
             <Section title="Month by month">
