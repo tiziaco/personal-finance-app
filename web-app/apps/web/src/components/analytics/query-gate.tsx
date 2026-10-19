@@ -1,5 +1,6 @@
 import type { ReactNode } from "react"
 
+import { cn } from "@app/core/lib/utils"
 import { Card, CardContent } from "@app/ui/card"
 
 import { SectionError } from "@/components/dashboard/section-error"
@@ -53,12 +54,15 @@ export function QueryGate<T>({
       </Card>
     )
   }
+  // Mirrors the tabs' own `flex flex-col gap-6` column, so the sections keep
+  // their spacing whether or not this wrapper is there.
   return (
     <div
       aria-busy={isPlaceholderData === true}
-      className={
-        isPlaceholderData ? "opacity-60 transition-opacity" : undefined
-      }
+      className={cn(
+        "flex flex-col gap-6",
+        isPlaceholderData && "opacity-60 transition-opacity",
+      )}
     >
       {children(data)}
     </div>

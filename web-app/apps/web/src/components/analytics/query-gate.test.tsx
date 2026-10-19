@@ -82,27 +82,43 @@ describe("QueryGate", () => {
   })
 
   it("dims and marks busy while placeholder data shows", () => {
-    renderGate({
+    const { container } = renderGate({
       data: ["a"],
       isError: false,
       isPlaceholderData: true,
       refetch: vi.fn(),
     })
-    const wrapper = screen.getByText("a").parentElement
+    const wrapper = container.firstElementChild
     expect(wrapper?.getAttribute("aria-busy")).toBe("true")
     expect(wrapper?.className).toContain("opacity-60")
   })
 
   it("is not busy or dimmed once the data is real", () => {
-    renderGate({
+    const { container } = renderGate({
       data: ["a"],
       isError: false,
       isPlaceholderData: false,
       refetch: vi.fn(),
     })
-    const wrapper = screen.getByText("a").parentElement
+    const wrapper = container.firstElementChild
     expect(wrapper?.getAttribute("aria-busy")).toBe("false")
     expect(wrapper?.className).not.toContain("opacity-60")
+  })
+
+  it("keeps the tabs' column spacing between its children", () => {
+    for (const isPlaceholderData of [false, true]) {
+      const { container, unmount } = renderGate({
+        data: ["a"],
+        isError: false,
+        isPlaceholderData,
+        refetch: vi.fn(),
+      })
+      const wrapper = container.firstElementChild
+      expect(wrapper?.classList.contains("flex")).toBe(true)
+      expect(wrapper?.classList.contains("flex-col")).toBe(true)
+      expect(wrapper?.classList.contains("gap-6")).toBe(true)
+      unmount()
+    }
   })
 
   it("a first load still shows the skeleton", () => {
