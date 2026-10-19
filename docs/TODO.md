@@ -83,10 +83,12 @@ must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insigh
 
 ## Insights — word an outlier by what it was compared with
 
-`insights` reads the outliers but words every one as "above its category". Since 19 Oct 2026
-an outlier carries `compared_with`; when it is `"all"` the expense was scored against all
-one-off spending, and the wording should say "above your usual spending". Owned by whoever
-next touches `insights/`.
+Since 19 Oct 2026 an outlier carries `compared_with`, and the insights agent already receives
+it (`insights/figures.py` passes the anomalies through `model_dump`). What is missing is the
+wording: the prompt (`server/app/agents/insights/prompts/v1.md`, the `anomalies` section line,
+"a single unusual charge") never tells the model that `"all"` means the expense was scored
+against all one-off spending, to be worded "above your usual spending" rather than "above its
+category". Owned by whoever next touches the insights prompt.
 
 ## Server — the chatbot names the default model after a fallback
 

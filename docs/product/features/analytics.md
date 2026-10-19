@@ -203,9 +203,9 @@ How they compute, so the numbers can be checked:
   in the preceding `window_days` (its own day excluded) passes the threshold; it needs at
   least 5 such expenses and a nonzero spread. When the category's window holds fewer than 5,
   the expense is scored against all one-off spending in the same window instead, so a large
-  purchase in a thin category is still seen. That fallback leaves out `atm` and
-  `savings_investments` (money moved, not spent) and any expense under 5% of the period's
-  average monthly spend, the same floor spikes use. Each outlier says which it was compared
+  purchase in a thin category is still seen. The fallback never flags `atm` or
+  `savings_investments` (money moved, not spent), though they still count in its window and its
+  mean, nor any expense under 5% of the period's average monthly spend, the same floor spikes use. Each outlier says which it was compared
   with (`compared_with`: `category` or `all`). Recurring expenses are neither candidates nor
   part of a window, and a window may reach back before the period. The top 20 are returned.
   Spikes still count recurring expenses.

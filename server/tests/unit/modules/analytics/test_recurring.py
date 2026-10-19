@@ -6,7 +6,13 @@ from decimal import Decimal
 import pytest
 
 from app.modules.analytics.domain.period import resolve_period
-from app.modules.analytics.domain.recurring import HiddenSubscription, RecurringMerchant, recurring_analysis
+from app.modules.analytics.domain.recurring import (
+    USER_SOURCE,
+    HiddenSubscription,
+    RecurringMerchant,
+    recurring_analysis,
+)
+from app.modules.transaction.domain import USER
 from tests.unit.modules.analytics.rows import row
 
 pytestmark = pytest.mark.unit
@@ -224,3 +230,8 @@ def test_an_untick_before_the_period_still_excludes_the_merchant():
     unticked = row("2026-01-03", "-9.99", merchant="Spotify", source="user")
     assert [h.merchant for h in analyse(spotify, months=3).hidden_subscriptions] == ["Spotify"]
     assert analyse([unticked, *spotify], months=3).hidden_subscriptions == ()
+
+
+def test_the_user_source_matches_the_one_transaction_writes():
+    """analytics may not import transaction (contract R9), so it keeps its own copy of the literal."""
+    assert USER_SOURCE == USER
