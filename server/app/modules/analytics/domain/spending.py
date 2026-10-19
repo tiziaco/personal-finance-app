@@ -171,17 +171,46 @@ def month_to_date(rows: Sequence[Row], today: dt.date) -> Optional[MonthToDate]:
     )
 
 
-def _latest_month(flows: Sequence[MonthFlow], monthly_in: Decimal, monthly_out: Decimal) -> Optional[LatestMonth]:
+@dataclass(frozen=True)
+class _MonthlyAverages:
+    income: Decimal
+    expenses: Decimal
+    net: Decimal
+    burn: Decimal
+
+
+_ZERO_AVERAGES = _MonthlyAverages(ZERO, ZERO, ZERO, ZERO)
+
+
+def _monthly_averages(total_in: Decimal, total_out: Decimal, period: Optional[Period]) -> Optional[_MonthlyAverages]:
+    """Totals over the period's month weights; all zero without a period, None when no month of it is whole.
+
+    A part-month is never scaled up to a whole one: with no whole month there is no monthly average.
+    """
+    if not period:
+        return _ZERO_AVERAGES
+    if not period.whole_months():
+        return None
+    weight = period.weight()
+    return _MonthlyAverages(
+        income=money(total_in / weight),
+        expenses=money(total_out / weight),
+        net=money((total_in - total_out) / weight),
+        burn=money((total_out - total_in) / weight),
+    )
+
+
+def _latest_month(flows: Sequence[MonthFlow], averages: Optional[_MonthlyAverages]) -> Optional[LatestMonth]:
     whole = [f for f in flows if not f.partial]
-    if not whole:
+    if not whole or averages is None:
         return None
     last = whole[-1]
     return LatestMonth(
         last.month,
         last.income,
         last.expenses,
-        pct_change(monthly_in, last.income),
-        pct_change(monthly_out, last.expenses),
+        pct_change(averages.income, last.income),
+        pct_change(averages.expenses, last.expenses),
     )
 
 
@@ -190,13 +219,7 @@ def spending_summary(rows: Sequence[Row], period: Optional[Period], *, today: dt
     covered = period.rows(rows) if period else []
     money_in, money_out = incomes(covered), expenses(covered)
     total_in, total_out = total_amount(money_in), total_spend(money_out)
-    weight = period.weight() if period else Decimal(0)
-    # A part-month is never scaled up to a whole one: with no whole month there is no monthly average.
-    averaged = bool(period and period.whole_months())
-    monthly_in = money(total_in / weight) if averaged else None if period else ZERO
-    monthly_out = money(total_out / weight) if averaged else None if period else ZERO
-    monthly_net = money((total_in - total_out) / weight) if averaged else None if period else ZERO
-    burn = money((total_out - total_in) / weight) if averaged else None if period else ZERO
+    averages = _monthly_averages(total_in, total_out, period)
     flows = monthly_flows(rows, period.months, today=today) if period else ()
     return SpendingSummary(
         date_from=period.first_day if period else None,
@@ -207,14 +230,12 @@ def spending_summary(rows: Sequence[Row], period: Optional[Period], *, today: dt
         transaction_count=len(money_in) + len(money_out),
         average_income=average(total_in, len(money_in)),
         average_expense=average(total_out, len(money_out)),
-        average_monthly_income=monthly_in,
-        average_monthly_expenses=monthly_out,
-        average_monthly_net=monthly_net,
-        burn_rate=burn,
+        average_monthly_income=averages.income if averages else None,
+        average_monthly_expenses=averages.expenses if averages else None,
+        average_monthly_net=averages.net if averages else None,
+        burn_rate=averages.burn if averages else None,
         savings_rate_pct=_savings_rate(total_in - total_out, total_in),
         months=flows,
-        latest_month=_latest_month(flows, monthly_in, monthly_out)
-        if monthly_in is not None and monthly_out is not None
-        else None,
+        latest_month=_latest_month(flows, averages),
         month_to_date=month_to_date(rows, today),
     )
