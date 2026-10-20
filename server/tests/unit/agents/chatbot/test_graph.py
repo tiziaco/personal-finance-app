@@ -5,17 +5,20 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
 from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
 from app.agents.chatbot.events import ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.graph import (
+    STOPPED_FALLBACK_TEXT,
     TOOL_ARGS_LOG_LIMIT,
     TOOL_FAILED_MESSAGE,
     TOOL_UNKNOWN_MESSAGE,
     ChatbotAgent,
     _format_tool_args,
+    repeated_call,
 )
 from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.toolkit import (
@@ -27,7 +30,9 @@ from app.agents.chatbot.toolkit import (
     ToolOutcome,
     TurnContext,
 )
+from app.agents.graph import drop_unanswered_tool_calls
 from app.agents.messages import Message
+from app.core.config import settings
 from app.integrations.llm.service import LLMRegistry
 
 pytestmark = pytest.mark.unit
@@ -255,6 +260,167 @@ class TestChat:
         sent = agent.llm_service.call.call_args.args[0]
         assert not any(m.get("tool_calls") for m in sent)
         assert [m["content"] for m in sent[1:]] == ["What did I spend on rent", "Never mind, thanks"]
+
+
+def _call(name: str, n: int, call_id: str) -> dict:
+    return {"name": name, "args": {"n": n}, "id": call_id}
+
+
+class TestRepeatedCall:
+    def test_the_same_name_and_args_since_the_last_human_message_repeats(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "b")]),
+        ]
+        assert repeated_call(messages)
+
+    def test_different_args_or_name_is_not_a_repeat(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="", tool_calls=[_call("t", 2, "b"), _call("u", 1, "c")]),
+        ]
+        assert not repeated_call(messages)
+
+    def test_a_call_from_an_earlier_turn_does_not_count(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="done"),
+            HumanMessage(content="again"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "b")]),
+        ]
+        assert not repeated_call(messages)
+
+
+class TestTurnLimits:
+    """The loop end to end on a MemorySaver: step cap, repeat detection, wrap-up."""
+
+    @staticmethod
+    async def _run(agent: ChatbotAgent, llm_responses, text: str = "q", thread: str = "t1", **extra):
+        """Run one turn on the agent's graph; `llm_responses(with_tools, n)` makes each model reply."""
+        name = LLMRegistry.get_all_names()[0]
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(name)
+        agent.llm_service.current_model_name.return_value = name
+        calls: list[bool] = []
+
+        async def call(messages, *args, with_tools=True, **kwargs):
+            calls.append(with_tools)
+            return llm_responses(with_tools, len(calls))
+
+        agent.llm_service.call = AsyncMock(side_effect=call)
+        graph = agent._graph or await agent.create_graph(MemorySaver())
+        config = {"configurable": {"thread_id": thread, "turn_context": CTX}}
+        state = await graph.ainvoke(
+            {"messages": [HumanMessage(content=text)], "turn_steps": 0, **extra}, config=config
+        )
+        return state, calls, config
+
+    @staticmethod
+    def _counting_agent() -> tuple[ChatbotAgent, list[int]]:
+        ran: list[int] = []
+
+        async def run(args: IntArgs, ctx: TurnContext) -> ToolOutcome:
+            ran.append(args.n)
+            return await _ok(args, ctx)
+
+        return _agent_with(make_tool("t", run)), ran
+
+    async def test_step_cap_ends_the_turn_with_a_wrap_up_answer_marked_stopped(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 2)
+        agent, ran = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, calls, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert last.text == "Partial answer." and not last.tool_calls
+        assert state["stopped"] == {last.id: "step_limit"}
+        assert calls == [True, True, False]
+        assert ran == [1]
+
+    async def test_repeated_identical_call_stops_the_loop(self):
+        agent, ran = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", 7, f"c{n}")])
+
+        state, calls, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert state["stopped"] == {last.id: "repeated_call"}
+        assert ran == [7]
+        assert calls == [True, True, False]
+
+    async def test_a_failing_wrap_up_falls_back_to_the_fixed_text(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent, _ = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                raise RuntimeError("model down")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, _, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert last.content == STOPPED_FALLBACK_TEXT
+        assert state["stopped"] == {last.id: "step_limit"}
+
+    async def test_turn_steps_reset_on_each_turn(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 2)
+        agent, _ = self._counting_agent()
+
+        def respond(with_tools, n):
+            # Each turn: one tool step, then an answer.
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")]) if n % 2 else AIMessage(content="ok")
+
+        await self._run(agent, respond)
+        state, _, _ = await self._run(agent, lambda w, n: respond(w, n), text="again")
+
+        assert not state.get("stopped")
+        assert state["messages"][-1].text == "ok"
+
+    async def test_the_next_turn_works_after_a_stopped_one(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent, _ = self._counting_agent()
+
+        def stops(with_tools, n):
+            return (
+                AIMessage(content="Partial.")
+                if not with_tools
+                else AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+            )
+
+        await self._run(agent, stops)
+        state, _, _ = await self._run(agent, lambda w, n: AIMessage(content="Fine."), text="next")
+
+        sent = drop_unanswered_tool_calls(state["messages"])
+        assert not any(isinstance(m, AIMessage) and m.tool_calls for m in sent)
+        assert state["messages"][-1].text == "Fine."
+
+    async def test_the_answering_model_labels_the_metric(self):
+        agent, _ = self._counting_agent()
+        before = REGISTRY.get_sample_value("llm_inference_duration_seconds_count", {"model": "answering-model"}) or 0
+
+        await self._run(
+            agent,
+            lambda w, n: AIMessage(content="hi", response_metadata={"model_name": "answering-model"}),
+        )
+
+        after = REGISTRY.get_sample_value("llm_inference_duration_seconds_count", {"model": "answering-model"})
+        assert after == before + 1
 
 
 class TestTitleFor:

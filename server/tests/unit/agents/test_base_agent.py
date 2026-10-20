@@ -132,3 +132,18 @@ async def test_structured_content_streams_only_its_text():
         [AIMessageChunk(content=[{"type": "reasoning", "id": "r"}, {"type": "text", "text": "Hi"}])]
     )
     assert chunks == ["Hi"]
+
+
+def test_history_reads_only_the_text_of_a_reply_that_kept_its_reasoning():
+    history = _Agent()._process_messages(
+        [
+            HumanMessage(content="Hi"),
+            AIMessage(
+                content=[
+                    {"type": "reasoning", "id": "rs_1", "summary": [{"type": "summary_text", "text": "thinking"}]},
+                    {"type": "text", "text": "Hello."},
+                ]
+            ),
+        ]
+    )
+    assert history == [Message(role="user", content="Hi"), Message(role="assistant", content="Hello.")]

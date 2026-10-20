@@ -53,16 +53,16 @@ class TestProcessLlmResponse:
         result = process_llm_response(response)
         assert result.content == "First part. Second part."
 
-    def test_list_with_reasoning_block_filtered(self):
+    def test_reasoning_blocks_survive_processing(self):
         response = AIMessage(
             content=[
-                {"type": "reasoning", "id": "r1", "summary": []},
-                {"type": "text", "text": "Actual answer"},
+                {"type": "reasoning", "summary": [{"type": "summary_text", "text": "t"}]},
+                {"type": "text", "text": "answer"},
             ]
         )
         result = process_llm_response(response)
-        assert result.content == "Actual answer"
-        assert "reasoning" not in result.content
+        assert result.text == "answer"
+        assert any(b["type"] == "reasoning" for b in result.content)
 
     def test_list_with_string_blocks(self):
         response = AIMessage(content=["Hello ", "World"])
@@ -78,18 +78,20 @@ class TestProcessLlmResponse:
             ]
         )
         result = process_llm_response(response)
-        assert result.content == "Answer: 42"
+        assert result.text == "Answer: 42"
+        assert [b["type"] for b in result.content] == ["reasoning", "text"]
 
     def test_empty_list_produces_empty_string(self):
         response = AIMessage(content=[])
         result = process_llm_response(response)
         assert result.content == ""
 
-    def test_only_reasoning_blocks_produces_empty(self):
+    def test_only_reasoning_blocks_has_no_text(self):
         response = AIMessage(
             content=[
                 {"type": "reasoning", "id": "r1", "summary": []},
             ]
         )
         result = process_llm_response(response)
-        assert result.content == ""
+        assert result.text == ""
+        assert [b["type"] for b in result.content] == ["reasoning"]

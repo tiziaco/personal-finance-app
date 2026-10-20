@@ -34,6 +34,13 @@ from app.core.logging import logger
 _TURN_MESSAGE_SEPARATOR = "\n\n"
 
 
+def _content_text(content: str | list) -> str:
+    """The text of a message's content: the string itself, or a block list's text blocks."""
+    if isinstance(content, str):
+        return content
+    return "".join(b["text"] for b in content if isinstance(b, dict) and b.get("type") == "text")
+
+
 class BaseAgent(ABC):
     """Abstract base class for all LangGraph agents.
 
@@ -73,7 +80,7 @@ class BaseAgent(ABC):
 
         try:
             response = await self._graph.ainvoke(
-                input={"messages": dump_messages(messages), "long_term_memory": relevant_memory},
+                input={"messages": dump_messages(messages), "long_term_memory": relevant_memory, "turn_steps": 0},
                 config=config,
             )
             # Backgrounded: the memory write must not delay the response.
@@ -107,7 +114,7 @@ class BaseAgent(ABC):
             # them with a blank line, and so does the stream.
             last_message_id: Optional[str] = None
             async for token, _ in self._graph.astream(
-                {"messages": dump_messages(messages), "long_term_memory": relevant_memory},
+                {"messages": dump_messages(messages), "long_term_memory": relevant_memory, "turn_steps": 0},
                 config=config,
                 stream_mode="messages",
             ):
@@ -155,7 +162,9 @@ class BaseAgent(ABC):
         for message in openai_style_messages:
             if message["role"] not in ["assistant", "user"] or not message["content"]:
                 continue
-            content = str(message["content"])
+            content = _content_text(message["content"])
+            if not content:
+                continue
             if message["role"] == "assistant" and processed and processed[-1].role == "assistant":
                 processed[-1] = Message(
                     role="assistant", content=processed[-1].content + _TURN_MESSAGE_SEPARATOR + content
@@ -168,6 +177,6 @@ class BaseAgent(ABC):
         """The last assistant message, or an empty one if there is none."""
         openai_style_messages = convert_to_openai_messages(messages)
         for message in reversed(openai_style_messages):
-            if message["role"] == "assistant" and message["content"]:
-                return Message(role="assistant", content=str(message["content"]))
+            if message["role"] == "assistant" and (text := _content_text(message["content"])):
+                return Message(role="assistant", content=text)
         return Message(role="assistant", content="")

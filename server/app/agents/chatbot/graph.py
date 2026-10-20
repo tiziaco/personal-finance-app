@@ -6,7 +6,7 @@ import time
 import uuid
 from typing import Optional
 
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
 from langchain_core.runnables import RunnableLambda
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.config import get_stream_writer
@@ -39,6 +39,7 @@ from app.agents.graph import (
     prepare_messages,
     process_llm_response,
 )
+from app.agents.messages import Message
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.metadata import PROJECT_NAME
@@ -56,6 +57,16 @@ from app.integrations.llm import LLMService
 # do not belong in either place.
 TOOL_FAILED_MESSAGE = "The tool failed to run. Tell the user this information could not be retrieved right now."
 TOOL_UNKNOWN_MESSAGE = "That tool does not exist. Answer without it."
+
+# Told to the model for the final call of a turn the server ended: no tools are
+# bound, so it must answer in text from what it already has.
+WRAP_UP_INSTRUCTION = (
+    "Tools are no longer available this turn. Answer from the results above and say that the answer may be incomplete."
+)
+# Persisted as the answer if the wrap-up call itself fails.
+STOPPED_FALLBACK_TEXT = (
+    "I could not finish looking into this, so I have no complete answer. Try asking again, or narrow the question."
+)
 
 # Tool arguments are logged, so they need a ceiling: they are the most useful
 # field when diagnosing a bad answer, but a tool taking a large payload would
@@ -75,6 +86,28 @@ def _format_validation_error(error: ValidationError) -> str:
     """Render argument validation errors for the model: which argument, and what is wrong with it."""
     problems = "; ".join(f"{'.'.join(str(p) for p in e['loc']) or 'arguments'}: {e['msg']}" for e in error.errors())
     return f"Invalid arguments: {problems}"
+
+
+def repeated_call(messages: list[BaseMessage]) -> bool:
+    """Whether the last AI message repeats a (tool, arguments) call already made this turn.
+
+    "This turn" is everything after the last human message. A repeat means the
+    model is going round in circles: the same lookup cannot return anything new.
+    """
+    turn: list[BaseMessage] = []
+    for message in reversed(messages):
+        if isinstance(message, HumanMessage):
+            break
+        turn.append(message)
+    ai_messages = [m for m in reversed(turn) if isinstance(m, AIMessage) and m.tool_calls]
+    if len(ai_messages) < 2:
+        return False
+
+    def key(call: dict) -> tuple[str, str]:
+        return call["name"], json.dumps(call["args"], sort_keys=True, default=str)
+
+    earlier = {key(call) for message in ai_messages[:-1] for call in message.tool_calls}
+    return any(key(call) in earlier for call in ai_messages[-1].tool_calls)
 
 
 class ChatbotAgent(BaseAgent):
@@ -99,42 +132,83 @@ class ChatbotAgent(BaseAgent):
             environment=settings.ENVIRONMENT.value,
         )
 
+    async def _call_model(
+        self, messages: list[Message], requested_model: str, *, with_tools: bool = True
+    ) -> AIMessage:
+        """One model call, timed under the name of the model that answered.
+
+        A fallback can answer instead of the requested model; its name is on the
+        response, and only known after the call, so the duration is observed
+        rather than timed with a context manager.
+        """
+        started = time.perf_counter()
+        response = await self.llm_service.call(dump_messages(messages), with_tools=with_tools)
+        answering_model = response.response_metadata.get("model_name") or requested_model
+        llm_inference_duration_seconds.labels(model=answering_model).observe(time.perf_counter() - started)
+        logger.info(
+            "llm_response_generated",
+            model=answering_model,
+            with_tools=with_tools,
+            environment=settings.ENVIRONMENT.value,
+        )
+        return process_llm_response(response)
+
+    async def _wrap_up(self, messages: list[Message], model_name: str, conversation_id: str) -> AIMessage:
+        """The final answer of a turn the server ended: a tool-less model call, or the fixed text."""
+        try:
+            answer = await self._call_model(
+                [*messages, Message(role="system", content=WRAP_UP_INSTRUCTION)], model_name, with_tools=False
+            )
+            if answer.text.strip() and not answer.tool_calls:
+                return answer
+        except Exception as e:
+            logger.exception("llm_wrap_up_failed", conversation_id=conversation_id, error=str(e))
+        return AIMessage(content=STOPPED_FALLBACK_TEXT)
+
     async def _chat(self, state: GraphState, config: RunnableConfig) -> Command:
-        """Process the chat state and generate a response."""
+        """Process the chat state and generate a response.
+
+        A response with tool calls goes on to the tools unless the turn has used
+        its steps or the model repeats a call; then its calls are dropped and a
+        tool-less wrap-up answer ends the turn, marked in `stopped`.
+        """
         current_llm = self.llm_service.get_llm()
         model_name = self.llm_service.current_model_name()
+        conversation_id = config["configurable"]["thread_id"]
 
         system_prompt = load_system_prompt(long_term_memory=state.long_term_memory)
 
         messages = prepare_messages(drop_unanswered_tool_calls(state.messages), current_llm, system_prompt)
 
         try:
-            with llm_inference_duration_seconds.labels(model=model_name).time():
-                response_message = await self.llm_service.call(dump_messages(messages))
-
-            response_message = process_llm_response(response_message)
-
-            logger.info(
-                "llm_response_generated",
-                conversation_id=config["configurable"]["thread_id"],
-                model=model_name,
-                environment=settings.ENVIRONMENT.value,
-            )
-
-            if response_message.tool_calls:
-                goto = "tool_call"
-            else:
-                goto = END
-
-            return Command(update={"messages": [response_message]}, goto=goto)
+            response_message = await self._call_model(messages, model_name)
         except Exception as e:
             logger.exception(
                 "llm_call_failed_all_models",
-                conversation_id=config["configurable"]["thread_id"],
+                conversation_id=conversation_id,
                 error=str(e),
                 environment=settings.ENVIRONMENT.value,
             )
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
+
+        if not response_message.tool_calls:
+            return Command(update={"messages": [response_message]}, goto=END)
+
+        if state.turn_steps + 1 >= settings.llm.CHAT_MAX_STEPS:
+            reason = "step_limit"
+        elif repeated_call([*state.messages, response_message]):
+            reason = "repeated_call"
+        else:
+            return Command(
+                update={"messages": [response_message], "turn_steps": state.turn_steps + 1}, goto="tool_call"
+            )
+
+        logger.warning("chat_turn_stopped", conversation_id=conversation_id, reason=reason, steps=state.turn_steps)
+        # The tool-calling response is not persisted: a stored AI message with calls
+        # and no results would be a dangling call in every later turn's history.
+        final = await self._wrap_up(messages, model_name, conversation_id)
+        final.id = final.id or str(uuid.uuid4())
+        return Command(update={"messages": [final], "stopped": {**state.stopped, final.id: reason}}, goto=END)
 
     async def title_for(self, conversation_id: uuid.UUID, user_id: uuid.UUID) -> Optional[str]:
         """A title for a conversation from its first exchange, on the current model, or None.

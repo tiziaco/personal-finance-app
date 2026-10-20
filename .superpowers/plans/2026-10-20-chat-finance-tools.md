@@ -203,7 +203,7 @@ def test_no_web_search_tool_is_bound():
   - `STOPPED_FALLBACK_TEXT: str` — used if the wrap-up call itself fails.
   - `process_llm_response` keeps `reasoning` blocks in `content` (Spike A/B); `.text` remains the answer text. Spike C: unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 async def test_step_cap_ends_the_turn_with_a_wrap_up_answer_marked_stopped():
@@ -229,10 +229,10 @@ def test_reasoning_blocks_survive_processing():  # Spike A/B only
 
 Keep `test_chat_does_not_send_a_tool_call_left_without_a_result` green (Review Focus 1).
 
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Implement.** Route in `_chat`: after a model response with tool calls, if `turn_steps + 1 >= CHAT_MAX_STEPS` or `repeated_call(...)`, do not go to `tool_call`; drop that response's tool calls and make the wrap-up call (`with_tools=False`), record `stopped[id]`. The answering model is read from `response.response_metadata.get("model_name")` for the `llm_inference_duration_seconds` label and the `llm_response_generated` log (closes TODO *names the default model*); time with `time.perf_counter()` and `.observe()` since the label is known only after.
-- [ ] **Step 4: Run** — PASS; `make test-unit` — PASS.
-- [ ] **Step 5: Commit** `feat(agents): per-turn step cap and repeat detection end in a stopped answer`.
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Implement.** Route in `_chat`: after a model response with tool calls, if `turn_steps + 1 >= CHAT_MAX_STEPS` or `repeated_call(...)`, do not go to `tool_call`; drop that response's tool calls and make the wrap-up call (`with_tools=False`), record `stopped[id]`. The answering model is read from `response.response_metadata.get("model_name")` for the `llm_inference_duration_seconds` label and the `llm_response_generated` log (closes TODO *names the default model*); time with `time.perf_counter()` and `.observe()` since the label is known only after.
+- [x] **Step 4: Run** — PASS; `make test-unit` — PASS.
+- [x] **Step 5: Commit** `feat(agents): per-turn step cap and repeat detection end in a stopped answer`.
 
 ---
 

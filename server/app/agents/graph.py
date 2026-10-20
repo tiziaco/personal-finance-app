@@ -19,19 +19,24 @@ def dump_messages(messages: list[Message]) -> list[dict]:
 
 
 def process_llm_response(response: BaseMessage) -> BaseMessage:
-    """Flatten structured content blocks back to text.
+    """Collapse structured content blocks to the answer text, keeping reasoning blocks.
 
     GPT-5 models return content as a list of blocks rather than a string —
-    ``[{'id': ..., 'summary': [], 'type': 'reasoning'}, {'type': 'text',
-    'text': 'actual response'}]`` — and only the text blocks are the answer.
+    ``[{'id': ..., 'summary': [...], 'type': 'reasoning'}, {'type': 'text',
+    'text': 'actual response'}]``. The text blocks are the answer (``.text``). The
+    reasoning blocks stay in ``content``, beside one text block, because the
+    provider accepts them back unchanged on the next call and the client shows
+    their summaries. A response with no reasoning block becomes a plain string.
     """
     if isinstance(response.content, list):
         text_parts = []
+        reasoning_blocks = []
         for block in response.content:
             if isinstance(block, dict):
                 if block.get("type") == "text" and "text" in block:
                     text_parts.append(block["text"])
                 elif block.get("type") == "reasoning":
+                    reasoning_blocks.append(block)
                     logger.debug(
                         "reasoning_block_received",
                         reasoning_id=block.get("id"),
@@ -40,11 +45,15 @@ def process_llm_response(response: BaseMessage) -> BaseMessage:
             elif isinstance(block, str):
                 text_parts.append(block)
 
-        response.content = "".join(text_parts)
+        text = "".join(text_parts)
+        if reasoning_blocks:
+            response.content = [*reasoning_blocks, {"type": "text", "text": text}] if text else reasoning_blocks
+        else:
+            response.content = text
         logger.debug(
             "processed_structured_content",
-            block_count=len(response.content) if isinstance(response.content, list) else 1,
-            extracted_length=len(response.content) if isinstance(response.content, str) else 0,
+            reasoning_blocks=len(reasoning_blocks),
+            extracted_length=len(text),
         )
 
     return response
