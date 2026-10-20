@@ -1,7 +1,6 @@
 # Web
 
-The Personal Finance app — what a signed-in person uses to track their money. Finance
-screens are not built yet.
+The Finsight app — what a signed-in person uses to track their money.
 
 Runs on **http://localhost:3000** in the main checkout; `make dev-web` from the repo
 root follows the checkout's own port, which differs in a git worktree.
@@ -16,7 +15,11 @@ This is a [Next.js 16](https://nextjs.org/) application using the App Router, pa
 
 | Route | Description |
 |---|---|
-| `/home` | Placeholder page in `src/app/(dashboard)/` — finance screens are not built yet. `/` redirects here |
+| `/home` | The month at a glance: totals, trend, categories, recent transactions. `/` redirects here |
+| `/transactions` | The transaction table: filters, edits, the CSV import |
+| `/analytics` | The four analytics views |
+| `/insights` | The generated insights |
+| `/chat` | The assistant |
 | `/sign-in` | Clerk's sign-in — public |
 | `/sign-up` | Clerk's sign-up — public; the first request provisions the account |
 
@@ -114,15 +117,17 @@ new component goes".
 
 ### Branding
 
-Two files carry the visual identity — swap them for your own:
+The app is **Finsight**, styled by the `finsight-design` skill (`.claude/skills/finsight-design/`).
+Where its identity lives:
 
-| File | Used by |
+| File | Carries |
 |---|---|
-| `public/images/logo-small.png` | the sidebar mark, via `logoSrc` on `AppSidebar` (`@app/components`, `packages/components/src/layout/company-logo.tsx`) |
-| `public/icons/favicon.ico` | the browser tab, via `metadata.icons` in `src/app/layout.tsx` |
+| `packages/ui/src/styles/finsight-tokens.css` | every colour, both themes; `globals.css` maps shadcn's variables onto them and holds the radius, type and shadow scales |
+| `packages/components/src/layout/finsight-mark.tsx` | the wallet mark (inline SVG on the `--logo-*` tokens), used by the rail and the sign-in lockup |
+| `src/app/icon.svg` | the browser tab icon, the navy app tile (Next's icon file convention) |
+| `src/app/layout.tsx` | `metadata.title`, the Onest font and Clerk's `appearance` |
 
-The accompanying `logoAlt` and `metadata.title` strings live in
-`src/app/(dashboard)/layout.tsx` and `src/app/layout.tsx`.
+More in [`docs/architecture/web-app.md`](../../../docs/architecture/web-app.md) §2, "The design system".
 
 ---
 

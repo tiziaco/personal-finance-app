@@ -44,13 +44,12 @@ export function HomeDashboard() {
       ) : (
         <>
           {/* In a first month the reference month is the month in progress: the card would repeat it. */}
+          {/* Side by side the row is as tall as the taller column: the card stretches (h-full)
+              and the two rows of summary cards stretch with it, so both columns end level. */}
           {data.month_to_date && !data.reference_partial ? (
             <div className="grid gap-4 lg:grid-cols-[1fr_2fr]">
               <MonthToDateCard monthToDate={data.month_to_date} />
-              <SummaryCards
-                dashboard={data}
-                className="content-start md:grid-cols-2"
-              />
+              <SummaryCards dashboard={data} className="md:grid-cols-2" />
             </div>
           ) : (
             <SummaryCards dashboard={data} />

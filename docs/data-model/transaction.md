@@ -103,7 +103,8 @@ The two import tables also carry the `user_id` and `created_at` indexes their mi
   second source of truth for a list that is twenty entries long and changes with the code that
   reads it.
   - *Add a category:* one new `(slug, label)` in `CATEGORIES`. The pre-commit hook regenerates
-    the contract; the web needs nothing.
+    the contract, and the web then fails to type-check until the slug has an icon row in
+    `apps/web/src/components/transactions/category-icon.tsx`.
   - *Rename a label:* edit the label. Nothing else moves.
   - *Rename or remove a slug:* edit `CATEGORIES`, and add an Alembic revision with
     `UPDATE transaction SET category = '<new>' WHERE category = '<old>'` for the rows that hold

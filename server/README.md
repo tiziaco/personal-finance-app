@@ -1,4 +1,4 @@
-# Personal Finance — API Server
+# Finsight — API Server
 
 FastAPI backend serving the web app. Handles authentication via Clerk; every row is scoped
 to its user. Also user provisioning and GDPR erasure, the LangGraph agent, and the OpenAPI

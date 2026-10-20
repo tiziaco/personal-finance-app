@@ -50,12 +50,13 @@ describe("ClerkUserPanel", () => {
     expect(screen.queryByText("User")).not.toBeInTheDocument()
   })
 
-  it("falls back to User and No email", () => {
+  it("falls back to User and No email", async () => {
     setAuth({ user: { name: null, email: null, imageUrl: null } })
     renderPanel()
 
-    expect(screen.getByText("User")).toBeInTheDocument()
-    expect(screen.getByText("No email")).toBeInTheDocument()
+    // The rail shows the avatar alone, named User; the menu holds the rest.
+    await openMenu(/^User$/)
+    expect(await screen.findByText("No email")).toBeInTheDocument()
   })
 
   it("opens Clerk's profile from Account", async () => {

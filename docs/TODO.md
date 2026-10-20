@@ -134,6 +134,19 @@ every analytics figure (`analytics.md` §4). Found in the 5b legacy audit. **Unb
 figures that match what the user means by income and spending. **Needs:** a transfer/refund
 notion on `transaction`.
 
+## Server — a transaction counted in the month it belongs to
+
+A salary paid on the 1st instead of the 30th leaves its month with no income and the next
+with two, so both months' savings rates are wrong; one month with only a small refund as income
+reads −15,000%. The savings rate stays net over income for the month (decided 20 Oct 2026):
+smoothing it with a rolling window lags, and dividing by an average income stops measuring
+what happened. Re-dating the transaction, which Copilot, PocketGuard and Simplifi users do,
+falsifies the bank date. **Fix:** an optional month on `transaction` that the user sets
+("count in September") and every analytics month bucket reads instead of `date`'s month;
+the transactions table and the import keep the bank date. **Unblocks:** monthly figures
+that survive a late salary. **Needs:** a data-model decision in `transaction.md` and an
+action on the transactions page.
+
 ## Server — a per-user cap on insight generation
 
 Every `POST /insights/generate` is a paid model call over the user's figures, and opening
@@ -154,18 +167,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
   real screen.
 
 Reasoning: [`architecture/web-app.md`](./architecture/web-app.md) §7.
-
-## Web — legacy's theme
-
-Step 2 brought back legacy's layout on `/transactions` — the table card, the filter sheet, the
-floating bulk bar, the sort control — but not its theme: the teal accent, the grey-green page
-background and the font. The theme changes every page, so it is a decision of its own, made
-once for the whole app, not per screen. Corners are already decided, against legacy's pills:
-one radius scale, in the `web-app-patterns` skill's `references/components.md`. Legacy's
-calendar date-range picker is out too; the date filter uses the shared single-day picker. Reference screenshots of both apps were taken with the same
-data on 14 Oct 2026.
-
-**Unblocks:** nothing; the app is usable with the template's theme.
 
 ## Server — analytics loads the whole history on every request
 

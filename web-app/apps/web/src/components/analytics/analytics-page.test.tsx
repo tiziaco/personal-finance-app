@@ -33,13 +33,24 @@ function setup(
 }
 
 describe("AnalyticsPage", () => {
-  it("opens By Category by default", () => {
+  it("opens By category by default", () => {
     setup("")
     expect(
       screen.getByRole("heading", { level: 1, name: "Analytics" }),
     ).toBeTruthy()
     expect(screen.getByText("category 3")).toBeTruthy()
     expect(screen.queryByText(/^flow/)).toBeNull()
+  })
+
+  it("names its tabs in sentence case", () => {
+    setup("")
+    for (const name of [
+      "By category",
+      "Income vs expenses",
+      "Trends",
+      "Seasonality",
+    ])
+      expect(screen.getByRole("tab", { name })).toBeTruthy()
   })
 
   it("opens the tab in the URL with its period", () => {

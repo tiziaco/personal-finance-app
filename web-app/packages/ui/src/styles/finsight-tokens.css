@@ -1,0 +1,115 @@
+/*
+ * The Finsight design system's tokens, from .claude/skills/finsight-design/tokens/.
+ * Names and values are the design system's; its [data-theme="dark"] blocks are
+ * written under .dark, the class next-themes sets. globals.css maps shadcn's
+ * semantic variables onto these: change a colour here, not there.
+ */
+
+:root {
+  /* Palette */
+  --navy-900: #121833;
+  --navy-800: #182040;
+  --navy-700: #1c2447;
+  --navy-500: #34417a;
+  --navy-300: #8b97d1;
+  --navy-100: #e1e5f7;
+  --navy-50: #f1f3fb;
+  --gold-700: #8f5e00;
+  --gold-600: #c98a10;
+  --gold-500: #f2b53e;
+  --gold-200: #f9db9e;
+  --gold-50: #fdf4e0;
+  --ink-900: #11152b;
+  --ink-600: #3a4160;
+  --ink-400: #68708c;
+  --ink-300: #9aa2c0;
+  --ink-200: #dce0ec;
+  --ink-100: #eef0f6;
+  --ink-50: #f7f8fb;
+  --white: #ffffff;
+  --income-500: #2fa37a;
+  --income-700: #1b7556;
+  --income-50: #e3f5ee;
+  --expense-500: #e5584f;
+  --expense-700: #b3362e;
+  --expense-50: #fce9e8;
+  --warning-500: #f2b53e;
+  --info-500: #4c7dd9;
+  --info-50: #e6eefb;
+
+  /* Roles */
+  --bg-page: var(--ink-50);
+  --bg-surface: var(--white);
+  --bg-sidebar: var(--white);
+  --bg-subtle: var(--ink-100);
+  --border-default: var(--ink-200);
+  --border-subtle: var(--ink-100);
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--ink-600);
+  --text-muted: var(--ink-400);
+  --text-on-brand: var(--white);
+  --brand: var(--navy-700);
+  --brand-hover: var(--navy-500);
+  --brand-soft: var(--navy-100);
+  --accent-gold: var(--gold-500);
+  --accent-gold-soft: var(--gold-50);
+  --logo-body: var(--navy-700);
+  --logo-clasp: var(--gold-500);
+  --logo-dot: var(--navy-700);
+  --positive: var(--income-500);
+  --negative: var(--expense-500);
+  /* Warning text on a surface: the design system's warning badge foreground. */
+  --warning-text: var(--gold-700);
+
+  /* Charts */
+  --chart-1: #1c2447;
+  --chart-2: #f2b53e;
+  --chart-3: #2a9d8f;
+  --chart-4: #e76f51;
+  --chart-5: #6fa8dc;
+  --chart-6: #8e5aa8;
+  --chart-other: #b8bed3;
+  --chart-income: var(--income-500);
+  --chart-expense: var(--expense-500);
+  --chart-net: var(--navy-700);
+  --chart-grid: var(--ink-100);
+  --chart-axis: var(--ink-400);
+  --chart-gap: #ffffff;
+
+  /* Elevation (--shadow-sm/md/lg) is in globals.css's @theme, so Tailwind's
+     shadow-sm/md/lg utilities are the design system's. */
+}
+
+.dark {
+  --bg-page: #0f1328;
+  --bg-surface: #161c3a;
+  --bg-sidebar: #121833;
+  --bg-subtle: #232a4d;
+  --border-default: #262e54;
+  --border-subtle: #1d2446;
+  --text-primary: #f4f6fd;
+  --text-secondary: #c3c9e3;
+  --text-muted: #9aa2c0;
+  --text-on-brand: #11152b;
+  --brand: var(--gold-500);
+  --brand-hover: #f6c763;
+  --brand-soft: #232a4d;
+  --accent-gold-soft: #2a2a35;
+  --logo-body: #f4f6fd;
+  --logo-dot: #1c2447;
+  --positive: #3cc594;
+  --negative: #f2766e;
+  --warning-text: var(--gold-500);
+
+  --chart-1: #8b97d1;
+  --chart-2: #f2b53e;
+  --chart-3: #3cc5b3;
+  --chart-4: #f2876b;
+  --chart-5: #7db8f0;
+  --chart-6: #b885d1;
+  --chart-other: #4a5380;
+  --chart-net: #f4f6fd;
+  --chart-grid: #232a4d;
+  --chart-axis: #9aa2c0;
+  --chart-gap: #161c3a;
+}

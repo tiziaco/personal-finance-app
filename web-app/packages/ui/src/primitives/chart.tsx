@@ -42,7 +42,7 @@ function ChartContainer({
         data-slot="chart"
         style={{ ...colors, ...style } as React.CSSProperties}
         className={cn(
-          "flex justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-muted-foreground [&_.recharts-cartesian-grid_line]:stroke-border [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
+          "flex justify-center text-xs [&_.recharts-cartesian-axis-tick_text]:fill-(--chart-axis) [&_.recharts-cartesian-grid_line]:stroke-(--chart-grid) [&_.recharts-layer]:outline-hidden [&_.recharts-sector]:outline-hidden [&_.recharts-surface]:outline-hidden",
           className,
         )}
         {...props}
@@ -64,6 +64,8 @@ type TooltipItem = {
   dataKey?: unknown
   value?: unknown
   color?: string
+  /** "none" for a series drawn with tooltipType="none", such as a line's halo. */
+  type?: string
 }
 
 /** Tooltip body: one row per series, labelled and coloured from the config; text in text tokens. */
@@ -85,7 +87,8 @@ function ChartTooltipContent({
   className?: string
 }) {
   const { config } = useChart()
-  if (!active || !payload?.length) return null
+  const rows = payload?.filter((item) => item.type !== "none")
+  if (!active || !rows?.length) return null
   return (
     <div
       className={cn(
@@ -98,7 +101,7 @@ function ChartTooltipContent({
           {labelFormatter ? labelFormatter(label) : String(label)}
         </div>
       )}
-      {payload.map((item) => {
+      {rows.map((item) => {
         const key = String(
           typeof item.dataKey === "string" && config[item.dataKey]
             ? item.dataKey

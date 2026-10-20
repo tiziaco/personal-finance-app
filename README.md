@@ -1,4 +1,4 @@
-# Personal Finance
+# Finsight
 
 A B2C app for tracking and understanding one person's money: a Next.js app
 (`web-app/apps/web`) backed by a FastAPI server. The user is the tenant — data is keyed by

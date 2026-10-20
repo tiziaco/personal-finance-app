@@ -52,10 +52,10 @@ export function ServerStatusIndicator({
   const health = error || !status ? "down" : status.status
   const statusColor =
     health === "healthy"
-      ? "bg-green-500"
+      ? "bg-positive"
       : health === "degraded"
-        ? "bg-yellow-500"
-        : "bg-red-500"
+        ? "bg-(--warning-500)"
+        : "bg-negative"
 
   const statusIndicator = (
     <div className="flex items-center gap-2 px-3 py-2 cursor-default">
@@ -89,7 +89,7 @@ export function ServerStatusIndicator({
       <HoverCardContent side="top" align="start" className="w-64">
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-sm font-semibold">Server Status</span>
+            <span className="text-sm font-semibold">Server status</span>
             <Badge
               variant="secondary"
               className="text-[10px] px-1.5 py-0 h-4 font-mono"
@@ -105,8 +105,8 @@ export function ServerStatusIndicator({
                   className={cn(
                     "size-1.5 rounded-full",
                     status?.components?.api === "healthy"
-                      ? "bg-green-500"
-                      : "bg-red-500",
+                      ? "bg-positive"
+                      : "bg-negative",
                   )}
                 />
                 <span className="text-xs capitalize">
@@ -121,8 +121,8 @@ export function ServerStatusIndicator({
                   className={cn(
                     "size-1.5 rounded-full",
                     status?.components?.database?.status === "healthy"
-                      ? "bg-green-500"
-                      : "bg-red-500",
+                      ? "bg-positive"
+                      : "bg-negative",
                   )}
                 />
                 <span className="text-xs capitalize">
@@ -139,14 +139,14 @@ export function ServerStatusIndicator({
                   className={cn(
                     "size-1.5 rounded-full",
                     status?.components?.agents?.chatbot?.ready
-                      ? "bg-green-500"
-                      : "bg-red-500",
+                      ? "bg-positive"
+                      : "bg-negative",
                   )}
                 />
                 <span className="text-xs">
                   {status?.components?.agents?.chatbot?.ready
                     ? "Ready"
-                    : "Not Ready"}
+                    : "Not ready"}
                 </span>
               </div>
             </div>

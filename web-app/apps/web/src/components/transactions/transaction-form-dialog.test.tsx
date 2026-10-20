@@ -12,7 +12,7 @@ import {
   useUpdateTransaction,
 } from "@app/api-client/endpoints/transactions"
 import type { TransactionResponse } from "@app/api-client/types"
-import { formatAmount, formatDate } from "./format"
+import { formatDate, formatSignedAmount } from "./format"
 import { TransactionFormDialog } from "./transaction-form-dialog"
 
 vi.mock("@app/api-client/endpoints/transactions", async (orig) => ({
@@ -146,7 +146,7 @@ describe("TransactionFormDialog", () => {
       ),
     )
 
-    const expected = `You already have a transaction on ${formatDate("2026-03-03")} at Späti for ${formatAmount("-4.50")}.`
+    const expected = `You already have a transaction on ${formatDate("2026-03-03")} at Späti for ${formatSignedAmount("-4.50")}.`
     expect(screen.getByRole("alert")).toHaveTextContent(expected)
     expect(screen.getByRole("button", { name: "Cancel" })).toBeInTheDocument()
 

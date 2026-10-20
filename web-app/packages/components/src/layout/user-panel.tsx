@@ -1,6 +1,6 @@
 "use client"
 
-import { BadgeCheck, ChevronsUpDown, LogOut } from "lucide-react"
+import { BadgeCheck, LogOut } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@app/ui/avatar"
 import {
   DropdownMenu,
@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@app/ui/dropdown-menu"
-import { SidebarMenuButton, SidebarMenuItem, useSidebar } from "@app/ui/sidebar"
+import { SidebarMenuItem } from "@app/ui/sidebar"
 import { Skeleton } from "@app/ui/skeleton"
 
 export interface UserPanelUser {
@@ -40,19 +40,10 @@ export function UserDetailsPanel({
   onSignOut,
   onOpenProfile,
 }: UserDetailsPanelProps) {
-  const { isMobile } = useSidebar()
-
   if (!user) {
     return (
-      <SidebarMenuItem>
-        <SidebarMenuButton size="lg">
-          <Skeleton className="h-8 w-8 rounded-full bg-sidebar-accent" />
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <Skeleton className="h-4 w-24 mb-1 bg-sidebar-accent" />
-            <Skeleton className="h-3 w-28 bg-sidebar-accent" />
-          </div>
-          <ChevronsUpDown className="ml-auto size-4" />
-        </SidebarMenuButton>
+      <SidebarMenuItem className="flex justify-center">
+        <Skeleton className="size-9 rounded-lg bg-sidebar-accent" />
       </SidebarMenuItem>
     )
   }
@@ -60,17 +51,14 @@ export function UserDetailsPanel({
   const initials = getInitials(user.name)
 
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem className="flex justify-center">
       <DropdownMenu>
+        {/* The rail shows the avatar alone; the name and email head the menu. */}
         <DropdownMenuTrigger
-          render={
-            <SidebarMenuButton
-              size="lg"
-              className="cursor-pointer data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
-            />
-          }
+          aria-label={user.name}
+          className="cursor-pointer rounded-lg outline-hidden ring-sidebar-ring focus-visible:ring-2"
         >
-          <Avatar className="h-8 w-8 rounded-lg">
+          <Avatar className="size-9 rounded-lg">
             <AvatarImage src={user.imageUrl} alt={user.name} />
             <AvatarFallback
               className="rounded-lg"
@@ -82,17 +70,13 @@ export function UserDetailsPanel({
               {initials}
             </AvatarFallback>
           </Avatar>
-          <div className="grid flex-1 text-left text-sm leading-tight">
-            <span className="truncate font-medium">{user.name}</span>
-            <span className="truncate text-xs">{user.email}</span>
-          </div>
-          <ChevronsUpDown className="ml-auto size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent
-          className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
-          side={isMobile ? "bottom" : "top"}
+          className="min-w-56 rounded-lg"
+          side="right"
           align="end"
-          sideOffset={4}
+          // Clears the rail: half of w-26 minus half the avatar (34px), plus a gap.
+          sideOffset={42}
         >
           <DropdownMenuGroup>
             <DropdownMenuLabel className="p-0 font-normal">

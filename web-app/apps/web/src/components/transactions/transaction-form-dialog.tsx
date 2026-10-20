@@ -28,7 +28,7 @@ import { Label } from "@app/ui/label"
 import { Switch } from "@app/ui/switch"
 import { Textarea } from "@app/ui/textarea"
 import { parseAmount } from "./amount-input"
-import { formatAmount, formatDate } from "./format"
+import { formatDate, formatSignedAmount } from "./format"
 import { CategorySelect } from "./category-select"
 import { useCategories } from "./use-categories"
 import { DeleteTransactionsDialog } from "./delete-transactions-dialog"
@@ -190,7 +190,7 @@ function TransactionForm({
     create.isPending || update.isPending || create.isSuccess || update.isSuccess
   const adding = target.mode === "add"
   // A duplicate's notice is worded from the dialog's own input, never the error body.
-  const duplicateText = `You already have a transaction on ${formatDate(form.date)} at ${form.merchant.trim()} for ${formatAmount(parseAmount(form.amount) ?? "0")}.`
+  const duplicateText = `You already have a transaction on ${formatDate(form.date)} at ${form.merchant.trim()} for ${formatSignedAmount(parseAmount(form.amount) ?? "0")}.`
 
   return (
     <>

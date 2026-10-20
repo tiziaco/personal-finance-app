@@ -12,7 +12,10 @@ import type {
   SpendingResponse,
 } from "@app/api-client/types"
 import { formatMonth } from "@/components/dashboard/month"
-import { formatAmount } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+} from "@/components/transactions/format"
 import { FlowTab } from "./flow-tab"
 import { formatDayRange, formatPct, formatPeriod } from "./format"
 
@@ -157,7 +160,9 @@ describe("FlowTab", () => {
     const cash = within(card("Cash flow"))
     expect(cash.getByText(formatAmount("19200.00"))).toBeInTheDocument()
     expect(cash.getByText(formatAmount("12840.00"))).toBeInTheDocument()
-    expect(cash.getByText(`${formatAmount("1060.00")} / month`)).toBeTruthy()
+    expect(
+      cash.getByText(`${formatSignedAmount("1060.00")} / month`),
+    ).toBeTruthy()
     expect(cash.getByText("Kept 33.1% of income")).toBeInTheDocument()
   })
 
@@ -165,8 +170,8 @@ describe("FlowTab", () => {
     spending({ data: { ...DATA, net: "-420.00", savings_rate_pct: -6.5 } })
     renderTab()
     const cash = within(card("Cash flow"))
-    expect(cash.getByText(formatAmount("-420.00"))).toHaveClass(
-      "text-destructive",
+    expect(cash.getByText(formatSignedAmount("-420.00"))).toHaveClass(
+      "text-negative",
     )
     expect(
       cash.getByText(`Spent ${formatPct(6.5)} more than income`),
@@ -193,9 +198,9 @@ describe("FlowTab", () => {
     spending({ data: { ...DATA, average_monthly_net: "-70.00" } })
     renderTab()
     const el = within(card("Cash flow")).getByText(
-      `${formatAmount("-70.00")} / month`,
+      `${formatSignedAmount("-70.00")} / month`,
     )
-    expect(el).toHaveClass("text-destructive")
+    expect(el).toHaveClass("text-negative")
     expect(el).not.toHaveClass("text-muted-foreground")
   })
 
@@ -215,7 +220,7 @@ describe("FlowTab", () => {
     expect(notes).toHaveLength(3)
     for (const note of notes) {
       expect(note).toHaveClass("text-muted-foreground")
-      expect(note).not.toHaveClass("text-destructive")
+      expect(note).not.toHaveClass("text-negative")
     }
     expect(cash.queryByText(/\/ month/)).not.toBeInTheDocument()
     expect(cash.getByText(formatAmount("19200.00"))).toBeInTheDocument()

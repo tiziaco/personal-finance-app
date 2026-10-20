@@ -1,0 +1,19 @@
+<!-- @dsCard group="Components" viewport="700x560" name="Core components" subtitle="Button, Badge, Input, Card, StatCard, TransactionRow, Sidebar" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script><script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script><script src="../../_ds_bundle.js"></script><style>body{padding:20px;background:var(--bg-page)}.l{font:var(--text-caption);color:var(--text-muted);margin:16px 0 8px;text-transform:uppercase;letter-spacing:var(--tracking-caps)}.r{display:flex;gap:10px;flex-wrap:wrap;align-items:center}</style></head><body><div id="root"></div>
+<script type="text/babel" data-presets="react">
+Promise.resolve(window.FinsightDesignSystem_dd687d).then(({Button,Badge,Input,Card,StatCard,TransactionRow,Sidebar})=>{
+const App=()=><div style={{display:'flex',gap:20}}>
+<div style={{flex:1,minWidth:0}}>
+<div className="l" style={{marginTop:0}}>Buttons</div><div className="r"><Button>Primary</Button><Button variant="accent">Accent</Button><Button variant="secondary">Secondary</Button><Button variant="ghost">Ghost</Button><Button disabled>Disabled</Button></div>
+<div className="r" style={{marginTop:8}}><Button size="sm">Small</Button><Button size="md">Medium</Button><Button size="lg">Large</Button></div>
+<div className="l">Badges</div><div className="r"><Badge>Neutral</Badge><Badge tone="income">Income</Badge><Badge tone="expense">Expense</Badge><Badge tone="warning">Over budget</Badge><Badge tone="info">Scheduled</Badge></div>
+<div className="l">Input</div><Input label="Amount" placeholder="0.00" hint="Use a minus for expenses"/>
+<div className="l">Stat card</div><StatCard label="Total balance" value="$ 12,480.35" delta="+ $ 1,204.80 this month" hero/>
+<div className="l">Card + rows</div><Card title="Recent"><div>
+<TransactionRow name="Groceries" category="Food" date="Oct 17" amount={-84.2}/>
+<TransactionRow name="Salary" category="Income" date="Oct 1" amount={3200} icon="banknote"/></div></Card>
+</div>
+<div style={{height:420,border:'1px solid var(--border-default)',borderRadius:12,overflow:'hidden'}}><Sidebar active="home" items={[{id:'home',label:'Overview',icon:'layout-dashboard'},{id:'tx',label:'Activity',icon:'arrow-left-right'},{id:'bud',label:'Budgets',icon:'chart-pie'},{id:'set',label:'Settings',icon:'settings'}]}/></div>
+</div>;
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);});
+</script></body></html>

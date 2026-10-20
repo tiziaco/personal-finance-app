@@ -320,6 +320,18 @@ describe("TransactionsTable", () => {
     ).toBeInTheDocument()
   })
 
+  // jsdom has no layout, so this pins the class contract that keeps the row
+  // inside a 375px screen: below sm the actions are icon buttons, still named.
+  it("shows the header actions as icons below sm, keeping their names", async () => {
+    result([row])
+    renderAt()
+    for (const name of ["Import CSV", "Add transaction"]) {
+      const button = screen.getByRole("button", { name })
+      expect(button.className).toContain("max-sm:w-8")
+      expect(within(button).getByText(name)).toHaveClass("max-sm:sr-only")
+    }
+  })
+
   it("moves a page past the end back to the last page, with no empty state", async () => {
     // 25 rows, and page 3 (offset 40) is empty: e.g. its only row was deleted.
     list.mockImplementation(

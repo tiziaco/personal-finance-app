@@ -16,7 +16,7 @@ import { ServerHealthIndicator } from "@/components/settings/server-status"
 import { ClerkUserPanel } from "@/components/layout/clerk-user-panel"
 import { QueryProvider } from "@app/api-client/query-provider"
 import { UrlStateAdapter } from "@app/data-table/url-state/url-state-adapter"
-import { Settings, Cog, Database } from "lucide-react"
+import { Settings, Database } from "lucide-react"
 
 const SETTINGS_TABS: SettingsTab[] = [
   {
@@ -43,19 +43,12 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
         <SidebarProvider>
           <AppSidebar
             items={HUB_NAV}
-            logoSrc="/images/logo-small.png"
-            logoAlt="Personal Finance"
-            variant="floating"
             settingsSlot={
               <SettingsDialog
                 tabs={SETTINGS_TABS}
                 trigger={
-                  <SidebarMenuButton
-                    size="lg"
-                    tooltip="Settings"
-                    className="cursor-pointer"
-                  >
-                    <Cog />
+                  <SidebarMenuButton size="rail" className="cursor-pointer">
+                    <Settings />
                     <span>Settings</span>
                   </SidebarMenuButton>
                 }
@@ -64,13 +57,16 @@ export default function HubLayout({ children }: { children: React.ReactNode }) {
             }
             userSlot={<ClerkUserPanel />}
           />
+          {/* Phones only: the rail is a slide-out there. */}
           <SidebarTrigger
             size="icon"
-            className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer"
+            className="text-muted-foreground hover:text-foreground hover:bg-transparent cursor-pointer md:hidden"
           />
           <SidebarInset className="flex flex-col overflow-hidden">
             <div className="flex-1 overflow-auto">
-              <div className="px-4 py-4 min-w-0">{children}</div>
+              <div className="min-w-0 px-4 py-4 md:px-8 md:py-7">
+                {children}
+              </div>
             </div>
           </SidebarInset>
         </SidebarProvider>

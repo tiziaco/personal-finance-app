@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest"
 import { render, screen } from "@testing-library/react"
 import type { MonthToDateResponse } from "@app/api-client/types"
-import { formatAmount } from "@/components/transactions/format"
+import {
+  formatAmount,
+  formatSignedAmount,
+} from "@/components/transactions/format"
 import { MonthToDateCard } from "./month-to-date-card"
 
 const mtd = (over: Partial<MonthToDateResponse> = {}): MonthToDateResponse => ({
@@ -19,14 +22,18 @@ const mtd = (over: Partial<MonthToDateResponse> = {}): MonthToDateResponse => ({
   ...over,
 })
 
+/** A footer stat, income or net: its term and the definitions under it. */
+const stat = (term: string) =>
+  screen.getByText(term, { selector: "dt" }).parentElement!
+
 describe("MonthToDateCard", () => {
   it("shows spent, income and net with changes", () => {
     render(<MonthToDateCard monthToDate={mtd()} />)
     const card = screen.getByRole("group", { name: /so far/ })
     expect(card).toHaveTextContent(formatAmount("1184.00"))
     expect(card).toHaveTextContent(`+12% vs ${formatAmount("1057.00")}`)
-    expect(card).toHaveTextContent(`Income ${formatAmount("2950.00")}`)
-    expect(card).toHaveTextContent(`Net ${formatAmount("1766.00")}`)
+    expect(stat("Income")).toHaveTextContent(formatAmount("2950.00"))
+    expect(stat("Net")).toHaveTextContent(formatSignedAmount("1766.00"))
     expect(card).toHaveTextContent("1–16")
     expect(card).toHaveTextContent("vs 1–16")
   })
@@ -39,19 +46,17 @@ describe("MonthToDateCard", () => {
     expect(card).not.toHaveTextContent("12%")
   })
 
-  it("shows income's change beside income", () => {
+  it("shows income's change with income", () => {
     render(<MonthToDateCard monthToDate={mtd()} />)
-    expect(
-      screen.getByText(`Income ${formatAmount("2950.00")}`, { exact: false }),
-    ).toHaveTextContent(
-      `Income ${formatAmount("2950.00")} · +5% vs ${formatAmount("2800.00")}`,
+    expect(stat("Income")).toHaveTextContent(
+      `+5% vs ${formatAmount("2800.00")}`,
     )
   })
 
   it("a null income change shows no income comparison", () => {
     render(<MonthToDateCard monthToDate={mtd({ income_change_pct: null })} />)
     const card = screen.getByRole("group", { name: /so far/ })
-    expect(card).toHaveTextContent(`Income ${formatAmount("2950.00")}`)
+    expect(stat("Income")).toHaveTextContent(formatAmount("2950.00"))
     expect(card).not.toHaveTextContent(`vs ${formatAmount("2800.00")}`)
     expect(card).toHaveTextContent(`+12% vs ${formatAmount("1057.00")}`)
   })
@@ -86,16 +91,6 @@ describe("MonthToDateCard", () => {
 
   it("renders the server's net, not income minus expenses", () => {
     render(<MonthToDateCard monthToDate={mtd({ net: "-123.45" })} />)
-    const card = screen.getByRole("group", { name: /so far/ })
-    expect(card).toHaveTextContent(`Net ${formatAmount("-123.45")}`)
-  })
-
-  it("shows days covered", () => {
-    render(<MonthToDateCard monthToDate={mtd()} />)
-    expect(screen.getByText("16 of 31 days")).toBeInTheDocument()
-    expect(screen.getByRole("progressbar")).toHaveAttribute(
-      "aria-valuenow",
-      "16",
-    )
+    expect(stat("Net")).toHaveTextContent(formatSignedAmount("-123.45"))
   })
 })

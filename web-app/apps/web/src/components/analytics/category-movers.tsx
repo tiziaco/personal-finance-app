@@ -2,6 +2,7 @@ import type { CategoryTrendResponse } from "@app/api-client/types"
 import { Badge } from "@app/ui/badge"
 
 import { formatAmount } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 import { useCategories } from "@/components/transactions/use-categories"
 
 import { TONE_CLASS } from "./change"
@@ -42,7 +43,9 @@ export function CategoryMovers({
             </p>
           </div>
           <div className="text-right tabular-nums">
-            <p>{formatAmount(r.change_amount)}</p>
+            <p>
+              <Money amount={r.change_amount} kind="spendChange" />
+            </p>
             <p className="text-xs">
               <MoverPct pct={r.change_pct} />
             </p>

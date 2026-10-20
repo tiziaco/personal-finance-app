@@ -1,0 +1,2 @@
+export interface CardProps { title?: string; action?: React.ReactNode; padding?: number; style?: React.CSSProperties; children?: React.ReactNode; }
+export declare function Card(props: CardProps): JSX.Element;

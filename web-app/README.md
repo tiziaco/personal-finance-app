@@ -1,4 +1,4 @@
-# Personal Finance — Web App
+# Finsight — Web App
 
 pnpm monorepo containing the Next.js app (`apps/web`) and the packages it is built from,
 including one generated API client.

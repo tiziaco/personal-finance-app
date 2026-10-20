@@ -1,0 +1,37 @@
+<!-- @dsCard group="Finsight app" viewport="1200x720" name="Dashboard" subtitle="Overview screen, light and dark" -->
+<!-- @startingPoint section="Screens" subtitle="Overview dashboard with sidebar, stat cards, activity and budgets" viewport="1200x720" -->
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../../styles.css"><script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script><script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script><script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js"></script><script src="../../_ds_bundle.js"></script><style>html,body{height:100%}body{overflow:hidden}</style></head><body><div id="root" style="height:100%"></div>
+<script type="text/babel" data-presets="react">
+Promise.resolve(window.FinsightDesignSystem_dd687d).then(({Button,Badge,Card,StatCard,TransactionRow,Sidebar,Icon})=>{
+const nav=[{id:'home',label:'Overview',icon:'layout-dashboard'},{id:'tx',label:'Activity',icon:'arrow-left-right'},{id:'bud',label:'Budgets',icon:'chart-pie'},{id:'goals',label:'Goals',icon:'target'},{id:'set',label:'Settings',icon:'settings'}];
+const tx=[['Whole Foods','Groceries','Oct 17',-84.2,'shopping-cart'],['Salary — Acme Inc.','Income','Oct 15',3200,'banknote'],['Rent','Housing','Oct 1',-950,'house'],['Netflix','Subscriptions','Sep 29',-15.99,'tv'],['Freelance invoice','Income','Sep 27',620,'briefcase'],['Shell','Transport','Sep 26',-52.4,'car']];
+const cats=[['Housing',950,1000],['Groceries',420,500],['Transport',150,200],['Subscriptions',64,60]];
+function App(){
+  const [dark,setDark]=React.useState(false),[page,setPage]=React.useState('home'),[f,setF]=React.useState('all');
+  const rows=tx.filter(t=>f==='all'||(f==='in'?t[3]>0:t[3]<0));
+  return <div data-theme={dark?'dark':'light'} style={{display:'flex',height:'100%',background:'var(--bg-page)'}}>
+    <Sidebar items={nav} active={page} onSelect={setPage}/>
+    <main style={{flex:1,minWidth:0,overflow:'auto',padding:'28px 32px',display:'flex',flexDirection:'column',gap:24}}>
+      <header style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div><div style={{font:'var(--text-caption)',color:'var(--text-muted)'}}>October 2026</div><h1 style={{margin:0,font:'var(--text-h1)',letterSpacing:'var(--tracking-tight)'}}>Good morning, Alex</h1></div>
+        <div style={{display:'flex',gap:8}}><Button variant="secondary" onClick={()=>setDark(!dark)}><Icon name={dark?'sun':'moon'} size={16}/>{dark?'Light':'Dark'}</Button><Button><Icon name="plus" size={16}/>Add transaction</Button></div>
+      </header>
+      <div style={{display:'grid',gridTemplateColumns:'1.4fr 1fr 1fr',gap:16}}>
+        <StatCard hero label="Total balance" value="$ 12,480.35" delta="+ $ 1,204.80 this month"/>
+        <StatCard label="Income" value="$ 3,820.00" delta="+ 8% vs Sep"/>
+        <StatCard label="Spending" value="$ 1,586.59" delta="− 12% vs Sep" trend="up"/>
+      </div>
+      <div style={{display:'grid',gridTemplateColumns:'1.6fr 1fr',gap:16,alignItems:'start'}}>
+        <Card title="Recent activity" action={<div style={{display:'flex',gap:6}}>{[['all','All'],['in','Income'],['out','Expenses']].map(([k,l])=><Button key={k} size="sm" variant={f===k?'primary':'ghost'} onClick={()=>setF(k)}>{l}</Button>)}</div>}>
+          <div>{rows.map(t=><TransactionRow key={t[0]} name={t[0]} category={t[1]} date={t[2]} amount={t[3]} icon={t[4]}/>)}</div>
+        </Card>
+        <Card title="Budgets">
+          {cats.map(([n,s,b])=>{const p=Math.min(100,s/b*100),over=s>b;return <div key={n} style={{display:'flex',flexDirection:'column',gap:6}}>
+            <div style={{display:'flex',justifyContent:'space-between',gap:12,font:'var(--text-label)'}}><span>{n}</span><span style={{flex:'none',whiteSpace:'nowrap',color:over?'var(--negative)':'var(--text-muted)'}}>$ {s} / {b}</span></div>
+            <div style={{height:8,borderRadius:4,background:'var(--bg-subtle)'}}><div style={{width:p+'%',height:'100%',borderRadius:4,background:over?'var(--negative)':'var(--accent)'}}/></div></div>;})}
+        </Card>
+      </div>
+    </main></div>;
+}
+ReactDOM.createRoot(document.getElementById('root')).render(<App/>);});
+</script></body></html>

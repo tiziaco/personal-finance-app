@@ -12,8 +12,4 @@ export type NavItem = {
   title: string
   url: string
   icon?: ComponentType<{ className?: string }>
-  items?: Array<{
-    title: string
-    url: string
-  }>
 }

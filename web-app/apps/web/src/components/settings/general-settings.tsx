@@ -51,7 +51,7 @@ export function GeneralSettings() {
                 </div>
               </SelectValue>
             </SelectTrigger>
-            <SelectContent className="min-w-34 max-w-34">
+            <SelectContent>
               <SelectItem value="light">
                 <div className="flex items-center gap-2">
                   <Sun className="w-4 h-4" />

@@ -38,7 +38,7 @@ describe("ServerStatusIndicator", () => {
       />,
     )
 
-    expect(dotClasses()).toContain("bg-green-500")
+    expect(dotClasses()).toContain("bg-positive")
     expect(document.querySelector(".animate-ping")).not.toBeNull()
     expect(screen.getByText("v1.2.3")).toBeInTheDocument()
   })
@@ -52,7 +52,7 @@ describe("ServerStatusIndicator", () => {
       />,
     )
 
-    expect(dotClasses()).toContain("bg-yellow-500")
+    expect(dotClasses()).toContain("bg-(--warning-500)")
     expect(document.querySelector(".animate-ping")).toBeNull()
   })
 
@@ -65,13 +65,13 @@ describe("ServerStatusIndicator", () => {
       />,
     )
 
-    expect(dotClasses()).toContain("bg-red-500")
+    expect(dotClasses()).toContain("bg-negative")
   })
 
   it("is red with v0.0.0 when there is no status", () => {
     render(<ServerStatusIndicator isLoading={false} error={undefined} />)
 
-    expect(dotClasses()).toContain("bg-red-500")
+    expect(dotClasses()).toContain("bg-negative")
     expect(screen.getByText("v0.0.0")).toBeInTheDocument()
   })
 
@@ -86,7 +86,7 @@ describe("ServerStatusIndicator", () => {
       />,
     )
 
-    expect(dotClasses()).toContain("bg-red-500")
+    expect(dotClasses()).toContain("bg-negative")
   })
 
   it("no pulsing ring when a healthy status is stale behind an error", () => {
@@ -98,7 +98,7 @@ describe("ServerStatusIndicator", () => {
       />,
     )
 
-    expect(dotClasses()).toContain("bg-red-500")
+    expect(dotClasses()).toContain("bg-negative")
     expect(document.querySelector(".animate-ping")).toBeNull()
   })
 

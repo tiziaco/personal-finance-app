@@ -106,7 +106,7 @@ describe("HomeDashboard", () => {
     dashboard({ data: DATA })
     render(<HomeDashboard />)
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
     expect(screen.getByText("category chart")).toBeInTheDocument()
     expect(screen.getByText("trend chart")).toBeInTheDocument()
@@ -123,7 +123,7 @@ describe("HomeDashboard", () => {
     render(<HomeDashboard />)
     expect(screen.getByText("month to date card")).toBeInTheDocument()
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
   })
 
@@ -139,7 +139,7 @@ describe("HomeDashboard", () => {
     render(<HomeDashboard />)
     expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
   })
 
@@ -148,7 +148,7 @@ describe("HomeDashboard", () => {
     render(<HomeDashboard />)
     expect(screen.queryByText("month to date card")).not.toBeInTheDocument()
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
   })
 
@@ -160,7 +160,7 @@ describe("HomeDashboard", () => {
       screen.getByRole("link", { name: "Go to transactions" }),
     ).toHaveAttribute("href", "/transactions")
     expect(
-      screen.queryByRole("group", { name: "Total Spent" }),
+      screen.queryByRole("group", { name: "Total spent" }),
     ).not.toBeInTheDocument()
     expect(screen.queryByText("insights callout")).not.toBeInTheDocument()
     expect(screen.queryByText("Recent transactions")).not.toBeInTheDocument()
@@ -180,7 +180,7 @@ describe("HomeDashboard", () => {
     recent({ isError: true })
     render(<HomeDashboard />)
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
     expect(
       screen.getByText("Couldn't load recent transactions."),
@@ -197,7 +197,7 @@ describe("HomeDashboard", () => {
     })
     render(<HomeDashboard />)
     expect(
-      screen.getByRole("group", { name: "Total Spent" }),
+      screen.getByRole("group", { name: "Total spent" }),
     ).toBeInTheDocument()
     expect(screen.queryByText(/Couldn't load/)).not.toBeInTheDocument()
     expect(

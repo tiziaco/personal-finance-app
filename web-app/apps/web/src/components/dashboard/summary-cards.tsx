@@ -9,7 +9,8 @@ import {
 import type { DashboardResponse } from "@app/api-client/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
 import { cn } from "@app/core/lib/utils"
-import { formatAmount, isExpense } from "@/components/transactions/format"
+import { amountSign } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 import { formatMonth } from "./month"
 
 const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? "" : "s"}`
@@ -19,13 +20,14 @@ function SummaryCard({
   value,
   subtitle,
   icon: Icon,
-  negative = false,
+  kind = "total",
 }: {
   title: string
   value: string
   subtitle: string
   icon: ComponentType<{ className?: string }>
-  negative?: boolean
+  /** A net is signed and toned; a total stays unsigned. */
+  kind?: "total" | "net"
 }) {
   const id = useId()
   return (
@@ -40,13 +42,8 @@ function SummaryCard({
         <Icon className="size-4 text-muted-foreground" />
       </CardHeader>
       <CardContent className="space-y-1">
-        <p
-          className={cn(
-            "text-2xl font-semibold tabular-nums",
-            negative && "text-destructive",
-          )}
-        >
-          {formatAmount(value)}
+        <p className="text-2xl font-semibold">
+          <Money amount={value} kind={kind} />
         </p>
         <p className="text-xs text-muted-foreground">{subtitle}</p>
       </CardContent>
@@ -65,34 +62,34 @@ export function SummaryCards({
   const month = dashboard.reference_month
     ? formatMonth(dashboard.reference_month)
     : ""
-  const netNegative = isExpense(dashboard.net_balance)
+  const netNegative = amountSign(dashboard.net_balance) < 0
   return (
     <div className={cn("grid grid-cols-2 gap-4 md:grid-cols-4", className)}>
       <SummaryCard
-        title="Total Spent"
+        title="Total spent"
         value={dashboard.total_spent}
         subtitle={month}
         icon={CreditCard}
       />
       <SummaryCard
-        title="Recurring Costs"
+        title="Recurring costs"
         value={dashboard.recurring_spent}
         subtitle={plural(dashboard.recurring_count, "recurring payment")}
         icon={RefreshCw}
       />
       <SummaryCard
-        title="Net Balance"
+        title="Net balance"
         value={dashboard.net_balance}
         subtitle={month}
         icon={netNegative ? TrendingDown : TrendingUp}
-        negative={netNegative}
+        kind="net"
       />
       <SummaryCard
-        title="Average Cashflow"
+        title="Average cashflow"
         value={dashboard.average_cashflow}
         subtitle={`average of ${plural(dashboard.cashflow_months, "month")}`}
         icon={PiggyBank}
-        negative={isExpense(dashboard.average_cashflow)}
+        kind="net"
       />
     </div>
   )

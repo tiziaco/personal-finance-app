@@ -14,7 +14,7 @@ import {
 import type { MonthOfYearPoint, WeekdayPoint } from "./seasonality-points"
 
 const weekdayConfig: ChartConfig = {
-  perDay: { label: "Average per day", color: "var(--chart-expense)" },
+  perDay: { label: "Average per day", color: "var(--chart-1)" },
 }
 
 /** Average spend per day for each weekday, Monday first. */
@@ -52,7 +52,7 @@ export function WeekdayChart({ points }: { points: WeekdayPoint[] }) {
 }
 
 const monthConfig: ChartConfig = {
-  average: { label: "Average", color: "var(--chart-expense)" },
+  average: { label: "Average", color: "var(--chart-1)" },
 }
 
 /** Average spend for each calendar month; a month with no history has no bar. */

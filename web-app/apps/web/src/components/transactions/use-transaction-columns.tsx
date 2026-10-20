@@ -16,12 +16,9 @@ import {
   DropdownMenuTrigger,
 } from "@app/ui/dropdown-menu"
 import { CategoryPicker } from "./category-picker"
-import {
-  amountClass,
-  formatAmount,
-  formatDate,
-  isLowConfidence,
-} from "./format"
+import { formatDate, isLowConfidence } from "./format"
+import { Money } from "./money"
+import { CategoryTile } from "./category-icon"
 
 export type TransactionRowActions = {
   categories: CategoryResponse[]
@@ -44,16 +41,24 @@ export function useTransactionColumns(
         meta: { width: "8rem" },
         cell: ({ row }) => formatDate(row.original.date),
       },
-      { accessorKey: "merchant", id: "merchant", header: "Merchant" },
+      {
+        accessorKey: "merchant",
+        id: "merchant",
+        header: "Merchant",
+        cell: ({ row }) => (
+          <div className="flex items-center gap-3">
+            <CategoryTile slug={row.original.category} size="sm" />
+            <span className="min-w-0 truncate">{row.original.merchant}</span>
+          </div>
+        ),
+      },
       {
         accessorKey: "amount",
         id: "amount",
         header: "Amount",
         meta: { align: "right", width: "8rem" },
         cell: ({ row }) => (
-          <span className={amountClass(row.original.amount)}>
-            {formatAmount(row.original.amount)}
-          </span>
+          <Money amount={row.original.amount} kind="transaction" />
         ),
       },
       {
@@ -80,7 +85,7 @@ export function useTransactionColumns(
             <span
               className={
                 isLowConfidence(c)
-                  ? "text-amber-600 dark:text-amber-400"
+                  ? "text-(--warning-text)"
                   : "text-muted-foreground"
               }
             >

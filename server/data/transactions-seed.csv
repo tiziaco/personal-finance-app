@@ -72,6 +72,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-05-23,EDEKA,-5.02,,food_groceries,1.0,false,Presentment
 2023-05-26,BVG,-3.49,,transportation,0.9,false,Presentment
 2023-05-26,Asiagourmet,-10.26,,food_groceries,0.9,false,Presentment
+2023-05-26,Employer GmbH,2312.42,Salary 05/2023,salary,1.0,true,Credit Transfer
 2023-05-27,LA ROSE DE FRANCE,-14.15,,food_groceries,0.5,false,Presentment
 2023-05-27,RATP,-11.83,,transportation,0.95,false,Presentment
 2023-05-28,MONOP,-4.85,,food_groceries,0.9,false,Presentment
@@ -114,6 +115,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-06-23,Lidl,-10.34,,food_groceries,1.0,false,Presentment
 2023-06-26,Uber Eats,-12.16,,food_delivery,0.5,false,Presentment
 2023-06-27,Lidl,-15.57,,food_groceries,1.0,false,Presentment
+2023-06-27,Employer GmbH,2312.42,Salary 06/2023,salary,1.0,true,Credit Transfer
 2023-06-29,Lidl,-3.30,,food_groceries,1.0,false,Presentment
 2023-07-01,LERCHEN & EULEN,-2.79,,bars_restaurants,0.9,false,Presentment
 2023-07-02,MILES,-5.06,,transportation,0.9,false,Presentment
@@ -147,6 +149,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-07-24,Kiosk,-87.33,,food_groceries,0.9,false,Presentment
 2023-07-26,RESIDENT ADVISOR TICKE,18.60,Refund,leisure_entertainment,0.95,false,Presentment Refund
 2023-07-27,Tor164,-21.83,,bars_restaurants,0.9,false,Presentment
+2023-07-27,Employer GmbH,2312.42,Salary 07/2023,salary,1.0,true,Credit Transfer
 2023-07-28,Bio Market,-11.14,,food_groceries,1.0,false,Presentment
 2023-07-29,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
 2023-07-29,Renate,-2.18,,bars_restaurants,1.0,false,Presentment
@@ -192,6 +195,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-09-22,REWE,-2.65,,food_groceries,1.0,false,Presentment
 2023-09-22,REWE,-3.69,,food_groceries,1.0,false,Presentment
 2023-09-25,Coffee Fellows,-2.27,,bars_restaurants,0.9,false,Presentment
+2023-09-27,Employer GmbH,2312.42,Salary 09/2023,salary,1.0,true,Credit Transfer
 2023-09-29,Lidl,-4.10,,food_groceries,1.0,false,Presentment
 2023-10-01,Lidl,-20.28,,food_groceries,1.0,false,Presentment
 2023-10-03,EDEKA,-15.40,,food_groceries,1.0,false,Presentment
@@ -215,6 +219,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-10-23,TRESOR BERLIN GMBH,-19.21,,leisure_entertainment,0.9,false,Presentment
 2023-10-24,Lidl,-7.71,,food_groceries,1.0,false,Presentment
 2023-10-26,Bio Market,-7.80,,food_groceries,1.0,false,Presentment
+2023-10-27,Employer GmbH,2312.42,Salary 10/2023,salary,1.0,true,Credit Transfer
 2023-10-28,BOULANGERIE SEC,-1.22,,food_groceries,0.9,false,Presentment
 2023-10-28,MAISON ST GEORG,-5.41,,bars_restaurants,0.9,false,Presentment
 2023-10-29,BOMBARDIER,-8.30,,miscellaneous,0.4,false,Presentment
@@ -244,6 +249,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-11-26,Lydia,-4.37,,family_friends,0.9,false,Presentment
 2023-11-26,Spaetify,-8.73,,food_groceries,0.9,false,Presentment
 2023-11-27,Cafe Wunder,-14.22,,bars_restaurants,0.9,false,Presentment
+2023-11-27,Employer GmbH,2312.42,Salary 11/2023,salary,1.0,true,Credit Transfer
 2023-11-28,Friend C,-3.91,,family_friends,0.4,false,Presentment
 2023-11-29,Friend C,-3.56,,family_friends,0.4,false,Presentment
 2023-11-30,Raclette bitte,-6.11,,bars_restaurants,0.8,false,Presentment
@@ -265,6 +271,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2023-12-18,Friend E,-21.83,,family_friends,0.4,false,Presentment
 2023-12-19,Wolt,-13.79,,food_delivery,1.0,false,Presentment
 2023-12-20,Ritter Butzke,-61.13,,leisure_entertainment,0.9,false,Presentment
+2023-12-27,Employer GmbH,2312.42,Salary 12/2023,salary,1.0,true,Credit Transfer
 2023-12-28,Regional Rail,-5.68,,transportation,0.7,false,Presentment
 2023-12-28,CASANIK,-29.69,,bars_restaurants,0.9,false,Presentment
 2023-12-30,Wine Shop,-1.22,,food_groceries,0.6,false,Presentment
@@ -285,6 +292,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-01-17,EDEKA,-22.24,,food_groceries,1.0,false,Presentment
 2024-01-19,Vending Machine,-87.33,,miscellaneous,0.2,false,Presentment
 2024-01-24,Kramer Restaurant,-38.42,,bars_restaurants,0.9,false,Presentment
+2024-01-26,Employer GmbH,2398.10,Salary 01/2024,salary,1.0,true,Credit Transfer
 2024-01-28,REWE,-23.43,,food_groceries,1.0,false,Presentment
 2024-02-01,Wolt,-10.73,,food_delivery,1.0,false,Presentment
 2024-02-01,Feather Insurance,-4.31,,insurances,1.0,true,Presentment
@@ -301,6 +309,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-02-20,Friend C,-3.31,,family_friends,0.4,false,Presentment
 2024-02-23,Lidl,-9.61,,food_groceries,1.0,false,Presentment
 2024-02-25,REWE,-25.75,,food_groceries,1.0,false,Presentment
+2024-02-27,Employer GmbH,2398.10,Salary 02/2024,salary,1.0,true,Credit Transfer
 2024-02-28,Mater,-16.59,,bars_restaurants,0.9,false,Presentment
 2024-03-01,BVG,-42.79,Monthly ticket,transportation,1.0,true,Direct Debit
 2024-03-02,Friend C,-3.31,,family_friends,0.4,false,Presentment
@@ -321,6 +330,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-03-25,Cash Withdrawal,-87.33,,atm,0.95,false,Presentment
 2024-03-25,Paloma,-10.48,,bars_restaurants,1.0,false,Presentment
 2024-03-27,Uber Eats,-11.48,,food_delivery,0.5,false,Presentment
+2024-03-27,Employer GmbH,2398.10,Salary 03/2024,salary,1.0,true,Credit Transfer
 2024-03-28,Mikkeller Berlin,-3.93,,bars_restaurants,0.9,false,Presentment
 2024-03-29,Lidl,-10.00,,food_groceries,1.0,false,Presentment
 2024-03-31,Klunkerkranich,-6.99,,bars_restaurants,1.0,false,Presentment
@@ -344,6 +354,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-04-22,Online Shop,-12.62,,shopping,0.3,false,Presentment
 2024-04-25,EDEKA,-10.87,,food_groceries,1.0,false,Presentment
 2024-04-25,Friend C,-3.05,,family_friends,0.4,false,Presentment
+2024-04-26,Employer GmbH,2398.10,Salary 04/2024,salary,1.0,true,Credit Transfer
 2024-04-27,Klunkerkranich,-2.18,,bars_restaurants,1.0,false,Presentment
 2024-04-27,Klunkerkranich,-6.11,,bars_restaurants,1.0,false,Presentment
 2024-04-28,Apple,-6.10,,media_electronics,0.95,true,Presentment
@@ -366,6 +377,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-05-23,Ryanair,-17.03,,travel_holidays,1.0,false,Presentment
 2024-05-25,Friend C,-5.05,,family_friends,0.4,false,Presentment
 2024-05-26,Lidl,-26.50,,food_groceries,1.0,false,Presentment
+2024-05-27,Employer GmbH,2398.10,Salary 05/2024,salary,1.0,true,Credit Transfer
 2024-05-28,MILES,-1.98,,transportation,0.9,false,Presentment
 2024-05-28,EDEKA,-11.61,,food_groceries,1.0,false,Presentment
 2024-05-31,Friend C,-4.09,,family_friends,0.4,false,Presentment
@@ -391,6 +403,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-06-20,Lidl,-29.59,,food_groceries,1.0,false,Presentment
 2024-06-23,Bio Market,-12.67,,food_groceries,1.0,false,Presentment
 2024-06-26,REWE,-25.56,,food_groceries,1.0,false,Presentment
+2024-06-27,Employer GmbH,2398.10,Salary 06/2024,salary,1.0,true,Credit Transfer
 2024-06-29,Lidl,-5.22,,food_groceries,1.0,false,Presentment
 2024-06-30,Klunkerkranich,-6.99,,bars_restaurants,1.0,false,Presentment
 2024-07-01,Klunkerkranich,-6.72,,bars_restaurants,1.0,false,Presentment
@@ -417,6 +430,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-07-24,Online Pharmacy,-34.06,,healthcare_drug_stores,0.9,false,Presentment
 2024-07-25,Friend D,-23.58,,family_friends,0.6,false,Presentment
 2024-07-26,Lidl,-3.70,,food_groceries,1.0,false,Presentment
+2024-07-26,Employer GmbH,2398.10,Salary 07/2024,salary,1.0,true,Credit Transfer
 2024-07-27,Lidl,-4.17,,food_groceries,1.0,false,Presentment
 2024-07-28,Paloma,-9.17,,bars_restaurants,1.0,false,Presentment
 2024-07-29,Paloma,-3.23,,bars_restaurants,1.0,false,Presentment
@@ -448,6 +462,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-08-20,Lufthansa,-210.93,,travel_holidays,0.9,false,Presentment
 2024-08-24,PayPal Pay in 3,-72.25,,shopping,0.6,false,Presentment
 2024-08-27,Beach Club,-3.06,,bars_restaurants,0.8,false,Presentment
+2024-08-27,Employer GmbH,2398.10,Salary 08/2024,salary,1.0,true,Credit Transfer
 2024-08-28,Cocolo Restaurant,-19.69,,bars_restaurants,0.95,false,Presentment
 2024-08-28,REWE,-33.60,,food_groceries,1.0,false,Presentment
 2024-08-29,RELAY,-7.95,,shopping,0.9,false,Presentment
@@ -494,6 +509,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-09-25,Wolt,-12.23,,food_delivery,1.0,false,Presentment
 2024-09-26,REWE,-30.85,,food_groceries,1.0,false,Presentment
 2024-09-27,BURGER VISION,-11.27,,bars_restaurants,0.9,false,Presentment
+2024-09-27,Employer GmbH,2398.10,Salary 09/2024,salary,1.0,true,Credit Transfer
 2024-09-29,Vending Machine,-61.13,,miscellaneous,0.2,false,Presentment
 2024-09-29,Wolt,-20.06,,food_delivery,1.0,false,Presentment
 2024-09-30,Brick Berlin,-26.46,,bars_restaurants,0.9,false,Presentment
@@ -519,6 +535,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-10-20,POCO EINRICHTUNGSMÄRKT,-6.53,,shopping,1.0,false,Presentment
 2024-10-23,PayPal Pay in 3,-72.25,,shopping,0.6,false,Presentment
 2024-10-25,REWE,-39.45,,food_groceries,1.0,false,Presentment
+2024-10-25,Employer GmbH,2398.10,Salary 10/2024,salary,1.0,true,Credit Transfer
 2024-10-28,Lidl,-9.82,,food_groceries,1.0,false,Presentment
 2024-10-30,Udemy,-14.83,,education,1.0,false,Presentment
 2024-10-30,Shodo Udon Lab,-18.25,,bars_restaurants,0.9,false,Presentment
@@ -558,6 +575,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2024-12-14,Sparkasse ATM,-52.40,,atm,0.9,false,Presentment
 2024-12-15,Lidl,-31.93,,food_groceries,1.0,false,Presentment
 2024-12-16,Friend O,-4.80,,family_friends,0.9,false,Presentment
+2024-12-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2024-12-17,Riedel Berlin Cruises,-11.79,,leisure_entertainment,0.9,false,Presentment
 2024-12-17,REWE,-9.99,,food_groceries,1.0,false,Presentment
 2024-12-18,Lidl,-13.74,,food_groceries,1.0,false,Presentment
@@ -618,6 +636,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2025-02-17,BOWLING,-15.72,,leisure_entertainment,0.9,false,Presentment
 2025-02-17,Gym,-4.21,Membership,leisure_entertainment,1.0,true,Direct Debit
 2025-02-17,illy,-2.58,,bars_restaurants,0.9,false,Presentment
+2025-02-17,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2025-02-18,REWE,-17.36,,food_groceries,1.0,false,Presentment
 2025-02-20,Lidl,-6.91,,food_groceries,1.0,false,Presentment
 2025-02-21,Playtomic,-49.34,,leisure_entertainment,1.0,false,Presentment
@@ -649,6 +668,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2025-03-15,Lidl,-20.79,,food_groceries,1.0,false,Presentment
 2025-03-17,Pandoras Cafe,-17.29,,bars_restaurants,0.9,false,Presentment
 2025-03-17,Savings Space,-192.12,Savings,savings_investments,1.0,false,Debit Transfer
+2025-03-17,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2025-03-18,Elfi-Supermarkt,-1.30,,food_groceries,0.9,false,Presentment
 2025-03-20,Uber,-12.45,,transportation,1.0,false,Presentment
 2025-03-20,Pawn Dot Com Bar,-8.41,,bars_restaurants,0.9,false,Presentment
@@ -790,6 +810,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2025-07-15,Wandelhalle HH,-7.77,,bars_restaurants,0.9,false,Presentment
 2025-07-15,Savings Space,-192.12,Savings,savings_investments,1.0,false,Debit Transfer
 2025-07-16,Bio Market,-9.99,,food_groceries,1.0,false,Presentment
+2025-07-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2025-07-17,Bio Market,-11.08,,food_groceries,1.0,false,Presentment
 2025-07-18,Friend F,-11.35,,family_friends,0.9,false,Presentment
 2025-07-18,BER Airport,-3.49,,travel_holidays,0.9,false,Presentment
@@ -830,6 +851,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2025-08-14,Playtomic,-26.63,,leisure_entertainment,1.0,false,Presentment
 2025-08-15,Health Insurer,-225.11,Contribution,insurances,1.0,true,Debit Transfer
 2025-08-17,Beach Club,-13.10,,bars_restaurants,0.8,false,Presentment
+2025-08-18,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2025-08-19,Supermarket,-18.77,,food_groceries,0.9,false,Presentment
 2025-08-20,Bio Market,-4.38,,food_groceries,1.0,false,Presentment
 2025-08-21,Espresso House,-5.94,,bars_restaurants,0.9,false,Presentment
@@ -866,6 +888,7 @@ date,merchant,amount,description,category,confidence,is_recurring,original_categ
 2025-09-14,Lidl,-1.52,,food_groceries,1.0,false,Presentment
 2025-09-15,Health Insurer,-739.32,Contribution,insurances,1.0,true,Debit Transfer
 2025-09-15,Wolt,-14.01,,food_delivery,1.0,false,Presentment
+2025-09-16,University,1921.17,Scholarship,income,1.0,true,Credit Transfer
 2025-09-17,TICKET.IO,-116.57,,leisure_entertainment,0.9,false,Presentment
 2025-09-18,Rueya,-6.29,,bars_restaurants,1.0,false,Presentment
 2025-09-20,Bio Market,-9.94,,food_groceries,1.0,false,Presentment

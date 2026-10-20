@@ -5,25 +5,14 @@ import { useListTransactions } from "@app/api-client/endpoints/transactions"
 import type { TransactionResponse } from "@app/api-client/types"
 import { buttonVariants } from "@app/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@app/ui/card"
-import { cn } from "@app/core/lib/utils"
-import {
-  amountClass,
-  formatAmount,
-  formatDate,
-} from "@/components/transactions/format"
+import { formatDate } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
+import { CategoryTile } from "@/components/transactions/category-icon"
 import { useCategories } from "@/components/transactions/use-categories"
 import { RecentSkeleton } from "./dashboard-skeleton"
 import { SectionError } from "./section-error"
 
 const RECENT = { limit: 10 } as const
-
-function Amount({ value }: { value: string }) {
-  return (
-    <span className={cn("tabular-nums", amountClass(value))}>
-      {formatAmount(value)}
-    </span>
-  )
-}
 
 /** The ten newest transactions: a table from md up, a list on a phone. */
 export function RecentTransactions() {
@@ -63,7 +52,12 @@ export function RecentTransactions() {
               <tbody>
                 {items.map((t) => (
                   <tr key={t.id} className="border-b last:border-0">
-                    <td className="py-2 pr-3 font-medium">{t.merchant}</td>
+                    <td className="py-2 pr-3 font-medium">
+                      <div className="flex items-center gap-3">
+                        <CategoryTile slug={t.category} />
+                        <span className="min-w-0 truncate">{t.merchant}</span>
+                      </div>
+                    </td>
                     <td className="py-2 pr-3 text-muted-foreground">
                       {formatDate(t.date)}
                     </td>
@@ -71,7 +65,7 @@ export function RecentTransactions() {
                       {label(t.category)}
                     </td>
                     <td className="py-2 text-right">
-                      <Amount value={t.amount} />
+                      <Money amount={t.amount} kind="transaction" />
                     </td>
                   </tr>
                 ))}
@@ -79,17 +73,15 @@ export function RecentTransactions() {
             </table>
             <ul className="space-y-3 md:hidden">
               {items.map((t) => (
-                <li
-                  key={t.id}
-                  className="flex items-start justify-between gap-3"
-                >
-                  <div className="min-w-0">
+                <li key={t.id} className="flex items-center gap-3">
+                  <CategoryTile slug={t.category} />
+                  <div className="min-w-0 flex-1">
                     <p className="truncate font-medium">{t.merchant}</p>
                     <p className="text-xs text-muted-foreground">
                       {formatDate(t.date)} · {label(t.category)}
                     </p>
                   </div>
-                  <Amount value={t.amount} />
+                  <Money amount={t.amount} kind="transaction" />
                 </li>
               ))}
             </ul>
