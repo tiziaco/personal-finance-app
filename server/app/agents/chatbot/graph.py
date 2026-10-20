@@ -207,6 +207,17 @@ class ChatbotAgent(BaseAgent):
             raise Exception(f"failed to get llm response after trying all models: {str(e)}")
 
         if not response_message.tool_calls:
+            if not response_message.text.strip():
+                # Not an answer: ending the turn here would store an empty reply and show the user nothing.
+                # The Responses API reports a cut-off reply as status "incomplete" with no content.
+                logger.warning(
+                    "llm_empty_response",
+                    conversation_id=conversation_id,
+                    model=response_message.response_metadata.get("model_name") or model_name,
+                    status=response_message.response_metadata.get("status"),
+                    incomplete_details=response_message.response_metadata.get("incomplete_details"),
+                )
+                raise Exception("the model returned an empty reply")
             return Command(update={"messages": [response_message]}, goto=END)
 
         if state.turn_steps + 1 >= settings.llm.CHAT_MAX_STEPS:

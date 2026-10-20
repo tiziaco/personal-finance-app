@@ -443,6 +443,56 @@ class TestTurnLimits:
         assert after == before + 1
 
 
+class TestEmptyReply:
+    """A reply with no text and no tool calls is a failed model call, not an answer."""
+
+    @pytest.mark.parametrize(
+        "reply",
+        [
+            AIMessage(content=""),
+            AIMessage(content="  "),
+            AIMessage(
+                content=[],
+                response_metadata={"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+            ),
+        ],
+    )
+    async def test_the_turn_fails_and_nothing_empty_is_checkpointed(self, reply):
+        agent = _agent_with(make_tool("t", _ok))
+
+        with pytest.raises(Exception, match="empty"):
+            await TestStreamAndHistory._stream(agent, lambda w, n: reply)
+
+        history = await agent.get_chat_history(THREAD_ID)
+        assert [m.role for m in history] == ["user"]
+
+    async def test_it_is_logged_with_the_model_and_the_incomplete_reason(self):
+        agent = _agent_with(make_tool("t", _ok))
+        reply = AIMessage(
+            content="",
+            response_metadata={"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+        )
+
+        with patch("app.agents.chatbot.graph.logger") as log, pytest.raises(Exception, match="empty"):
+            await TestStreamAndHistory._stream(agent, lambda w, n: reply)
+
+        [call] = [c for c in log.warning.call_args_list if c.args[0] == "llm_empty_response"]
+        assert call.kwargs["model"] == LLMRegistry.get_all_names()[0]
+        assert call.kwargs["status"] == "incomplete"
+        assert call.kwargs["incomplete_details"] == {"reason": "max_output_tokens"}
+
+    async def test_an_empty_wrap_up_falls_back_to_the_fixed_text(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return AIMessage(content="") if not with_tools else AIMessage(content="", tool_calls=[_call("t", n, "c")])
+
+        events = await TestStreamAndHistory._stream(agent, respond)
+
+        assert events == [TextEvent(text=STOPPED_FALLBACK_TEXT), DoneEvent(stopped=True)]
+
+
 class TestStreamAndHistory:
     """The typed stream and the history on the real graph: what reaches the client."""
 

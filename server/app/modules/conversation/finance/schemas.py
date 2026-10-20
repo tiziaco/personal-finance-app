@@ -4,7 +4,7 @@ import datetime as dt
 from decimal import Decimal
 from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, WithJsonSchema, model_validator
 
 from app.modules.transaction import MAX_DATE, MIN_DATE, Category
 
@@ -50,6 +50,12 @@ class TopMerchantsArgs(PeriodArgs):
     top_n: int = Field(10, ge=1, le=15, description="How many merchants to rank by spend.")
 
 
+# Pydantic describes a Decimal as number-or-string with a lookahead regex `pattern`, and a model bound
+# to that schema answers nothing. The model sends a JSON number; pydantic reads a float through its
+# shortest repr (-0.1 is Decimal("-0.1")), so amounts stay exact server side.
+Amount = Annotated[Decimal, WithJsonSchema({"type": "number"})]
+
+
 class SearchArgs(BaseModel):
     """Filters for `search_transactions`; every one is optional and they all apply together."""
 
@@ -65,11 +71,11 @@ class SearchArgs(BaseModel):
     categories: Optional[list[Category]] = Field(
         None, max_length=len(Category), description="Only these categories, by slug (the one in brackets)."
     )
-    amount_min: Optional[Decimal] = Field(
+    amount_min: Optional[Amount] = Field(
         None,
         description="Smallest signed amount in EUR: spending is negative, so -100 means spending up to 100 or any income.",
     )
-    amount_max: Optional[Decimal] = Field(
+    amount_max: Optional[Amount] = Field(
         None, description="Largest signed amount in EUR: -50 keeps spending of at least 50; 0 keeps only spending."
     )
     recurring_only: bool = Field(False, description="Only transactions marked recurring.")

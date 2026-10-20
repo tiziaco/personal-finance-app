@@ -1,11 +1,13 @@
 """PeriodArgs: one kind of period, in bounds, and nothing the tool does not take."""
 
 import datetime as dt
+from decimal import Decimal
 
 import pytest
 from pydantic import ValidationError
 
-from app.modules.conversation.finance.schemas import PeriodArgs, TopMerchantsArgs
+from app.modules.conversation.finance.schemas import PeriodArgs, SearchArgs, TopMerchantsArgs
+from app.modules.conversation.finance.service import finance_toolkit
 
 pytestmark = pytest.mark.unit
 
@@ -51,3 +53,34 @@ def test_top_merchants_caps_its_ranking_at_15():
     assert TopMerchantsArgs.model_validate({"months": 1}).top_n == 10
     with pytest.raises(ValidationError, match="top_n"):
         TopMerchantsArgs.model_validate({"months": 1, "top_n": 16})
+
+
+def _keys(node):
+    """Every key anywhere in a JSON-schema document."""
+    if isinstance(node, dict):
+        for key, value in node.items():
+            yield key
+            yield from _keys(value)
+    elif isinstance(node, list):
+        for item in node:
+            yield from _keys(item)
+
+
+def test_no_tool_schema_sent_to_the_model_carries_a_regex_pattern():
+    # Pydantic's Decimal schema has a lookahead `pattern`; with it, gpt-5-mini answers nothing at all.
+    tools = finance_toolkit().tools
+    assert tools
+    for tool in tools:
+        assert "pattern" not in set(_keys(tool.as_schema())), tool.name
+
+
+def test_amounts_are_json_numbers_in_the_schema_and_exact_decimals_after_parsing():
+    props = SearchArgs.model_json_schema()["properties"]
+    assert props["amount_min"]["anyOf"][0]["type"] == "number"
+    args = SearchArgs.model_validate({"amount_min": -0.1, "amount_max": 12.35})
+    assert (args.amount_min, args.amount_max) == (Decimal("-0.1"), Decimal("12.35"))
+
+
+def test_an_inverted_amount_range_is_rejected():
+    with pytest.raises(ValidationError, match="amount_min"):
+        SearchArgs.model_validate({"amount_min": 5, "amount_max": 1})
