@@ -135,7 +135,7 @@ export const SendChatMessageResponse = zod
                               zod.null(),
                             ])
                             .describe(
-                              "What the chat shows for the result; null when the call failed",
+                              "What the chat shows for the result; null when the call failed or its display can no longer be shown",
                             ),
                           id: zod
                             .string()
@@ -146,6 +146,11 @@ export const SendChatMessageResponse = zod
                           ok: zod
                             .boolean()
                             .describe("Whether the call produced a result"),
+                          title: zod
+                            .string()
+                            .describe(
+                              "The tool's display title, as the stream's tool_started event carries it",
+                            ),
                           type: zod
                             .literal("tool")
                             .default(
@@ -318,7 +323,7 @@ export const ListChatMessagesResponse = zod
                                   zod.null(),
                                 ])
                                 .describe(
-                                  "What the chat shows for the result; null when the call failed",
+                                  "What the chat shows for the result; null when the call failed or its display can no longer be shown",
                                 ),
                               id: zod
                                 .string()
@@ -329,6 +334,11 @@ export const ListChatMessagesResponse = zod
                               ok: zod
                                 .boolean()
                                 .describe("Whether the call produced a result"),
+                              title: zod
+                                .string()
+                                .describe(
+                                  "The tool's display title, as the stream's tool_started event carries it",
+                                ),
                               type: zod
                                 .literal("tool")
                                 .default(

@@ -485,7 +485,7 @@ class TestStreamAndHistory:
             DoneEvent(stopped=False),
         ]
         [_, reply] = await agent.get_chat_history(THREAD_ID)
-        assert reply.activity.parts == [ToolPart(id="c1", name="t", ok=True, display=_display())]
+        assert reply.activity.parts == [ToolPart(id="c1", name="t", title="t title", ok=True, display=_display())]
 
     async def test_a_turn_the_server_stopped_is_done_stopped_and_reopens_stopped(self, monkeypatch):
         monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)

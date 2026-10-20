@@ -11,7 +11,7 @@ import type { ToolDisplay } from "./toolDisplay"
  * One tool call a reply made, as the chat shows it.
  */
 export interface ToolPart {
-  /** What the chat shows for the result; null when the call failed */
+  /** What the chat shows for the result; null when the call failed or its display can no longer be shown */
   display: ToolDisplay | null
   /** The tool call's id, as the stream's tool events carry it */
   id: string
@@ -19,5 +19,7 @@ export interface ToolPart {
   name: string
   /** Whether the call produced a result */
   ok: boolean
+  /** The tool's display title, as the stream's tool_started event carries it */
+  title: string
   type: "tool"
 }

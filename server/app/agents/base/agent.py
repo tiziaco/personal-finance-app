@@ -240,13 +240,14 @@ class BaseAgent(ABC):
             return []
         return self._process_messages(state.values["messages"], stopped=state.values.get("stopped", {}))
 
-    def _shows_tool(self, name: str) -> bool:
-        """Whether a call to this tool appears in a reply's activity.
+    def _tool_title(self, name: str) -> Optional[str]:
+        """The display title of a call to this tool in a reply's activity, or None to leave it out.
 
-        An agent whose stream announces only some tool calls narrows this, so a
-        reopened conversation shows the same rows the stream did.
+        An agent whose stream announces only some tool calls returns None for the
+        rest, so a reopened conversation shows the same rows, with the same titles,
+        the stream did.
         """
-        return True
+        return name
 
     def _process_messages(self, messages: list[BaseMessage], stopped: dict[str, str]) -> list[ChatMessage]:
         """Rebuild the history the client shows: each user message, then the turn's reply.
@@ -290,15 +291,16 @@ class BaseAgent(ABC):
                 parts.append(ReasoningPart(text=reasoning))
             for call in message.tool_calls:
                 result = results.get(call["id"])
-                if result is not None and self._shows_tool(call["name"]):
-                    parts.append(self._tool_part(call, result))
+                title = self._tool_title(call["name"])
+                if result is not None and title is not None:
+                    parts.append(self._tool_part(call, title, result))
 
         is_stopped = final.id is not None and final.id in stopped
         activity = Activity(parts=parts, stopped=is_stopped) if parts or is_stopped else None
         return [ChatMessage(role="assistant", content=_TURN_MESSAGE_SEPARATOR.join(texts), activity=activity)]
 
     @staticmethod
-    def _tool_part(call: dict, result: ToolMessage) -> ToolPart:
+    def _tool_part(call: dict, title: str, result: ToolMessage) -> ToolPart:
         """A tool call's part; its display is the result's artifact, if that still validates."""
         ok = result.status != "error"
         display = None
@@ -308,4 +310,4 @@ class BaseAgent(ABC):
             except ValidationError:
                 # An older checkpoint's display shape: the row stays, without its figures.
                 logger.warning("chat_history_tool_display_invalid", tool_name=call["name"], tool_call_id=call["id"])
-        return ToolPart(id=call["id"], name=call["name"], ok=ok, display=display)
+        return ToolPart(id=call["id"], name=call["name"], title=title, ok=ok, display=display)

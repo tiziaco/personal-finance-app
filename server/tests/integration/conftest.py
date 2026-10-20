@@ -95,11 +95,10 @@ async def authenticated_client_with_agent(authenticated_client, mock_agent):
 
     The chat routes put `app.state.session_factory` in the turn's context for the
     agent's tools, and no lifespan sets it under test. The agent is a mock that opens
-    no session, so a sentinel stands in; it is removed again so that tests relying on
-    its absence (`unauthenticated_client`) are unaffected.
+    no session, so a sentinel stands in; whatever was there before is put back, so
+    tests relying on its absence (`unauthenticated_client`) are unaffected.
     """
     app.dependency_overrides[get_chatbot_agent] = lambda: mock_agent
-    app.state.session_factory = MagicMock(name="session_factory")
-    yield authenticated_client
-    del app.state.session_factory
+    with patch.object(app.state, "session_factory", MagicMock(name="session_factory"), create=True):
+        yield authenticated_client
     app.dependency_overrides.pop(get_chatbot_agent, None)

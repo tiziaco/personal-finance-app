@@ -2732,7 +2732,7 @@
                 "type": "null"
               }
             ],
-            "description": "What the chat shows for the result; null when the call failed"
+            "description": "What the chat shows for the result; null when the call failed or its display can no longer be shown"
           },
           "id": {
             "description": "The tool call's id, as the stream's tool events carry it",
@@ -2749,6 +2749,11 @@
             "title": "Ok",
             "type": "boolean"
           },
+          "title": {
+            "description": "The tool's display title, as the stream's tool_started event carries it",
+            "title": "Title",
+            "type": "string"
+          },
           "type": {
             "const": "tool",
             "default": "tool",
@@ -2760,6 +2765,7 @@
           "type",
           "id",
           "name",
+          "title",
           "ok",
           "display"
         ],

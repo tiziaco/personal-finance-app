@@ -51,9 +51,11 @@ class ToolPart(_HistoryModel):
     type: Literal["tool"] = "tool"
     id: str = Field(..., description="The tool call's id, as the stream's tool events carry it")
     name: str = Field(..., description="The tool's name")
+    title: str = Field(..., description="The tool's display title, as the stream's tool_started event carries it")
     ok: bool = Field(..., description="Whether the call produced a result")
     display: ToolDisplay | None = Field(
-        default=None, description="What the chat shows for the result; null when the call failed"
+        default=None,
+        description="What the chat shows for the result; null when the call failed or its display can no longer be shown",
     )
 
 

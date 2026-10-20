@@ -28,9 +28,15 @@ DISPLAY = ToolDisplay(
 )
 
 
+TITLES = {"spending": "Spending by category", "income": "Income"}
+
+
 class _Agent(BaseAgent):
     async def create_graph(self, checkpointer):  # pragma: no cover - not used
         raise NotImplementedError
+
+    def _tool_title(self, name: str) -> str | None:
+        return TITLES.get(name)
 
 
 class _FakeGraph:
@@ -299,7 +305,9 @@ def test_history_folds_a_turn_into_one_message_with_activity():
     [user, reply] = _Agent()._process_messages(_tool_turn(), stopped={})
     assert user == ChatMessage(role="user", content="Where did my money go?")
     assert reply.content == "answer"
-    assert reply.activity == Activity(parts=[ToolPart(id="c1", name="spending", ok=True, display=DISPLAY)])
+    assert reply.activity == Activity(
+        parts=[ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=DISPLAY)]
+    )
     assert reply.activity.parts[0].display.title == "Spending by category"
 
 
@@ -335,15 +343,19 @@ def test_a_reply_without_reasoning_or_tools_has_no_activity():
     assert history[-1] == ChatMessage(role="assistant", content="Hello.", activity=None)
 
 
-def test_a_failed_tool_call_is_a_part_without_display():
+def test_a_failed_tool_call_is_a_part_without_display_but_with_its_title():
     [_, reply] = _Agent()._process_messages(_tool_turn(artifact=None, status="error"), stopped={})
-    assert reply.activity.parts == [ToolPart(id="c1", name="spending", ok=False, display=None)]
+    assert reply.activity.parts == [
+        ToolPart(id="c1", name="spending", title="Spending by category", ok=False, display=None)
+    ]
 
 
 def test_an_artifact_that_no_longer_validates_keeps_the_part_without_display():
     """An old checkpoint's artifact must not fail the whole history."""
     [_, reply] = _Agent()._process_messages(_tool_turn(artifact={"title": "Old shape"}), stopped={})
-    assert reply.activity.parts == [ToolPart(id="c1", name="spending", ok=True, display=None)]
+    assert reply.activity.parts == [
+        ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=None)
+    ]
 
 
 def test_reasoning_and_tool_parts_keep_their_order():
@@ -382,8 +394,8 @@ def test_reasoning_and_tool_parts_keep_their_order():
         activity=Activity(
             parts=[
                 ReasoningPart(text="First.\n\nSecond."),
-                ToolPart(id="c1", name="spending", ok=True, display=DISPLAY),
-                ToolPart(id="c2", name="income", ok=False, display=None),
+                ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=DISPLAY),
+                ToolPart(id="c2", name="income", title="Income", ok=False, display=None),
                 ReasoningPart(text="Then."),
             ]
         ),
@@ -426,8 +438,8 @@ def test_a_tool_the_agent_does_not_show_is_left_out():
     """The stream announces only the agent's own tools; the history matches it."""
 
     class _Shows(_Agent):
-        def _shows_tool(self, name: str) -> bool:
-            return name != "spending"
+        def _tool_title(self, name: str) -> str | None:
+            return None if name == "spending" else super()._tool_title(name)
 
     [_, reply] = _Shows()._process_messages(_tool_turn(), stopped={})
     assert reply.activity is None

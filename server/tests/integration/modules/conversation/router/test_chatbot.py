@@ -193,8 +193,8 @@ class TestGetChatHistory:
                 activity=Activity(
                     parts=[
                         ReasoningPart(text="Checking categories."),
-                        ToolPart(id="c1", name="spending", ok=True, display=DISPLAY),
-                        ToolPart(id="c2", name="income", ok=False, display=None),
+                        ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=DISPLAY),
+                        ToolPart(id="c2", name="income", title="Income", ok=False, display=None),
                     ],
                     stopped=True,
                 ),
@@ -207,8 +207,15 @@ class TestGetChatHistory:
         assert reply["activity"] == {
             "parts": [
                 {"type": "reasoning", "text": "Checking categories."},
-                {"type": "tool", "id": "c1", "name": "spending", "ok": True, "display": DISPLAY.model_dump()},
-                {"type": "tool", "id": "c2", "name": "income", "ok": False, "display": None},
+                {
+                    "type": "tool",
+                    "id": "c1",
+                    "name": "spending",
+                    "title": "Spending by category",
+                    "ok": True,
+                    "display": DISPLAY.model_dump(),
+                },
+                {"type": "tool", "id": "c2", "name": "income", "title": "Income", "ok": False, "display": None},
             ],
             "stopped": True,
         }
