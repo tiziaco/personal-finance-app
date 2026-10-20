@@ -13,3 +13,9 @@
 # regenerating is always correct and hand-merging never is.
 web-app/packages/api-client/src/generated/** linguist-generated=true
 server/openapi.json                          linguist-generated=true
+
+# The Claude Design export behind the finsight-design skill: reference HTML, JS
+# and CSS the agent reads, not code the app ships. linguist-documentation keeps
+# it out of the repository's language statistics but, unlike linguist-generated,
+# leaves it expanded in PR diffs — a change to the skill is still reviewed.
+.claude/skills/finsight-design/** linguist-documentation=true
