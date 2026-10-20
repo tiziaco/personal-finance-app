@@ -9,10 +9,13 @@ carries the `ToolOutcome` back: `content` for the model, `display` for the UI.
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import TYPE_CHECKING, Any, Literal
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.ext.asyncio import async_sessionmaker
+
+if TYPE_CHECKING:
+    # Type-only: a module's domain slot builds ToolOutcomes, and R9 keeps the ORM out of it.
+    from sqlalchemy.ext.asyncio import async_sessionmaker
 
 
 @dataclass
@@ -24,7 +27,7 @@ class TurnContext:
     """
 
     user_id: uuid.UUID
-    session_factory: async_sessionmaker
+    session_factory: "async_sessionmaker"
     # Scratch space shared by this turn's tool calls (e.g. a history loaded once).
     cache: dict[str, Any] = field(default_factory=dict)
 

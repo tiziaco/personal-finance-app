@@ -267,3 +267,18 @@ source_modules = [
     "app.modules.transaction.service",
 ]
 forbidden_modules = ["app.modules.transaction.imports"]
+
+[[tool.importlinter.contracts]]
+name = "R10: conversation's core never imports its finance sub-package"
+type = "forbidden"
+source_modules = [
+    "app.modules.conversation.dependencies",
+    "app.modules.conversation.exceptions",
+    "app.modules.conversation.handlers",
+    "app.modules.conversation.models",
+    "app.modules.conversation.repository",
+    "app.modules.conversation.router",
+    "app.modules.conversation.schemas",
+    "app.modules.conversation.service",
+]
+forbidden_modules = ["app.modules.conversation.finance"]

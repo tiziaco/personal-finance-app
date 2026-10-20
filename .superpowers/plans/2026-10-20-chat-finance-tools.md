@@ -310,7 +310,7 @@ def test_system_prompt_has_no_date_or_memory_placeholders():
   - `async def preamble(ctx: TurnContext) -> str` — "Last finished month: …; data covers … to …" or "The user has no transactions yet." (Review Focus 3).
   - `def finance_toolkit() -> Toolkit`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_months_and_dates_together_are_rejected():  # pydantic ValidationError
@@ -329,10 +329,10 @@ async def test_figures_match_the_analytics_route():  # spending_overview total =
 async def test_preamble_without_transactions_says_so():
 ```
 
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Implement.** Tool descriptions say when to use and when not (e.g. category_breakdown: "not for a single merchant — use search_transactions"). Add the R10 contract and run `cd server && uv run lint-imports`.
-- [ ] **Step 4: Run** the new tests, `make test-unit`, `make test-integration`, `lint-imports` — PASS.
-- [ ] **Step 5: Commit** `feat(conversation): finance toolkit over the analytics history`.
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Implement.** Tool descriptions say when to use and when not (e.g. category_breakdown: "not for a single merchant — use search_transactions"). Add the R10 contract and run `cd server && uv run lint-imports`.
+- [x] **Step 4: Run** the new tests, `make test-unit`, `make test-integration`, `lint-imports` — PASS.
+- [x] **Step 5: Commit** `feat(conversation): finance toolkit over the analytics history`.
 
 ---
 
