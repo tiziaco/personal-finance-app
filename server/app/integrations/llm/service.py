@@ -80,6 +80,8 @@ class LLMRegistry:
     # the process is single-threaded asyncio, and a lost race would cost one
     # redundant client, not a correctness bug.
     _instances: Dict[str, BaseChatModel] = {}
+    # Clients built by `get_tuned()`, kept apart so the defaults above stay untouched.
+    _tuned: Dict[tuple[str, int, Optional[str]], BaseChatModel] = {}
 
     @classmethod
     def _build(cls, model_name: str, **params) -> BaseChatModel:
@@ -122,6 +124,27 @@ class LLMRegistry:
         return cls._instances[model_name]
 
     @classmethod
+    def get_tuned(cls, model_name: str, *, max_tokens: int, reasoning_effort: Optional[str]) -> BaseChatModel:
+        """Get an LLM by name with its token budget and reasoning effort replaced.
+
+        Only entries whose params carry `reasoning` take the effort (and ask for a
+        readable summary of it); the others ignore it, so a non-reasoning fallback
+        never fails because of the tuning. The default instances are not touched.
+        """
+        key = (model_name, max_tokens, reasoning_effort)
+        if key not in cls._tuned:
+            entry = next((e for e in cls.LLMS if e["name"] == model_name), None)
+            if entry is None:
+                raise ValueError(
+                    f"model '{model_name}' not found in registry. available models: {', '.join(cls.get_all_names())}"
+                )
+            params = dict(entry["params"])
+            if "reasoning" in params and reasoning_effort is not None:
+                params["reasoning"] = {**params["reasoning"], "effort": reasoning_effort, "summary": "auto"}
+            cls._tuned[key] = cls._build(model_name, max_tokens=max_tokens, **params)
+        return cls._tuned[key]
+
+    @classmethod
     def get_all_names(cls) -> List[str]:
         """Get all registered LLM names, in registry order."""
         return [entry["name"] for entry in cls.LLMS]
@@ -137,8 +160,11 @@ class LLMRegistry:
 class LLMService:
     """Service for managing LLM calls with retries and circular fallback."""
 
-    def __init__(self):
+    def __init__(self, *, max_tokens: Optional[int] = None, reasoning_effort: Optional[str] = None):
         """Initialize the LLM service.
+
+        `max_tokens` and `reasoning_effort` tune every client the service builds, fallbacks
+        included (see `LLMRegistry.get_tuned`); unset, the registry defaults apply.
 
         No client is constructed here: `llm_service` below is a module-level
         singleton, so anything built in this method runs at import. `get_llm()`
@@ -147,6 +173,8 @@ class LLMService:
         `_default_index` is set here and never moves: a call keeps its fallback
         position in its own locals, since `llm_service` is shared by every request.
         """
+        self._max_tokens = max_tokens
+        self._reasoning_effort = reasoning_effort
         self._llm: Optional[BaseChatModel] = None
         self._tools: Optional[List] = None
         self._default_index: int = 0
@@ -170,8 +198,8 @@ class LLMService:
                 error=str(e),
             )
 
-    def _resolve(self, model_name: str, **kwargs) -> BaseChatModel:
-        """Build the client for `model_name` with the registered tools bound.
+    def _resolve(self, model_name: str, *, with_tools: bool = True, **kwargs) -> BaseChatModel:
+        """Build the client for `model_name` with the registered tools bound (unless `with_tools` is False).
 
         Every client the service calls is built here.
 
@@ -182,8 +210,15 @@ class LLMService:
         Resolving from the registry rather than from a held client is what makes
         that correct for a fallback, which moves to another model.
         """
-        llm = LLMRegistry.get(model_name, **kwargs)
-        return llm.bind_tools(self._tools) if self._tools else llm
+        if kwargs or (self._max_tokens is None and self._reasoning_effort is None):
+            llm = LLMRegistry.get(model_name, **kwargs)
+        else:
+            llm = LLMRegistry.get_tuned(
+                model_name,
+                max_tokens=self._max_tokens if self._max_tokens is not None else settings.llm.MAX_TOKENS,
+                reasoning_effort=self._reasoning_effort,
+            )
+        return llm.bind_tools(self._tools) if self._tools and with_tools else llm
 
     @retry(
         stop=stop_after_attempt(settings.llm.MAX_LLM_CALL_RETRIES),
@@ -221,22 +256,26 @@ class LLMService:
         messages: List[BaseMessage],
         model_name: Optional[str] = None,
         config: Optional[RunnableConfig] = None,
+        *,
+        with_tools: bool = True,
         **model_kwargs,
     ) -> BaseMessage:
         """Call the LLM with circular fallback, on `model_name` if given.
 
         `config` carries tracing callbacks for a call made outside a graph;
-        inside one, LangChain propagates the graph's.
+        inside one, LangChain propagates the graph's. `with_tools=False` calls clients
+        without the bound tools (a wrap-up call that must answer in text).
 
         Raises:
             ValueError: `model_name` is not in the registry.
             LLMServiceError: every model failed after retries (see _call_with_fallback).
         """
         if not model_name:
-            return await self._call_with_fallback(messages, config, self._default_index, self.get_llm())
+            start = self.get_llm() if with_tools else self._resolve(self.current_model_name(), with_tools=False)
+            return await self._call_with_fallback(messages, config, self._default_index, start, with_tools)
 
         try:
-            pinned = self._resolve(model_name, **model_kwargs)
+            pinned = self._resolve(model_name, with_tools=with_tools, **model_kwargs)
         except ValueError as e:
             logger.error("requested_model_not_found", model_name=model_name, error=str(e))
             raise
@@ -244,7 +283,9 @@ class LLMService:
         # The pin lives in this call's locals, never on the service: `llm_service` is a
         # singleton shared by every request, and a pin set on it would retarget their calls.
         logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
-        return await self._call_with_fallback(messages, config, LLMRegistry.get_all_names().index(model_name), pinned)
+        return await self._call_with_fallback(
+            messages, config, LLMRegistry.get_all_names().index(model_name), pinned, with_tools
+        )
 
     async def _call_with_fallback(
         self,
@@ -252,6 +293,7 @@ class LLMService:
         config: Optional[RunnableConfig],
         start_index: int,
         start_llm: BaseChatModel,
+        with_tools: bool = True,
     ) -> BaseMessage:
         """Call the model at `start_index`, then each next one in the registry, wrapping, until one answers.
 
@@ -268,7 +310,7 @@ class LLMService:
         last_error: Optional[OpenAIError] = None
         for offset in range(len(names)):
             index = (start_index + offset) % len(names)
-            llm = start_llm if offset == 0 else self._resolve(names[index])
+            llm = start_llm if offset == 0 else self._resolve(names[index], with_tools=with_tools)
             try:
                 return await self._call_llm_with_retry(llm, messages, config)
             except OpenAIError as e:

@@ -102,7 +102,7 @@ Throwaway; no product code, no tests. Its result decides the shape of Task 2's t
   - `LLMService.__init__(self, *, max_tokens: int | None = None, reasoning_effort: str | None = None)` — when either is set, `_resolve` uses `get_tuned`.
   - `LLMService.call(self, messages, model_name=None, config=None, *, with_tools: bool = True, **model_kwargs)` — `with_tools=False` resolves the client without the bound tools (used by the wrap-up call, Task 4).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_get_tuned_replaces_effort_only_on_reasoning_entries():
@@ -125,10 +125,10 @@ async def test_call_without_tools_uses_an_unbound_client():
     ...
 ```
 
-- [ ] **Step 2: Run** `cd server && APP_ENV=test uv run pytest tests/unit/integrations/llm/test_service.py -v` — expect the new tests to FAIL.
-- [ ] **Step 3: Implement** the settings (with `.env.example` comments: effort applies to the chat only; lowering it cuts cost and delay), `get_tuned`, the constructor args and `with_tools`. `with_tools` threads through `_call_with_fallback` to `_resolve`.
-- [ ] **Step 4: Run** the file again — PASS; then `make test-unit` — PASS.
-- [ ] **Step 5: Commit** `feat(llm): chat reasoning effort and reply/history budgets as settings`.
+- [x] **Step 2: Run** `cd server && APP_ENV=test uv run pytest tests/unit/integrations/llm/test_service.py -v` — expect the new tests to FAIL.
+- [x] **Step 3: Implement** the settings (with `.env.example` comments: effort applies to the chat only; lowering it cuts cost and delay), `get_tuned`, the constructor args and `with_tools`. `with_tools` threads through `_call_with_fallback` to `_resolve`.
+- [x] **Step 4: Run** the file again — PASS; then `make test-unit` — PASS.
+- [x] **Step 5: Commit** `feat(llm): chat reasoning effort and reply/history budgets as settings`.
 
 ---
 

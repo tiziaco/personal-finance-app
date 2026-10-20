@@ -344,3 +344,73 @@ class TestConcurrentCalls:
 
         assert default_answer.content == default
         assert pinned_answer.content == pinned
+
+
+class TestTunedClients:
+    """get_tuned and a tuned service: chat-only budgets that leave every other caller alone."""
+
+    def test_get_tuned_replaces_effort_only_on_reasoning_entries(self):
+        tuned = LLMRegistry.get_tuned("openai/gpt-5-mini", max_tokens=8000, reasoning_effort="medium")
+        assert tuned.reasoning["effort"] == "medium" and tuned.max_tokens == 8000
+        assert tuned.reasoning["summary"] == "auto"
+        plain = LLMRegistry.get_tuned("openai/gpt-4o", max_tokens=8000, reasoning_effort="medium")
+        assert plain.reasoning is None and plain.max_tokens == 8000
+
+    def test_get_tuned_does_not_touch_the_default_instances(self):
+        LLMRegistry.get_tuned("openai/gpt-5-mini", max_tokens=8000, reasoning_effort="high")
+        default = LLMRegistry.get("openai/gpt-5-mini")
+        assert default.reasoning == {"effort": "low"}
+        assert default.max_tokens == settings.llm.MAX_TOKENS
+
+    def test_get_tuned_caches_per_tuning(self):
+        a = LLMRegistry.get_tuned("openai/gpt-5", max_tokens=100, reasoning_effort="low")
+        assert a is LLMRegistry.get_tuned("openai/gpt-5", max_tokens=100, reasoning_effort="low")
+        assert a is not LLMRegistry.get_tuned("openai/gpt-5", max_tokens=100, reasoning_effort="high")
+
+    def test_get_tuned_rejects_an_unknown_model(self):
+        with pytest.raises(ValueError):
+            LLMRegistry.get_tuned("nope/none", max_tokens=1, reasoning_effort=None)
+
+    @pytest.mark.asyncio
+    async def test_a_tuned_service_falls_back_with_the_tuning(self, messages):
+        """Every model in the chain is built by get_tuned, a non-reasoning one included."""
+        service = LLMService(max_tokens=8000, reasoning_effort="high")
+        seen = []
+
+        async def fail_all_but_last(llm, msgs, config=None):
+            seen.append(llm)
+            if len(seen) < len(LLMRegistry.get_all_names()):
+                raise OpenAIError("down")
+            return AIMessage(content="ok")
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=fail_all_but_last):
+            await service.call(messages)
+
+        assert len(seen) == len(LLMRegistry.get_all_names())
+        for llm in seen:
+            assert llm.max_tokens == 8000
+            if llm.reasoning is not None:
+                assert llm.reasoning["effort"] == "high"
+        assert any(llm.reasoning is None for llm in seen)
+
+    def test_an_untuned_service_uses_the_registry_defaults(self):
+        service = LLMService()
+        assert service._resolve("openai/gpt-5-mini") is LLMRegistry.get("openai/gpt-5-mini")
+
+    @pytest.mark.asyncio
+    async def test_call_without_tools_uses_an_unbound_client(self, messages):
+        service = LLMService().bind_tools([echo])
+        seen = []
+
+        async def capture(llm, msgs, config=None):
+            seen.append(llm)
+            return AIMessage(content="ok")
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=capture):
+            await service.call(messages, with_tools=False)
+            await service.call(messages, model_name=_other_model(service), with_tools=False)
+            await service.call(messages)
+
+        assert not isinstance(seen[0], RunnableBinding)
+        assert not isinstance(seen[1], RunnableBinding)
+        assert _bound_tool_names(seen[2]) == ["echo"]
