@@ -75,6 +75,29 @@ async def test_preamble_names_the_last_finished_month_and_the_span():
     assert text == "Last finished month: September 2026; data covers March 2025 to October 2026."
 
 
+@pytest.mark.parametrize(
+    ("rows", "gap", "latest"),
+    [
+        # Today is October: September has no transactions, so the dashboard's month is August.
+        ((row("2025-03-02", "-40.00"), row("2026-08-05", "-300.00")), "September 2026", "August 2026"),
+        (
+            (row("2025-03-02", "-40.00"), row("2026-06-05", "-300.00"), row("2026-10-19", "-25.00")),
+            "Jul – Sep 2026",
+            "June 2026",
+        ),
+    ],
+)
+async def test_preamble_after_a_month_without_transactions_names_both_months(rows, gap, latest):
+    history = AnalyticsHistory(rows=rows, today=TODAY)
+    with patch.object(service.analytics_service, "history", AsyncMock(return_value=history)):
+        text = await preamble(ctx())
+    last = rows[-1].date.strftime("%B %Y")
+    assert text == (
+        f"Last finished month: September 2026. There are no transactions in {gap}; the latest finished month "
+        f"with transactions is {latest}, and `months` counts back from it. The data covers March 2025 to {last}."
+    )
+
+
 async def test_preamble_when_no_month_has_finished():
     only_now = AnalyticsHistory(rows=(row("2026-10-03", "-5.00"), row("2026-10-19", "-25.00")), today=TODAY)
     with patch.object(service.analytics_service, "history", AsyncMock(return_value=only_now)):

@@ -128,7 +128,8 @@ class LLMSettings(BaseSettings):
     CHAT_REASONING_EFFORT: Literal["minimal", "low", "medium", "high"] = "medium"
     CHAT_REPLY_MAX_TOKENS: int = 8000
     CHAT_HISTORY_MAX_TOKENS: int = 24000
-    CHAT_MAX_STEPS: int = 8
+    # Model calls with tool calls per turn; the run's recursion limit follows it (`turn_recursion_limit`).
+    CHAT_MAX_STEPS: int = Field(8, ge=1)
 
 
 # Long-term Memory Settings

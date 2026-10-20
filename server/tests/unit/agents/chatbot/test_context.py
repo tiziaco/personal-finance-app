@@ -1,6 +1,7 @@
 """Tests for app.agents.chatbot.context — what the chat model is sent."""
 
 import datetime as dt
+from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
@@ -170,6 +171,20 @@ class TestEarlierTurns:
         call_ids = {c["id"] for m in out if isinstance(m, AIMessage) for c in m.tool_calls}
         assert {m.tool_call_id for m in out if isinstance(m, ToolMessage)} <= call_ids
 
+    def test_each_message_is_counted_once_however_many_turns_are_dropped(self):
+        counted: list[int] = []
+
+        def recording(messages):
+            counted.extend(id(m) for m in messages)
+            return _chars(messages)
+
+        history = [*_tool_turn("first", "a"), *_tool_turn("second", "b"), *_tool_turn("third", "c")]
+
+        out = _build([*history, HumanMessage(content="now")], budget=1, count=recording)
+
+        assert [m.text for m in out] == [PROMPT, TURN_CONTEXT, "now"]
+        assert len(counted) == len(set(counted)) == len(out) + len(history)
+
     def test_a_tool_call_without_a_result_is_not_sent(self):
         history = [
             HumanMessage(content="old"),
@@ -229,6 +244,17 @@ class TestEstimate:
 
         assert with_estimate_fallback(broken)(messages) == estimate_tokens(messages)
 
+    def test_the_fallback_logs_at_debug_not_warning(self):
+        def broken(_messages):
+            raise ValueError("Unrecognized content block type reasoning")
+
+        with patch("app.agents.chatbot.context.logger") as log:
+            with_estimate_fallback(broken)([HumanMessage(content="a")])
+
+        log.debug.assert_called_once()
+        assert log.debug.call_args.args[0] == "token_counting_failed_estimating"
+        log.warning.assert_not_called()
+
     def test_fallback_still_trims_an_unmeasurable_history(self):
         def broken(_messages):
             raise ValueError("boom")
@@ -249,6 +275,14 @@ class TestPrompts:
 
         for phrase in ("this turn", "savings & investments", "category_breakdown", "csv", "read-only", "€"):
             assert phrase in prompt
+
+    def test_system_prompt_says_there_is_no_bank_connection(self):
+        prompt = load_system_prompt().lower()
+
+        assert "there is no bank connection" in prompt and "never offer to link an account" in prompt
+
+    def test_system_prompt_tells_the_model_a_month_without_transactions_is_not_skipped(self):
+        assert 'never call the earlier month "last month"' in load_system_prompt()
 
     def test_turn_context_carries_date_preamble_and_memory(self):
         text = render_turn_context(

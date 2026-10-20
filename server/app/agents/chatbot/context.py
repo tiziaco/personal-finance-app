@@ -57,13 +57,17 @@ def estimate_tokens(messages: list[BaseMessage]) -> int:
 
 
 def with_estimate_fallback(count_tokens: TokenCounter) -> TokenCounter:
-    """A counter that falls back to `estimate_tokens` when the model's own cannot measure the messages."""
+    """A counter that falls back to `estimate_tokens` when the model's own cannot measure the messages.
+
+    The fallback is the normal path, not a fault: the model's counter cannot measure
+    reasoning blocks, which every model step of a reasoning turn carries. So DEBUG.
+    """
 
     def count(messages: list[BaseMessage]) -> int:
         try:
             return count_tokens(messages)
         except Exception as e:
-            logger.warning("token_counting_failed_estimating", error=str(e), message_count=len(messages))
+            logger.debug("token_counting_failed_estimating", error=str(e), message_count=len(messages))
             return estimate_tokens(messages)
 
     return count
@@ -143,12 +147,16 @@ def build_model_context(
     head = SystemMessage(content=system_prompt)
     turn_context = SystemMessage(content=turn_context_text)
 
-    def assemble() -> list[BaseMessage]:
-        return [head, *(m for turn in prepared for m in turn), turn_context, *current]
-
-    while prepared and count_tokens(assemble()) > budget_tokens:
+    # Each part counted once, then turns dropped by subtraction rather than by
+    # re-counting the whole. A sum of counts runs slightly over the whole's (each
+    # count adds the reply's priming tokens), which errs towards trimming.
+    total = count_tokens([head, turn_context, *current])
+    sizes = [count_tokens(turn) for turn in prepared]
+    total += sum(sizes)
+    while prepared and total > budget_tokens:
+        total -= sizes.pop(0)
         prepared.pop(0)
-    return assemble()
+    return [head, *(m for turn in prepared for m in turn), turn_context, *current]
 
 
 def render_turn_context(*, today: dt.date, memory: str, preamble: str) -> str:

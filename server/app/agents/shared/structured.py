@@ -16,8 +16,8 @@ T = TypeVar("T", bound=BaseModel)
 _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$")
 
 
-# Tool-less: the chatbot's `llm_service` has tools bound, and an answer here must never be
-# a tool call. Builds no client until the first call, so importing it needs no API key.
+# Tool-less, unlike the chatbot agent's own service: an answer here must never be a
+# tool call. Builds no client until the first call, so importing it needs no API key.
 structured_llm_service = LLMService()
 
 

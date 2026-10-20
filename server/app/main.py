@@ -11,6 +11,7 @@ from langfuse import Langfuse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app.agents.chatbot.toolkit import Toolkit
 from app.api.middlewares import (
     AccessLogMiddleware,
     AuthMiddleware,
@@ -59,6 +60,15 @@ langfuse = Langfuse(
 )
 
 
+def agent_toolkits() -> dict[str, Toolkit]:
+    """The tools each agent runs with, by agent name.
+
+    Modules build them and they are handed over here: `app.agents` may not import a
+    module (R2). Dropping an entry leaves its agent without tools, answering from nothing.
+    """
+    return {"chatbot": finance_toolkit()}
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
@@ -84,7 +94,7 @@ async def lifespan(app: FastAPI):
     logger.info("checkpointer_initialized_at_startup")
 
     # Initialize all agents with pre-compiled graphs
-    agents = await initialize_agents(checkpointer, {"chatbot": finance_toolkit()})
+    agents = await initialize_agents(checkpointer, agent_toolkits())
     logger.info("application_ready", agent_names=list(agents.keys()))
 
     # Store in app state for dependency injection

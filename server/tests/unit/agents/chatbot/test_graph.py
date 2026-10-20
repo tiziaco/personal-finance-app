@@ -9,7 +9,7 @@ import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.checkpoint.memory import MemorySaver
 from prometheus_client import REGISTRY
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 from app.agents.chatbot.events import DoneEvent, TextEvent, ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.graph import (
@@ -33,7 +33,7 @@ from app.agents.chatbot.toolkit import (
 )
 from app.agents.graph import drop_unanswered_tool_calls
 from app.agents.messages import Activity, ChatMessage, Message, ToolPart
-from app.core.config import settings
+from app.core.config import LLMSettings, settings
 from app.integrations.llm.service import LLMRegistry
 
 pytestmark = pytest.mark.unit
@@ -321,7 +321,9 @@ class TestTurnLimits:
     """The loop end to end on a MemorySaver: step cap, repeat detection, wrap-up."""
 
     @staticmethod
-    async def _run(agent: ChatbotAgent, llm_responses, text: str = "q", thread: str = "t1", **extra):
+    async def _run(
+        agent: ChatbotAgent, llm_responses, text: str = "q", thread: str = "t1", recursion_limit=None, **extra
+    ):
         """Run one turn on the agent's graph; `llm_responses(with_tools, n)` makes each model reply."""
         name = LLMRegistry.get_all_names()[0]
         agent.llm_service = MagicMock()
@@ -336,6 +338,8 @@ class TestTurnLimits:
         agent.llm_service.call = AsyncMock(side_effect=call)
         graph = agent._graph or await agent.create_graph(MemorySaver())
         config = {"configurable": {"thread_id": thread, "turn_context": CTX}}
+        if recursion_limit is not None:
+            config["recursion_limit"] = recursion_limit
         state = await graph.ainvoke(
             {"messages": [HumanMessage(content=text)], "turn_steps": 0, **extra}, config=config
         )
@@ -367,6 +371,29 @@ class TestTurnLimits:
         assert state["stopped"] == {last.id: "step_limit"}
         assert calls == [True, True, False]
         assert ran == [1]
+
+    async def test_a_long_cap_is_what_ends_the_turn_not_langgraphs_recursion_limit(self, monkeypatch):
+        # 20 steps take 39 supersteps, past a fixed limit of 25: the turn's limit must follow the cap.
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 20)
+        agent, ran = self._counting_agent()
+        with patch("app.agents.shared.observability.langfuse.CallbackHandler"):
+            limit = agent._turn_config(THREAD_ID, CTX)["recursion_limit"]
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, _, _ = await self._run(agent, respond, recursion_limit=limit)
+
+        assert state["stopped"] == {state["messages"][-1].id: "step_limit"}
+        assert len(ran) == 19
+        # A backstop, not a bound the cap could never reach: it sits just above the turn's supersteps.
+        assert 2 * 20 <= limit < 2 * 20 + 10
+
+    def test_the_step_cap_setting_is_at_least_one(self):
+        with pytest.raises(ValidationError):
+            LLMSettings(CHAT_MAX_STEPS=0)
 
     async def test_repeated_identical_call_stops_the_loop(self):
         agent, ran = self._counting_agent()

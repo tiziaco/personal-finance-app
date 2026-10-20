@@ -51,8 +51,8 @@ class TestLLMServiceInit:
     def test_no_client_is_built_until_asked_for(self):
         """__init__ must not construct a client.
 
-        It runs at import via the module-level `llm_service` singleton, and
-        constructing a client is what requires a credential.
+        It runs at import for a module-level service (`structured_llm_service`),
+        and constructing a client is what requires a credential.
         """
         service = LLMService()
         assert service._llm is None
@@ -170,9 +170,8 @@ class TestLLMServiceCall:
     async def test_pinned_model_does_not_persist(self, messages):
         """A pinned model applies to its own call and no others.
 
-        `llm_service` is a module-level singleton shared by every request, so an
-        override left in place would retarget all subsequent traffic until the
-        process restarted.
+        A service is shared by every request, so an override left in place
+        would retarget all subsequent traffic until the process restarted.
         """
         service = LLMService()
         before_llm, before_index = service.get_llm(), service._default_index
@@ -302,7 +301,7 @@ class _FakeModel:
 
 
 class TestConcurrentCalls:
-    """Calls running at once on one service: `llm_service` is shared by every request."""
+    """Calls running at once on one service: a service is shared by every request."""
 
     @pytest.mark.asyncio
     async def test_each_call_walks_the_registry_from_the_default(self):

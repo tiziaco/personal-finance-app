@@ -359,17 +359,6 @@ def setup_logging() -> None:
         "httpx2",
         "httpx2._client",
         "httpcore2",
-        # ddgs calls into primp, a Rust extension bridging the `log` crate into
-        # Python logging via pyo3-log: one search emits ~124 records, named
-        # after the emitting crate and logged at INFO, so production's floor
-        # would not stop them. Silencing each crate root is enough — the leaf
-        # loggers (hickory_net.udp.udp_stream, h2.codec.framed_read, ...) are
-        # created at NOTSET and inherit.
-        "primp",
-        "h2",
-        "hickory_net",
-        "hickory_resolver",
-        "cookie_store",
         "asyncio",
         "urllib3",
         "urllib3.connectionpool",

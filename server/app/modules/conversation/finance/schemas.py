@@ -22,8 +22,8 @@ class PeriodArgs(BaseModel):
         None,
         ge=1,
         le=120,
-        description="The last N finished months, as the dashboard counts them (1 = the last finished month). "
-        "Never includes the month in progress.",
+        description="The last N finished months, as the dashboard counts them: back from the latest finished month "
+        "with transactions, which the turn context names (1 = that month). Never includes the month in progress.",
     )
     date_from: Optional[dt.date] = Field(
         None,

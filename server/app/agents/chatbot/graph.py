@@ -73,6 +73,21 @@ STOPPED_FALLBACK_TEXT = (
 TOOL_ARGS_LOG_LIMIT = 200
 
 
+# Supersteps a turn may run past what its step cap needs; see `turn_recursion_limit`.
+RECURSION_LIMIT_MARGIN = 3
+
+
+def turn_recursion_limit(max_steps: int) -> int:
+    """LangGraph's superstep limit for one turn: a backstop just above the step cap.
+
+    A turn the cap ends runs `max_steps` chat supersteps and `max_steps - 1` tool
+    supersteps, which LangGraph completes under a limit of `2 * max_steps`. The
+    limit follows the setting so that the cap, which ends the turn with an answer,
+    is always met first; LangGraph's own default (10007 in 1.x) is no backstop at all.
+    """
+    return 2 * max_steps + RECURSION_LIMIT_MARGIN
+
+
 def _format_tool_args(args: dict) -> str:
     """Render tool arguments as JSON, truncated past `TOOL_ARGS_LOG_LIMIT`."""
     rendered = json.dumps(args, default=str, ensure_ascii=False)
@@ -130,6 +145,12 @@ class ChatbotAgent(BaseAgent):
             model=settings.llm.DEFAULT_LLM_MODEL,
             environment=settings.ENVIRONMENT.value,
         )
+
+    def _turn_config(self, conversation_id: uuid.UUID, turn_context: TurnContext) -> dict:
+        """The base turn config, bounded by the recursion limit that follows `CHAT_MAX_STEPS`."""
+        config = super()._turn_config(conversation_id, turn_context)
+        config["recursion_limit"] = turn_recursion_limit(settings.llm.CHAT_MAX_STEPS)
+        return config
 
     async def _call_model(
         self, messages: list[BaseMessage], requested_model: str, *, with_tools: bool = True

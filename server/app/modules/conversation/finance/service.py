@@ -7,6 +7,7 @@ they read `TurnContext.user_id`.
 """
 
 import asyncio
+import datetime as dt
 from collections.abc import Callable
 
 from app.agents.chatbot.toolkit import AgentTool, ToolArgumentError, Toolkit, ToolOutcome, TurnContext
@@ -20,7 +21,13 @@ from app.modules.conversation.finance.domain.display import (
     top_merchants_outcome,
     unusual_spending_outcome,
 )
-from app.modules.conversation.finance.domain.periods import data_span, describe_span, period_label
+from app.modules.conversation.finance.domain.periods import (
+    data_span,
+    describe_span,
+    month_name,
+    name_period,
+    period_label,
+)
 from app.modules.conversation.finance.domain.search import search_rows
 from app.modules.conversation.finance.schemas import PeriodArgs, SearchArgs, TopMerchantsArgs
 from app.modules.transaction import CATEGORIES
@@ -35,7 +42,8 @@ ANOMALY_STD_THRESHOLD = 2.5
 ANOMALY_WINDOW_DAYS = 30
 
 PERIOD_HELP = (
-    " Period: `months` for the last N finished months (1 = the last finished month, as the dashboard counts), "
+    " Period: `months` for the last N finished months, counted back from the latest finished month with "
+    "transactions as the dashboard counts them (1 = that month), "
     "or `date_from`/`date_to` (YYYY-MM-DD) for a named month, a range, or the month in progress."
 )
 
@@ -80,7 +88,12 @@ def to_date_range(args: PeriodArgs, history: AnalyticsHistory) -> DateRange:
 
 
 async def preamble(ctx: TurnContext) -> str:
-    """What the model is told about the user's data each turn: the last finished month and the span covered."""
+    """What the model is told about the user's data each turn: the last finished month and the span covered.
+
+    The calendar's last finished month and the dashboard's differ after a month with no
+    transactions: `months` counts back from the latest finished month holding one, so the
+    model is told both, or it would call that month "last month".
+    """
     history = await turn_history(ctx)
     span = data_span(history)
     if span is None:
@@ -91,7 +104,15 @@ async def preamble(ctx: TurnContext) -> str:
     last_day = history.period(reference).last_day
     if (last_day.year, last_day.month) == (history.today.year, history.today.month):
         return f"No month has finished yet: the user's data covers only {label}."
-    return f"Last finished month: {label}; {describe_span(*span)}."
+    last_finished_end = history.today.replace(day=1) - dt.timedelta(days=1)
+    gap_start = (last_day.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
+    if gap_start > last_finished_end:
+        return f"Last finished month: {label}; {describe_span(*span)}."
+    return (
+        f"Last finished month: {month_name(last_finished_end)}. There are no transactions in "
+        f"{name_period(gap_start, last_finished_end)}; the latest finished month with transactions is {label}, "
+        f"and `months` counts back from it. The {describe_span(*span)}."
+    )
 
 
 def _analytics_tool(

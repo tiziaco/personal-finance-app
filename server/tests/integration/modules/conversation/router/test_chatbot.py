@@ -1,16 +1,24 @@
 """Integration tests for chatbot endpoints — chat, stream, history, clear."""
 
 import asyncio
+import datetime as dt
 import json
 import uuid
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage, ToolMessage
+from langgraph.checkpoint.memory import MemorySaver
 from uuid_utils.compat import uuid7
 
 from app.agents.chatbot.events import DoneEvent, TextEvent, ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.toolkit import SummaryItem, TableColumn, ToolDisplay, ToolTable
+from app.agents.factory import initialize_agents
 from app.agents.messages import Activity, ChatMessage, ReasoningPart, ToolPart
-from app.main import app
+from app.main import agent_toolkits, app
+from app.modules.analytics import service as analytics_service_module
+from app.modules.conversation import get_chatbot_agent
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
@@ -373,3 +381,61 @@ class TestStreamClientDisconnect:
 
         await asyncio.wait_for(app(scope, receive, send), timeout=5)
         assert cancelled.is_set()
+
+
+class TestFinanceToolsThroughTheRoute:
+    """The startup injection end to end: the agent `main.py` builds, a model that asks for a
+    finance lookup, the stream route, and the signed-in user's transactions."""
+
+    async def test_a_lookup_reads_the_users_data_and_its_result_reaches_the_model(
+        self, authenticated_client, db_session, test_user, other_user, add, test_conversation, monkeypatch
+    ):
+        monkeypatch.setattr(analytics_service_module, "_today", lambda: dt.date(2026, 10, 16))
+        await add(test_user, "2026-09-05", "-180.50", merchant="Lidl")
+        await add(test_user, "2026-09-25", "2100.00", category="salary", merchant="Employer")
+        await add(other_user, "2026-09-07", "-9999.00", merchant="Secret Boutique")
+
+        agent = (await initialize_agents(MemorySaver(), agent_toolkits()))["chatbot"]
+        sent: list[list] = []
+
+        async def model(messages, *args, with_tools=True, **kwargs):
+            sent.append(messages)
+            if len(sent) == 1:
+                call = {"name": "spending_overview", "args": {"months": 1}, "id": "c1", "type": "tool_call"}
+                return AIMessage(content="", tool_calls=[call])
+            return AIMessage(content="You spent €180.50 in September 2026.")
+
+        @asynccontextmanager
+        async def sessions():
+            yield db_session  # the test's session, so the tool sees the seeded rows
+
+        app.dependency_overrides[get_chatbot_agent] = lambda: agent
+        with (
+            patch.object(agent.llm_service, "call", AsyncMock(side_effect=model)),
+            patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
+            patch("app.agents.base.agent.update_memory", new=AsyncMock()),
+            patch.object(app.state, "session_factory", sessions, create=True),
+        ):
+            response = await authenticated_client.post(
+                f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
+                json={"message": "How much did I spend last month?"},
+            )
+        route = (await authenticated_client.get("/api/v1/analytics/spending", params={"months": 1})).json()
+
+        events = _events(response)
+        assert [e["type"] for e in events] == ["tool_started", "tool_finished", "text", "done"]
+        assert events[0] == {
+            "type": "tool_started",
+            "id": "c1",
+            "name": "spending_overview",
+            "title": "Spending overview",
+        }
+        finished = events[1]
+        assert finished["ok"] is True and finished["display"]["period"] == "September 2026"
+        spent = next(item for item in finished["display"]["summary"] if item["label"] == "spent")
+        assert spent["value"] == float(route["total_expenses"]) == 180.5
+        # The second model call is sent the tool's result: this user's figures, nobody else's.
+        [result] = [m for m in sent[1] if isinstance(m, ToolMessage)]
+        assert result.tool_call_id == "c1" and "expenses 180.50 EUR" in result.content
+        assert "9999" not in result.content
+        assert events[-1] == {"type": "done", "stopped": False}

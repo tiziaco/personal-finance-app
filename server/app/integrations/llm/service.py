@@ -166,12 +166,12 @@ class LLMService:
         `max_tokens` and `reasoning_effort` tune every client the service builds, fallbacks
         included (see `LLMRegistry.get_tuned`); unset, the registry defaults apply.
 
-        No client is constructed here: `llm_service` below is a module-level
-        singleton, so anything built in this method runs at import. `get_llm()`
-        resolves the client on first use instead.
+        No client is constructed here: services are module-level or startup-time
+        instances (`structured_llm_service`, the chatbot's own), so anything built in
+        this method runs at import. `get_llm()` resolves the client on first use instead.
 
         `_default_index` is set here and never moves: a call keeps its fallback
-        position in its own locals, since `llm_service` is shared by every request.
+        position in its own locals, since a service is shared by every request.
         """
         self._max_tokens = max_tokens
         self._reasoning_effort = reasoning_effort
@@ -280,8 +280,8 @@ class LLMService:
             logger.error("requested_model_not_found", model_name=model_name, error=str(e))
             raise
 
-        # The pin lives in this call's locals, never on the service: `llm_service` is a
-        # singleton shared by every request, and a pin set on it would retarget their calls.
+        # The pin lives in this call's locals, never on the service: a service is shared
+        # by every request, and a pin set on it would retarget their calls.
         logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
         return await self._call_with_fallback(
             messages, config, LLMRegistry.get_all_names().index(model_name), pinned, with_tools
@@ -359,6 +359,3 @@ class LLMService:
         self._llm = None
         logger.debug("tools_bound_to_llm", tool_count=len(tools))
         return self
-
-
-llm_service = LLMService()
