@@ -3,12 +3,12 @@ import { getListConversationsQueryKey } from "@app/api-client/endpoints/conversa
 import type {
   ConversationHistory,
   ConversationResponse,
-  Message,
+  ChatMessage,
 } from "@app/api-client/types"
 import type { QueryClient } from "@tanstack/react-query"
 
 /** One empty list, so a memo over "no messages" keeps its identity. */
-export const NO_MESSAGES: Message[] = []
+export const NO_MESSAGES: ChatMessage[] = []
 
 /** Write a conversation's new row (a rename, a generated title) into the loaded list. */
 export function replaceConversation(
@@ -56,7 +56,7 @@ export function removeConversation(
 export function cachedHistory(
   client: QueryClient,
   conversationId: string | null,
-): Message[] {
+): ChatMessage[] {
   if (conversationId === null) return NO_MESSAGES
   return (
     client.getQueryData<ConversationHistory>(

@@ -13,8 +13,9 @@ function bodyOf(...chunks: string[]): ReadableStream<Uint8Array> {
   })
 }
 
-const frame = (content: string, done = false) =>
-  `data: ${JSON.stringify({ content, done })}\n\n`
+const frame = (event: object) => `data: ${JSON.stringify(event)}\n\n`
+const text = (t: string) => frame({ type: "text", text: t })
+const done = (stopped = false) => frame({ type: "done", stopped })
 
 async function collect<T>(gen: AsyncGenerator<T>): Promise<T[]> {
   const out: T[] = []
@@ -36,32 +37,50 @@ afterEach(() => vi.restoreAllMocks())
 
 describe("readEvents", () => {
   it("joins a frame split across chunks", async () => {
-    const whole = frame("Hello")
+    const whole = text("Hello")
     const events = await collect(
       readEvents(bodyOf(whole.slice(0, 7), whole.slice(7))),
     )
-    expect(events).toEqual([{ content: "Hello", done: false }])
+    expect(events).toEqual([{ type: "text", text: "Hello" }])
   })
 
   it("splits several frames in one chunk", async () => {
-    const events = await collect(readEvents(bodyOf(frame("a") + frame("b"))))
-    expect(events.map((e) => e.content)).toEqual(["a", "b"])
+    const events = await collect(readEvents(bodyOf(text("a") + text("b"))))
+    expect(events).toEqual([
+      { type: "text", text: "a" },
+      { type: "text", text: "b" },
+    ])
   })
 
   it("ignores comment lines such as sse-starlette's ping", async () => {
     const events = await collect(
-      readEvents(bodyOf(": ping - 2026-10-13\n\n" + frame("a"))),
+      readEvents(bodyOf(": ping - 2026-10-13\n\n" + text("a"))),
     )
-    expect(events).toEqual([{ content: "a", done: false }])
+    expect(events).toEqual([{ type: "text", text: "a" }])
   })
 })
 
 describe("streamChat", () => {
-  it("posts the message to the conversation's stream and yields the chunks", async () => {
+  it("posts the message to the conversation's stream and yields every event, done last", async () => {
+    const tool = { type: "tool_started", id: "t1", name: "n", title: "T" }
     const request = respondWith(
-      new Response(bodyOf(frame("Hel") + frame("lo") + frame("", true))),
+      new Response(
+        bodyOf(
+          frame({ type: "reasoning", text: "hm" }) +
+            frame(tool) +
+            text("Hel") +
+            text("lo") +
+            done(true),
+        ),
+      ),
     )
-    await expect(run(request)).resolves.toEqual(["Hel", "lo"])
+    await expect(run(request)).resolves.toEqual([
+      { type: "reasoning", text: "hm" },
+      tool,
+      { type: "text", text: "Hel" },
+      { type: "text", text: "lo" },
+      { type: "done", stopped: true },
+    ])
     expect(request).toHaveBeenCalledWith(
       "/api/v1/chatbot/chat/c1/stream",
       expect.objectContaining({
@@ -71,6 +90,24 @@ describe("streamChat", () => {
     )
   })
 
+  it("parses a tool_finished with its display", async () => {
+    const display = {
+      title: "T",
+      period: null,
+      summary: [{ kind: "money", value: 12.5, label: null }],
+      table: {
+        columns: [{ key: "a", label: "A", kind: "text" }],
+        rows: [{ a: "x" }],
+      },
+    }
+    const event = { type: "tool_finished", id: "t1", ok: true, display }
+    const request = respondWith(new Response(bodyOf(frame(event) + done())))
+    await expect(run(request)).resolves.toEqual([
+      event,
+      { type: "done", stopped: false },
+    ])
+  })
+
   it("lets a refused stream's ApiError through", async () => {
     const request = vi.fn<ApiRequest>(async () => {
       throw new ApiError("HTTP 429", 429, null, null)
@@ -78,18 +115,16 @@ describe("streamChat", () => {
     await expect(run(request)).rejects.toMatchObject({ status: 429 })
   })
 
-  it("treats a final event carrying content as a failure", async () => {
+  it("throws StreamFailedError on an error event", async () => {
     const request = respondWith(
-      new Response(
-        bodyOf(frame("partial") + frame("An error occurred.", true)),
-      ),
+      new Response(bodyOf(text("partial") + frame({ type: "error" }))),
     )
     await expect(run(request)).rejects.toBeInstanceOf(StreamFailedError)
   })
 
   // Review Focus 2: a dropped connection must not leave the UI "running".
   it("treats a stream that ends without done as a failure", async () => {
-    const request = respondWith(new Response(bodyOf(frame("partial"))))
+    const request = respondWith(new Response(bodyOf(text("partial"))))
     await expect(run(request)).rejects.toBeInstanceOf(StreamFailedError)
   })
 

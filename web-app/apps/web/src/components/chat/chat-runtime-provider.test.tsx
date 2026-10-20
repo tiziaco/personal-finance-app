@@ -100,7 +100,8 @@ async function send(text: string) {
 }
 
 async function* chunks(...parts: string[]) {
-  for (const part of parts) yield part
+  for (const part of parts) yield { type: "text", text: part }
+  yield { type: "done", stopped: false }
 }
 
 describe("ChatRuntimeProvider — leaving and refusals", () => {
@@ -108,14 +109,14 @@ describe("ChatRuntimeProvider — leaving and refusals", () => {
   it("switching conversation mid-stream aborts it and does not carry the reply over", async () => {
     mocks.params = { conversationId: "c1" }
     routes["GET /api/v1/chatbot/chat/c2/messages"] = () => ({
-      messages: [{ role: "user", content: "older question" }],
+      messages: [{ role: "user", content: "older question", activity: null }],
     })
     let signal: AbortSignal | undefined
     mocks.stream.mockImplementation(async function* (opts: {
       signal: AbortSignal
     }) {
       signal = opts.signal
-      yield "streaming in c1"
+      yield { type: "text", text: "streaming in c1" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -185,14 +186,14 @@ describe("ChatRuntimeProvider", () => {
   it("a first send whose reply ends before the URL moves keeps showing the exchange", async () => {
     let saved = false
     mocks.stream.mockImplementation(async function* () {
-      yield "Hello"
+      yield { type: "text", text: "Hello" }
       saved = true
     })
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
       messages: saved
         ? [
-            { role: "user", content: "hi" },
-            { role: "assistant", content: "Hello" },
+            { role: "user", content: "hi", activity: null },
+            { role: "assistant", content: "Hello", activity: null },
           ]
         : [],
     })
@@ -227,14 +228,14 @@ describe("ChatRuntimeProvider", () => {
     // The server has saved the exchange once the stream has finished, not before.
     let saved = false
     mocks.stream.mockImplementation(async function* () {
-      yield "Hello"
+      yield { type: "text", text: "Hello" }
       saved = true
     })
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
       messages: saved
         ? [
-            { role: "user", content: "hi" },
-            { role: "assistant", content: "Hello" },
+            { role: "user", content: "hi", activity: null },
+            { role: "assistant", content: "Hello", activity: null },
           ]
         : [],
     })
@@ -318,7 +319,7 @@ describe("ChatRuntimeProvider", () => {
       signal: AbortSignal
     }) {
       signal = opts.signal
-      yield "partial"
+      yield { type: "text", text: "partial" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -368,7 +369,7 @@ describe("ChatRuntimeProvider", () => {
       signal: AbortSignal
     }) {
       getsAtStream.push(calls.filter((c) => c === historyGet).length)
-      yield "partial"
+      yield { type: "text", text: "partial" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -382,7 +383,7 @@ describe("ChatRuntimeProvider", () => {
     await screen.findByText(CHAT_COPY.stopped)
 
     routes[historyGet] = () => ({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
     const getsAfterStop = calls.filter((c) => c === historyGet).length
     mocks.stream.mockImplementationOnce(() => {
@@ -399,7 +400,7 @@ describe("ChatRuntimeProvider", () => {
     mocks.params = { conversationId: "c1" }
     const { StreamFailedError } = await import("@/lib/chat/stream-chat")
     mocks.stream.mockImplementation(async function* () {
-      yield "par"
+      yield { type: "text", text: "par" }
       throw new StreamFailedError()
     })
     renderChat()
@@ -526,11 +527,11 @@ describe("ChatRuntimeProvider", () => {
     mocks.params = { conversationId: "c1" }
     let resume: () => void = () => {}
     mocks.stream.mockImplementation(async function* () {
-      yield "Hel"
+      yield { type: "text", text: "Hel" }
       await new Promise<void>((resolve) => {
         resume = resolve
       })
-      yield "lo"
+      yield { type: "text", text: "lo" }
     })
     const { client } = renderChat()
     await send("hi")
@@ -538,7 +539,7 @@ describe("ChatRuntimeProvider", () => {
 
     // The graph has started: the server's history now holds the user's message.
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
     // TanStack notifies observers on a setTimeout(0) batch: let it render.
     await act(async () => {
@@ -548,7 +549,7 @@ describe("ChatRuntimeProvider", () => {
       await new Promise((r) => setTimeout(r, 0))
     })
     expect(client.getQueryData(getListChatMessagesQueryKey("c1"))).toEqual({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
 
     expect(screen.getAllByText("hi")).toHaveLength(1)

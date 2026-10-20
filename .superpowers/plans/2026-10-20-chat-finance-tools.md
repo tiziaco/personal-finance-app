@@ -467,7 +467,7 @@ def test_memory_config_carries_the_instructions():
   - `activity.ts`: `type ActivityState = { parts: ActivityPart[]; startedAt: number; endedAt: number | null; stopped: boolean; answerStarted: boolean }`, `ActivityPart = { kind: "reasoning"; text: string } | { kind: "tool"; id: string; name: string; title: string; status: "running" | "ok" | "error"; display: ToolDisplay | null }`; `function activityReducer(state: ActivityState, event: StreamEvent, now: number): ActivityState` (consecutive reasoning deltas append to the last reasoning part); `function fromHistory(activity: Activity): ActivityState` (`startedAt`/`endedAt` null-safe: no timing); `function currentLabel(state): string` ("Thinking…" or "Looking up <title lowercased>…").
   - `exchange.ts`: `Exchange.activity: ActivityState`; actions `{ type: "event"; send; event: StreamEvent; now: number }` replacing `chunk`; `toThreadMessages` sets `metadata: { custom: { activity } }` on assistant messages, from history (`fromHistory`) and in flight.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```ts
 it("appends reasoning deltas into one part", ...)
@@ -478,8 +478,8 @@ it("throws StreamFailedError on an error event", ...)
 it("puts history activity in metadata.custom.activity", ...)
 ```
 
-- [ ] **Step 2: Run** `make test-web` — FAIL. **Step 3: Implement.** **Step 4: Run** `make test-web` and `make check-web` — PASS.
-- [ ] **Step 5: Commit** `feat(web): typed chat stream and activity state`.
+- [x] **Step 2: Run** `make test-web` — FAIL. **Step 3: Implement.** **Step 4: Run** `make test-web` and `make check-web` — PASS.
+- [x] **Step 5: Commit** `feat(web): typed chat stream and activity state`.
 
 ---
 

@@ -248,6 +248,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         send: opened,
         userText: text,
         baseCount: cachedHistory(queryClient, activeId).length,
+        now: Date.now(),
       })
 
       const ready = await ensureConversation(opened, text)
@@ -263,13 +264,13 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        for await (const chunk of streamChat({
+        for await (const event of streamChat({
           conversationId,
           message: text,
           request,
           signal: send.controller.signal,
         })) {
-          dispatch({ type: "chunk", send, text: chunk })
+          dispatch({ type: "event", send, event, now: Date.now() })
         }
         await refetchHistory(queryClient, conversationId)
         dispatch({ type: "cleared", send })

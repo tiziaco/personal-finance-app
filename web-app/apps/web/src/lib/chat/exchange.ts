@@ -1,5 +1,13 @@
 import type { ThreadMessageLike } from "@assistant-ui/react"
-import type { Message } from "@app/api-client/types"
+import type { ChatMessage } from "@app/api-client/types"
+
+import {
+  activityReducer,
+  emptyActivity,
+  fromHistory,
+  type ActivityState,
+} from "./activity"
+import type { StreamEvent } from "./stream-chat"
 
 /**
  * One send. Stop aborts its controller; `conversationId` is the conversation
@@ -28,14 +36,21 @@ export type Exchange = {
   baseCount: number
   userText: string
   replyText: string
+  activity: ActivityState
   status: "running" | "stopped" | "error"
 }
 
 export type ExchangeAction =
-  | { type: "start"; send: Send; userText: string; baseCount: number }
+  | {
+      type: "start"
+      send: Send
+      userText: string
+      baseCount: number
+      now: number
+    }
   | { type: "created"; send: Send; next: Send }
   | { type: "rebased"; send: Send; baseCount: number }
-  | { type: "chunk"; send: Send; text: string }
+  | { type: "event"; send: Send; event: StreamEvent; now: number }
   | { type: "stopped"; send: Send }
   | { type: "failed"; send: Send }
   | { type: "cleared"; send: Send }
@@ -51,6 +66,7 @@ export function exchangeReducer(
       baseCount: action.baseCount,
       userText: action.userText,
       replyText: "",
+      activity: emptyActivity(action.now),
       status: "running",
     }
   }
@@ -68,8 +84,15 @@ export function exchangeReducer(
       return { ...state, send: action.next }
     case "rebased":
       return { ...state, baseCount: action.baseCount }
-    case "chunk":
-      return { ...state, replyText: state.replyText + action.text }
+    case "event":
+      return {
+        ...state,
+        replyText:
+          action.event.type === "text"
+            ? state.replyText + action.event.text
+            : state.replyText,
+        activity: activityReducer(state.activity, action.event, action.now),
+      }
     case "stopped":
       return { ...state, status: "stopped" }
     case "failed":
@@ -93,7 +116,7 @@ export function showsExchange(
 
 /** The thread: the saved history, then the exchange in flight if it shows here. */
 export function toThreadMessages(
-  saved: Message[],
+  saved: ChatMessage[],
   exchange: Exchange | null,
   activeId: string | null,
   historyId: string | null,
@@ -105,6 +128,9 @@ export function toThreadMessages(
     id: `${historyId}-${i}`,
     role: m.role === "user" ? "user" : "assistant",
     content: m.content,
+    ...(m.activity && {
+      metadata: { custom: { activity: fromHistory(m.activity) } },
+    }),
   }))
   if (!visible) return converted
   return [
@@ -114,6 +140,7 @@ export function toThreadMessages(
       id: "inflight-assistant",
       role: "assistant",
       content: visible.replyText,
+      metadata: { custom: { activity: visible.activity } },
       status:
         visible.status === "running"
           ? { type: "running" }
