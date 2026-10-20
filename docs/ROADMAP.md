@@ -54,7 +54,7 @@ here when someone picks it up.
 | 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights | done — #16, #17, #18 merged into `template-base` |
 | 4 | Wave 3 cleanup ∥ Analytics rules | done — #19, #20 merged into `template-base` |
 | 5 | Design system | done — #21 merged into `template-base` |
-| 6 | 7 Chat finance tools | in progress — `feat/chat-finance-tools` |
+| 6 | 7 Chat finance tools | done — [PR #…](https://github.com/tiziaco/personal-finance-app/pull/…) into `template-base` |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -114,7 +114,7 @@ not wait for 4.
 - **The chat-side TODOs ride in 7** (technical; decision on 19 Oct 2026). The model name
   after a fallback and the DB connection held through a model call change the chat route
   and graph that 7 changes. Releasing the request's session before the model call is the
-  same question as how 7's tools get a session, so one spec settles both.
+  same question as how 7's tools get a session, so one spec settled both; both are done in 7.
 - **The design system comes before 7** (product; decision on 19 Oct 2026). It restyles
   every screen, the chat included, so the two do not run in parallel. Step 7 may add chat UI
   (a tool call shown in the thread); built after the restyle, it starts on the new tokens

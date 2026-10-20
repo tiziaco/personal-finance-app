@@ -61,7 +61,7 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   spending behaviour, unusual spending (each the analytics library's own method, so its
   numbers are the dashboard's and the analytics page's) and a transaction search (merchant
   text, dates, categories, amounts, recurring only, weekday; it returns the count and total
-  of the matches, optionally grouped by month, merchant, category or weekday, and a capped
+  of the matches, optionally grouped by month (in date order), merchant, category or weekday, and a capped
   sample of rows). It filters the same rows the analytics tools see, so it agrees with them;
   money in and money out are reported apart, and a zero amount counts as neither. A figure
   must come from a lookup made in the same turn: the lookups of an earlier turn are
@@ -87,7 +87,7 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   what it has and marked stopped.
 - **Thinking is a setting.** `CHAT_REASONING_EFFORT` (default `medium`; the other model
   callers keep their own effort) sets how hard the model reasons. At any effort above `low`
-  the model streams a readable summary of its reasoning through the current client; the
+  the model streams a readable summary of its reasoning (the chat's own model client asks for summaries); the
   summaries vary from turn to turn and are absent at `low`, and the block shows only the
   lookups then. Reasoning of earlier turns is not sent back; within a turn it is.
 - **What the model is sent is bounded.** The reply may use `CHAT_REPLY_MAX_TOKENS` (8000,
@@ -132,9 +132,9 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 ## 5. Not built
 
 Summaries of long conversations (see [`TODO.md`](../../TODO.md)); a lookup over stored
-insights; free-form questions beyond the seven lookups; web search; file or image input; voice; sharing a
-conversation; clearing history from the screen and suggested prompts (both deferred by
-decision on 13 Oct 2026).
+insights; free-form questions beyond the seven lookups; web search; file or image input;
+voice; sharing a conversation; clearing history from the screen and suggested prompts
+(both deferred by decision on 13 Oct 2026).
 
 ## 6. Open questions
 

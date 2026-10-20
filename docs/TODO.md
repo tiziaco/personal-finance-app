@@ -153,7 +153,7 @@ Every `AnalyticsService` method loads the user's entire transaction history
 for. `AnalyticsHistory` fixes the fan-out inside one caller that needs several windows (an insights generation) but not across
 requests: the home dashboard, each `/analytics` tab and each period change are separate
 requests, and each reads every row again. Fine at one user's data; it grows with the history
-and with every caller step 7 adds.
+and with every caller the chat tools add.
 
 **Fix:** cache a user's analysis rows on the server, keyed by `user_id`, and drop the entry
 whenever that user's transactions change. **Decide first:**
