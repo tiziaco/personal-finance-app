@@ -1,12 +1,14 @@
 """Chatbot agent implementation using LangGraph."""
 
 import asyncio
+import datetime as dt
 import json
 import time
 import uuid
 from typing import Optional
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, ToolMessage
+from langchain_core.language_models.chat_models import BaseChatModel
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_core.runnables import RunnableLambda
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.config import get_stream_writer
@@ -22,6 +24,7 @@ from langgraph.types import RunnableConfig
 from pydantic import BaseModel, ValidationError
 
 from app.agents.base import BaseAgent
+from app.agents.chatbot.context import build_model_context, render_turn_context, with_estimate_fallback
 from app.agents.chatbot.events import ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.prompts import load_system_prompt
 from app.agents.chatbot.state import GraphState
@@ -34,12 +37,8 @@ from app.agents.chatbot.toolkit import (
     TurnContext,
 )
 from app.agents.graph import (
-    drop_unanswered_tool_calls,
-    dump_messages,
-    prepare_messages,
     process_llm_response,
 )
-from app.agents.messages import Message
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.metadata import PROJECT_NAME
@@ -133,7 +132,7 @@ class ChatbotAgent(BaseAgent):
         )
 
     async def _call_model(
-        self, messages: list[Message], requested_model: str, *, with_tools: bool = True
+        self, messages: list[BaseMessage], requested_model: str, *, with_tools: bool = True
     ) -> AIMessage:
         """One model call, timed under the name of the model that answered.
 
@@ -142,7 +141,7 @@ class ChatbotAgent(BaseAgent):
         rather than timed with a context manager.
         """
         started = time.perf_counter()
-        response = await self.llm_service.call(dump_messages(messages), with_tools=with_tools)
+        response = await self.llm_service.call(messages, with_tools=with_tools)
         answering_model = response.response_metadata.get("model_name") or requested_model
         llm_inference_duration_seconds.labels(model=answering_model).observe(time.perf_counter() - started)
         logger.info(
@@ -153,17 +152,35 @@ class ChatbotAgent(BaseAgent):
         )
         return process_llm_response(response)
 
-    async def _wrap_up(self, messages: list[Message], model_name: str, conversation_id: str) -> AIMessage:
+    async def _wrap_up(self, messages: list[BaseMessage], model_name: str, conversation_id: str) -> AIMessage:
         """The final answer of a turn the server ended: a tool-less model call, or the fixed text."""
         try:
             answer = await self._call_model(
-                [*messages, Message(role="system", content=WRAP_UP_INSTRUCTION)], model_name, with_tools=False
+                [*messages, SystemMessage(content=WRAP_UP_INSTRUCTION)], model_name, with_tools=False
             )
             if answer.text.strip() and not answer.tool_calls:
                 return answer
         except Exception as e:
             logger.exception("llm_wrap_up_failed", conversation_id=conversation_id, error=str(e))
         return AIMessage(content=STOPPED_FALLBACK_TEXT)
+
+    async def _model_context(self, state: GraphState, config: RunnableConfig, llm: BaseChatModel) -> list[BaseMessage]:
+        """The messages for this turn's model calls; the wrap-up call builds on the same ones.
+
+        The turn context is absent until a route sets it: the toolkit's preamble is then
+        empty, and the model still gets today's date and the user's memory.
+        """
+        ctx = config.get("configurable", {}).get("turn_context")
+        preamble = await self.toolkit.preamble(ctx) if ctx is not None else ""
+        return build_model_context(
+            state.messages,
+            system_prompt=load_system_prompt(),
+            turn_context_text=render_turn_context(
+                today=dt.date.today(), memory=state.long_term_memory, preamble=preamble
+            ),
+            budget_tokens=settings.llm.CHAT_HISTORY_MAX_TOKENS,
+            count_tokens=with_estimate_fallback(llm.get_num_tokens_from_messages),
+        )
 
     async def _chat(self, state: GraphState, config: RunnableConfig) -> Command:
         """Process the chat state and generate a response.
@@ -176,9 +193,7 @@ class ChatbotAgent(BaseAgent):
         model_name = self.llm_service.current_model_name()
         conversation_id = config["configurable"]["thread_id"]
 
-        system_prompt = load_system_prompt(long_term_memory=state.long_term_memory)
-
-        messages = prepare_messages(drop_unanswered_tool_calls(state.messages), current_llm, system_prompt)
+        messages = await self._model_context(state, config, current_llm)
 
         try:
             response_message = await self._call_model(messages, model_name)

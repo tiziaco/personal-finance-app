@@ -1,6 +1,7 @@
 """Tests for app.agents.chatbot.graph — tool execution, logging and metrics."""
 
 import asyncio
+import datetime as dt
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -258,8 +259,26 @@ class TestChat:
         await agent._chat(state, {"configurable": {"thread_id": "t1"}})
 
         sent = agent.llm_service.call.call_args.args[0]
-        assert not any(m.get("tool_calls") for m in sent)
-        assert [m["content"] for m in sent[1:]] == ["What did I spend on rent", "Never mind, thanks"]
+        assert not any(getattr(m, "tool_calls", None) for m in sent)
+        # [static prompt, history..., turn context, current turn]
+        assert [m.content for m in sent[1:-2]] == ["What did I spend on rent"]
+        assert sent[-1].content == "Never mind, thanks"
+
+    @pytest.mark.asyncio
+    async def test_chat_puts_date_and_memory_in_a_message_after_the_history_without_a_turn_context(self, agent):
+        """No turn context yet (nothing sets it before the route does): no preamble, no error."""
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
+        agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
+        state = GraphState(messages=[HumanMessage(content="hi")], long_term_memory="Saving for a flat")
+
+        await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+
+        sent = agent.llm_service.call.call_args.args[0]
+        assert "Saving for a flat" not in sent[0].content and "{" not in sent[0].content
+        assert str(dt.date.today()) in sent[1].content and "Saving for a flat" in sent[1].content
+        assert sent[2].content == "hi"
 
 
 def _call(name: str, n: int, call_id: str) -> dict:

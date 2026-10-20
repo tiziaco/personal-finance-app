@@ -252,7 +252,7 @@ Keep `test_chat_does_not_send_a_tool_call_left_without_a_result` green (Review F
   - `load_system_prompt() -> str` — the static prompt, no date or memory.
   - `render_turn_context(*, today: dt.date, memory: str, preamble: str) -> str` — date, the toolkit's preamble (last finished month, data span), memory.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_current_turn_is_never_trimmed_even_over_budget():
@@ -274,10 +274,10 @@ def test_system_prompt_has_no_date_or_memory_placeholders():
     assert "{" not in load_system_prompt()
 ```
 
-- [ ] **Step 2: Run** — FAIL.
-- [ ] **Step 3: Write `system.md`** as a personal-finance assistant per §4 and §1: figures only from this turn's tools; name the period; say plainly when data cannot answer; advice must cite the user's numbers; general knowledge is not a figure about the user; savings rate is the analytics one, show Savings & Investments beside it when investing comes up and explain why it lowers the rate; no transactions → point to CSV import; never compute an adjusted rate or add up rows. Then implement `context.py` and switch `_chat` to it (`count_tokens` = the client's `get_num_tokens_from_messages`, falling back to `estimate_tokens` on error).
-- [ ] **Step 4: Run** — PASS; `make test-unit` — PASS.
-- [ ] **Step 5: Commit** `feat(agents): model context keeps the current turn and stubs old tool results`.
+- [x] **Step 2: Run** — FAIL.
+- [x] **Step 3: Write `system.md`** as a personal-finance assistant per §4 and §1: figures only from this turn's tools; name the period; say plainly when data cannot answer; advice must cite the user's numbers; general knowledge is not a figure about the user; savings rate is the analytics one, show Savings & Investments beside it when investing comes up and explain why it lowers the rate; no transactions → point to CSV import; never compute an adjusted rate or add up rows. Then implement `context.py` and switch `_chat` to it (`count_tokens` = the client's `get_num_tokens_from_messages`, falling back to `estimate_tokens` on error).
+- [x] **Step 4: Run** — PASS; `make test-unit` — PASS.
+- [x] **Step 5: Commit** `feat(agents): model context keeps the current turn and stubs old tool results`.
 
 ---
 

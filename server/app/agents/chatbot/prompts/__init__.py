@@ -1,23 +1,14 @@
 """Prompts for the chatbot agent."""
 
-import os
-from datetime import datetime
+from pathlib import Path
 
-from app.core.metadata import PROJECT_NAME
+_SYSTEM_PROMPT = Path(__file__).with_name("system.md")
 
 
-def load_system_prompt(**kwargs):
-    """Load the system prompt from the file.
+def load_system_prompt() -> str:
+    """The static system prompt.
 
-    Args:
-        **kwargs: Additional template variables to format into the prompt.
-
-    Returns:
-        Formatted system prompt string.
+    No date and no memory: those change every turn and live in the turn context
+    message, after the history, so the provider can cache this prefix.
     """
-    with open(os.path.join(os.path.dirname(__file__), "system.md"), "r") as f:
-        return f.read().format(
-            agent_name=PROJECT_NAME + " Agent",
-            current_date_and_time=datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            **kwargs,
-        )
+    return _SYSTEM_PROMPT.read_text()
