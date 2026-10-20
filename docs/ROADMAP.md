@@ -35,7 +35,7 @@ Links are relative to `docs/`.
 | **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place; plus the status-dot ring, the rate-limit test fixture and the QueryProvider retry test | complete — [PR #20](https://github.com/tiziaco/personal-finance-app/pull/20) into `template-base`; reaches `main` at Cutover | `feat/wave3-cleanup` | [`analytics.md`](./product/features/analytics.md) §3 (no average without a whole month; month-to-date); [`architecture/server.md`](./architecture/server.md) (`AnalyticsHistory`) |
 | **Analytics rules** — an outlier rule for a thin category, frequent shopping not flagged recurring, yearly charges, hidden subscriptions that respect the user's "not recurring", and date bounds on hand-added transactions | complete — [PR #19](https://github.com/tiziaco/personal-finance-app/pull/19) into `template-base`; reaches `main` at Cutover | `feat/analytics-rules` | [`analytics.md`](./product/features/analytics.md) §3, [`data-model/transaction.md`](./data-model/transaction.md) D6, [`csv-import.md`](./product/features/csv-import.md) |
 | **Design system** — the app restyled to the design system made in Claude Design: tokens (colour in both themes, type, spacing, radius), fonts and the shared primitives, so every screen follows | complete — [PR #21](https://github.com/tiziaco/personal-finance-app/pull/21) into `template-base`; reaches `main` at Cutover | `feat/design-system` | [`web-app.md`](./architecture/web-app.md) §2 (the design system); the `finsight-design` skill; supersedes the former TODO **Web — legacy's theme** |
-| **7 Chat finance tools** — the assistant answers questions about the user's own money; names the model that answered after a fallback; releases the request's DB connection before a model call | not started — ready, #21 merged | — | [`chat.md`](./product/features/chat.md); [`TODO.md`](./TODO.md) **the chatbot names the default model**, **a model call holds the request's DB connection**, **Web — tests** (a failed conversation create). No spec yet |
+| **7 Chat finance tools** — the assistant answers questions about the user's own money; names the model that answered after a fallback; releases the request's DB connection before a model call | in progress — spec written | `feat/chat-finance-tools` | [spec](../.superpowers/specs/2026-10-20-chat-finance-tools-design.md); [`chat.md`](./product/features/chat.md); [`TODO.md`](./TODO.md) **the chatbot names the default model**, **a model call holds the request's DB connection**, **Web — tests** (a failed conversation create) |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -53,7 +53,7 @@ here when someone picks it up.
 | 3 | Analytics figures ∥ 5b Analytics page ∥ 6 Insights | done — #16, #17, #18 merged into `template-base` |
 | 4 | Wave 3 cleanup ∥ Analytics rules | done — #19, #20 merged into `template-base` |
 | 5 | Design system | done — #21 merged into `template-base` |
-| 6 | 7 Chat finance tools | now — #21 merged |
+| 6 | 7 Chat finance tools | in progress — `feat/chat-finance-tools` |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
