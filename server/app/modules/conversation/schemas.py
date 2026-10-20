@@ -11,7 +11,7 @@ from pydantic import (
     field_validator,
 )
 
-from app.agents.messages import Message
+from app.agents.messages import ChatMessage
 
 
 class ConversationResponse(BaseModel):
@@ -60,7 +60,7 @@ class ChatResponse(BaseModel):
         message: The assistant's response message.
     """
 
-    message: Message = Field(..., description="The assistant's response message")
+    message: ChatMessage = Field(..., description="The assistant's response message")
 
 
 class ConversationHistory(BaseModel):
@@ -70,16 +70,6 @@ class ConversationHistory(BaseModel):
         messages: List of all messages in the conversation.
     """
 
-    messages: List[Message] = Field(..., description="List of all messages in the conversation")
-
-
-class StreamResponse(BaseModel):
-    """Response model for streaming chat endpoint.
-
-    Attributes:
-        content: The content of the current chunk.
-        done: Whether the stream is complete.
-    """
-
-    content: str = Field(default="", description="The content of the current chunk")
-    done: bool = Field(default=False, description="Whether the stream is complete")
+    messages: List[ChatMessage] = Field(
+        ..., description="The conversation's messages: each user message, then the reply to it with its activity"
+    )

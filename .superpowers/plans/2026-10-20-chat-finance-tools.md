@@ -388,7 +388,7 @@ def test_no_match_says_so_in_content(): assert "no transactions match" in search
   - `get_chat_history(conversation_id) -> list[ChatMessage]` — a turn's AIMessages and ToolMessages fold into one assistant `ChatMessage` whose `activity` lists reasoning and tool parts in order and `stopped` from `state.stopped`; **a turn with no final assistant text yields no assistant message and no activity** (§7, user stop).
   - `conversation/schemas.py`: `ConversationHistory.messages: list[ChatMessage]`; `ChatResponse.message: ChatMessage`; `StreamResponse` removed.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_history_folds_a_turn_into_one_message_with_activity():
@@ -412,8 +412,8 @@ async def test_history_response_carries_activity():
 
 Replace `test_events_are_byte_identical` and `test_failure_is_a_final_event_with_content` (the old shape is gone on purpose); keep `test_disconnect_cancels_the_agent_stream`.
 
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement**; run `make gen-contract` from the repo root. **Step 4: Run** server tests, `make check-contract` — PASS.
-- [ ] **Step 5: Commit** (route, schemas, `openapi.json`, generated client together) `feat(chat): typed stream events and history with activity`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement**; run `make gen-contract` from the repo root. **Step 4: Run** server tests, `make check-contract` — PASS.
+- [x] **Step 5: Commit** (route, schemas, `openapi.json`, generated client together) `feat(chat): typed stream events and history with activity`.
 
 ---
 

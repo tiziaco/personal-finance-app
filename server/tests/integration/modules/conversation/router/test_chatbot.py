@@ -7,9 +7,23 @@ import uuid
 import pytest
 from uuid_utils.compat import uuid7
 
+from app.agents.chatbot.events import DoneEvent, TextEvent, ToolFinishedEvent, ToolStartedEvent
+from app.agents.chatbot.toolkit import SummaryItem, TableColumn, ToolDisplay, ToolTable
+from app.agents.messages import Activity, ChatMessage, ReasoningPart, ToolPart
+from app.main import app
 from app.modules.conversation.models import Conversation
 
 pytestmark = pytest.mark.integration
+
+DISPLAY = ToolDisplay(
+    title="Spending by category",
+    period="Sep 2026",
+    summary=[SummaryItem(kind="money", value=2184.5, label="spent")],
+    table=ToolTable(
+        columns=[TableColumn(key="category", label="Category", kind="text")],
+        rows=[{"category": "Groceries"}],
+    ),
+)
 
 
 @pytest.fixture
@@ -88,15 +102,25 @@ class TestChatEndpoint:
         )
         assert response.status_code == 422
 
+    async def test_chat_gives_the_agent_the_users_turn_context(
+        self, authenticated_client_with_agent, test_conversation, mock_agent, test_user
+    ):
+        await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}",
+            json={"message": "Hello"},
+        )
+        ctx = mock_agent.get_response.await_args.args[2]
+        assert ctx.user_id == test_user.id
+        assert ctx.session_factory is app.state.session_factory
+
 
 class TestStreamChatEndpoint:
     """Tests for POST /api/v1/chatbot/chat/{conversation_id}/stream"""
 
     async def test_stream_returns_event_stream(self, authenticated_client_with_agent, test_conversation, mock_agent):
-        # Override get_stream_response to use an async generator
         async def mock_stream(*args, **kwargs):
-            for chunk in ["Hello", " World"]:
-                yield chunk
+            yield TextEvent(text="Hello")
+            yield DoneEvent()
 
         mock_agent.get_stream_response = mock_stream
 
@@ -107,27 +131,23 @@ class TestStreamChatEndpoint:
         assert response.status_code == 200
         assert "text/event-stream" in response.headers.get("content-type", "")
 
-    async def test_stream_response_contains_sse_data(
-        self, authenticated_client_with_agent, test_conversation, mock_agent
+    async def test_the_agent_gets_the_users_turn_context(
+        self, authenticated_client_with_agent, test_conversation, mock_agent, test_user
     ):
-        async def mock_stream(*args, **kwargs):
-            for chunk in ["Hi!"]:
-                yield chunk
+        received = {}
+
+        async def mock_stream(messages, conversation_id, turn_context):
+            received["ctx"] = turn_context
+            yield DoneEvent()
 
         mock_agent.get_stream_response = mock_stream
 
-        response = await authenticated_client_with_agent.post(
+        await authenticated_client_with_agent.post(
             f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
             json={"message": "Hello"},
         )
-        content = response.text
-        # SSE format: "data: {...}\n\n"
-        assert "data:" in content
-        # Parse first event
-        first_line = [line for line in content.split("\n") if line.startswith("data:")][0]
-        payload = json.loads(first_line.replace("data: ", ""))
-        assert "content" in payload
-        assert "done" in payload
+        assert received["ctx"].user_id == test_user.id
+        assert received["ctx"].session_factory is app.state.session_factory
 
 
 class TestGetChatHistory:
@@ -154,15 +174,44 @@ class TestGetChatHistory:
     async def test_long_reply_in_history_returns_200(
         self, authenticated_client_with_agent, test_conversation, mock_agent
     ):
-        from app.agents.messages import Message
-
         mock_agent.get_chat_history.return_value = [
-            Message(role="user", content="Explain budgeting"),
-            Message(role="assistant", content="x" * 5000),
+            ChatMessage(role="user", content="Explain budgeting"),
+            ChatMessage(role="assistant", content="x" * 5000),
         ]
         response = await authenticated_client_with_agent.get(f"/api/v1/chatbot/chat/{test_conversation.id}/messages")
         assert response.status_code == 200
         assert len(response.json()["messages"][1]["content"]) == 5000
+
+    async def test_history_response_carries_activity(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
+        mock_agent.get_chat_history.return_value = [
+            ChatMessage(role="user", content="Where did my money go?"),
+            ChatMessage(
+                role="assistant",
+                content="Mostly groceries.",
+                activity=Activity(
+                    parts=[
+                        ReasoningPart(text="Checking categories."),
+                        ToolPart(id="c1", name="spending", ok=True, display=DISPLAY),
+                        ToolPart(id="c2", name="income", ok=False, display=None),
+                    ],
+                    stopped=True,
+                ),
+            ),
+        ]
+        response = await authenticated_client_with_agent.get(f"/api/v1/chatbot/chat/{test_conversation.id}/messages")
+        assert response.status_code == 200
+        [user, reply] = response.json()["messages"]
+        assert user == {"role": "user", "content": "Where did my money go?", "activity": None}
+        assert reply["activity"] == {
+            "parts": [
+                {"type": "reasoning", "text": "Checking categories."},
+                {"type": "tool", "id": "c1", "name": "spending", "ok": True, "display": DISPLAY.model_dump()},
+                {"type": "tool", "id": "c2", "name": "income", "ok": False, "display": None},
+            ],
+            "stopped": True,
+        }
 
 
 class TestClearChatHistory:
@@ -182,13 +231,23 @@ class TestClearChatHistory:
         assert response.content == b""
 
 
-class TestStreamWireFormat:
-    """The event shape is a published interface: WS7 must not move it."""
+def _events(response) -> list[dict]:
+    frames = [f for f in response.text.split("\n\n") if f and not f.startswith(":")]
+    assert all(f.startswith("data: ") for f in frames)
+    return [json.loads(f.removeprefix("data: ")) for f in frames]
 
-    async def test_events_are_byte_identical(self, authenticated_client_with_agent, test_conversation, mock_agent):
+
+class TestStreamWireFormat:
+    """The event shape is a published interface: `stream-chat.ts` parses it."""
+
+    async def test_stream_emits_typed_events_ending_in_done(
+        self, authenticated_client_with_agent, test_conversation, mock_agent
+    ):
         async def mock_stream(*args, **kwargs):
-            yield "Hi"
-            yield " there"
+            yield ToolStartedEvent(id="c1", name="spending", title="Looking up spending")
+            yield ToolFinishedEvent(id="c1", ok=True, display=DISPLAY)
+            yield TextEvent(text="You spent €40.")
+            yield DoneEvent(stopped=False)
 
         mock_agent.get_stream_response = mock_stream
 
@@ -196,18 +255,18 @@ class TestStreamWireFormat:
             f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
             json={"message": "Hello"},
         )
-        frames = [f for f in response.text.split("\n\n") if f and not f.startswith(":")]
-        assert frames == [
-            'data: {"content": "Hi", "done": false}',
-            'data: {"content": " there", "done": false}',
-            'data: {"content": "", "done": true}',
-        ]
+        events = _events(response)
+        assert [e["type"] for e in events] == ["tool_started", "tool_finished", "text", "done"]
+        assert events[0] == {"type": "tool_started", "id": "c1", "name": "spending", "title": "Looking up spending"}
+        assert events[1]["display"] == DISPLAY.model_dump()
+        assert events[2] == {"type": "text", "text": "You spent €40."}
+        assert events[3] == {"type": "done", "stopped": False}
 
-    async def test_failure_is_a_final_event_with_content(
+    async def test_stream_failure_is_an_error_event_without_server_text(
         self, authenticated_client_with_agent, test_conversation, mock_agent
     ):
         async def failing_stream(*args, **kwargs):
-            yield "partial"
+            yield TextEvent(text="partial")
             raise RuntimeError("model down")
 
         mock_agent.get_stream_response = failing_stream
@@ -216,8 +275,8 @@ class TestStreamWireFormat:
             f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
             json={"message": "Hello"},
         )
-        frames = [f for f in response.text.split("\n\n") if f and not f.startswith(":")]
-        assert frames[-1] == 'data: {"content": "An error occurred. Please try again.", "done": true}'
+        events = _events(response)
+        assert events == [{"type": "text", "text": "partial"}, {"type": "error"}]
 
 
 class TestStreamClientDisconnect:
@@ -226,17 +285,15 @@ class TestStreamClientDisconnect:
     async def test_disconnect_cancels_the_agent_stream(
         self, authenticated_client_with_agent, test_conversation, mock_agent
     ):
-        from app.main import app
-
         first_chunk_sent = asyncio.Event()
         cancelled = asyncio.Event()
 
         async def slow_stream(*args, **kwargs):
             try:
-                yield "first"
+                yield TextEvent(text="first")
                 first_chunk_sent.set()
                 await asyncio.sleep(30)  # a model still generating
-                yield "never"
+                yield TextEvent(text="never")
             except asyncio.CancelledError:
                 cancelled.set()
                 raise

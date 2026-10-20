@@ -244,6 +244,10 @@ class ChatbotAgent(BaseAgent):
             logger.exception("conversation_title_generation_failed", conversation_id=conversation_id)
             return None
 
+    def _shows_tool(self, name: str) -> bool:
+        """Only this agent's own tools: `_tool_call` announces nothing for a name the model invented."""
+        return name in self.tools_by_name
+
     async def _invoke_tool(
         self, tool_call: dict, ctx: TurnContext | None, config: RunnableConfig | None = None
     ) -> ToolMessage:

@@ -6,13 +6,12 @@ import pytest
 from pydantic import ValidationError
 from uuid_utils.compat import uuid7
 
-from app.agents.messages import Message
+from app.agents.messages import ChatMessage
 from app.modules.conversation.schemas import (
     ChatRequest,
     ChatResponse,
     ConversationHistory,
     ConversationResponse,
-    StreamResponse,
 )
 
 pytestmark = pytest.mark.unit
@@ -38,7 +37,7 @@ class TestChatResponse:
     """Tests for ChatResponse schema."""
 
     def test_valid_response(self):
-        msg = Message(role="assistant", content="Hello!")
+        msg = ChatMessage(role="assistant", content="Hello!")
         resp = ChatResponse(message=msg)
         assert resp.message.content == "Hello!"
 
@@ -48,25 +47,11 @@ class TestConversationHistory:
 
     def test_valid_history(self):
         messages = [
-            Message(role="user", content="Hi"),
-            Message(role="assistant", content="Hello!"),
+            ChatMessage(role="user", content="Hi"),
+            ChatMessage(role="assistant", content="Hello!"),
         ]
         history = ConversationHistory(messages=messages)
         assert len(history.messages) == 2
-
-
-class TestStreamResponse:
-    """Tests for StreamResponse schema."""
-
-    def test_defaults(self):
-        resp = StreamResponse()
-        assert resp.content == ""
-        assert resp.done is False
-
-    def test_with_content(self):
-        resp = StreamResponse(content="chunk", done=True)
-        assert resp.content == "chunk"
-        assert resp.done is True
 
 
 class TestConversationResponse:
@@ -100,7 +85,7 @@ class TestConversationResponse:
 
 
 class TestChatRequestInputRules:
-    """The rules on what a user may send live on the request, not on Message."""
+    """The rules on what a user may send live on the request, not on the message models."""
 
     def test_script_tag_rejected(self):
         with pytest.raises(ValidationError, match="script"):

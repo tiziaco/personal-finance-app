@@ -10,7 +10,7 @@ Structure:
 """
 
 from app.agents.base import BaseAgent
-from app.agents.chatbot import ChatbotAgent
+from app.agents.chatbot.graph import ChatbotAgent
 
 __all__ = [
     "BaseAgent",

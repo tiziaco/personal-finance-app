@@ -1,6 +1,45 @@
 {
   "components": {
     "schemas": {
+      "Activity": {
+        "description": "What the assistant did on the way to a reply: reasoning and tool calls, in order.",
+        "properties": {
+          "parts": {
+            "description": "Reasoning and tool parts, in order",
+            "items": {
+              "discriminator": {
+                "mapping": {
+                  "reasoning": "#/components/schemas/ReasoningPart",
+                  "tool": "#/components/schemas/ToolPart"
+                },
+                "propertyName": "type"
+              },
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ReasoningPart"
+                },
+                {
+                  "$ref": "#/components/schemas/ToolPart"
+                }
+              ]
+            },
+            "title": "Parts",
+            "type": "array"
+          },
+          "stopped": {
+            "default": false,
+            "description": "Whether the server ended the turn (step cap or repeat)",
+            "title": "Stopped",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "parts",
+          "stopped"
+        ],
+        "title": "Activity",
+        "type": "object"
+      },
       "AgentStatus": {
         "description": "Readiness of a single agent.",
         "properties": {
@@ -705,6 +744,43 @@
         "title": "CategoryTrendResponse",
         "type": "object"
       },
+      "ChatMessage": {
+        "description": "One message of a conversation's history, as the client shows it.\n\nOutput shape only: no length or content rules, so a long reply, or one quoting\n`<script>` in a code block, is returned as stored.",
+        "properties": {
+          "activity": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Activity"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "A reply's reasoning and tool calls; null for a user message, and for a reply with neither that was not stopped"
+          },
+          "content": {
+            "description": "The message text; for a reply, the text of the whole turn",
+            "title": "Content",
+            "type": "string"
+          },
+          "role": {
+            "description": "Who wrote the message",
+            "enum": [
+              "user",
+              "assistant"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role",
+          "content",
+          "activity"
+        ],
+        "title": "ChatMessage",
+        "type": "object"
+      },
       "ChatRequest": {
         "description": "Request model for chat endpoint.\n\nAttributes:\n    message: The user's message to send.",
         "properties": {
@@ -726,7 +802,7 @@
         "description": "Response model for chat endpoint.\n\nAttributes:\n    message: The assistant's response message.",
         "properties": {
           "message": {
-            "$ref": "#/components/schemas/Message",
+            "$ref": "#/components/schemas/ChatMessage",
             "description": "The assistant's response message"
           }
         },
@@ -826,9 +902,9 @@
         "description": "Response model for conversation history endpoint.\n\nAttributes:\n    messages: List of all messages in the conversation.",
         "properties": {
           "messages": {
-            "description": "List of all messages in the conversation",
+            "description": "The conversation's messages: each user message, then the reply to it with its activity",
             "items": {
-              "$ref": "#/components/schemas/Message"
+              "$ref": "#/components/schemas/ChatMessage"
             },
             "title": "Messages",
             "type": "array"
@@ -1819,33 +1895,6 @@
         "title": "MerchantSpendResponse",
         "type": "object"
       },
-      "Message": {
-        "description": "One message in an agent's history.\n\nOutput shape only. The rules on what a user may send (length, script tags,\nnull bytes) live on `ChatRequest`: applied here they also judged the\nassistant's replies, so a long answer, or one quoting `<script>` in a code\nblock, turned the history route into a 500.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
-        "properties": {
-          "content": {
-            "description": "The content of the message",
-            "minLength": 1,
-            "title": "Content",
-            "type": "string"
-          },
-          "role": {
-            "description": "The role of the message sender",
-            "enum": [
-              "user",
-              "assistant",
-              "system"
-            ],
-            "title": "Role",
-            "type": "string"
-          }
-        },
-        "required": [
-          "role",
-          "content"
-        ],
-        "title": "Message",
-        "type": "object"
-      },
       "MonthFlowResponse": {
         "description": "One month's income, expenses and net, with the change in expenses, a rolling average and the savings rate.",
         "properties": {
@@ -2153,6 +2202,28 @@
           "timestamp"
         ],
         "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "ReasoningPart": {
+        "description": "The readable summary of the model's reasoning for one of a turn's model calls.",
+        "properties": {
+          "text": {
+            "description": "The reasoning summary, its parts separated by a blank line",
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "reasoning",
+            "default": "reasoning",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "text"
+        ],
+        "title": "ReasoningPart",
         "type": "object"
       },
       "RecurringMerchantResponse": {
@@ -2522,6 +2593,219 @@
           "month_to_date"
         ],
         "title": "SpendingResponse",
+        "type": "object"
+      },
+      "SummaryItem": {
+        "additionalProperties": false,
+        "description": "One figure in a tool row's one-line summary, e.g. a count, an amount or a share.",
+        "properties": {
+          "kind": {
+            "enum": [
+              "count",
+              "money",
+              "percent",
+              "text"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "kind",
+          "value"
+        ],
+        "title": "SummaryItem",
+        "type": "object"
+      },
+      "TableColumn": {
+        "additionalProperties": false,
+        "description": "A column of a tool result's table: the row key, its header and how to format it.",
+        "properties": {
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "text",
+              "money",
+              "percent",
+              "count",
+              "date"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "label",
+          "kind"
+        ],
+        "title": "TableColumn",
+        "type": "object"
+      },
+      "ToolDisplay": {
+        "additionalProperties": false,
+        "description": "What the chat UI shows for one tool call: a title, the period covered, a summary and an optional table.",
+        "properties": {
+          "period": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period"
+          },
+          "summary": {
+            "items": {
+              "$ref": "#/components/schemas/SummaryItem"
+            },
+            "title": "Summary",
+            "type": "array"
+          },
+          "table": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolTable"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "period",
+          "summary",
+          "table"
+        ],
+        "title": "ToolDisplay",
+        "type": "object"
+      },
+      "ToolPart": {
+        "description": "One tool call a reply made, as the chat shows it.",
+        "properties": {
+          "display": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ToolDisplay"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "What the chat shows for the result; null when the call failed"
+          },
+          "id": {
+            "description": "The tool call's id, as the stream's tool events carry it",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "description": "The tool's name",
+            "title": "Name",
+            "type": "string"
+          },
+          "ok": {
+            "description": "Whether the call produced a result",
+            "title": "Ok",
+            "type": "boolean"
+          },
+          "type": {
+            "const": "tool",
+            "default": "tool",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "name",
+          "ok",
+          "display"
+        ],
+        "title": "ToolPart",
+        "type": "object"
+      },
+      "ToolTable": {
+        "additionalProperties": false,
+        "description": "The figures behind a tool result, as numbers the client formats; bounded for the UI.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/TableColumn"
+            },
+            "title": "Columns",
+            "type": "array"
+          },
+          "rows": {
+            "items": {
+              "additionalProperties": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "number"
+                  },
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "type": "object"
+            },
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns",
+          "rows"
+        ],
+        "title": "ToolTable",
         "type": "object"
       },
       "TransactionCreate": {

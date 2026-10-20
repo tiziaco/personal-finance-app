@@ -6,13 +6,12 @@
  * OpenAPI spec version: 1.0.0
  */
 
-/**
- * The role of the message sender
- */
-export type MessageRole = (typeof MessageRole)[keyof typeof MessageRole]
+export type SummaryItemKind =
+  (typeof SummaryItemKind)[keyof typeof SummaryItemKind]
 
-export const MessageRole = {
-  user: "user",
-  assistant: "assistant",
-  system: "system",
+export const SummaryItemKind = {
+  count: "count",
+  money: "money",
+  percent: "percent",
+  text: "text",
 } as const

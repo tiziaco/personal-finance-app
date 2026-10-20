@@ -5,7 +5,7 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
-import type { Message } from "./message"
+import type { ChatMessage } from "./chatMessage"
 
 /**
  * Response model for chat endpoint.
@@ -15,5 +15,5 @@ import type { Message } from "./message"
  */
 export interface ChatResponse {
   /** The assistant's response message */
-  message: Message
+  message: ChatMessage
 }

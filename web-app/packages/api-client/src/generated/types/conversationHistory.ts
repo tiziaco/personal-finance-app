@@ -5,7 +5,7 @@
  * API for Personal Finance: transactions, analytics and insights for one user's money.
  * OpenAPI spec version: 1.0.0
  */
-import type { Message } from "./message"
+import type { ChatMessage } from "./chatMessage"
 
 /**
  * Response model for conversation history endpoint.
@@ -14,6 +14,6 @@ import type { Message } from "./message"
  *     messages: List of all messages in the conversation.
  */
 export interface ConversationHistory {
-  /** List of all messages in the conversation */
-  messages: Message[]
+  /** The conversation's messages: each user message, then the reply to it with its activity */
+  messages: ChatMessage[]
 }

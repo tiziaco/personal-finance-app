@@ -8,7 +8,7 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
-from app.agents.messages import Message
+from app.agents.messages import ChatMessage
 from app.agents.shared.observability import create_graph_config
 from app.integrations.llm import LLMRegistry
 
@@ -40,7 +40,7 @@ def clean_title(raw: str) -> str:
     return title[:TITLE_MAX_LENGTH].rstrip()
 
 
-def first_exchange(history: list[Message]) -> tuple[str, str] | None:
+def first_exchange(history: list[ChatMessage]) -> tuple[str, str] | None:
     """The first reply and the user message it answered, or None before any reply.
 
     Paired, not taken separately: a first turn stopped before its reply leaves

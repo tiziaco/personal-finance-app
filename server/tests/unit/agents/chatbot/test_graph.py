@@ -11,7 +11,7 @@ from langgraph.checkpoint.memory import MemorySaver
 from prometheus_client import REGISTRY
 from pydantic import BaseModel
 
-from app.agents.chatbot.events import ToolFinishedEvent, ToolStartedEvent
+from app.agents.chatbot.events import DoneEvent, TextEvent, ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.graph import (
     STOPPED_FALLBACK_TEXT,
     TOOL_ARGS_LOG_LIMIT,
@@ -32,7 +32,7 @@ from app.agents.chatbot.toolkit import (
     TurnContext,
 )
 from app.agents.graph import drop_unanswered_tool_calls
-from app.agents.messages import Message
+from app.agents.messages import Activity, ChatMessage, Message, ToolPart
 from app.core.config import settings
 from app.integrations.llm.service import LLMRegistry
 
@@ -60,6 +60,7 @@ def _agent_with(*tools: AgentTool) -> ChatbotAgent:
 
 
 CTX = TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
+THREAD_ID = uuid.uuid4()
 
 
 def _tool_calls(tool_name: str, outcome: str = "error") -> int:
@@ -442,6 +443,81 @@ class TestTurnLimits:
         assert after == before + 1
 
 
+class TestStreamAndHistory:
+    """The typed stream and the history on the real graph: what reaches the client."""
+
+    @staticmethod
+    async def _stream(agent: ChatbotAgent, llm_responses, text: str = "q") -> list:
+        name = LLMRegistry.get_all_names()[0]
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(name)
+        agent.llm_service.current_model_name.return_value = name
+        calls: list[bool] = []
+
+        async def call(messages, *args, with_tools=True, **kwargs):
+            calls.append(with_tools)
+            return llm_responses(with_tools, len(calls))
+
+        agent.llm_service.call = AsyncMock(side_effect=call)
+        if agent._graph is None:
+            await agent.create_graph(MemorySaver())
+        with (
+            patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
+            patch("app.agents.base.agent.update_memory", new=AsyncMock()),
+        ):
+            return [
+                event
+                async for event in agent.get_stream_response([Message(role="user", content=text)], THREAD_ID, CTX)
+            ]
+
+    async def test_a_tool_turn_streams_tool_events_then_the_answer(self):
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return AIMessage(content="", tool_calls=[_call("t", 1, "c1")]) if n == 1 else AIMessage(content="Done.")
+
+        events = await self._stream(agent, respond)
+
+        assert events == [
+            ToolStartedEvent(id="c1", name="t", title="t title"),
+            ToolFinishedEvent(id="c1", ok=True, display=_display()),
+            TextEvent(text="Done."),
+            DoneEvent(stopped=False),
+        ]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.activity.parts == [ToolPart(id="c1", name="t", ok=True, display=_display())]
+
+    async def test_a_turn_the_server_stopped_is_done_stopped_and_reopens_stopped(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        events = await self._stream(agent, respond)
+
+        assert events == [TextEvent(text="Partial."), DoneEvent(stopped=True)]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.content == "Partial."
+        assert reply.activity == Activity(parts=[], stopped=True)
+
+    async def test_an_unknown_tool_is_in_neither_the_stream_nor_the_history(self):
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return (
+                AIMessage(content="", tool_calls=[_call("invented", 1, "c1")]) if n == 1 else AIMessage(content="OK.")
+            )
+
+        events = await self._stream(agent, respond)
+
+        assert events == [TextEvent(text="OK."), DoneEvent(stopped=False)]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.activity is None
+
+
 class TestTitleFor:
     """Tests for `title_for` — a conversation's title from its first exchange."""
 
@@ -450,7 +526,7 @@ class TestTitleFor:
 
     async def test_titles_the_first_exchange_on_the_current_model(self, agent):
         agent.get_chat_history = AsyncMock(
-            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+            return_value=[ChatMessage(role="user", content="Q"), ChatMessage(role="assistant", content="A")]
         )
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(return_value="Budget")) as generate:
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) == "Budget"
@@ -459,14 +535,14 @@ class TestTitleFor:
         )
 
     async def test_no_reply_yet_is_none_without_a_model_call(self, agent):
-        agent.get_chat_history = AsyncMock(return_value=[Message(role="user", content="Q")])
+        agent.get_chat_history = AsyncMock(return_value=[ChatMessage(role="user", content="Q")])
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock()) as generate:
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None
         generate.assert_not_awaited()
 
     async def test_a_model_failure_is_none(self, agent):
         agent.get_chat_history = AsyncMock(
-            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+            return_value=[ChatMessage(role="user", content="Q"), ChatMessage(role="assistant", content="A")]
         )
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(side_effect=RuntimeError("down"))):
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None

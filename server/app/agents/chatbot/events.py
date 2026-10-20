@@ -1,4 +1,27 @@
-"""Typed events the chat stream carries (§8): the tool node's and the route's vocabulary."""
+r"""Typed events the chat stream carries: the wire contract of `POST /chatbot/chat/{id}/stream`.
+
+The route is tagged `streaming`, so it is not in the generated client: these models
+are the schema, and `web-app/apps/web/src/lib/chat/stream-chat.ts` mirrors them by
+hand. Each event is one server-sent event, `data: <json>` followed by a blank line,
+its JSON a model below told apart by `type`:
+
+- `{"type": "reasoning", "text"}`: a delta of the model's readable reasoning. A
+  break between summary paragraphs arrives as "\n\n" inside a delta, as the history's
+  `ReasoningPart` joins them. Reasoning before and after a tool row are two parts.
+- `{"type": "tool_started", "id", "name", "title"}`: a tool call began; `title` is
+  the label shown while it runs. Only the agent's own tools are announced.
+- `{"type": "tool_finished", "id", "ok", "display"}`: that call ended; `display`
+  (a `ToolDisplay`: title, period, summary, table) is null when `ok` is false.
+  Parallel calls finish in any order; `id` pairs the two events.
+- `{"type": "text", "text"}`: a delta of the reply. A new model message in the turn
+  starts with "\n\n", as the history's `content` joins them.
+- `{"type": "done", "stopped"}`: the turn is over and saved, always last on success;
+  `stopped` is true when the server cut it short (step cap or repeated call).
+- `{"type": "error"}`: the turn failed and ends here, with no `done`. It carries no
+  text: the client words the failure.
+
+A client that disconnects cancels the turn; nothing more is sent.
+"""
 
 from typing import Annotated, Literal, Union
 
