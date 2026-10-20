@@ -134,6 +134,19 @@ every analytics figure (`analytics.md` §4). Found in the 5b legacy audit. **Unb
 figures that match what the user means by income and spending. **Needs:** a transfer/refund
 notion on `transaction`.
 
+## Server — a transaction counted in the month it belongs to
+
+A salary paid on the 1st instead of the 30th leaves its month with no income and the next
+with two, so both months' savings rates are wrong; one month with only a small refund as income
+reads −15,000%. The savings rate stays net over income for the month (decided 20 Oct 2026):
+smoothing it with a rolling window lags, and dividing by an average income stops measuring
+what happened. Re-dating the transaction, which Copilot, PocketGuard and Simplifi users do,
+falsifies the bank date. **Fix:** an optional month on `transaction` that the user sets
+("count in September") and every analytics month bucket reads instead of `date`'s month;
+the transactions table and the import keep the bank date. **Unblocks:** monthly figures
+that survive a late salary. **Needs:** a data-model decision in `transaction.md` and an
+action on the transactions page.
+
 ## Server — a per-user cap on insight generation
 
 Every `POST /insights/generate` is a paid model call over the user's figures, and opening
