@@ -434,7 +434,7 @@ Replace `test_events_are_byte_identical` and `test_failure_is_a_final_event_with
   - `MEMORY_INSTRUCTIONS: str` in `memory/factory.py`, passed as mem0 `custom_instructions` — keep goals, circumstances, preferences; drop amounts, balances, dates of activity, anything describing a period's spending.
   - `BaseAgent` calls `update_memory(user_id, [{"role": "user", "content": messages[-1].content}], metadata)` — this turn's user message only.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 async def test_chat_releases_the_connection_before_the_model_call():
@@ -449,8 +449,8 @@ def test_memory_config_carries_the_instructions():
     assert config["custom_instructions"] == MEMORY_INSTRUCTIONS
 ```
 
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** Update the `mock_agent` fixture (`tests/integration/conftest.py`) to the new signatures. **Step 4: Run** `make test` — PASS.
-- [ ] **Step 5: Commit** `feat(chat): release the request connection before model calls; inject the finance toolkit; memory from user messages only`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** Update the `mock_agent` fixture (`tests/integration/conftest.py`) to the new signatures. **Step 4: Run** `make test` — PASS.
+- [x] **Step 5: Commit** `feat(chat): release the request connection before model calls; inject the finance toolkit; memory from user messages only`.
 
 ---
 

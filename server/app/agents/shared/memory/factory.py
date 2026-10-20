@@ -8,6 +8,14 @@ from mem0 import AsyncMemory
 from app.core.config import settings
 from app.core.logging import logger
 
+# What mem0 extracts from the user's message. Figures in a memory go stale and would be
+# read back as facts, and the transaction data already answers questions about them.
+MEMORY_INSTRUCTIONS = (
+    "Remember the user's goals, circumstances and preferences, such as saving for a flat, "
+    "being paid monthly, or rent fixed until March. Never store amounts, balances, prices, "
+    "dates of specific transactions, or anything describing a period's spending or activity."
+)
+
 _memory_instance: Optional[AsyncMemory] = None
 
 # Keys mem0 owns on the memory record itself. `add()` takes user_id as a named
@@ -91,6 +99,7 @@ async def create_memory() -> AsyncMemory:
                 # "custom_instructions"; the 1.x "custom_fact_extraction_prompt"
                 # and "custom_update_memory_prompt" keys were removed and now
                 # fail config validation.
+                "custom_instructions": MEMORY_INSTRUCTIONS,
             }
         )
     return _memory_instance

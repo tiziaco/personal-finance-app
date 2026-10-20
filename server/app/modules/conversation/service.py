@@ -15,6 +15,16 @@ from app.modules.conversation.models import Conversation
 from app.modules.conversation.repository import conversation_repository
 
 
+async def release_connection(session: AsyncSession) -> None:
+    """End the read-only transaction, handing the connection back before the model call.
+
+    The call takes seconds, and DbSession would otherwise hold its pool connection idle in
+    a transaction through it (docs/TODO.md). Nothing has been written yet; the session opens
+    a new transaction on its next use, which DbSession commits after the route as usual.
+    """
+    await session.commit()
+
+
 class ConversationService:
     """Service for chat conversation management operations."""
 
@@ -81,6 +91,7 @@ class ConversationService:
         if conversation.name:
             return conversation
 
+        await release_connection(session)
         title = await agent.title_for(conversation.id, conversation.user_id)
         if title is None:
             return conversation

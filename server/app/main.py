@@ -46,6 +46,7 @@ from app.modules import analytics as _analytics
 from app.modules import conversation as _conversation
 from app.modules import insights as _insights
 from app.modules import transaction as _transaction
+from app.modules.conversation import finance_toolkit
 
 # Load environment variables
 load_dotenv()
@@ -83,7 +84,7 @@ async def lifespan(app: FastAPI):
     logger.info("checkpointer_initialized_at_startup")
 
     # Initialize all agents with pre-compiled graphs
-    agents = await initialize_agents(checkpointer)
+    agents = await initialize_agents(checkpointer, {"chatbot": finance_toolkit()})
     logger.info("application_ready", agent_names=list(agents.keys()))
 
     # Store in app state for dependency injection

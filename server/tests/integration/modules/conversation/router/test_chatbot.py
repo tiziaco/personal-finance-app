@@ -113,6 +113,22 @@ class TestChatEndpoint:
         assert ctx.user_id == test_user.id
         assert ctx.session_factory is app.state.session_factory
 
+    async def test_chat_releases_the_connection_before_the_model_call(
+        self, authenticated_client_with_agent, test_conversation, mock_agent, db_session
+    ):
+        seen = {}
+
+        async def respond(*_):
+            seen["in_transaction"] = db_session.in_transaction()
+            return [ChatMessage(role="assistant", content="Hi")]
+
+        mock_agent.get_response = respond
+
+        await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}", json={"message": "Hello"}
+        )
+        assert seen["in_transaction"] is False
+
 
 class TestStreamChatEndpoint:
     """Tests for POST /api/v1/chatbot/chat/{conversation_id}/stream"""
@@ -148,6 +164,22 @@ class TestStreamChatEndpoint:
         )
         assert received["ctx"].user_id == test_user.id
         assert received["ctx"].session_factory is app.state.session_factory
+
+    async def test_stream_releases_the_connection_before_the_model_call(
+        self, authenticated_client_with_agent, test_conversation, mock_agent, db_session
+    ):
+        seen = {}
+
+        async def mock_stream(*_):
+            seen["in_transaction"] = db_session.in_transaction()
+            yield DoneEvent()
+
+        mock_agent.get_stream_response = mock_stream
+
+        await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}/stream", json={"message": "Hello"}
+        )
+        assert seen["in_transaction"] is False
 
 
 class TestGetChatHistory:

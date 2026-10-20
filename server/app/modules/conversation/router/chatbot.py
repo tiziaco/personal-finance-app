@@ -16,6 +16,7 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.core.metrics import llm_stream_duration_seconds
+from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
 from app.modules.conversation.dependencies import ChatbotAgentDep, UserConversation
 from app.modules.conversation.schemas import (
@@ -23,6 +24,7 @@ from app.modules.conversation.schemas import (
     ChatResponse,
     ConversationHistory,
 )
+from app.modules.conversation.service import release_connection
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 
@@ -41,6 +43,7 @@ async def chat(
     chat_request: ChatRequest,
     user: CurrentUser,
     agent: ChatbotAgentDep,
+    db_session: DbSession,
 ):
     """Process a chat request using LangGraph."""
     logger.info(
@@ -49,6 +52,7 @@ async def chat(
         message_length=len(chat_request.message),
     )
 
+    await release_connection(db_session)
     user_message = Message(role="user", content=chat_request.message)
     turn_context = TurnContext(user_id=user.id, session_factory=request.app.state.session_factory)
     result = await agent.get_response([user_message], conversation.id, turn_context)
@@ -72,6 +76,7 @@ async def chat_stream(
     chat_request: ChatRequest,
     user: CurrentUser,
     agent: ChatbotAgentDep,
+    db_session: DbSession,
 ):
     """Process a chat request using LangGraph, streaming the response."""
     logger.info(
@@ -79,6 +84,9 @@ async def chat_stream(
         conversation_id=conversation.id,
         message_length=len(chat_request.message),
     )
+
+    # The stream takes seconds: hand the connection back first.
+    await release_connection(db_session)
 
     # Plain values only: the body runs after the request's session has closed.
     turn_context = TurnContext(user_id=user.id, session_factory=request.app.state.session_factory)

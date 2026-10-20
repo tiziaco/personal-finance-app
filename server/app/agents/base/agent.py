@@ -17,7 +17,6 @@ from langchain_core.messages import (
     BaseMessage,
     HumanMessage,
     ToolMessage,
-    convert_to_openai_messages,
 )
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from langgraph.graph.state import CompiledStateGraph
@@ -49,6 +48,16 @@ from app.agents.shared.memory import (
 )
 from app.agents.shared.observability import create_graph_config
 from app.core.logging import logger
+
+
+def _user_turn(messages: list[Message]) -> list[dict]:
+    """What long-term memory sees of a turn: the user's message, nothing the tools or the model said.
+
+    Tool results and replies carry figures the user did not state; stored as memories they go
+    stale and would be read back as facts.
+    """
+    return [{"role": "user", "content": messages[-1].content}]
+
 
 # Between two of a turn's assistant messages, in the stream and in the history alike;
 # and between two parts of one message's reasoning summary.
@@ -137,9 +146,7 @@ class BaseAgent(ABC):
                 config=config,
             )
             # Backgrounded: the memory write must not delay the response.
-            asyncio.create_task(
-                update_memory(user_id, convert_to_openai_messages(response["messages"]), config["metadata"])
-            )
+            asyncio.create_task(update_memory(user_id, _user_turn(messages), config["metadata"]))
             return self._process_messages(response["messages"], stopped=response.get("stopped", {}))
         except Exception as e:
             logger.exception("error_getting_response", error=str(e), conversation_id=conversation_id)
@@ -217,9 +224,7 @@ class BaseAgent(ABC):
             state: StateSnapshot = await self._graph.aget_state(config=config)
             values = state.values or {}
             if values.get("messages"):
-                asyncio.create_task(
-                    update_memory(user_id, convert_to_openai_messages(values["messages"]), config["metadata"])
-                )
+                asyncio.create_task(update_memory(user_id, _user_turn(messages), config["metadata"]))
             final_id = values["messages"][-1].id if values.get("messages") else None
             yield DoneEvent(stopped=final_id is not None and final_id in values.get("stopped", {}))
         except Exception as stream_error:

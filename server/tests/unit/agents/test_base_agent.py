@@ -1,5 +1,6 @@
 """Tests for BaseAgent — what reaches the client's stream, and the history rebuilt from a checkpoint."""
 
+import asyncio
 import uuid
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -285,6 +286,51 @@ async def test_get_response_input_resets_turn_steps_and_carries_the_turn_context
     assert agent._graph.inputs[0]["turn_steps"] == 0
     assert agent._graph.configs[0]["configurable"]["turn_context"] is ctx
     assert result[-1] == ChatMessage(role="assistant", content="Hello.")
+
+
+async def test_get_response_sends_memory_only_this_turns_user_message():
+    agent = _Agent()
+    agent._graph = _FakeGraph(
+        [],
+        values={
+            "messages": [
+                HumanMessage(content="how much on food?"),
+                AIMessage(content="", tool_calls=[{"name": "spending", "args": {}, "id": "c1"}], id="a1"),
+                ToolMessage(content="RAW: 412.50 EUR", tool_call_id="c1"),
+                AIMessage(content="You spent 412.50 EUR."),
+            ]
+        },
+    )
+    update = AsyncMock()
+    with (
+        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
+        patch("app.agents.base.agent.update_memory", new=update),
+    ):
+        await agent.get_response([Message(role="user", content="how much on food?")], uuid.uuid4(), _turn_context())
+        await asyncio.sleep(0)
+    sent = update.await_args.args[1]
+    assert sent == [{"role": "user", "content": "how much on food?"}]
+
+
+async def test_the_stream_sends_memory_only_this_turns_user_message():
+    agent = _Agent()
+    agent._graph = _FakeGraph(
+        [AIMessageChunk(content="Hi")],
+        values={"messages": [HumanMessage(content="how much on food?"), AIMessage(content="You spent 412.50 EUR.")]},
+    )
+    update = AsyncMock()
+    with (
+        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
+        patch("app.agents.base.agent.update_memory", new=update),
+    ):
+        _ = [
+            e
+            async for e in agent.get_stream_response(
+                [Message(role="user", content="how much on food?")], uuid.uuid4(), _turn_context()
+            )
+        ]
+        await asyncio.sleep(0)
+    assert update.await_args.args[1] == [{"role": "user", "content": "how much on food?"}]
 
 
 # ── The history ───────────────────────────────────────────────────────────────
