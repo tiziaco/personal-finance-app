@@ -36,8 +36,8 @@ Links are relative to `docs/`.
 | **Analytics rules** — an outlier rule for a thin category, frequent shopping not flagged recurring, yearly charges, hidden subscriptions that respect the user's "not recurring", and date bounds on hand-added transactions | complete — [PR #19](https://github.com/tiziaco/personal-finance-app/pull/19) into `template-base`; reaches `main` at Cutover | `feat/analytics-rules` | [`analytics.md`](./product/features/analytics.md) §3, [`data-model/transaction.md`](./data-model/transaction.md) D6, [`csv-import.md`](./product/features/csv-import.md) |
 | **Design system** — the app restyled to the design system made in Claude Design: tokens (colour in both themes, type, spacing, radius), fonts and the shared primitives, so every screen follows | complete — [PR #21](https://github.com/tiziaco/personal-finance-app/pull/21) into `template-base`; reaches `main` at Cutover | `feat/design-system` | [`web-app.md`](./architecture/web-app.md) §2 (the design system); the `finsight-design` skill; supersedes the former TODO **Web — legacy's theme** |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money, shows its lookups and thinking, and releases the request's DB connection before a model call | complete — [PR #22](https://github.com/tiziaco/personal-finance-app/pull/22) into `template-base`; reaches `main` at Cutover | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md), [`architecture/server.md`](./architecture/server.md) (agents get module knowledge by injection) |
-| **7b Chat evaluation** — an eval set of questions over a seeded account, a grounding check that every figure in an answer came from a tool result, and an LLM-as-judge for answer quality; builds on the Langfuse traces of tool calls | not started | — | [`chat.md`](./product/features/chat.md) §4 (figures come from tools). No spec yet |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
+| **9 Chat evaluation** — an eval set of questions over a seeded account, a grounding check that every figure in an answer came from a tool result, and an LLM-as-judge for answer quality; builds on the Langfuse traces of tool calls | not started | — | [`chat.md`](./product/features/chat.md) §4 (figures come from tools). No spec yet |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
 [`TODO.md`](./TODO.md) (deferred to the change that should make it). An item gets a row
@@ -99,8 +99,9 @@ not wait for 4.
 - **Evaluation is its own step after 7** (product; decision at the 7 brainstorm, 20 Oct 2026).
   7 ships the tools and leaves their Langfuse spans (arguments and results) as the raw
   material; the eval set, grounding check and judge need the finished tools and a stable
-  prompt, so building them inside 7 would be graded against a moving target. It has no
-  dependency on 8; whether it lands before Cutover is the user's call.
+  prompt, so building them inside 7 would be graded against a moving target.
+- **Evaluation comes after Cutover** (product; decision on 20 Oct 2026). It has no technical
+  dependency on 8 either way, so the order is a product choice.
 - **Analytics rules is its own step, beside the cleanup** (product and technical; decision
   on 19 Oct 2026). The cleanup changes no behaviour; the rules step changes what the library
   reports, and may re-judge stored recurring flags, so the two are reviewed apart. They run
