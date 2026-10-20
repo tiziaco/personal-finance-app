@@ -35,7 +35,8 @@ Links are relative to `docs/`.
 | **Wave 3 cleanup** — shared analytics plumbing the 5b and 6 reviews found: url-state exports, chart props, two loading fixes on Income vs Expenses, one history load per caller, the month-to-date rule in one place; plus the status-dot ring, the rate-limit test fixture and the QueryProvider retry test | complete — [PR #20](https://github.com/tiziaco/personal-finance-app/pull/20) into `template-base`; reaches `main` at Cutover | `feat/wave3-cleanup` | [`analytics.md`](./product/features/analytics.md) §3 (no average without a whole month; month-to-date); [`architecture/server.md`](./architecture/server.md) (`AnalyticsHistory`) |
 | **Analytics rules** — an outlier rule for a thin category, frequent shopping not flagged recurring, yearly charges, hidden subscriptions that respect the user's "not recurring", and date bounds on hand-added transactions | complete — [PR #19](https://github.com/tiziaco/personal-finance-app/pull/19) into `template-base`; reaches `main` at Cutover | `feat/analytics-rules` | [`analytics.md`](./product/features/analytics.md) §3, [`data-model/transaction.md`](./data-model/transaction.md) D6, [`csv-import.md`](./product/features/csv-import.md) |
 | **Design system** — the app restyled to the design system made in Claude Design: tokens (colour in both themes, type, spacing, radius), fonts and the shared primitives, so every screen follows | complete — [PR #21](https://github.com/tiziaco/personal-finance-app/pull/21) into `template-base`; reaches `main` at Cutover | `feat/design-system` | [`web-app.md`](./architecture/web-app.md) §2 (the design system); the `finsight-design` skill; supersedes the former TODO **Web — legacy's theme** |
-| **7 Chat finance tools** — the assistant answers questions about the user's own money; names the model that answered after a fallback; releases the request's DB connection before a model call | in progress — spec written | `feat/chat-finance-tools` | [spec](../.superpowers/specs/2026-10-20-chat-finance-tools-design.md); [`chat.md`](./product/features/chat.md); [`TODO.md`](./TODO.md) **the chatbot names the default model**, **a model call holds the request's DB connection**, **Web — tests** (a failed conversation create) |
+| **7 Chat finance tools** — the assistant answers questions about the user's own money, shows its lookups and thinking, and releases the request's DB connection before a model call | complete — [PR #…](https://github.com/tiziaco/personal-finance-app/pull/…) into `template-base`; reaches `main` at Cutover | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md), [`architecture/server.md`](./architecture/server.md) (agents get module knowledge by injection) |
+| **7b Chat evaluation** — an eval set of questions over a seeded account, a grounding check that every figure in an answer came from a tool result, and an LLM-as-judge for answer quality; builds on the Langfuse traces of tool calls | not started | — | [`chat.md`](./product/features/chat.md) §4 (figures come from tools). No spec yet |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 
 Everything else outstanding is in [`BUGS.md`](./BUGS.md) (wrong today) or
@@ -95,6 +96,11 @@ not wait for 4.
   was closed before its spec. The cleanup added `AnalyticsService.history`, which loads a
   user's history once and returns a typed `AnalyticsHistory`; 7's tools build on that, rather
   than on methods that each reload the whole history.
+- **Evaluation is its own step after 7** (product; decision at the 7 brainstorm, 20 Oct 2026).
+  7 ships the tools and leaves their Langfuse spans (arguments and results) as the raw
+  material; the eval set, grounding check and judge need the finished tools and a stable
+  prompt, so building them inside 7 would be graded against a moving target. It has no
+  dependency on 8; whether it lands before Cutover is the user's call.
 - **Analytics rules is its own step, beside the cleanup** (product and technical; decision
   on 19 Oct 2026). The cleanup changes no behaviour; the rules step changes what the library
   reports, and may re-judge stored recurring flags, so the two are reviewed apart. They run

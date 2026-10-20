@@ -41,7 +41,9 @@ server/app/
 │   │                         #   domain/ holds the pure functions (R9); history.py is AnalyticsHistory:
 │   │                         #   one load of a user's rows and today, then any analysis over any
 │   │                         #   DateRange in memory — insights' figures use one per generation
-│   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency
+│   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency;
+│   │                         #   finance/ is its feature sub-package: the chat's tools over analytics
+│   │                         #   and transaction
 │   ├── insights/             # AI-written insights: gathers analytics figures, calls agents/insights,
 │   │                         #   stores one set per user
 │   └── transaction/          # the user's transactions and the category list
@@ -61,6 +63,19 @@ server/app/
 **`llm` is an adapter, not a module.** It holds nothing about the product. `Message` and the
 graph helpers are `agents/`'s own types — an adapter importing a module's schema would break
 R2 — and the chat request and response schemas are `conversation`'s.
+
+**Agents get module knowledge by injection.** `app.agents` may not import a module (R2), so the
+chatbot knows nothing about money. `conversation/finance/` builds a `Toolkit` (the tools, and a
+preamble the model reads each turn) and `main.py` hands it over at startup:
+`initialize_agents(checkpointer, {"chatbot": finance_toolkit()})`. The route builds a
+`TurnContext(user_id, session_factory, cache)` per turn and passes it in
+`config["configurable"]["turn_context"]`; tools read the user from it, never from an argument,
+and share one `AnalyticsHistory` through its `cache`. The chat routes release the request's
+DB connection before the model call, so a tool opens its own short-lived session from the
+context's factory. The tool schemas sent to the model carry no regex `pattern` (a Decimal
+argument's made gpt-5-mini return empty replies), so money arguments are JSON numbers parsed
+to Decimal; a test guards it. The stream's typed events are documented in
+`app/agents/chatbot/events.py`.
 
 ## 2. Modules
 
@@ -137,7 +152,7 @@ app/modules/transactions/
 On every rung the root stays the only import surface and R1–R10 hold. A module on the second
 rung beside one that is all files is an expected state.
 
-**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it (R10). The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it.
+**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it (R10). The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it. `conversation/finance/` is the second: it has no routes, only a `Toolkit` the root re-exports (`finance_toolkit`), and `conversation`'s core never imports it (R10).
 
 Settings live in `app/core/config.py`; a module with settings of its own gets a nested model
 there named for it, so `settings.<module>.X` reads like the rest. Every route keeps an

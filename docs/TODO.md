@@ -69,18 +69,6 @@ refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS
 role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the finance
 tables.
 
-## Server — a model call holds the request's DB connection
-
-`POST /chatbot/chat/{id}` and `POST /conversation/conversation/{id}/title` load the
-conversation through `UserConversation`, which opens the request's `DbSession`
-transaction, then await a model call of several seconds before the session commits after
-the route. The pool connection sits idle in transaction for that long. Fine at one user's
-traffic; under concurrent chats it starves other requests of connections. The fix is to
-read what the call needs, release the session before the model call, and write with a
-short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insights/generate` already release it
-(`_release_connection` in `transaction/imports/service.py` and `insights/service.py`). **Unblocks:** chat under concurrent load.
-
 ## Insights — word an outlier by what it was compared with
 
 Since 19 Oct 2026 an outlier carries `compared_with`, and the insights agent already receives
@@ -100,14 +88,6 @@ a z of about 170. Ticking the row recurring clears it, and so does a third month
 because, until then, rent looks exactly like a one-off; excluding `household_utilities` from
 the fallback would also hide a large furniture or appliance purchase. Revisit if users report
 it, for instance by not falling back for a charge the same merchant made about a month earlier.
-
-## Server — the chatbot names the default model after a fallback
-
-After an LLM fallback, the chatbot's inference-time metric label and its stored model name
-are the default model's (`current_model_name()`), not the one that answered. `LLMService`
-keeps no fallback position on itself any more, by design; the answering model is in the
-response's `response_metadata`. Read it from there. Found while making the fallback
-per call (15 Oct 2026).
 
 ## Server — every LLM call starts at the default model
 
@@ -159,9 +139,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 
 ## Web — tests the suite does not have yet
 
-- **A failed conversation create.** In `ChatRuntimeProvider`, a create that answers 500
-  clears the exchange and gives the text back to the composer if the user is still there.
-  The provider restructure moved this into `ensureConversation`; no test exercises it.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
@@ -230,9 +207,17 @@ A picker would let the user look back; every analytics route already takes
 `month` parameter. **Unblocks:**
 looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
 
+## Chat — conversation summaries
+
+A very long conversation drops its oldest turns from what the model is sent, oldest first,
+once the history passes `CHAT_HISTORY_MAX_TOKENS`; nothing stands in for them, so the
+assistant forgets how it began. Summarising the dropped turns (into the checkpoint, or
+beside it) would keep the thread. Left out of step 7 by decision (20 Oct 2026).
+**Unblocks:** long-running conversations. Reasoning: [`product/features/chat.md`](./product/features/chat.md) §4.
+
 ## Chat — free-form questions over the user's data
 
-The chat tools (step 7) call the analytics library's fixed functions. A question they do not
+The chat tools call the analytics library's fixed functions. A question they do not
 cover could be answered by generated code run in an isolated sandbox with its own environment
 (polars or similar); the server only hands it the user's rows from
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters

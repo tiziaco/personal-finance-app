@@ -1,12 +1,12 @@
 # Chat
 
-**Status:** shipped · **Owner:** Tiziano · **Last updated:** 13 Oct 2026
+**Status:** shipped · **Owner:** Tiziano · **Last updated:** 20 Oct 2026
 **Scope:** the assistant the user can talk to — conversations, messages, memory. Legacy
 v1.0 shipped the **backend** only: it had no chat screen. The port rebuilt the backend
 (the `conversation` module and its agent) and gave the assistant a screen (shipped in
-roadmap step 3); finance tools are step 7.
+roadmap step 3); step 7 gave it tools over the user's own transactions.
 **Data model:** [`../../data-model/conversation.md`](../../data-model/conversation.md)
-(conversations only; the finance part is pending, step 7).
+(conversations only; the tools add no table — their results live with the agent's checkpoints).
 **Related:** [`account.md`](./account.md) (erasure) · [`insights.md`](./insights.md) ·
 PRD [§8](../prd-mvp.md#8-chat).
 
@@ -28,8 +28,18 @@ has told it.
 - **Find a conversation again.** Conversations are listed newest first, under a title the
   assistant writes after the first reply. **Rename** and **delete** one at a time.
 - **Read the history** of a conversation, or **clear** it (API only).
+- **Ask about their money** — "where did my money go last month?", "how much at Lidl on
+  Tuesdays?", "how can I improve my savings rate?" — and get an answer from their own
+  transactions, with advice that points at their own numbers.
+- **See what the assistant did.** Above each reply an activity block shows, while the
+  assistant works, a live step label with an elapsed timer, its thinking when the model
+  provides it, and each lookup as a row that opens to a small table of what it returned.
+  When the answer starts the block collapses to "Worked for 4s · 2 lookups"; reopened from
+  history it reads "2 lookups", without the timing. A reply the server cut short reads
+  "Stopped".
 - **Send a message** over the API and get the reply in one piece, or **stream** it. The
-  stream carries only the model's text; tool results such as web search are not streamed.
+  stream carries typed events: the model's text, its reasoning, and each lookup starting
+  and finishing.
 - **Be remembered.** The assistant keeps long-term memory of facts the user has told it
   and reads it back in later conversations.
 
@@ -46,11 +56,53 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 
 - **Private by construction.** Another user's conversation answers "not found", the same as a
   missing one.
-- **What the v1.0 assistant could not do.** It could search the web, but it could **not**
-  see the user's transactions: a set of finance tools (spending summary, categories,
-  recurring, trends, behaviour, anomalies, merchants, stability) exists in the legacy code,
-  but was never given to the assistant. A user asking about their own spending got a
-  generic answer.
+- **Figures come from tools, never from the model.** The assistant has seven read-only
+  lookups: spending overview, spending by category, top merchants, recurring costs,
+  spending behaviour, unusual spending (each the analytics library's own method, so its
+  numbers are the dashboard's and the analytics page's) and a transaction search (merchant
+  text, dates, categories, amounts, recurring only, weekday; it returns the count and total
+  of the matches, optionally grouped by month, merchant, category or weekday, and a capped
+  sample of rows). It filters the same rows the analytics tools see, so it agrees with them;
+  money in and money out are reported apart, and a zero amount counts as neither. A figure
+  must come from a lookup made in the same turn: the lookups of an earlier turn are
+  replaced by a one-line note in what the model is sent, and memory is never a source of
+  figures. With no transactions it says so and points to CSV import.
+- **Every answer names its period** the way the dashboard does, and ranges are whole
+  finished months, the month in progress apart as month-to-date
+  ([`analytics.md`](./analytics.md) §2). Each turn the model is told today's date, the last
+  finished month and the span the data covers, so a question about a period with no data is
+  answered "you have no transactions before …".
+- **The savings rate is the analytics page's.** Analytics decides income and expense by
+  sign alone, so money moved into Savings & Investments counts as spending and lowers the
+  rate. When the question is about saving or investing, the assistant shows that category's
+  amount beside the rate and says so; it never computes an adjusted rate. Holdings and
+  returns are out of scope: investments are seen only through transactions.
+- **It only reads.** It cannot recategorise or change anything from chat.
+- **A bad lookup corrects itself.** A call with invalid arguments ("category must be one
+  of …", "no data before March 2025") goes back to the model as that call's result and it
+  tries again. A crash inside a lookup reaches the model as a fixed message, never the
+  exception text. Independent lookups in one step run together.
+- **A turn is bounded.** After `CHAT_MAX_STEPS` (default 8) model calls with lookups, or
+  the same lookup with the same arguments twice, the turn ends with an answer written from
+  what it has and marked stopped.
+- **Thinking is a setting.** `CHAT_REASONING_EFFORT` (default `medium`; the other model
+  callers keep their own effort) sets how hard the model reasons. At any effort above `low`
+  the model streams a readable summary of its reasoning through the current client; the
+  summaries vary from turn to turn and are absent at `low`, and the block shows only the
+  lookups then. Reasoning of earlier turns is not sent back; within a turn it is.
+- **What the model is sent is bounded.** The reply may use `CHAT_REPLY_MAX_TOKENS` (8000,
+  thinking included); the history is trimmed to `CHAT_HISTORY_MAX_TOKENS` (24000). The
+  current turn is never trimmed; earlier turns are dropped oldest first, so a very long
+  conversation forgets its beginning — there is no summary.
+- **An empty model reply fails the turn**, as any other failure does.
+- **Memory holds who the user is, not figures.** Long-term memory is fed only the user's own
+  messages, this turn's, never replies or tool results, and extraction is told to keep
+  goals, circumstances and preferences ("saving for a flat", "rent fixed until March") and
+  to drop amounts and anything describing a period's activity. The second half is a model
+  following instructions, best effort.
+- **No web search.** The assistant has no way to search the web: advice comes from the
+  user's data, general know-how is in the model, and the user's figures never leave the
+  app for a search engine. Only the LLM provider sees them.
 - **A conversation is erased with the account**, with its history and the long-term memory;
   see [`account.md`](./account.md).
 - **A reply that fails mid-stream** shows "The assistant couldn't reply. Try again."
@@ -61,11 +113,12 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   `StreamingResponse` stops listening at ASGI spec 2.4; uvicorn reports 2.3, so the earlier
   route was cancelled in practice too. A test pins the behaviour at 2.4.) The frames are
   unchanged, plus periodic `: ping` comments.
-- **Stopping a reply while its web search runs leaves the conversation usable.** The
+- **Stopping a reply while a lookup runs leaves the conversation usable.** The
   model's tool-call message is checkpointed before the tool runs, so a stop there leaves
   a call with no result, which providers reject with a 400 on every later turn.
   `drop_unanswered_tool_calls` (`app/agents/graph.py`) removes such a call, keeping any
-  text written beside it, before every model call.
+  text written beside it, before every model call. Reopening a stopped turn shows the
+  question alone: the history leaves out the activity of a turn with no final answer.
 - **Every LLM call goes through OpenRouter** (`OPENROUTER_API_KEY`) — the agent, titles and
   memory. `LLM_BASE_URL` defaults to OpenRouter and model names are OpenRouter ids
   (`openai/gpt-5-mini`); `server/.env.example` is the reference. An id without its
@@ -78,14 +131,13 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 
 ## 5. Not built
 
-The assistant reading the user's transactions; file or image input; voice; sharing a
+Summaries of long conversations (see [`TODO.md`](../../TODO.md)); a lookup over stored
+insights; free-form questions beyond the seven lookups; web search; file or image input; voice; sharing a
 conversation; clearing history from the screen and suggested prompts (both deferred by
 decision on 13 Oct 2026).
 
 ## 6. Open questions
 
-- **Wire the finance tools?** Giving the assistant the analytics tools is what makes it
-  useful. It is the main product decision here, and it belongs to step 7.
-- **Scope of memory.** What may the assistant remember about someone's money, and where does
-  the user see or delete it short of deleting the account?
-- **Web search.** Should an assistant with access to financial data also search the web?
+- **Where does the user see or delete what the assistant remembers** short of deleting
+  the account? Memory is now limited to goals, circumstances and preferences, but there
+  is still no screen for it.
