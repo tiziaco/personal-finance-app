@@ -62,7 +62,7 @@ async def generate_title(
 ) -> str | None:
     """Ask the model for a title; None if it answers with nothing usable. Model errors propagate.
 
-    Uses a registry client directly: `llm_service` has the chatbot's tools bound,
+    Uses a registry client directly: the chatbot's service has its tools bound,
     and a title request must not come back as a tool call. It runs outside the
     graph, so it carries its own Langfuse config, traced to the conversation.
     """

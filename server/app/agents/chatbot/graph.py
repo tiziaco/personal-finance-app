@@ -1,12 +1,15 @@
 """Chatbot agent implementation using LangGraph."""
 
+import asyncio
 import json
 import time
 import uuid
 from typing import Optional
 
 from langchain_core.messages import ToolMessage
+from langchain_core.runnables import RunnableLambda
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from langgraph.config import get_stream_writer
 from langgraph.graph import (
     END,
     StateGraph,
@@ -16,12 +19,20 @@ from langgraph.graph.state import (
     CompiledStateGraph,
 )
 from langgraph.types import RunnableConfig
+from pydantic import BaseModel, ValidationError
 
 from app.agents.base import BaseAgent
+from app.agents.chatbot.events import ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.prompts import load_system_prompt
 from app.agents.chatbot.state import GraphState
 from app.agents.chatbot.title import first_exchange, generate_title
-from app.agents.chatbot.tools import tools
+from app.agents.chatbot.toolkit import (
+    ToolArgumentError,
+    ToolDisplay,
+    Toolkit,
+    ToolOutcome,
+    TurnContext,
+)
 from app.agents.graph import (
     drop_unanswered_tool_calls,
     dump_messages,
@@ -36,7 +47,7 @@ from app.core.metrics import (
     tool_call_duration_seconds,
     tool_calls_total,
 )
-from app.integrations.llm import llm_service
+from app.integrations.llm import LLMService
 
 # What the model is told when a tool call does not produce a result. Fixed text
 # rather than the exception: a tool result becomes a ToolMessage in graph state,
@@ -46,10 +57,9 @@ from app.integrations.llm import llm_service
 TOOL_FAILED_MESSAGE = "The tool failed to run. Tell the user this information could not be retrieved right now."
 TOOL_UNKNOWN_MESSAGE = "That tool does not exist. Answer without it."
 
-# Tool arguments are logged, so they need a ceiling. For the search tool the
-# argument is the query — the most useful field when diagnosing a bad answer —
-# but a future tool taking a large payload would otherwise dump it into every
-# line.
+# Tool arguments are logged, so they need a ceiling: they are the most useful
+# field when diagnosing a bad answer, but a tool taking a large payload would
+# otherwise dump it into every line.
 TOOL_ARGS_LOG_LIMIT = 200
 
 
@@ -61,15 +71,27 @@ def _format_tool_args(args: dict) -> str:
     return rendered[:TOOL_ARGS_LOG_LIMIT] + "..."
 
 
+def _format_validation_error(error: ValidationError) -> str:
+    """Render argument validation errors for the model: which argument, and what is wrong with it."""
+    problems = "; ".join(f"{'.'.join(str(p) for p in e['loc']) or 'arguments'}: {e['msg']}" for e in error.errors())
+    return f"Invalid arguments: {problems}"
+
+
 class ChatbotAgent(BaseAgent):
     """A LangGraph conversational workflow with tools, memory and checkpointing."""
 
-    def __init__(self):
+    def __init__(self, toolkit: Toolkit | None = None):
         super().__init__()
 
-        self.llm_service = llm_service
-        self.llm_service.bind_tools(tools)
-        self.tools_by_name = {tool.name: tool for tool in tools}
+        self.toolkit = toolkit or Toolkit.empty()
+        # Its own service, not the shared singleton: the chat's reply budget and
+        # reasoning effort are set here and the tools bound are this agent's.
+        self.llm_service = LLMService(
+            max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS,
+            reasoning_effort=settings.llm.CHAT_REASONING_EFFORT,
+        )
+        self.llm_service.bind_tools([tool.as_schema() for tool in self.toolkit.tools])
+        self.tools_by_name = {tool.name: tool for tool in self.toolkit.tools}
 
         logger.info(
             "chatbot_agent_initialized",
@@ -133,17 +155,25 @@ class ChatbotAgent(BaseAgent):
             logger.exception("conversation_title_generation_failed", conversation_id=conversation_id)
             return None
 
-    async def _invoke_tool(self, tool_call: dict) -> ToolMessage:
+    async def _invoke_tool(
+        self, tool_call: dict, ctx: TurnContext | None, config: RunnableConfig | None = None
+    ) -> ToolMessage:
         """Run one tool call, recording what happened.
 
         This node hand-rolls the execution loop rather than using LangChain's
         prebuilt ToolNode, so error handling belongs here and not on the tools:
         one place covers a tool raising *and* a name the model invented, and
         every tool added later is covered without opting in. The returned
-        ToolMessage carries `status="error"` if there was no result.
+        ToolMessage carries `status="error"` if there was no result. Three
+        failures, three messages: arguments that do not validate or a
+        `ToolArgumentError` return text written for the model; anything else is
+        a crash and returns the fixed `TOOL_FAILED_MESSAGE`.
         """
         tool_name = tool_call["name"]
         tool = self.tools_by_name.get(tool_name)
+
+        def error_message(content: str) -> ToolMessage:
+            return ToolMessage(content=content, name=tool_name, tool_call_id=tool_call["id"], status="error")
 
         if tool is None:
             # A hallucinated name used to raise KeyError out of the graph and
@@ -154,58 +184,104 @@ class ChatbotAgent(BaseAgent):
                 known_tools=sorted(self.tools_by_name),
             )
             tool_calls_total.labels(tool=tool_name, outcome="unknown_tool").inc()
-            return ToolMessage(
-                content=TOOL_UNKNOWN_MESSAGE,
-                name=tool_name,
-                tool_call_id=tool_call["id"],
-                status="error",
-            )
+            return error_message(TOOL_UNKNOWN_MESSAGE)
 
-        logger.debug("tool_call_started", tool_name=tool_name, tool_args=_format_tool_args(tool_call["args"]))
+        tool_args = _format_tool_args(tool_call["args"])
+        logger.debug("tool_call_started", tool_name=tool_name, tool_args=tool_args)
         started = time.perf_counter()
 
-        try:
-            tool_result = await tool.ainvoke(tool_call["args"])
-        except Exception as e:
-            # Timed even on failure: a tool that fails slowly is a different
+        def finish(outcome: str) -> float:
+            # Timed on every outcome: a tool that fails slowly is a different
             # problem from one that fails fast.
             duration = time.perf_counter() - started
             tool_call_duration_seconds.labels(tool=tool_name).observe(duration)
-            tool_calls_total.labels(tool=tool_name, outcome="error").inc()
-            logger.exception(
-                "tool_call_failed",
+            tool_calls_total.labels(tool=tool_name, outcome=outcome).inc()
+            return duration
+
+        try:
+            args = tool.args_schema.model_validate(tool_call["args"])
+        except ValidationError as e:
+            duration = finish("invalid_args")
+            message = _format_validation_error(e)
+            logger.warning(
+                "tool_call_invalid_args",
                 tool_name=tool_name,
-                tool_args=_format_tool_args(tool_call["args"]),
+                tool_args=tool_args,
+                duration_ms=round(duration * 1000),
+                error=message,
+            )
+            return error_message(message)
+
+        try:
+            if ctx is None:
+                # Nothing sets a turn context until the route does; a tool call with
+                # none is a wiring bug, handled like any other crash.
+                raise RuntimeError("tool call without a turn context")
+
+            async def run(model: BaseModel) -> ToolOutcome:
+                return await tool.run(model, ctx)
+
+            # A runnable so the graph's Langfuse callback records one span per call,
+            # named for the tool, with its arguments and result.
+            outcome = await RunnableLambda(run).ainvoke(args, config={**(config or {}), "run_name": tool_name})
+        except ToolArgumentError as e:
+            duration = finish("invalid_args")
+            logger.warning(
+                "tool_call_rejected_args",
+                tool_name=tool_name,
+                tool_args=tool_args,
                 duration_ms=round(duration * 1000),
                 error=str(e),
             )
-            return ToolMessage(
-                content=TOOL_FAILED_MESSAGE,
-                name=tool_name,
-                tool_call_id=tool_call["id"],
-                status="error",
+            return error_message(str(e))
+        except Exception as e:
+            duration = finish("error")
+            logger.exception(
+                "tool_call_failed",
+                tool_name=tool_name,
+                tool_args=tool_args,
+                duration_ms=round(duration * 1000),
+                error=str(e),
             )
+            return error_message(TOOL_FAILED_MESSAGE)
 
-        duration = time.perf_counter() - started
-        tool_call_duration_seconds.labels(tool=tool_name).observe(duration)
-        tool_calls_total.labels(tool=tool_name, outcome="success").inc()
+        duration = finish("success")
         logger.info(
             "tool_call_completed",
             tool_name=tool_name,
-            tool_args=_format_tool_args(tool_call["args"]),
+            tool_args=tool_args,
             duration_ms=round(duration * 1000),
-            result_chars=len(str(tool_result)),
+            result_chars=len(outcome.content),
         )
         return ToolMessage(
-            content=tool_result,
+            content=outcome.content,
             name=tool_name,
             tool_call_id=tool_call["id"],
+            artifact=outcome.display.model_dump(),
         )
 
-    async def _tool_call(self, state: GraphState) -> Command:
-        """Run every tool call on the last message, then route back to chat."""
-        outputs = [await self._invoke_tool(tool_call) for tool_call in state.messages[-1].tool_calls]
-        return Command(update={"messages": outputs}, goto="chat")
+    async def _tool_call(self, state: GraphState, config: RunnableConfig) -> Command:
+        """Run every tool call on the last message concurrently, then route back to chat.
+
+        Results keep the order of the calls. Each call announces itself and its end
+        on the custom stream so the client can show it running.
+        """
+        ctx = config.get("configurable", {}).get("turn_context")
+        writer = get_stream_writer()
+
+        async def one(tool_call: dict) -> ToolMessage:
+            tool = self.tools_by_name.get(tool_call["name"])
+            if tool is not None:
+                writer(ToolStartedEvent(id=tool_call["id"], name=tool.name, title=tool.title))
+            message = await self._invoke_tool(tool_call, ctx, config)
+            if tool is not None:
+                ok = message.status == "success"
+                display = ToolDisplay.model_validate(message.artifact) if ok else None
+                writer(ToolFinishedEvent(id=tool_call["id"], ok=ok, display=display))
+            return message
+
+        outputs = await asyncio.gather(*(one(tool_call) for tool_call in state.messages[-1].tool_calls))
+        return Command(update={"messages": list(outputs)}, goto="chat")
 
     async def create_graph(self, checkpointer: AsyncPostgresSaver) -> CompiledStateGraph:
         """Create and compile the chatbot LangGraph workflow."""

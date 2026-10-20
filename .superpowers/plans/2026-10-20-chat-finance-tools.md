@@ -153,7 +153,7 @@ async def test_call_without_tools_uses_an_unbound_client():
 - Produces (`graph.py`): `ChatbotAgent.__init__(self, toolkit: Toolkit | None = None)`; the turn context is read from `config["configurable"]["turn_context"]`; `ToolMessage.artifact` holds `ToolDisplay.model_dump()` on success.
 - Produces (`factory.py`): `initialize_agents(checkpointer, toolkits: Mapping[str, Toolkit] | None = None)` — passes `toolkit=toolkits[name]` when present.
 
-- [ ] **Step 1: Write the failing tests** (replace the web-search-specific tests; keep the unknown-tool and crash tests)
+- [x] **Step 1: Write the failing tests** (replace the web-search-specific tests; keep the unknown-tool and crash tests)
 
 ```python
 async def test_invalid_arguments_return_the_validation_message(agent_with(tool_taking_int)):
@@ -181,10 +181,10 @@ def test_no_web_search_tool_is_bound():
     assert "duckduckgo" not in str(ChatbotAgent().llm_service._tools)
 ```
 
-- [ ] **Step 2: Run** `APP_ENV=test uv run pytest tests/unit/agents/chatbot -v` — FAIL.
-- [ ] **Step 3: Implement.** `ChatbotAgent` owns its own `LLMService(max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS, reasoning_effort=settings.llm.CHAT_REASONING_EFFORT)` (no longer the shared `llm_service` singleton) and binds `[t.as_schema() for t in toolkit.tools]`. `_invoke_tool(tool_call, ctx)` validates with `args_schema.model_validate` (a `ValidationError` → its errors rendered compactly, status `error`, outcome label `invalid_args`), then `run`; `ToolArgumentError` → its message; any other exception → `TOOL_FAILED_MESSAGE` as today. `_tool_call(state, config)` runs all calls with `asyncio.gather` and emits events through `langgraph.config.get_stream_writer()`. Keep metrics/logging per call. Run each `run` through `RunnableLambda(...).ainvoke(args, config={**config, "run_name": tool.name})` so the graph's Langfuse callback records a span per tool call with its arguments and result (§10; the eval ticket's raw material). Update `test_graph.py`'s fixture to `ChatbotAgent(Toolkit.empty())`, and `title.py`'s docstring that mentions `llm_service`.
-- [ ] **Step 4: Run** the chatbot tests and `make test-unit` — PASS.
-- [ ] **Step 5: Commit** `feat(agents): toolkit contract, validated and parallel tool calls; remove web search`.
+- [x] **Step 2: Run** `APP_ENV=test uv run pytest tests/unit/agents/chatbot -v` — FAIL.
+- [x] **Step 3: Implement.** `ChatbotAgent` owns its own `LLMService(max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS, reasoning_effort=settings.llm.CHAT_REASONING_EFFORT)` (no longer the shared `llm_service` singleton) and binds `[t.as_schema() for t in toolkit.tools]`. `_invoke_tool(tool_call, ctx)` validates with `args_schema.model_validate` (a `ValidationError` → its errors rendered compactly, status `error`, outcome label `invalid_args`), then `run`; `ToolArgumentError` → its message; any other exception → `TOOL_FAILED_MESSAGE` as today. `_tool_call(state, config)` runs all calls with `asyncio.gather` and emits events through `langgraph.config.get_stream_writer()`. Keep metrics/logging per call. Run each `run` through `RunnableLambda(...).ainvoke(args, config={**config, "run_name": tool.name})` so the graph's Langfuse callback records a span per tool call with its arguments and result (§10; the eval ticket's raw material). Update `test_graph.py`'s fixture to `ChatbotAgent(Toolkit.empty())`, and `title.py`'s docstring that mentions `llm_service`.
+- [x] **Step 4: Run** the chatbot tests and `make test-unit` — PASS.
+- [x] **Step 5: Commit** `feat(agents): toolkit contract, validated and parallel tool calls; remove web search`.
 
 ---
 
