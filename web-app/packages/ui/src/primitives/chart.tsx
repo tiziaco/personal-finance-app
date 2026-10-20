@@ -64,6 +64,8 @@ type TooltipItem = {
   dataKey?: unknown
   value?: unknown
   color?: string
+  /** "none" for a series drawn with tooltipType="none", such as a line's halo. */
+  type?: string
 }
 
 /** Tooltip body: one row per series, labelled and coloured from the config; text in text tokens. */
@@ -85,7 +87,8 @@ function ChartTooltipContent({
   className?: string
 }) {
   const { config } = useChart()
-  if (!active || !payload?.length) return null
+  const rows = payload?.filter((item) => item.type !== "none")
+  if (!active || !rows?.length) return null
   return (
     <div
       className={cn(
@@ -98,7 +101,7 @@ function ChartTooltipContent({
           {labelFormatter ? labelFormatter(label) : String(label)}
         </div>
       )}
-      {payload.map((item) => {
+      {rows.map((item) => {
         const key = String(
           typeof item.dataKey === "string" && config[item.dataKey]
             ? item.dataKey

@@ -35,7 +35,7 @@ export function CategoryRanking({
           </div>
           <div aria-hidden className="h-2 rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-chart-expense"
+              className="h-full rounded-full bg-chart-1"
               style={{ width: `${c.share_pct}%` }}
             />
           </div>

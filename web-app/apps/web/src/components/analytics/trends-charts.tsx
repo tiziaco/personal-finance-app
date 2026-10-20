@@ -38,7 +38,7 @@ import { changeTone, formatPct } from "./format"
 import type { MonthPoint } from "./month-points"
 
 const spendingConfig: ChartConfig = {
-  expenses: { label: "Expenses", color: "var(--chart-expense)" },
+  expenses: { label: "Expenses", color: "var(--chart-1)" },
   rollingAvg: { label: "3-month average", color: "var(--muted-foreground)" },
 }
 
@@ -78,6 +78,18 @@ export function SpendingTrendChart({ points }: { points: MonthPoint[] }) {
               <Cell key={p.month} fillOpacity={partialOpacity(p)} />
             ))}
           </Bar>
+          {/* A surface-coloured halo under the average: grey on the navy bars would vanish where it crosses one. */}
+          <Line
+            dataKey="rollingAvg"
+            type="monotone"
+            stroke="var(--chart-gap)"
+            strokeWidth={5}
+            dot={false}
+            activeDot={false}
+            connectNulls={false}
+            tooltipType="none"
+            isAnimationActive={false}
+          />
           <Line
             dataKey="rollingAvg"
             type="monotone"
