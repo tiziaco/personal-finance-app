@@ -475,10 +475,7 @@ export function DataTableCore<TData, TValue>({
           >
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow
-                  key={headerGroup.id}
-                  className="bg-muted/50 hover:bg-muted/50"
-                >
+                <TableRow key={headerGroup.id} className="hover:bg-transparent">
                   {headerGroup.headers.map((header, index) => {
                     const def = header.column.columnDef
                     const meta = def.meta
@@ -505,13 +502,14 @@ export function DataTableCore<TData, TValue>({
                         }
                         style={{ ...widthStyle(meta), ...freezeStyle(freeze) }}
                         className={cn(
-                          "text-xs font-medium tracking-wider text-muted-foreground uppercase",
+                          // The design system's caption caps: tracking-caps is 0.08em.
+                          "text-xs font-medium tracking-[0.08em] text-(--text-secondary) uppercase",
                           density === "compact" ? "h-8 px-2" : "h-9 px-4",
                           wraps && "whitespace-normal",
                           meta?.align === "right" && "text-right",
                           hasFrozen && "border-b",
-                          maxScrollHeight && "sticky top-0 z-10 bg-muted",
-                          freeze.frozen && "z-20 bg-muted",
+                          maxScrollHeight && "sticky top-0 z-10 bg-card",
+                          freeze.frozen && "z-20 bg-card",
                         )}
                       >
                         {header.isPlaceholder ? null : canSort ? (

@@ -146,7 +146,9 @@ value from props.
   `Button` with no `size` (`icon` for an icon-only one), `Input`, `SelectTrigger size="sm"` (its
   default is 36px). `sm` buttons are for compact spots: the bulk-action pill, the date presets.
 - **The frame:** every table sits in a card (`rounded-xl border bg-card shadow-sm`) with uppercase
-  muted header labels on a `bg-muted/50` strip. Sticky and frozen header cells use opaque `bg-muted`.
+  header labels in `--text-secondary` on the card's own white, set off by the header row's bottom
+  border — a tinted strip reads as the page showing through. Sticky and frozen header cells use
+  opaque `bg-card`.
 - **Phone cards:** `renderCard(row)` replaces the body with a card list below 768px (`useIsMobile`).
   Toolbar, chips and pager stay; column headers, row menus and the bulk bar do not. So a card that
   acts is a `<button>` (the transactions card opens the edit dialog), and a list that sorts needs a
