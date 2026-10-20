@@ -287,10 +287,15 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
           dispatch({ type: "event", send, event, now })
         }
         await refetchHistory(queryClient, conversationId)
-        // The refetched history ends with this send's reply.
+        // The refetched history ends with this send's reply. A user who left
+        // meanwhile reopens it later, without the timing.
         const saved = cachedHistory(queryClient, conversationId)
         const reply = saved.length - 1
-        if (endedAt !== null && saved[reply]?.role === "assistant") {
+        if (
+          owns(sendRef, send) &&
+          endedAt !== null &&
+          saved[reply]?.role === "assistant"
+        ) {
           const timing = { startedAt, endedAt }
           setFinished((f) => ({
             conversationId,
