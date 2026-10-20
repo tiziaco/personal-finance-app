@@ -119,7 +119,7 @@ def test_the_toolkit_holds_the_finance_tools():
         "Transaction search",
     ]
     assert toolkit.preamble is preamble
-    for tool in toolkit.tools[:6]:
+    for tool in (t for t in toolkit.tools if issubclass(t.args_schema, PeriodArgs)):
         parameters = tool.as_schema()["function"]["parameters"]["properties"]
         assert {"months", "date_from", "date_to"} <= parameters.keys()
         assert "user" not in " ".join(parameters)

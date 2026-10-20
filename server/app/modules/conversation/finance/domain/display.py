@@ -10,7 +10,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Optional, TypeVar
 
 from app.agents.chatbot.toolkit import SummaryItem, TableColumn, ToolDisplay, ToolOutcome, ToolTable
-from app.modules.conversation.finance.domain.periods import MONTH_NAMES, name_period, short_month
+from app.modules.conversation.finance.domain.periods import MONTH_NAMES, describe_span, name_period, short_month
 from app.modules.conversation.finance.domain.search import GROUP_LIMIT, SearchResult, Totals
 
 if TYPE_CHECKING:
@@ -456,7 +456,8 @@ def _group_name(label: str, group_by: str, names: Mapping[str, str]) -> str:
 
 
 def _totals(side: str, totals: Totals) -> str:
-    return f"{side} {totals.count} transactions, {_eur(totals.total)}"
+    noun = "transaction" if totals.count == 1 else "transactions"
+    return f"{side} {totals.count} {noun}, {_eur(totals.total)}"
 
 
 def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str, str]) -> ToolOutcome:
@@ -474,15 +475,18 @@ def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str,
         label = "All transactions"
     lines = [_describe_filter(args, names)]
     if not result.matched:
-        lines.append(f"{NO_MATCH.capitalize()}.")
+        covers = f"; the {describe_span(*result.data_span)}" if result.data_span else ""
+        lines.append(f"{NO_MATCH.capitalize()}{covers}.")
         return _outcome(
             "Transaction search", label, lines, [SummaryItem(kind="count", value=0, label="matches")], [], []
         )
-    lines.append(f"{result.matched} transactions match.")
+    lines.append(f"{result.matched} {'transaction matches' if result.matched == 1 else 'transactions match'}.")
     lines.append(f"{_totals('Money out:', result.money_out)}; {_totals('money in:', result.money_in)}.")
+    groups = result.groups
     if args.group_by:
         lines.append(f"By {args.group_by}:")
-        groups = _capped(result.groups, GROUP_LIMIT, "groups", lines)
+        # Months run oldest to newest and keep the newest; other groupings are ranked and keep the top.
+        groups = _capped(result.groups, GROUP_LIMIT, "groups", lines, last=args.group_by == "month")
         for name, out, into in groups:
             lines.append(
                 f"- {_group_name(name, args.group_by, names)}: "
@@ -514,7 +518,7 @@ def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str,
                 "in_count": into.count,
                 "in_total": _num(into.total),
             }
-            for name, out, into in result.groups[:GROUP_LIMIT]
+            for name, out, into in groups
         ]
     else:
         columns = [

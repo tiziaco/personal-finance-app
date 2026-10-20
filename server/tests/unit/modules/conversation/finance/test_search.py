@@ -128,10 +128,43 @@ def test_open_ended_range_and_unfiltered_labels():
     assert search_outcome(search_rows(ROWS, args()), args(), NAMES).display.period == "1 Sep – 4 Oct 2026"
 
 
-def test_groups_are_capped_and_say_so_and_the_table_shows_groups():
-    many = [row(f"{2020 + m // 12}-{m % 12 + 1:02d}-05", "-10.00") for m in range(30)]
-    a = args(group_by="month")
+def test_ranked_groups_are_capped_to_the_top_and_the_table_shows_groups():
+    many = [row("2026-09-05", f"-{m + 1}.00", merchant=f"Shop {m}") for m in range(30)]
+    a = args(group_by="merchant")
     outcome = search_outcome(search_rows(many, a), a, NAMES)
     assert f"(top {GROUP_LIMIT} of 30 groups shown)" in outcome.content
     assert len(outcome.display.table.rows) == GROUP_LIMIT
-    assert outcome.display.table.rows[0]["out_total"] == -10.0
+    assert outcome.display.table.rows[0]["out_total"] == -30.0
+
+
+def test_zero_amounts_are_neither_money_out_nor_in_and_not_matches():
+    r = search_rows([row("2026-09-01", "0.00"), row("2026-09-02", "-5.00")], args())
+    assert (r.matched, r.money_out.count, r.money_in.count) == (1, 1, 0)
+
+
+def test_months_run_oldest_first_and_the_cap_keeps_the_newest():
+    many = [row(f"{2020 + m // 12}-{m % 12 + 1:02d}-05", f"-{m + 1}.00") for m in range(30)]
+    a = args(group_by="month")
+    outcome = search_outcome(search_rows(many, a), a, NAMES)
+    assert f"(last {GROUP_LIMIT} of 30 groups shown)" in outcome.content
+    months = [r["group"] for r in outcome.display.table.rows]
+    assert months[0] == "Jul 2020" and months[-1] == "Jun 2022"
+    other = args(group_by="category")
+    assert [g[0] for g in search_rows(ROWS, other).groups][0] == "food_groceries"  # ranked by money out
+
+
+def test_no_match_names_the_data_span():
+    a = args(date_from="2019-01-01", date_to="2019-12-31")
+    outcome = search_outcome(search_rows(ROWS, a), a, NAMES)
+    assert "the data covers September 2026 to October 2026" in outcome.content
+
+
+def test_one_transaction_is_singular():
+    a = args(merchant="kiosk")
+    content = search_outcome(search_rows(ROWS, a), a, NAMES).content
+    assert "1 transaction matches." in content and "Money out: 1 transaction, -5.00 EUR" in content
+
+
+def test_a_blank_merchant_is_no_filter_and_a_padded_one_is_stripped():
+    assert search_rows(ROWS, args(merchant="   ")).matched == 5
+    assert search_rows(ROWS, args(merchant=" kiosk ")).matched == 1

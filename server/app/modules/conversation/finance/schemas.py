@@ -2,9 +2,9 @@
 
 import datetime as dt
 from decimal import Decimal
-from typing import Literal, Optional
+from typing import Annotated, Literal, Optional
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from app.modules.transaction import MAX_DATE, MIN_DATE, Category
 
@@ -55,8 +55,8 @@ class SearchArgs(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    merchant: Optional[str] = Field(
-        None, max_length=100, description='Part of the merchant name, any case ("lidl" finds "LIDL Berlin").'
+    merchant: Optional[Annotated[str, StringConstraints(strip_whitespace=True, max_length=100)]] = Field(
+        None, description='Part of the merchant name, any case ("lidl" finds "LIDL Berlin").'
     )
     date_from: Optional[dt.date] = Field(
         None, ge=MIN_DATE, le=MAX_DATE, description="First day, inclusive (YYYY-MM-DD)."

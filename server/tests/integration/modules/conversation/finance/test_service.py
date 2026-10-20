@@ -139,7 +139,7 @@ async def test_search_transactions_counts_the_context_users_rows_only(test_user,
 
     outcome = await run("search_transactions", turn(test_user), merchant="lidl", group_by="month")
 
-    assert "Money out: 3 transactions, -630.50 EUR; money in: 1 transactions, 40.00 EUR." in outcome.content
+    assert "Money out: 3 transactions, -630.50 EUR; money in: 1 transaction, 40.00 EUR." in outcome.content
     assert "- Sep 2026: out 1 for -180.50 EUR, in 1 for 40.00 EUR" in outcome.content
     assert outcome.display.table.rows[0]["group"] == "Aug 2026"
 

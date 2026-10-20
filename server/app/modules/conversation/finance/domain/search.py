@@ -44,6 +44,7 @@ class SearchResult:
     sample: list["AnalysisRow"]
     matched: int
     span: Optional[tuple[dt.date, dt.date]] = field(default=None)  # first and last day among the matches
+    data_span: Optional[tuple[dt.date, dt.date]] = field(default=None)  # first and last day of all the rows searched
 
 
 def _matches(row: "AnalysisRow", args: "SearchArgs") -> bool:
@@ -76,7 +77,8 @@ def _group_label(row: "AnalysisRow", group_by: str) -> str:
 
 def search_rows(rows: Sequence["AnalysisRow"], args: "SearchArgs") -> SearchResult:
     """Totals, groups and a capped sample over the rows matching every filter in `args`."""
-    matches = [r for r in rows if _matches(r, args)]
+    # A zero amount is money neither out nor in (as analytics counts it), so it is not a match.
+    matches = [r for r in rows if r.amount != 0 and _matches(r, args)]
     money_out, money_in = Totals(), Totals()
     grouped: dict[str, tuple[Totals, Totals]] = defaultdict(lambda: (Totals(), Totals()))
     spelling: dict[str, str] = {}
@@ -87,15 +89,17 @@ def search_rows(rows: Sequence["AnalysisRow"], args: "SearchArgs") -> SearchResu
             spelling.setdefault(label, r.merchant if args.group_by == "merchant" else label)
             out, into = grouped[label]
             (out if r.amount < 0 else into).add(r.amount)
-    groups = sorted(
-        ((spelling[label], out, into) for label, (out, into) in grouped.items()),
-        key=lambda g: (g[1].total, -g[2].total),
-    )
+    ordered = [(spelling[label], out, into) for label, (out, into) in grouped.items()]
+    if args.group_by == "month":
+        groups = sorted(ordered, key=lambda g: g[0])  # oldest first; the display keeps the newest
+    else:
+        groups = sorted(ordered, key=lambda g: (g[1].total, -g[2].total))
     if args.sample == "recent":
         sample = sorted(matches, key=lambda r: r.date, reverse=True)
     else:
         sample = sorted(matches, key=lambda r: abs(r.amount), reverse=True)
     days = [r.date for r in matches]
+    all_days = [r.date for r in rows]
     return SearchResult(
         money_out=money_out,
         money_in=money_in,
@@ -103,4 +107,5 @@ def search_rows(rows: Sequence["AnalysisRow"], args: "SearchArgs") -> SearchResu
         sample=sample[:SAMPLE_SIZE],
         matched=len(matches),
         span=(min(days), max(days)) if days else None,
+        data_span=(min(all_days), max(all_days)) if all_days else None,
     )
