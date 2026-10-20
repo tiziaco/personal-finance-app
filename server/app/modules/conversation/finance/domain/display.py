@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Optional, TypeVar
 
 from app.agents.chatbot.toolkit import SummaryItem, TableColumn, ToolDisplay, ToolOutcome, ToolTable
 from app.modules.conversation.finance.domain.periods import MONTH_NAMES, name_period, short_month
+from app.modules.conversation.finance.domain.search import GROUP_LIMIT, SearchResult, Totals
 
 if TYPE_CHECKING:
     from app.modules.analytics import (
@@ -21,6 +22,7 @@ if TYPE_CHECKING:
         RecurringResponse,
         SpendingResponse,
     )
+    from app.modules.conversation.finance.schemas import SearchArgs
 
 T = TypeVar("T")
 
@@ -407,3 +409,127 @@ def unusual_spending_outcome(response: "AnomaliesResponse", label: str, names: M
         for o in outliers
     ]
     return _outcome("Unusual spending", label, lines, summary, columns, rows)
+
+
+WEEKDAY_NAMES = {
+    "mon": "Monday",
+    "tue": "Tuesday",
+    "wed": "Wednesday",
+    "thu": "Thursday",
+    "fri": "Friday",
+    "sat": "Saturday",
+    "sun": "Sunday",
+}
+NO_MATCH = "no transactions match"
+
+
+def _describe_filter(args: "SearchArgs", names: Mapping[str, str]) -> str:
+    parts = []
+    if args.merchant:
+        parts.append(f'merchant contains "{args.merchant}"')
+    if args.date_from or args.date_to:
+        parts.append(
+            f"from {args.date_from.isoformat() if args.date_from else 'the start'} "
+            f"to {args.date_to.isoformat() if args.date_to else 'the end'}"
+        )
+    if args.categories:
+        parts.append("categories " + ", ".join(_named(c.value, names) for c in args.categories))
+    if args.amount_min is not None:
+        parts.append(f"amount at least {args.amount_min} EUR")
+    if args.amount_max is not None:
+        parts.append(f"amount at most {args.amount_max} EUR")
+    if args.recurring_only:
+        parts.append("recurring only")
+    if args.weekdays:
+        parts.append("on " + ", ".join(WEEKDAY_NAMES[d] for d in args.weekdays))
+    return "Filter: " + ("; ".join(parts) if parts else "none (all transactions)") + "."
+
+
+def _group_name(label: str, group_by: str, names: Mapping[str, str]) -> str:
+    if group_by == "month":
+        return short_month(label)
+    if group_by == "category":
+        return _named(label, names)
+    if group_by == "weekday":
+        return WEEKDAY_NAMES[label]
+    return label
+
+
+def _totals(side: str, totals: Totals) -> str:
+    return f"{side} {totals.count} transactions, {_eur(totals.total)}"
+
+
+def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str, str]) -> ToolOutcome:
+    """Matches as counts and totals (money out and in apart), optional groups, and a sample of transactions.
+
+    The table is the groups when `group_by` is set, else the sample.
+    """
+    if args.date_from and args.date_to:
+        label = name_period(args.date_from, args.date_to)
+    elif args.date_from or args.date_to:
+        label = f"from {args.date_from.isoformat()}" if args.date_from else f"up to {args.date_to.isoformat()}"
+    elif result.span is not None:
+        label = name_period(*result.span)
+    else:
+        label = "All transactions"
+    lines = [_describe_filter(args, names)]
+    if not result.matched:
+        lines.append(f"{NO_MATCH.capitalize()}.")
+        return _outcome(
+            "Transaction search", label, lines, [SummaryItem(kind="count", value=0, label="matches")], [], []
+        )
+    lines.append(f"{result.matched} transactions match.")
+    lines.append(f"{_totals('Money out:', result.money_out)}; {_totals('money in:', result.money_in)}.")
+    if args.group_by:
+        lines.append(f"By {args.group_by}:")
+        groups = _capped(result.groups, GROUP_LIMIT, "groups", lines)
+        for name, out, into in groups:
+            lines.append(
+                f"- {_group_name(name, args.group_by, names)}: "
+                f"out {out.count} for {_eur(out.total)}, in {into.count} for {_eur(into.total)}"
+            )
+    lines.append(
+        f"{'Largest' if args.sample == 'largest' else 'Most recent'} {len(result.sample)} of {result.matched}:"
+    )
+    for r in result.sample:
+        lines.append(f"- {r.date.isoformat()} {r.merchant} {_eur(r.amount)} {_named(r.category, names)}")
+    summary = [
+        _money_item(result.money_out.total, "money out"),
+        _money_item(result.money_in.total, "money in"),
+        SummaryItem(kind="count", value=result.matched, label="matches"),
+    ]
+    if args.group_by:
+        columns = [
+            TableColumn(key="group", label=args.group_by.capitalize(), kind="text"),
+            TableColumn(key="out_count", label="Out", kind="count"),
+            TableColumn(key="out_total", label="Money out", kind="money"),
+            TableColumn(key="in_count", label="In", kind="count"),
+            TableColumn(key="in_total", label="Money in", kind="money"),
+        ]
+        rows = [
+            {
+                "group": _group_name(name, args.group_by, names),
+                "out_count": out.count,
+                "out_total": _num(out.total),
+                "in_count": into.count,
+                "in_total": _num(into.total),
+            }
+            for name, out, into in result.groups[:GROUP_LIMIT]
+        ]
+    else:
+        columns = [
+            TableColumn(key="date", label="Date", kind="date"),
+            TableColumn(key="merchant", label="Merchant", kind="text"),
+            TableColumn(key="category", label="Category", kind="text"),
+            TableColumn(key="amount", label="Amount", kind="money"),
+        ]
+        rows = [
+            {
+                "date": r.date.isoformat(),
+                "merchant": r.merchant,
+                "category": _name(r.category, names),
+                "amount": _num(r.amount),
+            }
+            for r in result.sample
+        ]
+    return _outcome("Transaction search", label, lines, summary, columns, rows)

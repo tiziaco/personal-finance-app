@@ -354,7 +354,7 @@ Deviation from spec §10, decided while planning: the search filters **`history.
   - `def search_rows(rows: Sequence[AnalysisRow], args: SearchArgs) -> SearchResult` — pure; `money_out` = negative amounts, `money_in` = positive, never netted; groups sorted by money-out total; `sample` largest by absolute amount or most recent.
   - `def search_outcome(result: SearchResult, args: SearchArgs) -> ToolOutcome` in `display.py`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```python
 def test_merchant_match_is_case_insensitive_substring(): assert search_rows(rows, SearchArgs(merchant="lidl")).matched == 3
@@ -367,8 +367,8 @@ def test_unknown_category_is_a_validation_error(): with pytest.raises(Validation
 def test_no_match_says_so_in_content(): assert "no transactions match" in search_outcome(empty, args).content
 ```
 
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement** and register the tool (title "Transaction search"). **Step 4: Run** — PASS.
-- [ ] **Step 5: Commit** `feat(conversation): search_transactions with server-side totals`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement** and register the tool (title "Transaction search"). **Step 4: Run** — PASS.
+- [x] **Step 5: Commit** `feat(conversation): search_transactions with server-side totals`.
 
 ---
 

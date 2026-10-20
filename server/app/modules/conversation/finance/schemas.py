@@ -1,11 +1,12 @@
 """The finance tools' arguments, as the model sends them. The user is never one of them."""
 
 import datetime as dt
-from typing import Optional
+from decimal import Decimal
+from typing import Literal, Optional
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.modules.transaction import MAX_DATE, MIN_DATE
+from app.modules.transaction import MAX_DATE, MIN_DATE, Category
 
 
 class PeriodArgs(BaseModel):
@@ -47,3 +48,50 @@ class TopMerchantsArgs(PeriodArgs):
     """The period, and how many merchants to rank."""
 
     top_n: int = Field(10, ge=1, le=15, description="How many merchants to rank by spend.")
+
+
+class SearchArgs(BaseModel):
+    """Filters for `search_transactions`; every one is optional and they all apply together."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    merchant: Optional[str] = Field(
+        None, max_length=100, description='Part of the merchant name, any case ("lidl" finds "LIDL Berlin").'
+    )
+    date_from: Optional[dt.date] = Field(
+        None, ge=MIN_DATE, le=MAX_DATE, description="First day, inclusive (YYYY-MM-DD)."
+    )
+    date_to: Optional[dt.date] = Field(None, ge=MIN_DATE, le=MAX_DATE, description="Last day, inclusive (YYYY-MM-DD).")
+    categories: Optional[list[Category]] = Field(
+        None, max_length=len(Category), description="Only these categories, by slug (the one in brackets)."
+    )
+    amount_min: Optional[Decimal] = Field(
+        None,
+        description="Smallest signed amount in EUR: spending is negative, so -100 means spending up to 100 or any income.",
+    )
+    amount_max: Optional[Decimal] = Field(
+        None, description="Largest signed amount in EUR: -50 keeps spending of at least 50; 0 keeps only spending."
+    )
+    recurring_only: bool = Field(False, description="Only transactions marked recurring.")
+    weekdays: Optional[list[Literal["mon", "tue", "wed", "thu", "fri", "sat", "sun"]]] = Field(
+        None, max_length=7, description="Only these days of the week."
+    )
+    group_by: Optional[Literal["month", "merchant", "category", "weekday"]] = Field(
+        None, description="Also total the matches per month, merchant, category or weekday."
+    )
+    sample: Literal["largest", "recent"] = Field(
+        "largest", description="Which matches to list: the largest by amount, or the most recent."
+    )
+
+    @model_validator(mode="after")
+    def _ranges_are_ordered(self) -> "SearchArgs":
+        if self.date_from and self.date_to and self.date_from > self.date_to:
+            raise ValueError(
+                f"date_from {self.date_from.isoformat()} is after date_to {self.date_to.isoformat()}; "
+                "date_from must be the earlier day"
+            )
+        if self.amount_min is not None and self.amount_max is not None and self.amount_min > self.amount_max:
+            raise ValueError(
+                f"amount_min {self.amount_min} is above amount_max {self.amount_max}; amount_min must be the lower bound"
+            )
+        return self

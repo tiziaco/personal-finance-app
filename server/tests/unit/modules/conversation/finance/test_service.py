@@ -98,7 +98,7 @@ async def test_concurrent_calls_share_one_history_load():
     assert load.await_args.args[1] == turn.user_id
 
 
-def test_the_toolkit_holds_the_six_analytics_tools():
+def test_the_toolkit_holds_the_finance_tools():
     toolkit = finance_toolkit()
     assert [t.name for t in toolkit.tools] == [
         "spending_overview",
@@ -107,6 +107,7 @@ def test_the_toolkit_holds_the_six_analytics_tools():
         "recurring_costs",
         "spending_behaviour",
         "unusual_spending",
+        "search_transactions",
     ]
     assert [t.title for t in toolkit.tools] == [
         "Spending overview",
@@ -115,9 +116,10 @@ def test_the_toolkit_holds_the_six_analytics_tools():
         "Recurring costs",
         "Spending patterns",
         "Unusual spending",
+        "Transaction search",
     ]
     assert toolkit.preamble is preamble
-    for tool in toolkit.tools:
+    for tool in toolkit.tools[:6]:
         parameters = tool.as_schema()["function"]["parameters"]["properties"]
         assert {"months", "date_from", "date_to"} <= parameters.keys()
         assert "user" not in " ".join(parameters)

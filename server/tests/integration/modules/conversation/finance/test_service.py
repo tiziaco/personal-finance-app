@@ -130,3 +130,22 @@ async def test_a_period_before_the_data_names_the_span(test_user, add, turn):
 
     with pytest.raises(ToolArgumentError, match="data covers July 2026 to October 2026"):
         await run("spending_overview", turn(test_user), date_from="2019-01-01", date_to="2019-12-31")
+
+
+async def test_search_transactions_counts_the_context_users_rows_only(test_user, other_user, add, turn):
+    await seed(add, test_user)
+    await add(test_user, "2026-09-12", "40.00", merchant="Lidl")  # a refund: money in, not netted
+    await seed(add, other_user, merchant="Lidl")
+
+    outcome = await run("search_transactions", turn(test_user), merchant="lidl", group_by="month")
+
+    assert "Money out: 3 transactions, -630.50 EUR; money in: 1 transactions, 40.00 EUR." in outcome.content
+    assert "- Sep 2026: out 1 for -180.50 EUR, in 1 for 40.00 EUR" in outcome.content
+    assert outcome.display.table.rows[0]["group"] == "Aug 2026"
+
+
+async def test_search_transactions_without_transactions_says_so(test_user, other_user, add, turn):
+    await seed(add, other_user)
+
+    with pytest.raises(ToolArgumentError, match=NO_TRANSACTIONS):
+        await run("search_transactions", turn(test_user), merchant="lidl")

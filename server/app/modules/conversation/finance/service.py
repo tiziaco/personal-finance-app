@@ -1,4 +1,4 @@
-"""The chat's finance toolkit: six read-only tools over one `AnalyticsHistory` per turn, and the turn's preamble.
+"""The chat's finance toolkit: seven read-only tools over one `AnalyticsHistory` per turn, and the turn's preamble.
 
 Each tool wraps one `AnalyticsHistory` method, so the assistant's figures are the
 dashboard's and the analytics page's (spec §3). The history loads once per turn into
@@ -14,13 +14,15 @@ from app.modules.analytics import AnalyticsHistory, DateRange, analytics_service
 from app.modules.conversation.finance.domain.display import (
     category_breakdown_outcome,
     recurring_costs_outcome,
+    search_outcome,
     spending_behaviour_outcome,
     spending_overview_outcome,
     top_merchants_outcome,
     unusual_spending_outcome,
 )
 from app.modules.conversation.finance.domain.periods import data_span, describe_span, period_label
-from app.modules.conversation.finance.schemas import PeriodArgs, TopMerchantsArgs
+from app.modules.conversation.finance.domain.search import search_rows
+from app.modules.conversation.finance.schemas import PeriodArgs, SearchArgs, TopMerchantsArgs
 from app.modules.transaction import CATEGORIES
 
 HISTORY_KEY = "history"
@@ -109,6 +111,13 @@ def _analytics_tool(
     return AgentTool(name=name, title=title, description=description + PERIOD_HELP, args_schema=args_schema, run=run)
 
 
+async def _search_transactions(args: SearchArgs, ctx: TurnContext) -> ToolOutcome:
+    history = await turn_history(ctx)
+    if not history.rows:
+        raise ToolArgumentError(NO_TRANSACTIONS)
+    return search_outcome(search_rows(history.rows, args), args, CATEGORY_NAMES)
+
+
 def finance_toolkit() -> Toolkit:
     """The chat's finance tools and preamble, injected into the chatbot agent at startup."""
     tools = [
@@ -166,6 +175,17 @@ def finance_toolkit() -> Toolkit:
             lambda h, dr, _args, label: unusual_spending_outcome(
                 h.anomalies(dr, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS), label, CATEGORY_NAMES
             ),
+        ),
+        AgentTool(
+            name="search_transactions",
+            title="Transaction search",
+            description="Count and total the transactions matching filters (merchant, dates, categories, amounts, "
+            "recurring, weekdays), with money out and money in totalled separately, optionally grouped by month, "
+            "merchant, category or weekday, and a sample of the largest or most recent. Use for one merchant, "
+            '"how many" and "how much on" questions. It searches the same transactions the analytics tools use. '
+            "Amounts are signed: spending is negative.",
+            args_schema=SearchArgs,
+            run=_search_transactions,
         ),
     ]
     return Toolkit(tools=tools, preamble=preamble)
