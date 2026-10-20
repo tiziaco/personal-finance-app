@@ -165,7 +165,7 @@ describe("ActivityBlock", () => {
     )
     await user.click(screen.getByRole("button", { name: "2 lookups" }))
     expect(screen.getAllByText("tool")).toHaveLength(2)
-    expect(document.querySelector("p.italic")).toBeNull()
+    expect(document.querySelector(".italic")).toBeNull()
   })
 
   it("shows reasoning as muted italic text", () => {
@@ -179,7 +179,28 @@ describe("ActivityBlock", () => {
         })}
       />,
     )
-    expect(screen.getByText("Last month is September.")).toHaveClass("italic")
+    expect(
+      screen.getByText("Last month is September.").closest(".italic"),
+    ).toHaveClass("text-muted-foreground")
+  })
+
+  it("renders reasoning as Markdown: bold without asterisks, paragraphs apart", () => {
+    render(
+      <ActivityBlock
+        activity={state({
+          parts: [
+            {
+              kind: "reasoning",
+              text: "**Planning the lookup**\n\nI need September's spending.",
+            },
+            tool(),
+          ],
+        })}
+      />,
+    )
+    expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument()
+    expect(screen.getByText("Planning the lookup").tagName).toBe("STRONG")
+    expect(screen.getByText("I need September's spending.").tagName).toBe("P")
   })
 
   it("shows a failed lookup as failed, with no table", async () => {

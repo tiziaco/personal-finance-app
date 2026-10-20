@@ -15,7 +15,7 @@ import {
 import { ChevronRightIcon, Loader2Icon } from "lucide-react"
 
 import {
-  currentLabel,
+  runningLookup,
   type ActivityPart,
   type ActivityState,
 } from "@/lib/chat/activity"
@@ -27,6 +27,7 @@ import {
 } from "@/components/transactions/format"
 
 import { CHAT_COPY } from "./copy"
+import { MarkdownBlock } from "./markdown-text"
 
 type ToolPart = Extract<ActivityPart, { kind: "tool" }>
 type Cell = string | number | null | undefined
@@ -207,8 +208,10 @@ export function ActivityBlock({ activity }: { activity: ActivityState }) {
 
   let label: string
   if (working) {
-    const live = currentLabel(activity)
-    label = live === "Thinking…" ? CHAT_COPY.thinking : live
+    const running = runningLookup(activity)
+    label = running
+      ? CHAT_COPY.lookingUp(running.title.toLowerCase())
+      : CHAT_COPY.thinking
   } else if (stopped) {
     label =
       seconds === null
@@ -251,9 +254,11 @@ export function ActivityBlock({ activity }: { activity: ActivityState }) {
         <div className="mt-1.5 ml-1.5 flex flex-col gap-1.5 border-l-2 border-border pl-2.5">
           {parts.map((part, i) =>
             part.kind === "reasoning" ? (
-              <p key={i} className="text-muted-foreground italic">
-                {part.text}
-              </p>
+              <MarkdownBlock
+                key={i}
+                text={part.text}
+                className="text-muted-foreground italic"
+              />
             ) : (
               <ToolRow key={part.id} part={part} />
             ),

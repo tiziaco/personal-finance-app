@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   activityReducer,
-  currentLabel,
+  runningLookup,
   emptyActivity,
   fromHistory,
 } from "./activity"
@@ -124,9 +124,9 @@ describe("fromHistory", () => {
   })
 })
 
-describe("currentLabel", () => {
-  it("is Thinking… until a tool runs, then names the running tool", () => {
-    expect(currentLabel(emptyActivity(0))).toBe("Thinking…")
+describe("runningLookup", () => {
+  it("is none until a tool runs, then the running tool, then none again", () => {
+    expect(runningLookup(emptyActivity(0))).toBeUndefined()
     const running = run([
       {
         type: "tool_started",
@@ -135,12 +135,25 @@ describe("currentLabel", () => {
         title: "Spending by category",
       },
     ])
-    expect(currentLabel(running)).toBe("Looking up spending by category…")
+    expect(runningLookup(running)).toMatchObject({
+      id: "t1",
+      title: "Spending by category",
+    })
     const finished = activityReducer(
       running,
       { type: "tool_finished", id: "t1", ok: true, display },
       5,
     )
-    expect(currentLabel(finished)).toBe("Thinking…")
+    expect(runningLookup(finished)).toBeUndefined()
+  })
+})
+
+describe("fromHistory with the timing of a reply finished on this visit", () => {
+  it("keeps the times, so the header still reads 'Worked for'", () => {
+    const activity = fromHistory(
+      { parts: [], stopped: false },
+      { startedAt: 1000, endedAt: 5000 },
+    )
+    expect(activity).toMatchObject({ startedAt: 1000, endedAt: 5000 })
   })
 })

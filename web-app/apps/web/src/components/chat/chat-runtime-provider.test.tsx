@@ -275,6 +275,80 @@ describe("ChatRuntimeProvider", () => {
     expect(screen.getAllByText("Hello")).toHaveLength(1)
   })
 
+  it("a finished reply keeps its timed header and the block the user opened when the history replaces it", async () => {
+    mocks.params = { conversationId: "c1" }
+    const display = {
+      title: "Spending overview",
+      period: "September 2026",
+      summary: [{ kind: "money" as const, value: 180.5, label: "spent" }],
+      table: null,
+    }
+    let finish = () => {}
+    const finished = new Promise<void>((resolve) => (finish = resolve))
+    let saved = false
+    mocks.stream.mockImplementation(async function* () {
+      yield { type: "reasoning", text: "**Checking September**" }
+      yield {
+        type: "tool_started",
+        id: "t1",
+        name: "spending_overview",
+        title: "Spending overview",
+      }
+      yield { type: "tool_finished", id: "t1", ok: true, display }
+      yield { type: "text", text: "You spent €180.50." }
+      await finished
+      yield { type: "done", stopped: false }
+      saved = true
+    })
+    routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
+      messages: saved
+        ? [
+            { role: "user", content: "hi", activity: null },
+            {
+              role: "assistant",
+              content: "You spent €180.50.",
+              activity: {
+                parts: [
+                  { type: "reasoning", text: "**Checking September**" },
+                  {
+                    type: "tool",
+                    id: "t1",
+                    name: "spending_overview",
+                    title: "Spending overview",
+                    ok: true,
+                    display,
+                  },
+                ],
+                stopped: false,
+              },
+            },
+          ]
+        : [],
+    })
+    renderChat()
+    await send("hi")
+    // The answer has started: the block collapsed itself; the user opens it.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Worked for \d+s · 1 lookup/ }),
+    )
+    expect(screen.getByText("Spending overview")).toBeInTheDocument()
+
+    act(() => finish())
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+
+    // The saved copy has replaced the in-flight one: still timed, still open.
+    expect(
+      screen.getByRole("button", { name: /Worked for \d+s · 1 lookup/ }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("Spending overview")).toBeInTheDocument()
+    // Thinking renders as Markdown inside a message too.
+    expect(screen.getByText("Checking September").tagName).toBe("STRONG")
+  })
+
   it("writes the generated title into the conversation list", async () => {
     mocks.params = { conversationId: "c1" }
     mocks.stream.mockImplementation(() => chunks("Hello"))

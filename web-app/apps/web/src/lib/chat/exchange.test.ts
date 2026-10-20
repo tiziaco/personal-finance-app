@@ -99,7 +99,8 @@ describe("exchangeReducer", () => {
     for (const type of ["stopped", "failed"] as const) {
       const { activity } = exchangeReducer(state, { type, send, now: 5 })!
       expect(activity.endedAt).toBe(5)
-      expect(activity.stopped).toBe(true)
+      // Only the user stopped it: a failed reply's block keeps neutral timing.
+      expect(activity.stopped).toBe(type === "stopped")
       expect(activity.parts[0]).toMatchObject({ kind: "tool", status: "error" })
     }
     // A server done already closed it: its end time stays.
@@ -184,6 +185,21 @@ describe("toThreadMessages", () => {
       parts: [{ kind: "reasoning", text: "hm" }],
       startedAt: null,
       answerStarted: true,
+    })
+  })
+
+  it("gives the in-flight messages the ids their saved copies will have", () => {
+    const exchange = started(sendIn("c1"), 2)
+    const messages = toThreadMessages(saved.slice(0, 2), exchange, "c1", "c1")
+    expect(messages.map((m) => m.id)).toEqual(["c1-0", "c1-1", "c1-2", "c1-3"])
+  })
+
+  it("puts the timing of a reply finished on this visit onto its saved copy", () => {
+    const timings = new Map([[1, { startedAt: 1000, endedAt: 5000 }]])
+    const messages = toThreadMessages(saved, null, "c1", "c1", timings)
+    expect(messages[1].metadata?.custom?.activity).toMatchObject({
+      startedAt: 1000,
+      endedAt: 5000,
     })
   })
 

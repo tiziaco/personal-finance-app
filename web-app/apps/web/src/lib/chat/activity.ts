@@ -13,9 +13,13 @@ export type ActivityPart =
       display: ToolDisplay | null
     }
 
+/** When a reply's activity started and ended, in epoch milliseconds. */
+export type Timing = { startedAt: number; endedAt: number }
+
 /**
  * What the assistant did on the way to a reply. Timing is null for activity
- * rebuilt from history, which carries none.
+ * rebuilt from history, which carries none, unless the reply finished on this
+ * visit to the conversation.
  */
 export type ActivityState = {
   parts: ActivityPart[]
@@ -96,8 +100,14 @@ export function activityReducer(
   }
 }
 
-/** The block of a reply reopened from history: no timing, already answered. */
-export function fromHistory(activity: Activity): ActivityState {
+/**
+ * The block of a saved reply, already answered: no timing when reopened, or the
+ * timing it streamed with when it finished on this visit.
+ */
+export function fromHistory(
+  activity: Activity,
+  timing?: Timing,
+): ActivityState {
   return {
     parts: activity.parts.map((part): ActivityPart =>
       part.type === "reasoning"
@@ -111,19 +121,19 @@ export function fromHistory(activity: Activity): ActivityState {
             display: part.display,
           },
     ),
-    startedAt: null,
-    endedAt: null,
+    startedAt: timing?.startedAt ?? null,
+    endedAt: timing?.endedAt ?? null,
     stopped: activity.stopped,
     answerStarted: true,
   }
 }
 
-/** The header's live label: the running tool if there is one, else "Thinking…". */
-export function currentLabel(state: ActivityState): string {
-  const running = state.parts.findLast(
-    (part) => part.kind === "tool" && part.status === "running",
+/** The lookup the header names while working: the latest one still running, if any. */
+export function runningLookup(
+  state: ActivityState,
+): Extract<ActivityPart, { kind: "tool" }> | undefined {
+  return state.parts.findLast(
+    (part): part is Extract<ActivityPart, { kind: "tool" }> =>
+      part.kind === "tool" && part.status === "running",
   )
-  return running?.kind === "tool"
-    ? `Looking up ${running.title.toLowerCase()}…`
-    : "Thinking…"
 }

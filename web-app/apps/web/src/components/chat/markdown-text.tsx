@@ -1,5 +1,6 @@
 "use client"
 
+import { TextMessagePartProvider } from "@assistant-ui/react"
 import {
   MarkdownTextPrimitive,
   memoizeMarkdownComponents,
@@ -130,3 +131,26 @@ function MarkdownTextImpl() {
 }
 
 export const MarkdownText = memo(MarkdownTextImpl)
+
+/**
+ * Markdown that is not a message part, rendered as a reply is: an activity
+ * block's thinking. It provides its own text part for the primitive to read.
+ */
+export function MarkdownBlock({
+  text,
+  className,
+}: {
+  text: string
+  className?: string
+}) {
+  return (
+    <TextMessagePartProvider text={text}>
+      <MarkdownTextPrimitive
+        remarkPlugins={[remarkGfm]}
+        components={components}
+        smooth={false}
+        className={className}
+      />
+    </TextMessagePartProvider>
+  )
+}
