@@ -58,7 +58,8 @@ export function CategoryChart({ slices }: { slices: CategorySliceResponse[] }) {
               />
             </PieChart>
           </ChartContainer>
-          <ul className="w-full space-y-2 text-sm">
+          {/* min-w-0: beside the donut a flex item won't shrink below its nowrap names, and the card clips the amounts. */}
+          <ul className="w-full min-w-0 space-y-2 text-sm">
             {data.map((s) => (
               <li key={s.key} className="flex items-center gap-2">
                 <span
