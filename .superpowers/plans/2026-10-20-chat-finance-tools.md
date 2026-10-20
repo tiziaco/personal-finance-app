@@ -517,9 +517,9 @@ it("renders nothing without parts", ...)
 **Files:**
 - Test: `web-app/apps/web/src/components/chat/chat-runtime-provider.test.tsx`
 
-- [ ] **Step 1: Write the test** `it("clears the exchange and returns the text to the composer when create answers 500")` — mock `useCreateConversation` to reject with `new ApiError(500, …)`; send "hello" from `/chat`; assert no in-flight messages render and the composer's value is `"hello"`.
-- [ ] **Step 2: Run** `make test-web` — it should PASS against the existing `ensureConversation` behaviour; if it fails, the behaviour regressed: fix `ensureConversation`, not the test.
-- [ ] **Step 3: Commit** `test(web): a failed conversation create returns the text to the composer`.
+- [x] **Step 1: Write the test** `it("clears the exchange and returns the text to the composer when create answers 500")` — mock `useCreateConversation` to reject with `new ApiError(500, …)`; send "hello" from `/chat`; assert no in-flight messages render and the composer's value is `"hello"`.
+- [x] **Step 2: Run** `make test-web` — it should PASS against the existing `ensureConversation` behaviour; if it fails, the behaviour regressed: fix `ensureConversation`, not the test.
+- [x] **Step 3: Commit** `test(web): a failed conversation create returns the text to the composer`.
 
 ---
 

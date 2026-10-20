@@ -74,7 +74,8 @@ beforeEach(() => {
     calls.push(key)
     const handler = routes[key]
     if (!handler) return json({ detail: "not found" }, 404)
-    return json(await handler(init))
+    const body = await handler(init)
+    return body instanceof Response ? body : json(body)
   })
 })
 
@@ -160,6 +161,29 @@ describe("ChatRuntimeProvider — leaving and refusals", () => {
         screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
       ).toHaveValue("too fast"),
     )
+  })
+})
+
+describe("ChatRuntimeProvider — a failed create", () => {
+  // docs/TODO.md: a failed create must not leave the exchange stuck or eat the
+  // user's text. The mutation cache toasts; the provider clears and restores.
+  it("clears the exchange and returns the text to the composer when create answers 500", async () => {
+    routes["POST /api/v1/conversation/conversation"] = () =>
+      json({ detail: "boom" }, 500)
+    renderChat()
+    await send("hello")
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+      ).toHaveValue("hello"),
+    )
+    expect(document.querySelector('[data-role="user"]')).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: CHAT_COPY.stop }),
+    ).not.toBeInTheDocument()
+    expect(mocks.stream).not.toHaveBeenCalled()
+    expect(mocks.replace).not.toHaveBeenCalled()
   })
 })
 
