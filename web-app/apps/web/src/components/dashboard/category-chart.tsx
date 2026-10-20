@@ -32,10 +32,12 @@ export function CategoryChart({ slices }: { slices: CategorySliceResponse[] }) {
           </p>
         </CardContent>
       ) : (
-        <CardContent className="flex flex-col items-center gap-6 sm:flex-row">
+        // Beside the legend the donut gives way first: it shrinks toward its floor before a name
+        // is cut, and the two sit centred in a card the line chart beside it may make taller.
+        <CardContent className="flex flex-1 flex-col items-center gap-6 sm:flex-row">
           <ChartContainer
             config={config}
-            className="aspect-square w-44 shrink-0"
+            className="aspect-square min-w-36 shrink-[100] basis-60"
           >
             <PieChart>
               <ChartTooltip
@@ -59,18 +61,20 @@ export function CategoryChart({ slices }: { slices: CategorySliceResponse[] }) {
             </PieChart>
           </ChartContainer>
           {/* min-w-0: beside the donut a flex item won't shrink below its nowrap names, and the card clips the amounts. */}
-          <ul className="w-full min-w-0 space-y-2 text-sm">
+          <ul className="w-full min-w-0 space-y-2 text-sm sm:w-auto sm:flex-auto">
             {data.map((s) => (
-              <li key={s.key} className="flex items-center gap-2">
+              <li key={s.key} className="flex items-start gap-2">
                 <span
                   aria-hidden
-                  className="size-2.5 shrink-0 rounded-[2px]"
+                  className="mt-[5px] size-2.5 shrink-0 rounded-[2px]"
                   style={{ backgroundColor: s.fill }}
                 />
                 <span className="min-w-0 flex-1 truncate">{s.name}</span>
-                <span className="tabular-nums">{s.display}</span>
-                <span className="w-14 text-right text-muted-foreground tabular-nums">
-                  {s.share.toFixed(1)}%
+                <span className="flex flex-col items-end tabular-nums">
+                  {s.display}
+                  <span className="text-xs text-muted-foreground">
+                    {s.share.toFixed(1)}%
+                  </span>
                 </span>
               </li>
             ))}

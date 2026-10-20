@@ -58,7 +58,8 @@ export function TrendChart({ points }: { points: TrendPointResponse[] }) {
           })}
         </ul>
       </CardHeader>
-      <CardContent>
+      {/* Centred: the category card beside it can make the row taller than the 2:1 chart. */}
+      <CardContent className="flex flex-1 items-center">
         <ChartContainer config={config} className="aspect-[2/1] w-full">
           <LineChart data={data} margin={MARGIN}>
             <CartesianGrid {...GRID} />
