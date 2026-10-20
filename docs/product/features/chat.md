@@ -33,10 +33,11 @@ has told it.
   transactions, with advice that points at their own numbers.
 - **See what the assistant did.** Above each reply an activity block shows, while the
   assistant works, a live step label with an elapsed timer, its thinking when the model
-  provides it, and each lookup as a row that opens to a small table of what it returned.
-  When the answer starts the block collapses to "Worked for 4s · 2 lookups"; reopened from
-  history it reads "2 lookups", without the timing. A reply the server cut short reads
-  "Stopped".
+  provides it (rendered as Markdown, muted), and each lookup as a row that opens to a
+  small table of what it returned. When the answer starts the block collapses to "Worked
+  for 4s · 2 lookups", and keeps that header, and whatever the user opened, when the saved
+  history replaces the streamed reply; reopened later it reads "2 lookups", without the
+  timing. A reply the server cut short reads "Stopped".
 - **Send a message** over the API and get the reply in one piece, or **stream** it. The
   stream carries typed events: the model's text, its reasoning, and each lookup starting
   and finishing.
@@ -71,20 +72,26 @@ conversation table. A user's memory is stored by the memory service, keyed by th
   finished months, the month in progress apart as month-to-date
   ([`analytics.md`](./analytics.md) §2). Each turn the model is told today's date, the last
   finished month and the span the data covers, so a question about a period with no data is
-  answered "you have no transactions before …".
+  answered "you have no transactions before …". When the last finished month has no
+  transactions, it is also told the latest finished month that has some, which "the last N
+  months" count back from as on the dashboard, so it says the empty month has none rather
+  than calling the earlier one "last month".
 - **The savings rate is the analytics page's.** Analytics decides income and expense by
   sign alone, so money moved into Savings & Investments counts as spending and lowers the
   rate. When the question is about saving or investing, the assistant shows that category's
   amount beside the rate and says so; it never computes an adjusted rate. Holdings and
   returns are out of scope: investments are seen only through transactions.
-- **It only reads.** It cannot recategorise or change anything from chat.
+- **It only reads.** It cannot recategorise or change anything from chat. It knows the
+  data comes only from CSV import and transactions added by hand, and offers no bank
+  connection.
 - **A bad lookup corrects itself.** A call with invalid arguments ("category must be one
   of …", "no data before March 2025") goes back to the model as that call's result and it
   tries again. A crash inside a lookup reaches the model as a fixed message, never the
   exception text. Independent lookups in one step run together.
 - **A turn is bounded.** After `CHAT_MAX_STEPS` (default 8) model calls with lookups, or
   the same lookup with the same arguments twice, the turn ends with an answer written from
-  what it has and marked stopped.
+  what it has and marked stopped. The run's LangGraph recursion limit follows the setting
+  (twice the steps, plus three), so the cap, never the recursion limit, is what ends a turn.
 - **Thinking is a setting.** `CHAT_REASONING_EFFORT` (default `medium`; the other model
   callers keep their own effort) sets how hard the model reasons. At any effort above `low`
   the model streams a readable summary of its reasoning (the chat's own model client asks for summaries); the
@@ -106,7 +113,8 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 - **A conversation is erased with the account**, with its history and the long-term memory;
   see [`account.md`](./account.md).
 - **A reply that fails mid-stream** shows "The assistant couldn't reply. Try again."
-  Server text is never shown.
+  Server text is never shown. Its activity block keeps the plain "Worked for" header:
+  "Stopped" is for a reply the user or the server stopped.
 - **Leaving a conversation mid-reply stops the model call.** The stream route returns
   sse-starlette's `EventSourceResponse`, which listens for the client disconnect at every
   ASGI spec version and cancels the generator, so the model call stops. (Starlette's own

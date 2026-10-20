@@ -67,7 +67,9 @@ R2 — and the chat request and response schemas are `conversation`'s.
 **Agents get module knowledge by injection.** `app.agents` may not import a module (R2), so the
 chatbot knows nothing about money. `conversation/finance/` builds a `Toolkit` (the tools, and a
 preamble the model reads each turn) and `main.py` hands it over at startup:
-`initialize_agents(checkpointer, {"chatbot": finance_toolkit()})`. The route builds a
+`initialize_agents(checkpointer, agent_toolkits())`, where `agent_toolkits()` maps agent
+names to toolkits (`{"chatbot": finance_toolkit()}`); a route test runs a lookup through it
+against a seeded user, so a lost entry fails the suite. The route builds a
 `TurnContext(user_id, session_factory, cache)` per turn and passes it in
 `config["configurable"]["turn_context"]`; tools read the user from it, never from an argument,
 and share one `AnalyticsHistory` through its `cache`. The chat routes release the request's

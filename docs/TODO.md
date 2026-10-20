@@ -223,3 +223,14 @@ cover could be answered by generated code run in an isolated sandbox with its ow
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
+
+## Server — the agent layer imports the chatbot's stream contract
+
+`app/agents/base/agent.py` and `app/agents/messages.py` import
+`app/agents/chatbot/events.py` (the stream events) and the toolkit's display models from
+`app/agents/chatbot/toolkit.py`: the generic layer knows one agent's contract, and an import
+cycle is avoided only because `app/agents/chatbot/__init__.py` re-exports nothing. Move
+`events.py` and the toolkit and display models up to `app/agents/` (mechanical; the
+`chat` node name `BaseAgent` streams from goes with them). **Unblocks:** a second agent or
+a second toolkit, which must not import the chatbot package to stream. Found in step 7's
+final review (20 Oct 2026).
