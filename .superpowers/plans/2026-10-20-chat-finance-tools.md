@@ -495,7 +495,7 @@ it("puts history activity in metadata.custom.activity", ...)
 
 Behaviour (§7, mockup `.superpowers/brainstorm/24640-1792489429/content/agent-activity-v2.html`): open while running with a shimmer label and a `m:ss` timer ticking once a second; collapses itself when `answerStarted`; header toggles; each tool row toggles a table (money via `formatAmount`, percent with `%`); reasoning rows muted italic; no block when there are no parts.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```tsx
 it("shows the current step and a running timer while working", ...)   // vi.useFakeTimers; "0:03"
@@ -507,8 +507,8 @@ it("renders tool rows only when there is no reasoning", ...)
 it("renders nothing without parts", ...)
 ```
 
-- [ ] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `make test-web`, `make check-web` — PASS.
-- [ ] **Step 5: Commit** `feat(web): activity block for the assistant's thinking and tool calls`.
+- [x] **Step 2: Run** — FAIL. **Step 3: Implement.** **Step 4: Run** `make test-web`, `make check-web` — PASS.
+- [x] **Step 5: Commit** `feat(web): activity block for the assistant's thinking and tool calls`.
 
 ---
 

@@ -51,10 +51,28 @@ export type ExchangeAction =
   | { type: "created"; send: Send; next: Send }
   | { type: "rebased"; send: Send; baseCount: number }
   | { type: "event"; send: Send; event: StreamEvent; now: number }
-  | { type: "stopped"; send: Send }
-  | { type: "failed"; send: Send }
+  | { type: "stopped"; send: Send; now: number }
+  | { type: "failed"; send: Send; now: number }
   | { type: "cleared"; send: Send }
   | { type: "left"; activeId: string | null }
+
+/**
+ * A user stop or a failed stream sends no `done`, so the block would keep
+ * timing and its running lookups keep spinning. Close it: the lookups that
+ * never finished read as failed, and the header reads as stopped.
+ */
+function closeActivity(activity: ActivityState, now: number): ActivityState {
+  return {
+    ...activity,
+    stopped: true,
+    endedAt: activity.endedAt ?? now,
+    parts: activity.parts.map((part) =>
+      part.kind === "tool" && part.status === "running"
+        ? { ...part, status: "error" }
+        : part,
+    ),
+  }
+}
 
 export function exchangeReducer(
   state: Exchange | null,
@@ -94,9 +112,17 @@ export function exchangeReducer(
         activity: activityReducer(state.activity, action.event, action.now),
       }
     case "stopped":
-      return { ...state, status: "stopped" }
+      return {
+        ...state,
+        status: "stopped",
+        activity: closeActivity(state.activity, action.now),
+      }
     case "failed":
-      return { ...state, status: "error" }
+      return {
+        ...state,
+        status: "error",
+        activity: closeActivity(state.activity, action.now),
+      }
     case "cleared":
       return null
   }

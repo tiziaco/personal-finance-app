@@ -214,7 +214,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const settle = useCallback(
     (send: Send, conversationId: string, text: string, error: unknown) => {
       if (send.controller.signal.aborted) {
-        dispatch({ type: "stopped", send })
+        dispatch({ type: "stopped", send, now: Date.now() })
         markHistoryStale(queryClient, conversationId)
       } else if (error instanceof ApiError) {
         // Refused before anything streamed: nothing to show but the toast,
@@ -223,7 +223,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "cleared", send })
         restoreTextRef.current(text)
       } else {
-        dispatch({ type: "failed", send })
+        dispatch({ type: "failed", send, now: Date.now() })
         markHistoryStale(queryClient, conversationId)
       }
     },
@@ -258,7 +258,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
 
       // Stopped before the stream started: nothing was sent, nothing to stream.
       if (send.controller.signal.aborted) {
-        dispatch({ type: "stopped", send })
+        dispatch({ type: "stopped", send, now: Date.now() })
         release(sendRef, send)
         return
       }

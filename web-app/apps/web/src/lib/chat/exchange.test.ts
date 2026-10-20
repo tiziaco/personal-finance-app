@@ -73,13 +73,46 @@ describe("exchangeReducer", () => {
     state = step(state, { type: "event", send, event: text("Hel"), now: 1 })
     state = step(state, { type: "event", send, event: text("lo"), now: 2 })
     expect(state.replyText).toBe("Hello")
-    expect(exchangeReducer(state, { type: "stopped", send })?.status).toBe(
-      "stopped",
-    )
-    expect(exchangeReducer(state, { type: "failed", send })?.status).toBe(
-      "error",
-    )
+    expect(
+      exchangeReducer(state, { type: "stopped", send, now: 9 })?.status,
+    ).toBe("stopped")
+    expect(
+      exchangeReducer(state, { type: "failed", send, now: 9 })?.status,
+    ).toBe("error")
     expect(exchangeReducer(state, { type: "cleared", send })).toBeNull()
+  })
+
+  it("a stop or failure closes the activity: timer ends, running lookups stop", () => {
+    const send = sendIn("c1")
+    let state = started(send)
+    state = step(state, {
+      type: "event",
+      send,
+      event: {
+        type: "tool_started",
+        id: "t1",
+        name: "n",
+        title: "Top merchants",
+      },
+      now: 1,
+    })
+    for (const type of ["stopped", "failed"] as const) {
+      const { activity } = exchangeReducer(state, { type, send, now: 5 })!
+      expect(activity.endedAt).toBe(5)
+      expect(activity.stopped).toBe(true)
+      expect(activity.parts[0]).toMatchObject({ kind: "tool", status: "error" })
+    }
+    // A server done already closed it: its end time stays.
+    const done = step(state, {
+      type: "event",
+      send,
+      event: { type: "done", stopped: false },
+      now: 3,
+    })
+    expect(
+      exchangeReducer(done, { type: "stopped", send, now: 9 })!.activity
+        .endedAt,
+    ).toBe(3)
   })
 
   it("created swaps in the send that names the conversation", () => {

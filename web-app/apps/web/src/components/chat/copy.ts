@@ -22,4 +22,14 @@ export const CHAT_COPY = {
   notFoundTitle: "This conversation doesn't exist",
   notFoundAction: "Start a new chat",
   noConversations: "No conversations yet",
+  // The activity block above a reply.
+  thinking: "Thinking…",
+  lookingUp: (title: string) => `Looking up ${title}…`,
+  workedFor: (s: number, n: number) =>
+    `Worked for ${s}s · ${n} lookup${n === 1 ? "" : "s"}`,
+  lookups: (n: number) => `${n} lookup${n === 1 ? "" : "s"}`,
+  stoppedAfter: (s: number) => `Stopped after ${s}s`,
+  stoppedLookups: (n: number) => `Stopped · ${n} lookup${n === 1 ? "" : "s"}`,
+  toolTag: "tool",
+  lookupFailed: "Couldn't load",
 } as const

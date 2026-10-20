@@ -9,6 +9,9 @@ import { cn } from "@app/core/lib/utils"
 import { Button } from "@app/ui/button"
 import { CopyIcon } from "lucide-react"
 
+import type { ActivityState } from "@/lib/chat/activity"
+
+import { ActivityBlock } from "./activity-block"
 import { CHAT_COPY } from "./copy"
 import { IconTooltip } from "./icon-tooltip"
 import { MarkdownText } from "./markdown-text"
@@ -27,9 +30,15 @@ export function AssistantMessage() {
   const status = useAuiState((s) => s.message.status)
   const reason = status?.type === "incomplete" ? status.reason : undefined
   const isLast = useAuiState((s) => s.message.isLast)
+  const activity = useAuiState(
+    (s) => s.message.metadata.custom.activity as ActivityState | undefined,
+  )
 
   return (
     <MessagePrimitive.Root className="group/message py-2" data-role="assistant">
+      {activity && activity.parts.length > 0 && (
+        <ActivityBlock activity={activity} />
+      )}
       <div className="break-words">
         <MessagePrimitive.Parts components={{ Text: MarkdownText }} />
       </div>
