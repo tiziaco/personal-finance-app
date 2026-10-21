@@ -39,7 +39,7 @@ def _earlier_steps(count: int, *, n=None) -> list:
     return messages
 
 
-async def _run(messages, replies, *, state_extra=None):
+async def _run(messages, replies, *, state_extra=None, model_name=None):
     """Run the middleware over `messages`; `replies` is a queue of AIMessages or exceptions for the handler.
 
     Returns (result, requests the handler saw).
@@ -55,7 +55,7 @@ async def _run(messages, replies, *, state_extra=None):
         return ModelResponse(result=[reply])
 
     request = ModelRequest(
-        model=MagicMock(),
+        model=SimpleNamespace(model_name=model_name),
         messages=messages,
         system_message=SystemMessage("sys"),
         tool_choice=None,
@@ -195,3 +195,13 @@ def test_repeated_call_cases():
     assert repeated_call(same)
     assert not repeated_call(different)
     assert not repeated_call(earlier_turn)
+
+
+async def test_an_empty_reply_log_falls_back_to_the_requested_model_name():
+    empty = AIMessage(content="")
+
+    with patch(f"{MODULE}.logger") as log:
+        with pytest.raises(Exception, match="empty reply"):
+            await _run([HumanMessage(content="q")], [empty], model_name="requested-m")
+
+    assert log.warning.call_args.kwargs["model"] == "requested-m"

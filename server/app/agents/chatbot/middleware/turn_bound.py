@@ -110,7 +110,7 @@ class TurnBoundMiddleware(AgentMiddleware[ChatState, TurnContext]):
                 logger.warning(
                     "llm_empty_response",
                     conversation_id=_conversation_id(),
-                    model=message.response_metadata.get("model_name"),
+                    model=message.response_metadata.get("model_name") or getattr(request.model, "model_name", None),
                     status=message.response_metadata.get("status"),
                     incomplete_details=message.response_metadata.get("incomplete_details"),
                 )
