@@ -127,10 +127,10 @@ def repeated_call(messages: list[BaseMessage]) -> bool:
 class ChatbotAgent(BaseAgent):
     """A LangGraph conversational workflow with tools, memory and checkpointing."""
 
-    def __init__(self, toolkit: Toolkit | None = None):
+    def __init__(self, toolkit: Toolkit):
         super().__init__()
 
-        self.toolkit = toolkit or Toolkit.empty()
+        self.toolkit = toolkit
         # Its own service, not the shared singleton: the chat's reply budget and
         # reasoning effort are set here and the tools bound are this agent's.
         self.llm_service = LLMService(
@@ -188,18 +188,16 @@ class ChatbotAgent(BaseAgent):
     async def _model_context(self, state: GraphState, config: RunnableConfig, llm: BaseChatModel) -> list[BaseMessage]:
         """The messages for this turn's model calls; the wrap-up call builds on the same ones.
 
-        The turn context is absent until a route sets it: the toolkit's preamble is then
-        empty, and the model still gets today's date and the user's memory. A preamble that
-        fails is left out the same way, so the turn is still answered; a tool that needs the
-        same data fails on its own and the model is told so.
+        A preamble that fails is left out, so the turn is still answered with today's date
+        and the user's memory; a tool that needs the same data fails on its own and the
+        model is told so.
         """
-        ctx = config.get("configurable", {}).get("turn_context")
-        preamble = ""
-        if ctx is not None:
-            try:
-                preamble = await self.toolkit.preamble(ctx)
-            except Exception as e:
-                logger.exception("chat_preamble_failed", thread_id=config["configurable"]["thread_id"], error=str(e))
+        ctx = config["configurable"]["turn_context"]
+        try:
+            preamble = await self.toolkit.preamble(ctx)
+        except Exception as e:
+            preamble = ""
+            logger.exception("chat_preamble_failed", thread_id=config["configurable"]["thread_id"], error=str(e))
         return build_model_context(
             state.messages,
             system_prompt=load_system_prompt(),
@@ -289,7 +287,7 @@ class ChatbotAgent(BaseAgent):
         return tool.title if tool is not None else None
 
     async def _invoke_tool(
-        self, tool_call: dict, ctx: TurnContext | None, config: RunnableConfig | None = None
+        self, tool_call: dict, ctx: TurnContext, config: RunnableConfig | None = None
     ) -> ToolMessage:
         """Run one tool call, recording what happened.
 
@@ -345,15 +343,10 @@ class ChatbotAgent(BaseAgent):
             )
             return error_message(message)
 
+        async def run(model: BaseModel) -> ToolOutcome:
+            return await tool.run(model, ctx)
+
         try:
-            if ctx is None:
-                # Nothing sets a turn context until the route does; a tool call with
-                # none is a wiring bug, handled like any other crash.
-                raise RuntimeError("tool call without a turn context")
-
-            async def run(model: BaseModel) -> ToolOutcome:
-                return await tool.run(model, ctx)
-
             # A runnable so the graph's Langfuse callback records one span per call,
             # named for the tool, with its arguments and result.
             outcome = await RunnableLambda(run).ainvoke(args, config={**(config or {}), "run_name": tool_name})
@@ -399,7 +392,7 @@ class ChatbotAgent(BaseAgent):
         Results keep the order of the calls. Each call announces itself and its end
         on the custom stream so the client can show it running.
         """
-        ctx = config.get("configurable", {}).get("turn_context")
+        ctx = config["configurable"]["turn_context"]
         writer = get_stream_writer()
 
         async def one(tool_call: dict) -> ToolMessage:

@@ -34,8 +34,7 @@ async def test_the_chatbot_runs_with_the_toolkit_it_is_given():
     assert [schema["function"]["name"] for schema in chatbot.llm_service._tools] == ["lookup", "search"]
 
 
-async def test_an_agent_without_a_toolkit_runs_with_no_tools():
-    agents = await initialize_agents(MemorySaver())
-
-    assert agents["chatbot"].toolkit.tools == []
-    assert not agents["chatbot"].llm_service._tools
+async def test_an_agent_without_a_toolkit_fails_at_startup():
+    """A lost entry in main's agent_toolkits must not start an agent that answers from nothing."""
+    with pytest.raises(KeyError, match="chatbot"):
+        await initialize_agents(MemorySaver(), {})

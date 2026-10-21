@@ -131,14 +131,6 @@ class TestInvokeTool:
         assert "db down" not in message.content
         assert _tool_calls("crashy") == before + 1
 
-    async def test_a_call_without_a_turn_context_is_a_crash_not_an_exception(self):
-        agent = _agent_with(make_tool("t", _ok))
-
-        message = await agent._invoke_tool({"name": "t", "args": {"n": 1}, "id": "c1"}, None)
-
-        assert message.status == "error"
-        assert message.content == TOOL_FAILED_MESSAGE
-
     async def test_unknown_tool_does_not_raise(self, agent):
         """A name the model invented used to raise KeyError out of the graph."""
         message = await agent._invoke_tool({"name": "no_such_tool", "args": {}, "id": "call_3"}, CTX)
@@ -257,7 +249,7 @@ class TestChat:
             ]
         )
 
-        await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+        await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
 
         sent = agent.llm_service.call.call_args.args[0]
         assert not any(getattr(m, "tool_calls", None) for m in sent)
@@ -266,20 +258,31 @@ class TestChat:
         assert sent[-1].content == "Never mind, thanks"
 
     @pytest.mark.asyncio
-    async def test_chat_puts_date_and_memory_in_a_message_after_the_history_without_a_turn_context(self, agent):
-        """No turn context yet (nothing sets it before the route does): no preamble, no error."""
+    async def test_chat_puts_date_and_memory_in_a_message_after_the_history(self, agent):
         agent.llm_service = MagicMock()
         agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
         agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
         agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
         state = GraphState(messages=[HumanMessage(content="hi")], long_term_memory="Saving for a flat")
 
-        await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+        await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
 
         sent = agent.llm_service.call.call_args.args[0]
         assert "Saving for a flat" not in sent[0].content and "{" not in sent[0].content
         assert str(dt.date.today()) in sent[1].content and "Saving for a flat" in sent[1].content
         assert sent[2].content == "hi"
+
+    @pytest.mark.asyncio
+    async def test_a_turn_without_a_turn_context_is_a_wiring_bug_not_a_failed_preamble(self, agent):
+        """Every route sets one; a missing one raises rather than answering without the user's data."""
+        agent.llm_service = MagicMock()
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
+        state = GraphState(messages=[HumanMessage(content="hi")])
+
+        with pytest.raises(KeyError, match="turn_context"):
+            await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+
+        agent.llm_service.call.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_a_failed_preamble_still_answers_the_turn(self):

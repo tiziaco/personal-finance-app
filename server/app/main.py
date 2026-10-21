@@ -64,7 +64,7 @@ def agent_toolkits() -> dict[str, Toolkit]:
     """The tools each agent runs with, by agent name.
 
     Modules build them and they are handed over here: `app.agents` may not import a
-    module (R2). Dropping an entry leaves its agent without tools, answering from nothing.
+    module (R2). `initialize_agents` refuses to start without an entry for every agent.
     """
     return {"chatbot": finance_toolkit()}
 

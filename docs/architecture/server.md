@@ -68,11 +68,11 @@ R2 — and the chat request and response schemas are `conversation`'s.
 chatbot knows nothing about money. `conversation/finance/` builds a `Toolkit` (the tools, and a
 preamble the model reads each turn) and `main.py` hands it over at startup:
 `initialize_agents(checkpointer, agent_toolkits())`, where `agent_toolkits()` maps agent
-names to toolkits (`{"chatbot": finance_toolkit()}`); a route test runs a lookup through it
-against a seeded user, so a lost entry fails the suite. The route builds a
+names to toolkits (`{"chatbot": finance_toolkit()}`); an agent without an entry fails
+startup, and a route test runs a lookup through it against a seeded user. The route builds a
 `TurnContext(user_id, session_factory, cache)` per turn and passes it in
-`config["configurable"]["turn_context"]`; tools read the user from it, never from an argument,
-and share one `AnalyticsHistory` through its `cache`. The chat routes release the request's
+`config["configurable"]["turn_context"]`, which the chatbot's nodes require; tools read the
+user from it, never from an argument, and share one `AnalyticsHistory` through its `cache`. The chat routes release the request's
 DB connection before the model call, so a tool opens its own short-lived session from the
 context's factory. The tool schemas sent to the model carry no regex `pattern` (a Decimal
 argument's made gpt-5-mini return empty replies), so money arguments are JSON numbers parsed
