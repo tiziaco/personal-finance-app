@@ -234,3 +234,66 @@ cycle is avoided only because `app/agents/chatbot/__init__.py` re-exports nothin
 `chat` node name `BaseAgent` streams from goes with them). **Unblocks:** a second agent or
 a second toolkit, which must not import the chatbot package to stream. Found in step 7's
 final review (20 Oct 2026).
+
+The step's code review (21 Oct 2026) proposed a better fix. `BaseAgent` has one subclass,
+and its streaming and history-rebuild code (`get_stream_response`, the reasoning-block
+parsing, building `Activity`/`ToolPart` from a checkpoint, the `_tool_title` hook) is all
+chat semantics. Move that code into `app/agents/chatbot/` (for example `stream.py` and
+`history.py`) and shrink `BaseAgent` back to the generic shell: graph readiness, the turn
+config, memory. The `_tool_title` hook and the re-export restriction on
+`chatbot/__init__.py` then go, and so does the duplication between `get_response` and
+`get_stream_response` (readiness check, memory fetch, graph input, `update_memory`).
+Prefer this over hoisting `events.py` when a second agent arrives.
+
+## Chat — keep "Worked for" by saving the turn's duration
+
+A freshly saved reply keeps its "Worked for 4s" header only while the user stays on the
+conversation. The web holds a `finished` state and a timings map keyed by the history
+index for it (`chat-runtime-provider.tsx`, `exchange.ts`'s `timings`, `activity.ts`'s
+`fromHistory(…, timing?)`), about 40 lines. Saving the turn's duration with the checkpoint,
+beside `stopped`, and returning it on `Activity` would let every reopened reply show it
+and remove that state. **Decide first:** it changes the rule in
+[`product/features/chat.md`](./product/features/chat.md) that a reopened reply reads
+without timing. From step 7's code review (21 Oct 2026, M5).
+
+## Chat — code review leftovers
+
+Small items from step 7's code review (21 Oct 2026), each correct as it stands and none
+blocking. **Unblocks:** nothing; pick them up when touching the file.
+
+- **Groupings are strings in three places.** `search.py`'s `_group_label`, `display.py`'s
+  `_group_name` and `SearchArgs` each branch on `group_by == "month"` and so on. One
+  `Weekday` literal (with `WEEKDAYS` from `get_args`) and one table of key, label and
+  order would replace the chains.
+- **Date-order validation is split.** `SearchArgs` checks `date_from <= date_to` in its
+  validator (`schemas.py`); `PeriodArgs` is checked at run time in `resolve_period`
+  (`finance/service.py`), with a different message. Pick one place.
+- **`TurnContext.cache` is an untyped `dict[str, Any]`**, holding a `Future` under the
+  `HISTORY_KEY` string. A typed per-turn slot, or per-turn state the toolkit builds
+  itself, would say what it holds.
+- **Each tool call looks its tool up twice.** `_tool_call` (`graph.py`) repeats
+  `_invoke_tool`'s lookup and `model_validate`s the display that `_invoke_tool` has just
+  `model_dump`ed into the artifact. Returning the outcome beside the `ToolMessage` would do
+  both once.
+- **The web's view of an activity.** `chat-message.tsx` casts `metadata.custom.activity`
+  to `ActivityState`: a typed accessor in `lib/chat/activity.ts` would hold the cast. Its
+  `ActivityPart` renames the generated `type`/`ok` to `kind`/`status`. And the server sends
+  `Activity(parts=[], stopped=True)` for a stopped turn with no lookups
+  (`agent.py`), which both `chat-message.tsx` and `ActivityBlock` hide, so a reopened
+  stopped reply with no lookups never reads "Stopped": decide which side is right.
+- **Two reasoning paragraphs can run together** in the live stream of a stopped turn:
+  `get_stream_response` clears `last_reasoning_key` after a text event, so the wrap-up's
+  first reasoning delta arrives without its `"\n\n"` separator. Live only; a reopened
+  conversation shows just the wrap-up's reasoning.
+- **`LLMRegistry.get`'s overrides path** (`get(name, temperature=…)`, which replaces the
+  entry's whole configuration) has no caller in `app/`; only a registry test uses it.
+  Remove it, or keep it as the template's extension point on purpose.
+
+## Web — one minus sign for percents
+
+Money is signed with a true minus (`formatSignedAmount`: "−€84.20"), but the analytics
+page's `formatPct` writes the locale's hyphen-minus ("-8.3%"), and the dashboard's
+`formatPercent` a true minus again. The chat's tool rows now follow the analytics page,
+so they inherit the hyphen. **Unblocks:** consistent figures; pick one rule for percents
+in `components/analytics/format.ts` and `components/transactions/format.ts`. From step 7's
+code review (21 Oct 2026).
