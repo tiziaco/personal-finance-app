@@ -121,6 +121,7 @@ async def test_concurrent_calls_share_one_history_load():
         first, second = await asyncio.gather(turn_history(turn), turn_history(turn))
         third = await turn_history(turn)
     assert first is second is third is HISTORY
+    assert turn.history.done()
     load.assert_awaited_once()
     assert load.await_args.args[1] == turn.user_id
 

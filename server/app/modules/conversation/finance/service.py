@@ -2,7 +2,7 @@
 
 Each tool wraps one `AnalyticsHistory` method, so the assistant's figures are the
 dashboard's and the analytics page's (spec §3). The history loads once per turn into
-`TurnContext.cache` and every tool in the turn reads it (§5.3). No tool takes a user:
+`TurnContext.history` and every tool in the turn reads it (§5.3). No tool takes a user:
 they read `TurnContext.user_id`.
 """
 
@@ -36,7 +36,6 @@ from app.modules.transaction import CATEGORIES
 A = TypeVar("A", bound=PeriodArgs)
 R = TypeVar("R")
 
-HISTORY_KEY = "history"
 ONE_DAY = dt.timedelta(days=1)
 NO_TRANSACTIONS = "The user has no transactions yet."
 CATEGORY_NAMES = dict(CATEGORIES)
@@ -61,14 +60,12 @@ async def _load_history(ctx: TurnContext) -> AnalyticsHistory:
 async def turn_history(ctx: TurnContext) -> AnalyticsHistory:
     """The signed-in user's history, loaded once per turn and shared by the turn's tool calls.
 
-    The cache holds the load itself, not its result, so tool calls running concurrently
+    The slot holds the load itself, not its result, so tool calls running concurrently
     wait on the one load instead of each starting their own.
     """
-    load = ctx.cache.get(HISTORY_KEY)
-    if load is None:
-        load = asyncio.ensure_future(_load_history(ctx))
-        ctx.cache[HISTORY_KEY] = load
-    return await load
+    if ctx.history is None:
+        ctx.history = asyncio.ensure_future(_load_history(ctx))
+    return await ctx.history
 
 
 def resolve_period(args: PeriodArgs, history: AnalyticsHistory) -> tuple[DateRange, str]:

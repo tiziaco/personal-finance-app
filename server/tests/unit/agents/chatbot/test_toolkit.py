@@ -35,12 +35,10 @@ def test_as_schema_is_an_openai_tool_schema_from_the_args_model():
     assert schema["function"]["parameters"]["required"] == ["n"]
 
 
-def test_turn_context_cache_is_per_instance():
-    a = TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
-    b = TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
-    a.cache["k"] = 1
+def test_turn_context_history_slot_starts_empty():
+    ctx = TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
 
-    assert b.cache == {}
+    assert ctx.history is None
 
 
 def test_display_models_forbid_unknown_fields():

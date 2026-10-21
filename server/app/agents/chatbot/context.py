@@ -9,12 +9,32 @@ the oldest turns are dropped whole.
 """
 
 import datetime as dt
+import uuid
 from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 from app.agents.core import drop_unanswered_tool_calls
 from app.core.logging import logger
+
+
+@dataclass
+class TurnContext:
+    """What a tool may use during one chat turn; built once per turn by the route.
+
+    The user is never a tool argument: tools read `user_id` from here, so no
+    wording of a question can reach another user's data.
+    """
+
+    user_id: uuid.UUID
+    session_factory: async_sessionmaker
+    # The per-turn load of the user's analytics history: a `Future` the chat's tools
+    # set and share. `Any` because `agents` does not know the type.
+    history: Any = None
+
 
 STUB_TEMPLATE = "{title}{period}: result omitted from an earlier turn; call the tool again for figures."
 

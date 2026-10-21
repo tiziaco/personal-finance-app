@@ -6,27 +6,13 @@ against `AgentTool.args_schema`, hands the tool a per-turn `TurnContext`, and
 carries the `ToolOutcome` back: `content` for the model, `display` for the UI.
 """
 
-import uuid
 from collections.abc import Awaitable, Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy.ext.asyncio import async_sessionmaker
 
-
-@dataclass
-class TurnContext:
-    """What a tool may use during one chat turn; built once per turn by the route.
-
-    The user is never a tool argument: tools read `user_id` from here, so no
-    wording of a question can reach another user's data.
-    """
-
-    user_id: uuid.UUID
-    session_factory: async_sessionmaker
-    # Scratch space shared by this turn's tool calls (e.g. a history loaded once).
-    cache: dict[str, Any] = field(default_factory=dict)
+from app.agents.chatbot.context import TurnContext
 
 
 class ToolArgumentError(Exception):
