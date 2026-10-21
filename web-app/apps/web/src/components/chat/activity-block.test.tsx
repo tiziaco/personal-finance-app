@@ -19,17 +19,42 @@ const tool = (
     period: "Sep 2026",
     summary: [
       { kind: "count", value: 14, label: "categories" },
-      { kind: "money", value: "2184" },
+      { kind: "total", value: "2184.00" },
     ],
     table: {
       columns: [
         { key: "name", label: "Category", kind: "text" },
-        { key: "amount", label: "Amount", kind: "money" },
-        { key: "share", label: "Share", kind: "percent" },
+        { key: "spent", label: "Spent", kind: "total" },
+        { key: "net", label: "Net", kind: "net" },
+        { key: "amount", label: "Amount", kind: "transaction" },
+        { key: "share", label: "Share", kind: "share" },
+        { key: "change", label: "Change", kind: "change" },
       ],
       rows: [
-        { name: "Housing", amount: "950", share: 43.5 },
-        { name: "Refund", amount: "-12.5", share: null },
+        {
+          name: "Housing",
+          spent: "950.00",
+          net: "-12.50",
+          amount: "-40.00",
+          share: 43.5,
+          change: 12.04,
+        },
+        {
+          name: "Pets",
+          spent: "30.00",
+          net: "30.00",
+          amount: "25.00",
+          share: null,
+          change: "new",
+        },
+        {
+          name: "Travel",
+          spent: "10.00",
+          net: "0.00",
+          amount: "0.00",
+          share: 0.4,
+          change: null,
+        },
       ],
     },
   },
@@ -103,7 +128,7 @@ describe("ActivityBlock", () => {
     expect(screen.getByText("Worked for 4s · 2 lookups")).toBeInTheDocument()
   })
 
-  it("opens a tool row to a table with formatted money", async () => {
+  it("opens a tool row to a table formatted as the analytics page formats it", async () => {
     const user = userEvent.setup()
     render(
       <ActivityBlock
@@ -119,10 +144,53 @@ describe("ActivityBlock", () => {
     expect(row).toHaveTextContent("14 categories · €2,184.00")
     await user.click(row)
     expect(row).toHaveAttribute("aria-expanded", "true")
-    expect(screen.getAllByText("€950.00")[0]).toBeInTheDocument()
-    expect(screen.getAllByText("−€12.50")[0]).toBeInTheDocument()
+    // A total unsigned; a net signed and coloured; a transaction signed, income coloured.
+    expect(screen.getAllByText("€950.00")[0]).not.toHaveClass("text-negative")
+    expect(screen.getAllByText("−€12.50")[0]).toHaveClass("text-negative")
+    expect(screen.getAllByText("+€30.00")[0]).toHaveClass("text-positive")
+    expect(screen.getAllByText("−€40.00")[0]).not.toHaveClass("text-negative")
+    expect(screen.getAllByText("+€25.00")[0]).toHaveClass("text-positive")
     expect(screen.getAllByText("43.5%")[0]).toBeInTheDocument()
     expect(screen.getAllByText("–")[0]).toBeInTheDocument()
+    // A change as the category ranking shows it: up in spending is bad; "new"; a dash with nothing to compare.
+    const up = screen.getAllByText(/12\.0% more/)[0]
+    expect(up).toHaveTextContent("▲ 12.0% more")
+    expect(up).toHaveAttribute("data-tone", "bad")
+    expect(screen.getAllByText("new")[0]).toBeInTheDocument()
+    expect(screen.getAllByText("—")[0]).toBeInTheDocument()
+  })
+
+  it("words a summary's savings rate and weekend bias as the analytics page does", () => {
+    render(
+      <ActivityBlock
+        activity={state({
+          parts: [
+            tool({
+              display: {
+                title: "Spending patterns",
+                period: "Sep 2026",
+                summary: [
+                  { kind: "rate", value: -8.25, label: "savings rate" },
+                  { kind: "share", value: 61.04, label: "top 5 share" },
+                  {
+                    kind: "weekendBias",
+                    value: 12.5,
+                    label: "weekend vs weekday, per day",
+                  },
+                ],
+                table: null,
+              },
+            }),
+          ],
+        })}
+      />,
+    )
+    const row = screen.getByRole("button", { name: /Spending by category/ })
+    // formatPct, as the analytics page's Rate: one decimal, the locale's minus.
+    expect(row).toHaveTextContent(
+      "-8.3% · 61.0% · Weekend days cost you 12.5% more than weekdays",
+    )
+    expect(screen.getByText("-8.3%")).toHaveAttribute("data-tone", "bad")
   })
 
   it("reads 'Stopped after 3s' for a stopped exchange", () => {

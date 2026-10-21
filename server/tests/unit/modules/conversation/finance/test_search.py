@@ -6,7 +6,7 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
-from app.modules.conversation.finance.domain.display import search_outcome
+from app.modules.conversation.finance.display import search_outcome
 from app.modules.conversation.finance.domain.search import GROUP_LIMIT, SAMPLE_SIZE, search_rows
 from app.modules.conversation.finance.schemas import SearchArgs
 from tests.unit.modules.analytics.rows import row
@@ -119,7 +119,10 @@ def test_content_lists_filter_totals_and_sample_with_named_categories():
     assert "categories Food & Groceries (food_groceries)" in lines[1]
     assert "Money out: 3 transactions, -60.00 EUR; money in: 0 transactions, 0.00 EUR." in outcome.content
     assert "- 2026-09-12 Lidl -30.00 EUR Food & Groceries (food_groceries)" in outcome.content
-    assert [r["amount"] for r in outcome.display.table.rows] == [-30.0, -20.0, -10.0]
+    assert [r["amount"] for r in outcome.display.table.rows] == ["-30.00", "-20.00", "-10.00"]
+    assert outcome.display.table.columns[-1].kind == "transaction"
+    # Money out and in show unsigned under their labels; the content keeps the sign.
+    assert [(item.kind, item.value) for item in outcome.display.summary[:2]] == [("total", "60.00"), ("total", "0.00")]
 
 
 def test_open_ended_range_and_unfiltered_labels():
@@ -135,7 +138,7 @@ def test_ranked_groups_are_capped_to_the_top_and_the_table_shows_groups():
     outcome = search_outcome(search_rows(many, a), a, NAMES, SPAN)
     assert f"(top {GROUP_LIMIT} of 30 groups shown)" in outcome.content
     assert len(outcome.display.table.rows) == GROUP_LIMIT
-    assert outcome.display.table.rows[0]["out_total"] == -30.0
+    assert outcome.display.table.rows[0]["out_total"] == "30.00"
 
 
 def test_zero_amounts_are_neither_money_out_nor_in_and_not_matches():

@@ -94,7 +94,7 @@ describe("streamChat", () => {
     const display = {
       title: "T",
       period: null,
-      summary: [{ kind: "money", value: 12.5, label: null }],
+      summary: [{ kind: "total", value: "12.50", label: null }],
       table: {
         columns: [{ key: "a", label: "A", kind: "text" }],
         rows: [{ a: "x" }],

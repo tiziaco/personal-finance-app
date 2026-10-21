@@ -9,13 +9,10 @@ carries the `ToolOutcome` back: `content` for the model, `display` for the UI.
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict
-
-if TYPE_CHECKING:
-    # Type-only: a module's domain slot builds ToolOutcomes, and R9 keeps the ORM out of it.
-    from sqlalchemy.ext.asyncio import async_sessionmaker
+from sqlalchemy.ext.asyncio import async_sessionmaker
 
 
 @dataclass
@@ -27,7 +24,7 @@ class TurnContext:
     """
 
     user_id: uuid.UUID
-    session_factory: "async_sessionmaker"
+    session_factory: async_sessionmaker
     # Scratch space shared by this turn's tool calls (e.g. a history loaded once).
     cache: dict[str, Any] = field(default_factory=dict)
 
@@ -45,10 +42,25 @@ class _DisplayModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+SummaryKind = Literal["count", "text", "total", "share", "rate", "weekendBias"]
+"""How the web shows a summary figure, as the analytics page shows the same one.
+
+`total` is an amount as a decimal string, unsigned under a label that says its direction.
+`share` and `rate` are percents, a rate coloured good or bad; `weekendBias` is the percent
+a weekend day costs over a weekday, worded as a sentence.
+"""
+
+ColumnKind = Literal["text", "count", "date", "total", "net", "transaction", "share", "rate", "change"]
+"""How the web shows a table cell. Amounts are decimal strings: a `total` unsigned, a `net`
+signed and coloured, a `transaction` signed with income coloured. A `change` is a percent
+change in spending, "new" when there was nothing before, or null with no period to compare.
+"""
+
+
 class SummaryItem(_DisplayModel):
     """One figure in a tool row's one-line summary, e.g. a count, an amount or a share."""
 
-    kind: Literal["count", "money", "percent", "text"]
+    kind: SummaryKind
     value: float | int | str
     label: str | None = None
 
@@ -58,11 +70,11 @@ class TableColumn(_DisplayModel):
 
     key: str
     label: str
-    kind: Literal["text", "money", "percent", "count", "date"]
+    kind: ColumnKind
 
 
 class ToolTable(_DisplayModel):
-    """The figures behind a tool result, as numbers the client formats; bounded for the UI."""
+    """The figures behind a tool result, as values the client formats by column kind; bounded for the UI."""
 
     columns: list[TableColumn]
     rows: list[dict[str, str | float | int | None]]

@@ -34,7 +34,9 @@ has told it.
 - **See what the assistant did.** Above each reply an activity block shows, while the
   assistant works, a live step label with an elapsed timer, its thinking when the model
   provides it (rendered as Markdown, muted), and each lookup as a row that opens to a
-  small table of what it returned. When the answer starts the block collapses to "Worked
+  small table of what it returned. Its figures read as the analytics page shows the same
+  ones: totals unsigned, a net signed and coloured, a category's change as "▲ 12.0% more"
+  or **new**, the weekend bias as its sentence. When the answer starts the block collapses to "Worked
   for 4s · 2 lookups", and keeps that header, and whatever the user opened, when the saved
   history replaces the streamed reply; reopened later it reads "2 lookups", without the
   timing. A reply the server cut short reads "Stopped".

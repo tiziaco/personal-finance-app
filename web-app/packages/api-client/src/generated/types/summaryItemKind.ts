@@ -11,7 +11,9 @@ export type SummaryItemKind =
 
 export const SummaryItemKind = {
   count: "count",
-  money: "money",
-  percent: "percent",
   text: "text",
+  total: "total",
+  share: "share",
+  rate: "rate",
+  weekendBias: "weekendBias",
 } as const

@@ -2,15 +2,17 @@
 
 `content` opens with the period, then the figures, money as plain decimals with "EUR",
 and stays bounded: long lists are cut to a fixed length and say so. `display` carries
-money as numbers, never formatted strings; the web formats them (spec §7).
+amounts as decimal strings and percents as numbers, each with the kind that decides how
+the web shows it, as the analytics page shows the same figure; never formatted strings.
 """
 
 import datetime as dt
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from decimal import Decimal
-from typing import TYPE_CHECKING, Optional, TypeVar
+from typing import TYPE_CHECKING, Generic, Optional, TypeVar
 
-from app.agents.chatbot.toolkit import SummaryItem, TableColumn, ToolDisplay, ToolOutcome, ToolTable
+from app.agents.chatbot.toolkit import ColumnKind, SummaryItem, TableColumn, ToolDisplay, ToolOutcome, ToolTable
 from app.modules.conversation.finance.domain.periods import MONTH_NAMES, describe_span, name_period, short_month
 from app.modules.conversation.finance.domain.search import GROUP_LIMIT, SearchResult, Totals
 
@@ -48,8 +50,30 @@ def _change(value: float) -> str:
     return f"{value:+.1f}%"
 
 
-def _num(value: Decimal) -> float:
-    return float(value)
+def _amount(value: Decimal) -> str:
+    """An amount on the wire: a decimal string, so the web reads its sign from the text, never a float."""
+    return f"{value:.2f}"
+
+
+Cell = str | float | int | None
+
+
+@dataclass(frozen=True)
+class Col(Generic[T]):
+    """One table column, declared once: its key, header and kind, and how a row's cell is read from an item."""
+
+    key: str
+    label: str
+    kind: ColumnKind
+    cell: Callable[[T], Cell]
+
+
+def _table(cols: Sequence[Col[T]], items: Iterable[T]) -> Optional[ToolTable]:
+    """The table of `items` under `cols`; None without a row."""
+    rows = [{c.key: c.cell(item) for c in cols} for item in items]
+    if not rows:
+        return None
+    return ToolTable(columns=[TableColumn(key=c.key, label=c.label, kind=c.kind) for c in cols], rows=rows)
 
 
 def _capped(items: Sequence[T], limit: int, what: str, lines: list[str], *, last: bool = False) -> Sequence[T]:
@@ -70,20 +94,14 @@ def _named(slug: str, names: Mapping[str, str]) -> str:
 
 
 def _outcome(
-    title: str,
-    label: str,
-    lines: list[str],
-    summary: list[SummaryItem],
-    columns: list[TableColumn],
-    rows: list[dict],
+    title: str, label: str, lines: list[str], summary: list[SummaryItem], table: Optional[ToolTable]
 ) -> ToolOutcome:
-    table = ToolTable(columns=columns, rows=rows) if rows else None
     display = ToolDisplay(title=title, period=label, summary=summary, table=table)
     return ToolOutcome(content="\n".join([label, *lines]), display=display)
 
 
-def _money_item(value: Decimal, label: str) -> SummaryItem:
-    return SummaryItem(kind="money", value=_num(value), label=label)
+def _total_item(value: Decimal, label: str) -> SummaryItem:
+    return SummaryItem(kind="total", value=_amount(value), label=label)
 
 
 def spending_overview_outcome(response: "SpendingResponse", label: str) -> ToolOutcome:
@@ -125,27 +143,20 @@ def spending_overview_outcome(response: "SpendingResponse", label: str) -> ToolO
             f"expenses {_eur(mtd.expenses)}; the same days of {short_month(mtd.previous_month)}: "
             f"income {_eur(mtd.previous_income)}, expenses {_eur(mtd.previous_expenses)}."
         )
-    summary = [_money_item(r.total_expenses, "spent"), _money_item(r.total_income, "income")]
+    summary = [_total_item(r.total_expenses, "spent"), _total_item(r.total_income, "income")]
     if r.savings_rate_pct is not None:
-        summary.append(SummaryItem(kind="percent", value=r.savings_rate_pct, label="savings rate"))
-    columns = [
-        TableColumn(key="month", label="Month", kind="text"),
-        TableColumn(key="income", label="Income", kind="money"),
-        TableColumn(key="expenses", label="Expenses", kind="money"),
-        TableColumn(key="net", label="Net", kind="money"),
-        TableColumn(key="savings_rate_pct", label="Savings rate", kind="percent"),
-    ]
-    rows = [
-        {
-            "month": short_month(m.month),
-            "income": _num(m.income),
-            "expenses": _num(m.expenses),
-            "net": _num(m.net),
-            "savings_rate_pct": m.savings_rate_pct,
-        }
-        for m in months
-    ]
-    return _outcome("Spending overview", label, lines, summary, columns, rows)
+        summary.append(SummaryItem(kind="rate", value=r.savings_rate_pct, label="savings rate"))
+    table = _table(
+        [
+            Col("month", "Month", "text", lambda m: short_month(m.month)),
+            Col("income", "Income", "total", lambda m: _amount(m.income)),
+            Col("expenses", "Expenses", "total", lambda m: _amount(m.expenses)),
+            Col("net", "Net", "net", lambda m: _amount(m.net)),
+            Col("savings_rate_pct", "Savings rate", "rate", lambda m: m.savings_rate_pct),
+        ],
+        months,
+    )
+    return _outcome("Spending overview", label, lines, summary, table)
 
 
 def _trend(change_pct: Optional[float]) -> str:
@@ -190,26 +201,26 @@ def category_breakdown_outcome(
                     )
     summary = [
         SummaryItem(kind="count", value=len(categories), label="categories"),
-        _money_item(r.total_expenses, "spent"),
+        _total_item(r.total_expenses, "spent"),
     ]
-    columns = [
-        TableColumn(key="category", label="Category", kind="text"),
-        TableColumn(key="total", label="Spent", kind="money"),
-        TableColumn(key="share_pct", label="Share", kind="percent"),
-        TableColumn(key="count", label="Purchases", kind="count"),
-        TableColumn(key="change_pct", label="Change", kind="percent"),
-    ]
-    rows = [
-        {
-            "category": _name(c.category, names),
-            "total": _num(c.total),
-            "share_pct": c.share_pct,
-            "count": c.count,
-            "change_pct": c.change_pct,
-        }
-        for c in categories
-    ]
-    return _outcome("Spending by category", label, lines, summary, columns, rows)
+    table = _table(
+        [
+            Col("category", "Category", "text", lambda c: _name(c.category, names)),
+            Col("total", "Spent", "total", lambda c: _amount(c.total)),
+            Col("share_pct", "Share", "share", lambda c: c.share_pct),
+            Col("count", "Purchases", "count", lambda c: c.count),
+            Col("change_pct", "Change", "change", _category_change),
+        ],
+        categories,
+    )
+    return _outcome("Spending by category", label, lines, summary, table)
+
+
+def _category_change(c) -> Cell:
+    """A category's change, as the analytics page's ranking shows it: "new" when nothing was spent before."""
+    if c.change_pct is None and c.previous_total is not None:
+        return "new"
+    return c.change_pct
 
 
 def top_merchants_outcome(response: "MerchantBreakdownResponse", label: str) -> ToolOutcome:
@@ -232,22 +243,21 @@ def top_merchants_outcome(response: "MerchantBreakdownResponse", label: str) -> 
         frequent = ", ".join(f"{m.merchant} ({m.count})" for m in r.top_by_frequency[:FREQUENT_SHOWN])
         lines.append(f"Most frequent (purchases): {frequent}.")
     summary = [
-        _money_item(r.total_expenses, "spent"),
+        _total_item(r.total_expenses, "spent"),
         SummaryItem(kind="count", value=c.unique_merchants, label="merchants"),
     ]
     if r.top_by_spend:
-        summary.append(SummaryItem(kind="percent", value=c.top_5_share_pct, label="top 5 share"))
-    columns = [
-        TableColumn(key="merchant", label="Merchant", kind="text"),
-        TableColumn(key="total", label="Spent", kind="money"),
-        TableColumn(key="share_pct", label="Share", kind="percent"),
-        TableColumn(key="count", label="Purchases", kind="count"),
-    ]
-    rows = [
-        {"merchant": m.merchant, "total": _num(m.total), "share_pct": m.share_pct, "count": m.count}
-        for m in r.top_by_spend
-    ]
-    return _outcome("Top merchants", label, lines, summary, columns, rows)
+        summary.append(SummaryItem(kind="share", value=c.top_5_share_pct, label="top 5 share"))
+    table = _table(
+        [
+            Col("merchant", "Merchant", "text", lambda m: m.merchant),
+            Col("total", "Spent", "total", lambda m: _amount(m.total)),
+            Col("share_pct", "Share", "share", lambda m: m.share_pct),
+            Col("count", "Purchases", "count", lambda m: m.count),
+        ],
+        r.top_by_spend,
+    )
+    return _outcome("Top merchants", label, lines, summary, table)
 
 
 def recurring_costs_outcome(response: "RecurringResponse", label: str) -> ToolOutcome:
@@ -280,27 +290,20 @@ def recurring_costs_outcome(response: "RecurringResponse", label: str) -> ToolOu
                 f"{h.months_active} months"
             )
     summary = [
-        _money_item(r.monthly_recurring_cost, "a month"),
+        _total_item(r.monthly_recurring_cost, "a month"),
         SummaryItem(kind="count", value=len(r.merchants), label="recurring"),
     ]
-    columns = [
-        TableColumn(key="merchant", label="Merchant", kind="text"),
-        TableColumn(key="monthly_cost", label="A month", kind="money"),
-        TableColumn(key="median_charge", label="Median charge", kind="money"),
-        TableColumn(key="last_charge", label="Last charge", kind="date"),
-        TableColumn(key="status", label="Status", kind="text"),
-    ]
-    rows = [
-        {
-            "merchant": m.merchant,
-            "monthly_cost": _num(m.monthly_cost),
-            "median_charge": _num(m.median_charge),
-            "last_charge": m.last_charge.isoformat(),
-            "status": "active" if m.active else "stopped",
-        }
-        for m in merchants
-    ]
-    return _outcome("Recurring costs", label, lines, summary, columns, rows)
+    table = _table(
+        [
+            Col("merchant", "Merchant", "text", lambda m: m.merchant),
+            Col("monthly_cost", "A month", "total", lambda m: _amount(m.monthly_cost)),
+            Col("median_charge", "Median charge", "total", lambda m: _amount(m.median_charge)),
+            Col("last_charge", "Last charge", "date", lambda m: m.last_charge.isoformat()),
+            Col("status", "Status", "text", lambda m: "active" if m.active else "stopped"),
+        ],
+        merchants,
+    )
+    return _outcome("Recurring costs", label, lines, summary, table)
 
 
 def spending_behaviour_outcome(response: "BehaviourResponse", label: str, names: Mapping[str, str]) -> ToolOutcome:
@@ -340,25 +343,20 @@ def spending_behaviour_outcome(response: "BehaviourResponse", label: str, names:
             )
     summary: list[SummaryItem] = []
     if r.weekend_bias_pct is not None:
-        summary.append(SummaryItem(kind="percent", value=r.weekend_bias_pct, label="weekend vs weekday, per day"))
+        summary.append(SummaryItem(kind="weekendBias", value=r.weekend_bias_pct, label="weekend vs weekday, per day"))
     if spent:
         busiest = max(r.by_weekday, key=lambda w: w.per_day)
         summary.append(SummaryItem(kind="text", value=busiest.name, label="busiest day"))
-    columns = [
-        TableColumn(key="weekday", label="Day", kind="text"),
-        TableColumn(key="total", label="Spent", kind="money"),
-        TableColumn(key="count", label="Purchases", kind="count"),
-        TableColumn(key="per_day", label="Per day", kind="money"),
-    ]
-    rows = (
+    table = _table(
         [
-            {"weekday": w.name, "total": _num(w.total), "count": w.count, "per_day": _num(w.per_day)}
-            for w in r.by_weekday
-        ]
-        if spent
-        else []
+            Col("weekday", "Day", "text", lambda w: w.name),
+            Col("total", "Spent", "total", lambda w: _amount(w.total)),
+            Col("count", "Purchases", "count", lambda w: w.count),
+            Col("per_day", "Per day", "total", lambda w: _amount(w.per_day)),
+        ],
+        r.by_weekday if spent else [],
     )
-    return _outcome("Spending patterns", label, lines, summary, columns, rows)
+    return _outcome("Spending patterns", label, lines, summary, table)
 
 
 def unusual_spending_outcome(response: "AnomaliesResponse", label: str, names: Mapping[str, str]) -> ToolOutcome:
@@ -394,22 +392,17 @@ def unusual_spending_outcome(response: "AnomaliesResponse", label: str, names: M
         SummaryItem(kind="count", value=len(r.outliers), label="unusual expenses"),
         SummaryItem(kind="count", value=len(r.spikes), label="category spikes"),
     ]
-    columns = [
-        TableColumn(key="date", label="Date", kind="date"),
-        TableColumn(key="merchant", label="Merchant", kind="text"),
-        TableColumn(key="category", label="Category", kind="text"),
-        TableColumn(key="amount", label="Amount", kind="money"),
-    ]
-    rows = [
-        {
-            "date": o.date.isoformat(),
-            "merchant": o.merchant,
-            "category": _name(o.category, names),
-            "amount": _num(o.amount),
-        }
-        for o in outliers
-    ]
-    return _outcome("Unusual spending", label, lines, summary, columns, rows)
+    table = _table(
+        [
+            Col("date", "Date", "date", lambda o: o.date.isoformat()),
+            Col("merchant", "Merchant", "text", lambda o: o.merchant),
+            Col("category", "Category", "text", lambda o: _name(o.category, names)),
+            # Analytics reports an outlier as positive spend, so it reads as a total, not a signed transaction.
+            Col("amount", "Spent", "total", lambda o: _amount(o.amount)),
+        ],
+        outliers,
+    )
+    return _outcome("Unusual spending", label, lines, summary, table)
 
 
 WEEKDAY_NAMES = {
@@ -483,7 +476,7 @@ def search_outcome(
     if not result.matched:
         lines.append(f"{NO_MATCH.capitalize()}; the {describe_span(*data_span)}.")
         return _outcome(
-            "Transaction search", label, lines, [SummaryItem(kind="count", value=0, label="matches")], [], []
+            "Transaction search", label, lines, [SummaryItem(kind="count", value=0, label="matches")], None
         )
     lines.append(f"{result.matched} {'transaction matches' if result.matched == 1 else 'transactions match'}.")
     lines.append(f"{_totals('Money out:', result.money_out)}; {_totals('money in:', result.money_in)}.")
@@ -502,43 +495,32 @@ def search_outcome(
     )
     for r in result.sample:
         lines.append(f"- {r.date.isoformat()} {r.merchant} {_eur(r.amount)} {_named(r.category, names)}")
+    # Money out is negative in the data; under its label it shows unsigned, as a total (abs, never "-0.00").
     summary = [
-        _money_item(result.money_out.total, "money out"),
-        _money_item(result.money_in.total, "money in"),
+        _total_item(abs(result.money_out.total), "money out"),
+        _total_item(result.money_in.total, "money in"),
         SummaryItem(kind="count", value=result.matched, label="matches"),
     ]
     if args.group_by:
-        columns = [
-            TableColumn(key="group", label=args.group_by.capitalize(), kind="text"),
-            TableColumn(key="out_count", label="Out", kind="count"),
-            TableColumn(key="out_total", label="Money out", kind="money"),
-            TableColumn(key="in_count", label="In", kind="count"),
-            TableColumn(key="in_total", label="Money in", kind="money"),
-        ]
-        rows = [
-            {
-                "group": _group_name(name, args.group_by, names),
-                "out_count": out.count,
-                "out_total": _num(out.total),
-                "in_count": into.count,
-                "in_total": _num(into.total),
-            }
-            for name, out, into in groups
-        ]
+        group_by = args.group_by
+        table = _table(
+            [
+                Col("group", group_by.capitalize(), "text", lambda g: _group_name(g[0], group_by, names)),
+                Col("out_count", "Out", "count", lambda g: g[1].count),
+                Col("out_total", "Money out", "total", lambda g: _amount(abs(g[1].total))),
+                Col("in_count", "In", "count", lambda g: g[2].count),
+                Col("in_total", "Money in", "total", lambda g: _amount(g[2].total)),
+            ],
+            groups,
+        )
     else:
-        columns = [
-            TableColumn(key="date", label="Date", kind="date"),
-            TableColumn(key="merchant", label="Merchant", kind="text"),
-            TableColumn(key="category", label="Category", kind="text"),
-            TableColumn(key="amount", label="Amount", kind="money"),
-        ]
-        rows = [
-            {
-                "date": r.date.isoformat(),
-                "merchant": r.merchant,
-                "category": _name(r.category, names),
-                "amount": _num(r.amount),
-            }
-            for r in result.sample
-        ]
-    return _outcome("Transaction search", label, lines, summary, columns, rows)
+        table = _table(
+            [
+                Col("date", "Date", "date", lambda t: t.date.isoformat()),
+                Col("merchant", "Merchant", "text", lambda t: t.merchant),
+                Col("category", "Category", "text", lambda t: _name(t.category, names)),
+                Col("amount", "Amount", "transaction", lambda t: _amount(t.amount)),
+            ],
+            result.sample,
+        )
+    return _outcome("Transaction search", label, lines, summary, table)

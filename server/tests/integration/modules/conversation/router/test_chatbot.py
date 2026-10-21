@@ -26,7 +26,7 @@ pytestmark = pytest.mark.integration
 DISPLAY = ToolDisplay(
     title="Spending by category",
     period="Sep 2026",
-    summary=[SummaryItem(kind="money", value=2184.5, label="spent")],
+    summary=[SummaryItem(kind="total", value="2184.50", label="spent")],
     table=ToolTable(
         columns=[TableColumn(key="category", label="Category", kind="text")],
         rows=[{"category": "Groceries"}],
@@ -433,7 +433,8 @@ class TestFinanceToolsThroughTheRoute:
         finished = events[1]
         assert finished["ok"] is True and finished["display"]["period"] == "September 2026"
         spent = next(item for item in finished["display"]["summary"] if item["label"] == "spent")
-        assert spent["value"] == float(route["total_expenses"]) == 180.5
+        # The amount the analytics route returns, as the same decimal string: never a float.
+        assert spent["value"] == route["total_expenses"] == "180.50" and spent["kind"] == "total"
         # The second model call is sent the tool's result: this user's figures, nobody else's.
         [result] = [m for m in sent[1] if isinstance(m, ToolMessage)]
         assert result.tool_call_id == "c1" and "expenses 180.50 EUR" in result.content

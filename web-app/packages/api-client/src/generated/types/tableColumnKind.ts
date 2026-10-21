@@ -11,8 +11,12 @@ export type TableColumnKind =
 
 export const TableColumnKind = {
   text: "text",
-  money: "money",
-  percent: "percent",
   count: "count",
   date: "date",
+  total: "total",
+  net: "net",
+  transaction: "transaction",
+  share: "share",
+  rate: "rate",
+  change: "change",
 } as const

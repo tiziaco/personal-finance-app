@@ -1,5 +1,9 @@
 import type { ApiRequest } from "@app/api-client"
-import type { ToolDisplay } from "@app/api-client/types"
+import {
+  SummaryItemKind,
+  TableColumnKind,
+  type ToolDisplay,
+} from "@app/api-client/types"
 import { z } from "zod"
 
 /**
@@ -12,7 +16,7 @@ const ToolDisplaySchema = z.object({
   period: z.string().nullable(),
   summary: z.array(
     z.object({
-      kind: z.enum(["count", "money", "percent", "text"]),
+      kind: z.enum(SummaryItemKind),
       value: z.union([z.number(), z.string()]),
       label: z.string().nullish(),
     }),
@@ -23,7 +27,7 @@ const ToolDisplaySchema = z.object({
         z.object({
           key: z.string(),
           label: z.string(),
-          kind: z.enum(["text", "money", "percent", "count", "date"]),
+          kind: z.enum(TableColumnKind),
         }),
       ),
       rows: z.array(

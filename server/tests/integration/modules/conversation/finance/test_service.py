@@ -93,8 +93,9 @@ async def test_figures_match_the_analytics_route(authenticated_client, test_user
 
         spent = next(item for item in outcome.display.summary if item.label == "spent")
         income = next(item for item in outcome.display.summary if item.label == "income")
-        assert spent.value == float(route["total_expenses"])
-        assert income.value == float(route["total_income"])
+        # The same decimal strings the analytics route returns.
+        assert spent.value == route["total_expenses"]
+        assert income.value == route["total_income"]
         assert f"expenses {route['total_expenses']} EUR" in outcome.content
         assert f"savings rate {route['savings_rate_pct']:.1f}%" in outcome.content
 
@@ -106,7 +107,7 @@ async def test_category_figures_match_the_analytics_route(authenticated_client, 
     outcome = await run("category_breakdown", turn(test_user), months=3)
 
     assert outcome.content.startswith("Jul – Sep 2026")
-    assert [r["total"] for r in outcome.display.table.rows] == [float(c["total"]) for c in route["top_categories"]]
+    assert [r["total"] for r in outcome.display.table.rows] == [c["total"] for c in route["top_categories"]]
 
 
 async def test_preamble_without_transactions_says_so(test_user, other_user, add, turn):

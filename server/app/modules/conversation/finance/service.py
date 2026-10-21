@@ -9,10 +9,12 @@ they read `TurnContext.user_id`.
 import asyncio
 import datetime as dt
 from collections.abc import Callable
+from functools import partial
+from typing import TypeVar
 
 from app.agents.chatbot.toolkit import AgentTool, ToolArgumentError, Toolkit, ToolOutcome, TurnContext
 from app.modules.analytics import AnalyticsHistory, DateRange, analytics_service
-from app.modules.conversation.finance.domain.display import (
+from app.modules.conversation.finance.display import (
     category_breakdown_outcome,
     recurring_costs_outcome,
     search_outcome,
@@ -30,6 +32,9 @@ from app.modules.conversation.finance.domain.periods import (
 from app.modules.conversation.finance.domain.search import search_rows
 from app.modules.conversation.finance.schemas import PeriodArgs, SearchArgs, TopMerchantsArgs
 from app.modules.transaction import CATEGORIES
+
+A = TypeVar("A", bound=PeriodArgs)
+R = TypeVar("R")
 
 HISTORY_KEY = "history"
 ONE_DAY = dt.timedelta(days=1)
@@ -122,15 +127,16 @@ def _analytics_tool(
     name: str,
     title: str,
     description: str,
-    args_schema: type[PeriodArgs],
-    outcome: Callable[[AnalyticsHistory, DateRange, PeriodArgs, str], ToolOutcome],
+    args_schema: type[A],
+    fetch: Callable[[AnalyticsHistory, DateRange, A], R],
+    render: Callable[[R, str], ToolOutcome],
 ) -> AgentTool:
-    """A tool over one analytics method: resolve the period on the turn's history, then render the result."""
+    """A tool over one analytics method: resolve the period on the turn's history, `fetch` the response, `render` it."""
 
-    async def run(args: PeriodArgs, ctx: TurnContext) -> ToolOutcome:
+    async def run(args: A, ctx: TurnContext) -> ToolOutcome:
         history = await turn_history(ctx)
         date_range, label = resolve_period(args, history)
-        return outcome(history, date_range, args, label)
+        return render(fetch(history, date_range, args), label)
 
     return AgentTool(name=name, title=title, description=description + PERIOD_HELP, args_schema=args_schema, run=run)
 
@@ -153,7 +159,8 @@ def finance_toolkit() -> Toolkit:
             "progress so far. Use for totals, how much was spent or earned, cash flow and the savings rate. Not for "
             "where the money went: use category_breakdown or top_merchants.",
             PeriodArgs,
-            lambda h, dr, _args, label: spending_overview_outcome(h.spending(dr), label),
+            lambda h, dr, _: h.spending(dr),
+            spending_overview_outcome,
         ),
         _analytics_tool(
             "category_breakdown",
@@ -162,9 +169,8 @@ def finance_toolkit() -> Toolkit:
             "same length, plus the categories growing and declining. Use for where the money went and for the "
             "Savings & Investments amount. Not for a single merchant: use search_transactions.",
             PeriodArgs,
-            lambda h, dr, _args, label: category_breakdown_outcome(
-                h.categories(dr, CATEGORY_TOP_N), label, CATEGORY_NAMES
-            ),
+            lambda h, dr, _: h.categories(dr, CATEGORY_TOP_N),
+            partial(category_breakdown_outcome, names=CATEGORY_NAMES),
         ),
         _analytics_tool(
             "top_merchants",
@@ -172,7 +178,8 @@ def finance_toolkit() -> Toolkit:
             "The merchants taking the most spend over a period, with share, purchases and dates, the most frequent "
             "ones, and how concentrated spending is. Not for one merchant's transactions: use search_transactions.",
             TopMerchantsArgs,
-            lambda h, dr, args, label: top_merchants_outcome(h.merchants(dr, args.top_n), label),
+            lambda h, dr, args: h.merchants(dr, args.top_n),
+            top_merchants_outcome,
         ),
         _analytics_tool(
             "recurring_costs",
@@ -181,7 +188,8 @@ def finance_toolkit() -> Toolkit:
             "whether it still charges, plus merchants charging like a subscription without being marked. Use for "
             "subscriptions and fixed costs. Not for one-off spending.",
             PeriodArgs,
-            lambda h, dr, _args, label: recurring_costs_outcome(h.recurring(dr), label),
+            lambda h, dr, _: h.recurring(dr),
+            recurring_costs_outcome,
         ),
         _analytics_tool(
             "spending_behaviour",
@@ -189,7 +197,8 @@ def finance_toolkit() -> Toolkit:
             "How spending is spread over a period: by weekday, weekdays against weekends, by month of the year, and "
             "how steady each category is month to month. Not for totals: use spending_overview.",
             PeriodArgs,
-            lambda h, dr, _args, label: spending_behaviour_outcome(h.behaviour(dr), label, CATEGORY_NAMES),
+            lambda h, dr, _: h.behaviour(dr),
+            partial(spending_behaviour_outcome, names=CATEGORY_NAMES),
         ),
         _analytics_tool(
             "unusual_spending",
@@ -197,9 +206,8 @@ def finance_toolkit() -> Toolkit:
             "Expenses far above what came before them, and categories spending well above their average in the "
             "period's last 30 days. Use for surprises, outliers and spikes. Not for regular spending.",
             PeriodArgs,
-            lambda h, dr, _args, label: unusual_spending_outcome(
-                h.anomalies(dr, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS), label, CATEGORY_NAMES
-            ),
+            lambda h, dr, _: h.anomalies(dr, ANOMALY_STD_THRESHOLD, ANOMALY_WINDOW_DAYS),
+            partial(unusual_spending_outcome, names=CATEGORY_NAMES),
         ),
         AgentTool(
             name="search_transactions",

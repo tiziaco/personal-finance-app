@@ -13,7 +13,7 @@ from app.modules.analytics import (
     MerchantBreakdownResponse,
     RecurringResponse,
 )
-from app.modules.conversation.finance.domain.display import (
+from app.modules.conversation.finance.display import (
     MONTHS_SHOWN,
     RECURRING_SHOWN,
     TRENDS_SHOWN,
@@ -80,10 +80,10 @@ def test_category_outcome_is_bounded_and_names_the_period():
     assert out.display.period == "Sep 2026"
     assert out.display.title == "Spending by category"
     assert out.display.summary[0] == SummaryItem(kind="count", value=14, label="categories")
-    assert out.display.summary[1] == SummaryItem(kind="money", value=2184.0, label="spent")
+    assert out.display.summary[1] == SummaryItem(kind="total", value="2184.00", label="spent")
     assert len(out.display.table.rows) == 14
-    assert all(isinstance(r["total"], float) for r in out.display.table.rows)
-    assert out.display.table.rows[0]["total"] == 100.5
+    assert out.display.table.rows[0]["total"] == "100.50"
+    assert [c.kind for c in out.display.table.columns] == ["text", "total", "share", "count", "change"]
     growing_lines = [line for line in out.content.splitlines() if "a month (+40.0%)" in line]
     assert len(growing_lines) == TRENDS_SHOWN
 
@@ -102,6 +102,14 @@ def test_category_outcome_names_categories_and_their_slugs_and_the_previous_peri
     assert "Food & Groceries (food_groceries): 300.00 EUR" in out.content
     assert "new (nothing in the previous period)" in out.content
     assert [r["category"] for r in out.display.table.rows] == ["Savings & Investments", "Food & Groceries"]
+    # As the analytics page's ranking: a percent, "new" when nothing was spent before.
+    assert [r["change_pct"] for r in out.display.table.rows] == [25.0, "new"]
+
+
+def test_a_category_without_a_previous_period_has_no_change():
+    out = category_breakdown_outcome(breakdown([category("food_groceries", "300.00")]), "September 2026", NAMES)
+
+    assert out.display.table.rows[0]["change_pct"] is None
 
 
 def test_a_period_without_spending_says_so_and_has_no_table():
@@ -136,17 +144,18 @@ def test_spending_outcome_carries_totals_months_and_the_month_in_progress():
     assert "- Sep 2026: income 2000.00 EUR, expenses 1500.00 EUR, net 500.00 EUR, savings rate 25.0%" in out.content
     assert "Month in progress, Oct 2026 through 2026-10-05" in out.content
     assert out.display.summary == [
-        SummaryItem(kind="money", value=2000.0, label="spent"),
-        SummaryItem(kind="money", value=4000.0, label="income"),
-        SummaryItem(kind="percent", value=50.0, label="savings rate"),
+        SummaryItem(kind="total", value="2000.00", label="spent"),
+        SummaryItem(kind="total", value="4000.00", label="income"),
+        SummaryItem(kind="rate", value=50.0, label="savings rate"),
     ]
     assert out.display.table.rows[1] == {
         "month": "Sep 2026",
-        "income": 2000.0,
-        "expenses": 1500.0,
-        "net": 500.0,
+        "income": "2000.00",
+        "expenses": "1500.00",
+        "net": "500.00",
         "savings_rate_pct": 25.0,
     }
+    assert [c.kind for c in out.display.table.columns] == ["text", "total", "total", "net", "rate"]
 
 
 def test_spending_outcome_keeps_only_the_latest_months():
@@ -175,7 +184,7 @@ def test_merchants_outcome():
 
     assert "- Amazon: 90.00 EUR, 75.0% of expenses, 1 purchases" in out.content
     assert out.display.summary[:2] == [
-        SummaryItem(kind="money", value=120.0, label="spent"),
+        SummaryItem(kind="total", value="120.00", label="spent"),
         SummaryItem(kind="count", value=2, label="merchants"),
     ]
     assert [r["merchant"] for r in out.display.table.rows] == ["Amazon", "Lidl"]
@@ -246,10 +255,10 @@ def test_recurring_outcome_keeps_the_costliest_merchants():
 
     assert len(out.display.table.rows) == RECURRING_SHOWN
     assert out.display.table.rows[0]["merchant"] == f"Service {RECURRING_SHOWN + 4}"
-    assert out.display.table.rows[0]["monthly_cost"] == float(RECURRING_SHOWN + 5)
+    assert out.display.table.rows[0]["monthly_cost"] == f"{RECURRING_SHOWN + 5}.00"
     assert f"(top {RECURRING_SHOWN} of {RECURRING_SHOWN + 5} recurring merchants shown)" in out.content
     assert "- Spotify: average charge 9.99 EUR, 3 charges over 3 months" in out.content
-    assert out.display.summary[0] == SummaryItem(kind="money", value=325.0, label="a month")
+    assert out.display.summary[0] == SummaryItem(kind="total", value="325.00", label="a month")
 
 
 def test_behaviour_outcome():
@@ -259,6 +268,7 @@ def test_behaviour_outcome():
 
     assert "- Saturday: 60.00 EUR, 1 purchases" in out.content
     assert out.display.summary[-1] == SummaryItem(kind="text", value="Saturday", label="busiest day")
+    assert [item.kind for item in out.display.summary] == ["weekendBias", "text"]
     assert len(out.display.table.rows) == 7
 
 
@@ -303,5 +313,6 @@ def test_anomalies_outcome():
     )
     assert "No category spikes." in out.content
     assert out.display.table.rows == [
-        {"date": "2026-09-14", "merchant": "MediaMarkt", "category": "Food & Groceries", "amount": 899.0}
+        {"date": "2026-09-14", "merchant": "MediaMarkt", "category": "Food & Groceries", "amount": "899.00"}
     ]
+    assert out.display.table.columns[-1].kind == "total"  # positive spend, never a signed transaction

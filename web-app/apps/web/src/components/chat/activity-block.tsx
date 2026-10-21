@@ -1,12 +1,13 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Fragment, useEffect, useState, type ReactNode } from "react"
 import type {
   SummaryItem,
   TableColumn,
   ToolDisplay,
 } from "@app/api-client/types"
 import { cn } from "@app/core/lib/utils"
+import { Badge } from "@app/ui/badge"
 import {
   Collapsible,
   CollapsibleContent,
@@ -19,12 +20,10 @@ import {
   type ActivityPart,
   type ActivityState,
 } from "@/lib/chat/activity"
-import {
-  amountSign,
-  formatAmount,
-  formatDate,
-  formatSignedAmount,
-} from "@/components/transactions/format"
+import { Change, Rate } from "@/components/analytics/change"
+import { biasSentence, formatPct } from "@/components/analytics/format"
+import { formatDate } from "@/components/transactions/format"
+import { Money } from "@/components/transactions/money"
 
 import { CHAT_COPY } from "./copy"
 import { MarkdownBlock } from "./markdown-text"
@@ -32,21 +31,17 @@ import { MarkdownBlock } from "./markdown-text"
 type ToolPart = Extract<ActivityPart, { kind: "tool" }>
 type Cell = string | number | null | undefined
 
-/** A money figure: a plain total, or a signed amount when it is negative. */
-const money = (value: string | number) => {
-  const text = String(value)
-  return amountSign(text) < 0 ? formatSignedAmount(text) : formatAmount(text)
-}
-
-const percent = (value: string | number) =>
-  `${Number(Number(value).toFixed(1))}%`
-
-function formatSummaryItem(item: SummaryItem): string {
+/** One summary figure, shown as the analytics page shows the same one. */
+function SummaryFigure({ item }: { item: SummaryItem }): ReactNode {
   switch (item.kind) {
-    case "money":
-      return money(item.value)
-    case "percent":
-      return percent(item.value)
+    case "total":
+      return <Money amount={String(item.value)} kind="total" />
+    case "share":
+      return formatPct(Number(item.value))
+    case "rate":
+      return <Rate pct={Number(item.value)} />
+    case "weekendBias":
+      return biasSentence(Number(item.value))
     case "count":
       return item.label ? `${item.value} ${item.label}` : String(item.value)
     case "text":
@@ -54,16 +49,39 @@ function formatSummaryItem(item: SummaryItem): string {
   }
 }
 
-export const formatSummary = (items: SummaryItem[]) =>
-  items.map(formatSummaryItem).join(" · ")
+export function Summary({ items }: { items: SummaryItem[] }) {
+  return items.map((item, i) => (
+    <Fragment key={i}>
+      {i > 0 && " · "}
+      <SummaryFigure item={item} />
+    </Fragment>
+  ))
+}
 
-function formatCell(column: TableColumn, value: Cell): string {
+/** One table cell by its column's kind: amounts and percents as the analytics page shows them. */
+function TableCell({ column, value }: { column: TableColumn; value: Cell }) {
+  if (column.kind === "change") {
+    // As the analytics page's category ranking: "new" when nothing was spent before.
+    if (value === "new") return <Badge variant="secondary">new</Badge>
+    return (
+      <Change
+        pct={value === null || value === undefined ? null : Number(value)}
+        kind="spend"
+        up="more"
+        down="less"
+      />
+    )
+  }
   if (value === null || value === undefined || value === "") return "–"
   switch (column.kind) {
-    case "money":
-      return money(value)
-    case "percent":
-      return percent(value)
+    case "total":
+    case "net":
+    case "transaction":
+      return <Money amount={String(value)} kind={column.kind} />
+    case "share":
+      return formatPct(Number(value))
+    case "rate":
+      return <Rate pct={Number(value)} />
     case "date":
       return formatDate(String(value)) || String(value)
     default:
@@ -110,7 +128,7 @@ function ResultTable({ table }: { table: NonNullable<ToolDisplay["table"]> }) {
                     "text-right tabular-nums",
                 )}
               >
-                {formatCell(column, row[column.key])}
+                <TableCell column={column} value={row[column.key]} />
               </td>
             ))}
           </tr>
@@ -126,8 +144,6 @@ function ToolRow({ part }: { part: ToolPart }) {
   const failed = part.status === "error"
   const period = display?.period
   const hasTable = part.status === "ok" && !!display?.table
-  const summary =
-    part.status === "ok" && display ? formatSummary(display.summary) : ""
 
   return (
     <Collapsible
@@ -156,7 +172,9 @@ function ToolRow({ part }: { part: ToolPart }) {
             <Loader2Icon className="size-3 animate-spin" aria-hidden />
           )}
           {failed && CHAT_COPY.lookupFailed}
-          {summary}
+          {part.status === "ok" && display && (
+            <Summary items={display.summary} />
+          )}
           {hasTable && (
             <ChevronRightIcon
               className={cn("size-3 transition-transform", open && "rotate-90")}

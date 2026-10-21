@@ -2602,9 +2602,11 @@
           "kind": {
             "enum": [
               "count",
-              "money",
-              "percent",
-              "text"
+              "text",
+              "total",
+              "share",
+              "rate",
+              "weekendBias"
             ],
             "title": "Kind",
             "type": "string"
@@ -2653,10 +2655,14 @@
           "kind": {
             "enum": [
               "text",
-              "money",
-              "percent",
               "count",
-              "date"
+              "date",
+              "total",
+              "net",
+              "transaction",
+              "share",
+              "rate",
+              "change"
             ],
             "title": "Kind",
             "type": "string"
@@ -2774,7 +2780,7 @@
       },
       "ToolTable": {
         "additionalProperties": false,
-        "description": "The figures behind a tool result, as numbers the client formats; bounded for the UI.",
+        "description": "The figures behind a tool result, as values the client formats by column kind; bounded for the UI.",
         "properties": {
           "columns": {
             "items": {

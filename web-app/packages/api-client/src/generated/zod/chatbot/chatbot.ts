@@ -73,9 +73,11 @@ export const SendChatMessageResponse = zod
                                       .object({
                                         kind: zod.enum([
                                           "count",
-                                          "money",
-                                          "percent",
                                           "text",
+                                          "total",
+                                          "share",
+                                          "rate",
+                                          "weekendBias",
                                         ]),
                                         label: zod
                                           .union([zod.string(), zod.null()])
@@ -99,10 +101,14 @@ export const SendChatMessageResponse = zod
                                               key: zod.string(),
                                               kind: zod.enum([
                                                 "text",
-                                                "money",
-                                                "percent",
                                                 "count",
                                                 "date",
+                                                "total",
+                                                "net",
+                                                "transaction",
+                                                "share",
+                                                "rate",
+                                                "change",
                                               ]),
                                               label: zod.string(),
                                             })
@@ -123,7 +129,7 @@ export const SendChatMessageResponse = zod
                                         ),
                                       })
                                       .describe(
-                                        "The figures behind a tool result, as numbers the client formats; bounded for the UI.",
+                                        "The figures behind a tool result, as values the client formats by column kind; bounded for the UI.",
                                       ),
                                     zod.null(),
                                   ]),
@@ -261,9 +267,11 @@ export const ListChatMessagesResponse = zod
                                           .object({
                                             kind: zod.enum([
                                               "count",
-                                              "money",
-                                              "percent",
                                               "text",
+                                              "total",
+                                              "share",
+                                              "rate",
+                                              "weekendBias",
                                             ]),
                                             label: zod
                                               .union([zod.string(), zod.null()])
@@ -287,10 +295,14 @@ export const ListChatMessagesResponse = zod
                                                   key: zod.string(),
                                                   kind: zod.enum([
                                                     "text",
-                                                    "money",
-                                                    "percent",
                                                     "count",
                                                     "date",
+                                                    "total",
+                                                    "net",
+                                                    "transaction",
+                                                    "share",
+                                                    "rate",
+                                                    "change",
                                                   ]),
                                                   label: zod.string(),
                                                 })
@@ -311,7 +323,7 @@ export const ListChatMessagesResponse = zod
                                             ),
                                           })
                                           .describe(
-                                            "The figures behind a tool result, as numbers the client formats; bounded for the UI.",
+                                            "The figures behind a tool result, as values the client formats by column kind; bounded for the UI.",
                                           ),
                                         zod.null(),
                                       ]),

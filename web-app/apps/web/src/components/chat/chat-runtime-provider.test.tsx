@@ -280,7 +280,7 @@ describe("ChatRuntimeProvider", () => {
     const display = {
       title: "Spending overview",
       period: "September 2026",
-      summary: [{ kind: "money" as const, value: 180.5, label: "spent" }],
+      summary: [{ kind: "total" as const, value: "180.50", label: "spent" }],
       table: null,
     }
     let finish = () => {}

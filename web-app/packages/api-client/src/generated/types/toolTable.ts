@@ -9,7 +9,7 @@ import type { TableColumn } from "./tableColumn"
 import type { ToolTableRowsItem } from "./toolTableRowsItem"
 
 /**
- * The figures behind a tool result, as numbers the client formats; bounded for the UI.
+ * The figures behind a tool result, as values the client formats by column kind; bounded for the UI.
  */
 export interface ToolTable {
   columns: TableColumn[]

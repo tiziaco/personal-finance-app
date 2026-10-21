@@ -25,14 +25,9 @@ import {
 } from "@/components/transactions/format"
 import { Money } from "@/components/transactions/money"
 
-import { Change, SavingsHeadline, TONE_CLASS } from "./change"
+import { Change, Rate, SavingsHeadline } from "./change"
 import { FlowChart } from "./flow-chart"
-import {
-  changeTone,
-  formatPct,
-  partialLabel,
-  type PartialLabel,
-} from "./format"
+import { partialLabel, type PartialLabel } from "./format"
 import { monthToDate, toMonthPoints } from "./month-points"
 import { MonthToDateStrip } from "./month-to-date-strip"
 import { PeriodHeader } from "./period-select"
@@ -307,16 +302,5 @@ export function FlowTab({
         }}
       </QueryGate>
     </div>
-  )
-}
-
-/** A month's savings rate; bad when negative, a dash when there is none. */
-function Rate({ pct }: { pct: number | null }) {
-  if (pct === null) return <>—</>
-  const tone = changeTone(pct, "income")
-  return (
-    <span data-tone={tone} className={TONE_CLASS[tone]}>
-      {formatPct(pct)}
-    </span>
   )
 }
