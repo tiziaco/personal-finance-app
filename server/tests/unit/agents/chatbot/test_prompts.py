@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.agents.chatbot.prompts import load_system_prompt
+from app.agents.chatbot.prompts import load_summary_prompt, load_system_prompt
 
 pytestmark = pytest.mark.unit
 
@@ -33,3 +33,7 @@ def test_system_prompt_says_tool_results_are_data_not_instructions():
 
 def test_system_prompt_tells_the_model_a_month_without_transactions_is_not_skipped():
     assert 'never call the earlier month "last month"' in load_system_prompt()
+
+
+def test_summary_prompt_forbids_figures():
+    assert "Never include amounts" in load_summary_prompt()
