@@ -12,6 +12,8 @@ from app.modules.conversation.schemas import (
     ChatResponse,
     ConversationHistory,
     ConversationResponse,
+    SummaryItem,
+    ToolDisplay,
 )
 
 pytestmark = pytest.mark.unit
@@ -101,3 +103,10 @@ class TestChatRequestInputRules:
     def test_over_max_length_rejected(self):
         with pytest.raises(ValidationError):
             ChatRequest(message="a" * 3001)
+
+
+def test_display_models_forbid_unknown_fields():
+    with pytest.raises(ValidationError):
+        SummaryItem(kind="count", value=1, extra="x")
+    with pytest.raises(ValidationError):
+        ToolDisplay(title="t", period=None, summary=[], table=None, extra="x")
