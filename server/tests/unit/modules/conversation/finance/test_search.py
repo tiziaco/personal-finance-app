@@ -27,6 +27,7 @@ ROWS = [
     row("2026-10-03", "-5.00", "Kiosk"),  # Saturday
     row("2026-10-04", "15.00", "Refund Shop"),  # Sunday
 ]
+SPAN = (ROWS[0].date, ROWS[-1].date)
 
 
 def test_merchant_match_is_case_insensitive_substring():
@@ -104,7 +105,7 @@ def test_invalid_arguments_are_rejected_with_a_reason(bad, message):
 
 def test_no_match_says_so_in_content():
     a = args(merchant="nothing")
-    outcome = search_outcome(search_rows(ROWS, a), a, NAMES)
+    outcome = search_outcome(search_rows(ROWS, a), a, NAMES, SPAN)
     assert "no transactions match" in outcome.content.lower()
     assert 'merchant contains "nothing"' in outcome.content
     assert outcome.display.table is None
@@ -112,7 +113,7 @@ def test_no_match_says_so_in_content():
 
 def test_content_lists_filter_totals_and_sample_with_named_categories():
     a = args(merchant="lidl", categories=["food_groceries"], date_from="2026-09-01", date_to="2026-09-30")
-    outcome = search_outcome(search_rows(ROWS, a), a, NAMES)
+    outcome = search_outcome(search_rows(ROWS, a), a, NAMES, SPAN)
     lines = outcome.content.splitlines()
     assert lines[0] == "September 2026"
     assert "categories Food & Groceries (food_groceries)" in lines[1]
@@ -123,15 +124,15 @@ def test_content_lists_filter_totals_and_sample_with_named_categories():
 
 def test_open_ended_range_and_unfiltered_labels():
     assert search_outcome(
-        search_rows(ROWS, args(date_from="2026-10-01")), args(date_from="2026-10-01"), NAMES
+        search_rows(ROWS, args(date_from="2026-10-01")), args(date_from="2026-10-01"), NAMES, SPAN
     ).content.startswith("from 2026-10-01")
-    assert search_outcome(search_rows(ROWS, args()), args(), NAMES).display.period == "1 Sep – 4 Oct 2026"
+    assert search_outcome(search_rows(ROWS, args()), args(), NAMES, SPAN).display.period == "1 Sep – 4 Oct 2026"
 
 
 def test_ranked_groups_are_capped_to_the_top_and_the_table_shows_groups():
     many = [row("2026-09-05", f"-{m + 1}.00", merchant=f"Shop {m}") for m in range(30)]
     a = args(group_by="merchant")
-    outcome = search_outcome(search_rows(many, a), a, NAMES)
+    outcome = search_outcome(search_rows(many, a), a, NAMES, SPAN)
     assert f"(top {GROUP_LIMIT} of 30 groups shown)" in outcome.content
     assert len(outcome.display.table.rows) == GROUP_LIMIT
     assert outcome.display.table.rows[0]["out_total"] == -30.0
@@ -145,7 +146,7 @@ def test_zero_amounts_are_neither_money_out_nor_in_and_not_matches():
 def test_months_run_oldest_first_and_the_cap_keeps_the_newest():
     many = [row(f"{2020 + m // 12}-{m % 12 + 1:02d}-05", f"-{m + 1}.00") for m in range(30)]
     a = args(group_by="month")
-    outcome = search_outcome(search_rows(many, a), a, NAMES)
+    outcome = search_outcome(search_rows(many, a), a, NAMES, SPAN)
     assert f"(last {GROUP_LIMIT} of 30 groups shown)" in outcome.content
     months = [r["group"] for r in outcome.display.table.rows]
     assert months[0] == "Jul 2020" and months[-1] == "Jun 2022"
@@ -155,13 +156,13 @@ def test_months_run_oldest_first_and_the_cap_keeps_the_newest():
 
 def test_no_match_names_the_data_span():
     a = args(date_from="2019-01-01", date_to="2019-12-31")
-    outcome = search_outcome(search_rows(ROWS, a), a, NAMES)
+    outcome = search_outcome(search_rows(ROWS, a), a, NAMES, SPAN)
     assert "the data covers September 2026 to October 2026" in outcome.content
 
 
 def test_one_transaction_is_singular():
     a = args(merchant="kiosk")
-    content = search_outcome(search_rows(ROWS, a), a, NAMES).content
+    content = search_outcome(search_rows(ROWS, a), a, NAMES, SPAN).content
     assert "1 transaction matches." in content and "Money out: 1 transaction, -5.00 EUR" in content
 
 

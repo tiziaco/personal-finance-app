@@ -9,7 +9,7 @@ from app.modules.analytics.domain.behaviour import behaviour_analysis
 from app.modules.analytics.domain.categories import category_breakdown
 from app.modules.analytics.domain.dashboard import build_dashboard
 from app.modules.analytics.domain.merchants import merchant_breakdown
-from app.modules.analytics.domain.period import Period, resolve_period
+from app.modules.analytics.domain.period import Period, data_span, resolve_period
 from app.modules.analytics.domain.recurring import recurring_analysis
 from app.modules.analytics.domain.spending import spending_summary
 from app.modules.analytics.schemas import (
@@ -35,6 +35,10 @@ class AnalyticsHistory:
 
     rows: tuple[AnalysisRow, ...]
     today: dt.date
+
+    def span(self) -> Optional[tuple[dt.date, dt.date]]:
+        """The first and last day holding a transaction; None without any."""
+        return data_span(self.rows, self.today)
 
     def period(self, date_range: DateRange) -> Optional[Period]:
         """The period the range resolves to over these rows; None when there is nothing to resolve."""

@@ -13,7 +13,7 @@ class PeriodArgs(BaseModel):
     """The period an analytics tool covers: the last `months` finished months, or ISO date bounds.
 
     Every analytics tool's arguments extend it. Whether the period holds any data is checked
-    against the user's history when the tool runs (`to_date_range`), not here.
+    against the user's history when the tool runs (`resolve_period`), not here.
     """
 
     model_config = ConfigDict(extra="forbid")

@@ -40,7 +40,8 @@ server/app/
 │   ├── analytics/            # every calculation over the user's transactions; stores nothing.
 │   │                         #   domain/ holds the pure functions (R9); history.py is AnalyticsHistory:
 │   │                         #   one load of a user's rows and today, then any analysis over any
-│   │                         #   DateRange in memory — insights' figures use one per generation
+│   │                         #   DateRange in memory — insights' figures use one per generation,
+│   │                         #   the chat's tools one per turn, reading its periods and span
 │   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency;
 │   │                         #   finance/ is its feature sub-package: the chat's tools over analytics
 │   │                         #   and transaction

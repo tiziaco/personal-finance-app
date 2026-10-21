@@ -44,7 +44,6 @@ class SearchResult:
     sample: list["AnalysisRow"]
     matched: int
     span: Optional[tuple[dt.date, dt.date]] = field(default=None)  # first and last day among the matches
-    data_span: Optional[tuple[dt.date, dt.date]] = field(default=None)  # first and last day of all the rows searched
 
 
 def _matches(row: "AnalysisRow", args: "SearchArgs") -> bool:
@@ -99,7 +98,6 @@ def search_rows(rows: Sequence["AnalysisRow"], args: "SearchArgs") -> SearchResu
     else:
         sample = sorted(matches, key=lambda r: abs(r.amount), reverse=True)
     days = [r.date for r in matches]
-    all_days = [r.date for r in rows]
     return SearchResult(
         money_out=money_out,
         money_in=money_in,
@@ -107,5 +105,4 @@ def search_rows(rows: Sequence["AnalysisRow"], args: "SearchArgs") -> SearchResu
         sample=sample[:SAMPLE_SIZE],
         matched=len(matches),
         span=(min(days), max(days)) if days else None,
-        data_span=(min(all_days), max(all_days)) if all_days else None,
     )

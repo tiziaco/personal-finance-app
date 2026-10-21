@@ -6,10 +6,6 @@ reads "so far". Month names are fixed English, never the server's locale.
 """
 
 import datetime as dt
-from typing import TYPE_CHECKING, Optional
-
-if TYPE_CHECKING:
-    from app.modules.analytics import AnalyticsHistory, DateRange
 
 MONTH_NAMES = (
     "January",
@@ -40,11 +36,6 @@ def short_month(month: str) -> str:
     return f"{SHORT_MONTH_NAMES[int(number) - 1]} {year}"
 
 
-def _month_end(day: dt.date) -> dt.date:
-    first_of_next = (day.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
-    return first_of_next - dt.timedelta(days=1)
-
-
 def _by_month(first_day: dt.date, last_day: dt.date) -> str:
     if (first_day.year, first_day.month) == (last_day.year, last_day.month):
         return month_name(first_day)
@@ -68,17 +59,9 @@ def _by_day(first_day: dt.date, last_day: dt.date) -> str:
 
 def name_period(first_day: dt.date, last_day: dt.date, *, so_far: bool = False) -> str:
     """Name an inclusive span of days; `so_far` when it ends at the data's end in the month in progress."""
-    whole_months = first_day.day == 1 and (so_far or last_day == _month_end(last_day))
+    whole_months = first_day.day == 1 and (so_far or (last_day + dt.timedelta(days=1)).day == 1)
     name = _by_month(first_day, last_day) if whole_months else _by_day(first_day, last_day)
     return f"{name} so far" if so_far else name
-
-
-def data_span(history: "AnalyticsHistory") -> Optional[tuple[dt.date, dt.date]]:
-    """The first and last day holding a transaction; None without any."""
-    if not history.rows:
-        return None
-    days = [r.date for r in history.rows]
-    return min(days), max(days)
 
 
 def describe_span(first_day: dt.date, last_day: dt.date) -> str:
@@ -86,14 +69,10 @@ def describe_span(first_day: dt.date, last_day: dt.date) -> str:
     return f"data covers {month_name(first_day)} to {month_name(last_day)}"
 
 
-def period_label(history: "AnalyticsHistory", date_range: "DateRange") -> str:
-    """The name of the period a range resolves to over the history, as the analytics page shows it.
+def period_label(first_day: dt.date, last_day: dt.date, *, today: dt.date, data_last: dt.date) -> str:
+    """The name of a resolved period, as the analytics page shows it.
 
-    Raises ValueError for a range that resolves to nothing: callers validate it first (`to_date_range`).
+    It reads "so far" when it ends at the data's last day in the month in progress.
     """
-    period = history.period(date_range)
-    span = data_span(history)
-    if period is None or span is None:
-        raise ValueError("the range resolves to no period")
-    in_progress = (period.last_day.year, period.last_day.month) == (history.today.year, history.today.month)
-    return name_period(period.first_day, period.last_day, so_far=in_progress and period.last_day == span[1])
+    in_progress = (last_day.year, last_day.month) == (today.year, today.month)
+    return name_period(first_day, last_day, so_far=in_progress and last_day == data_last)

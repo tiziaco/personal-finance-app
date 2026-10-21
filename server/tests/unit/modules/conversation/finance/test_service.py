@@ -15,7 +15,7 @@ from app.modules.conversation.finance.service import (
     NO_TRANSACTIONS,
     finance_toolkit,
     preamble,
-    to_date_range,
+    resolve_period,
     turn_history,
 )
 from tests.unit.modules.analytics.rows import row
@@ -34,35 +34,39 @@ def args(**kwargs) -> PeriodArgs:
     return PeriodArgs.model_validate(kwargs)
 
 
-def test_months_become_the_analytics_range():
-    assert to_date_range(args(months=3), HISTORY) == DateRange(months=3)
+def test_months_become_the_analytics_range_and_its_name():
+    assert resolve_period(args(months=3), HISTORY) == (DateRange(months=3), "Jul – Sep 2026")
 
 
-def test_dates_inside_the_data_become_the_analytics_range():
+def test_dates_inside_the_data_become_the_analytics_range_and_its_name():
     expected = DateRange(date_from=dt.date(2026, 9, 1), date_to=dt.date(2026, 9, 30))
-    assert to_date_range(args(date_from="2026-09-01", date_to="2026-09-30"), HISTORY) == expected
+    assert resolve_period(args(date_from="2026-09-01", date_to="2026-09-30"), HISTORY) == (expected, "September 2026")
+
+
+def test_the_month_in_progress_reads_so_far():
+    assert resolve_period(args(date_from="2026-10-01"), HISTORY)[1] == "October 2026 so far"
 
 
 def test_range_before_the_data_names_the_span():
     with pytest.raises(ToolArgumentError, match="data covers March 2025 to October 2026") as error:
-        to_date_range(args(date_from="2019-01-01", date_to="2019-12-31"), HISTORY)
+        resolve_period(args(date_from="2019-01-01", date_to="2019-12-31"), HISTORY)
     assert "No transactions from 2019-01-01 to 2019-12-31" in str(error.value)
 
 
 def test_range_after_the_data_names_the_span():
     with pytest.raises(ToolArgumentError, match="data covers March 2025 to October 2026"):
-        to_date_range(args(date_from="2026-11-01"), HISTORY)
+        resolve_period(args(date_from="2026-11-01"), HISTORY)
 
 
 def test_an_inverted_range_names_the_span():
     with pytest.raises(ToolArgumentError, match="date_from 2026-09-30 is after date_to 2026-09-01; the data covers"):
-        to_date_range(args(date_from="2026-09-30", date_to="2026-09-01"), HISTORY)
+        resolve_period(args(date_from="2026-09-30", date_to="2026-09-01"), HISTORY)
 
 
 @pytest.mark.parametrize("period", [{"months": 1}, {"date_from": "2026-09-01"}])
 def test_no_transactions_is_an_argument_error_not_zeros(period):
     with pytest.raises(ToolArgumentError, match=NO_TRANSACTIONS):
-        to_date_range(args(**period), EMPTY)
+        resolve_period(args(**period), EMPTY)
 
 
 def ctx() -> TurnContext:

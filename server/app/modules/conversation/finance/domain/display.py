@@ -5,6 +5,7 @@ and stays bounded: long lists are cut to a fixed length and say so. `display` ca
 money as numbers, never formatted strings; the web formats them (spec §7).
 """
 
+import datetime as dt
 from collections.abc import Mapping, Sequence
 from decimal import Decimal
 from typing import TYPE_CHECKING, Optional, TypeVar
@@ -460,7 +461,12 @@ def _totals(side: str, totals: Totals) -> str:
     return f"{side} {totals.count} {noun}, {_eur(totals.total)}"
 
 
-def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str, str]) -> ToolOutcome:
+def search_outcome(
+    result: SearchResult,
+    args: "SearchArgs",
+    names: Mapping[str, str],
+    data_span: tuple[dt.date, dt.date],
+) -> ToolOutcome:
     """Matches as counts and totals (money out and in apart), optional groups, and a sample of transactions.
 
     The table is the groups when `group_by` is set, else the sample.
@@ -475,8 +481,7 @@ def search_outcome(result: SearchResult, args: "SearchArgs", names: Mapping[str,
         label = "All transactions"
     lines = [_describe_filter(args, names)]
     if not result.matched:
-        covers = f"; the {describe_span(*result.data_span)}" if result.data_span else ""
-        lines.append(f"{NO_MATCH.capitalize()}{covers}.")
+        lines.append(f"{NO_MATCH.capitalize()}; the {describe_span(*data_span)}.")
         return _outcome(
             "Transaction search", label, lines, [SummaryItem(kind="count", value=0, label="matches")], [], []
         )

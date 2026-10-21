@@ -22,7 +22,6 @@ from app.modules.conversation.finance.domain.display import (
     unusual_spending_outcome,
 )
 from app.modules.conversation.finance.domain.periods import (
-    data_span,
     describe_span,
     month_name,
     name_period,
@@ -33,6 +32,7 @@ from app.modules.conversation.finance.schemas import PeriodArgs, SearchArgs, Top
 from app.modules.transaction import CATEGORIES
 
 HISTORY_KEY = "history"
+ONE_DAY = dt.timedelta(days=1)
 NO_TRANSACTIONS = "The user has no transactions yet."
 CATEGORY_NAMES = dict(CATEGORIES)
 # Every category: the list is fixed and short, and Savings & Investments must never be cut (spec §1).
@@ -66,25 +66,27 @@ async def turn_history(ctx: TurnContext) -> AnalyticsHistory:
     return await load
 
 
-def to_date_range(args: PeriodArgs, history: AnalyticsHistory) -> DateRange:
-    """The analytics range for the tool's period; a `ToolArgumentError` naming the data span when it holds no data."""
-    span = data_span(history)
+def resolve_period(args: PeriodArgs, history: AnalyticsHistory) -> tuple[DateRange, str]:
+    """The analytics range for the tool's period and its name; a `ToolArgumentError` naming the data span when it holds no data."""
+    span = history.span()
     if span is None:
         raise ToolArgumentError(NO_TRANSACTIONS)
     covers = describe_span(*span)
-    if args.months is not None:
-        return DateRange(months=args.months)
     if args.date_from and args.date_to and args.date_from > args.date_to:
         raise ToolArgumentError(
             f"date_from {args.date_from.isoformat()} is after date_to {args.date_to.isoformat()}; the {covers}."
         )
-    date_range = DateRange(date_from=args.date_from, date_to=args.date_to)
-    if history.period(date_range) is None:
+    if args.months is not None:
+        date_range = DateRange(months=args.months)
+    else:
+        date_range = DateRange(date_from=args.date_from, date_to=args.date_to)
+    period = history.period(date_range)
+    if period is None:
         asked = f"{args.date_from.isoformat() if args.date_from else 'the start'} to " + (
             args.date_to.isoformat() if args.date_to else "the end"
         )
         raise ToolArgumentError(f"No transactions from {asked}: the {covers}.")
-    return date_range
+    return date_range, period_label(period.first_day, period.last_day, today=history.today, data_last=span[1])
 
 
 async def preamble(ctx: TurnContext) -> str:
@@ -95,17 +97,18 @@ async def preamble(ctx: TurnContext) -> str:
     model is told both, or it would call that month "last month".
     """
     history = await turn_history(ctx)
-    span = data_span(history)
+    span = history.span()
     if span is None:
         return NO_TRANSACTIONS
     # The dashboard's reference month: the latest finished month holding a transaction.
-    reference = DateRange(months=1)
-    label = period_label(history, reference)
-    last_day = history.period(reference).last_day
+    reference = history.period(DateRange(months=1))
+    last_day = reference.last_day
+    label = period_label(reference.first_day, last_day, today=history.today, data_last=span[1])
     if (last_day.year, last_day.month) == (history.today.year, history.today.month):
         return f"No month has finished yet: the user's data covers only {label}."
-    last_finished_end = history.today.replace(day=1) - dt.timedelta(days=1)
-    gap_start = (last_day.replace(day=1) + dt.timedelta(days=32)).replace(day=1)
+    last_finished_end = history.today.replace(day=1) - ONE_DAY
+    # A finished month's period runs to its last day, so the gap starts the day after.
+    gap_start = last_day + ONE_DAY
     if gap_start > last_finished_end:
         return f"Last finished month: {label}; {describe_span(*span)}."
     return (
@@ -126,17 +129,18 @@ def _analytics_tool(
 
     async def run(args: PeriodArgs, ctx: TurnContext) -> ToolOutcome:
         history = await turn_history(ctx)
-        date_range = to_date_range(args, history)
-        return outcome(history, date_range, args, period_label(history, date_range))
+        date_range, label = resolve_period(args, history)
+        return outcome(history, date_range, args, label)
 
     return AgentTool(name=name, title=title, description=description + PERIOD_HELP, args_schema=args_schema, run=run)
 
 
 async def _search_transactions(args: SearchArgs, ctx: TurnContext) -> ToolOutcome:
     history = await turn_history(ctx)
-    if not history.rows:
+    span = history.span()
+    if span is None:
         raise ToolArgumentError(NO_TRANSACTIONS)
-    return search_outcome(search_rows(history.rows, args), args, CATEGORY_NAMES)
+    return search_outcome(search_rows(history.rows, args), args, CATEGORY_NAMES, span)
 
 
 def finance_toolkit() -> Toolkit:
