@@ -24,7 +24,7 @@ Four layers, top to bottom. A layer imports downward only.
 | :---- | :---- | :---- |
 | **Assembly** | `app/main.py`, `app/api/` (router assembly, middlewares, system endpoints) | everything below |
 | **Modules** | `app/modules/<name>/` | other modules' package roots (§3), and everything below |
-| **Adapters** | `app/integrations/<provider>/` (Clerk, the LLM providers), `app/agents/` (LangGraph base, memory, checkpointing, observability) | each other, and the foundation |
+| **Adapters** | `app/integrations/<provider>/` (Clerk, the LLM providers), `app/agents/` (`core/`: memory, checkpointing, observability, structured calls; the chatbot; the one-call agents) | each other, and the foundation |
 | **Foundation** | `app/core/`, `app/database/`, `app/exceptions/`, `app/models/base.py`, `app/schemas/base.py`, `app/utils/` | nothing above |
 
 ```
@@ -43,7 +43,7 @@ server/app/
 │   │                         #   DateRange in memory — insights' figures use one per generation,
 │   │                         #   the chat's tools one per turn, reading its periods and span
 │   ├── conversation/         # the chatbot: conversations and chat routes, the agent dependency;
-│   │                         #   finance/ is its feature sub-package: the chat's tools over analytics
+│   │                         #   tools/ is its feature sub-package: the chat's tools over analytics
 │   │                         #   and transaction
 │   ├── insights/             # AI-written insights: gathers analytics figures, calls agents/insights,
 │   │                         #   stores one set per user
@@ -51,8 +51,8 @@ server/app/
 ├── integrations/
 │   ├── clerk/                # client, exceptions, timestamps, webhooks/{verification,schemas} — the provider half
 │   └── llm/                  # a provider adapter, not a domain
-├── agents/                   # base/, shared/, chatbot/, the one-call agents (csv_mapping/, transaction_labeler/,
-│                             #   insights/), plus messages.py (the Message type), graph.py, factory.py
+├── agents/                   # core/, chatbot/ (create_agent + middleware), the one-call agents
+│                             #   (csv_mapping/, transaction_labeler/, insights/)
 ├── core/                     # config, logging, metrics, limiter, metadata, events.py (§8)
 ├── database/                 # engine, dependencies.py (DbSession, the transaction boundary — §6)
 ├── exceptions/               # the exception hierarchy and the handlers (§7)
@@ -61,24 +61,30 @@ server/app/
 └── utils/                    # token verification, sanitisation
 ```
 
-**`llm` is an adapter, not a module.** It holds nothing about the product. `Message` and the
-graph helpers are `agents/`'s own types — an adapter importing a module's schema would break
-R2 — and the chat request and response schemas are `conversation`'s.
+**`llm` is an adapter, not a module.** It holds nothing about the product. The chat's history and
+stream types are `conversation`'s own (`schemas.py`, `domain/chat.py`): an adapter importing a
+module's schema would break R2.
 
 **Agents get module knowledge by injection.** `app.agents` may not import a module (R2), so the
-chatbot knows nothing about money. `conversation/finance/` builds a `Toolkit` (the tools, and a
-preamble the model reads each turn) and `main.py` hands it over at startup:
-`initialize_agents(checkpointer, agent_toolkits())`, where `agent_toolkits()` maps agent
-names to toolkits (`{"chatbot": finance_toolkit()}`); an agent without an entry fails
-startup, and a route test runs a lookup through it against a seeded user. The route builds a
-`TurnContext(user_id, session_factory, cache)` per turn and passes it in
-`config["configurable"]["turn_context"]`, which the chatbot's nodes require; tools read the
-user from it, never from an argument, and share one `AnalyticsHistory` through its `cache`. The chat routes release the request's
-DB connection before the model call, so a tool opens its own short-lived session from the
-context's factory. The tool schemas sent to the model carry no regex `pattern` (a Decimal
-argument's made gpt-5-mini return empty replies), so money arguments are JSON numbers parsed
-to Decimal; a test guards it. The stream's typed events are documented in
-`app/agents/chatbot/events.py`.
+chatbot knows nothing about money. `conversation/tools/` builds `chat_tools()` (seven
+`StructuredTool`s) and `chat_preamble` (what the model reads each turn); `main.py` compiles
+`build_chatbot(checkpointer, chat_tools(), chat_preamble)` and puts `ChatbotAgent(graph, tools)`
+on `app.state.agents`. The route builds a `TurnContext(user_id, session_factory)` per turn and
+passes it as the graph's `context=`; a tool declares `runtime: ToolRuntime[TurnContext]` and reads
+the user from `runtime.context`, never from an argument. The chat routes release the request's DB
+connection before the model call, so a tool opens its own short-lived session from the context's
+factory. The tool schemas sent to the model carry no regex `pattern` (a Decimal argument's made
+gpt-5-mini return empty replies), so money arguments are JSON numbers parsed to Decimal; a test
+guards it. The turn's superstep limit is `3 * CHAT_MAX_STEPS + 3`, because a `create_agent` turn
+with k model calls takes 3k + 1 supersteps. The stream contract is documented on the event models in
+`conversation/schemas.py`. OpenRouter delivers reasoning in raw `content` blocks
+(`{"type": "reasoning", "summary": [...]}`) and `content_blocks` loses the item boundaries, so
+`conversation/domain/chat.py` parses the raw content; it is the only place that parses reasoning.
+
+**One-call agents go through `ask()`** (`app/agents/core/structured.py`): a plain model through
+`with_fallbacks`, a fence-tolerant JSON parse (`parse_answer`) and one re-ask on an invalid answer.
+It is not `with_structured_output`: the OpenRouter spike (21 Oct 2026) found no method reliable for
+all three shapes (see `TODO.md`, *One-call agents on with_structured_output*).
 
 ## 2. Modules
 
@@ -155,7 +161,7 @@ app/modules/transactions/
 On every rung the root stays the only import surface and R1–R10 hold. A module on the second
 rung beside one that is all files is an expected state.
 
-**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it (R10). The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it. `conversation/finance/` is the second: it has no routes, only a `Toolkit` the root re-exports (`finance_toolkit`), and `conversation`'s core never imports it (R10).
+**A feature sub-package** is the third way a module grows: one concept with its own small tables and routes, kept together instead of spread across slot packages. `transaction/imports/` holds its own `router`, `service`, `repository`, `schemas`, `models`, `domain` and `handlers`. It calls the module's core — rows are written only through `transaction_service` — and the core never imports it (R10). The module root re-exports what the outside needs (`imports_router`), so R1 is unchanged; the R9 contract covers `app.modules.*.*.domain` for it. `conversation/tools/` is the second: it has no routes, no `domain` and no models, only the chat's tools, which the root re-exports (`chat_tools`, `chat_preamble`), and `conversation`'s core never imports it (R10).
 
 Settings live in `app/core/config.py`; a module with settings of its own gets a nested model
 there named for it, so `settings.<module>.X` reads like the rest. Every route keeps an
@@ -222,7 +228,7 @@ imports are excluded from the graph, which lets R4's hint through; every directo
 carries an `__init__.py` because the graph builder needs regular packages. R9 is a `forbidden` contract too: it
 forbids `sqlmodel`, `sqlalchemy` and `fastapi` in `app.modules.*.domain` and
 `app.modules.*.*.domain`. R10 is one `forbidden` contract per feature sub-package, with the
-core's slots as sources: `transaction/imports/` has one, `conversation/finance/` the other.
+core's slots as sources: `transaction/imports/` has one, `conversation/tools/` the other.
 
 A new module is three edits to `pyproject.toml` before it is enforced.
 `tests/unit/test_module_contracts.py` fails when a module is missing its R1 contract, is absent

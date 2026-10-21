@@ -15,11 +15,9 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, RootModel
 
-from app.agents.shared.observability import create_trace_config
-from app.agents.shared.structured import ask_json, structured_llm_service
+from app.agents.core import ask, create_trace_config
 from app.agents.transaction_labeler.known_merchants import match_known
 from app.core.logging import logger
-from app.integrations.llm import LLMService
 
 KNOWN_CONFIDENCE = 0.95
 FALLBACK_CATEGORY = "miscellaneous"
@@ -95,7 +93,7 @@ async def label(
     async def run(batch: list[MerchantToLabel]) -> Optional[dict[str, Label]]:
         async with semaphore:
             try:
-                return await _label_batch(structured_llm_service, batch, categories, config)
+                return await _label_batch(batch, categories, config)
             except Exception as e:  # noqa: BLE001  any failure of one batch is that batch's fallback, never the import's crash
                 logger.warning("label_batch_failed", size=len(batch), error_type=type(e).__name__)
                 return None
@@ -115,7 +113,7 @@ async def label(
 
 
 async def _label_batch(
-    service: LLMService, batch: list[MerchantToLabel], categories: list[tuple[str, str]], config: RunnableConfig
+    batch: list[MerchantToLabel], categories: list[tuple[str, str]], config: RunnableConfig
 ) -> dict[str, Label]:
     """One model call for up to BATCH_SIZE merchants: the labels it gave that name a real category."""
     slugs = {slug for slug, _ in categories}
@@ -134,7 +132,7 @@ async def _label_batch(
         ],
         ensure_ascii=False,
     )
-    answers = await ask_json(service, system, user, _Answers, config)
+    answers = await ask(_Answers, system, user, config)
     labelled: dict[str, Label] = {}
     for answer in answers.root:
         if not 0 <= answer.id < len(batch):

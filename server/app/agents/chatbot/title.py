@@ -7,10 +7,10 @@ from langchain_core.messages import (
     HumanMessage,
     SystemMessage,
 )
+from langchain_core.runnables import Runnable
 
-from app.agents.messages import ChatMessage
-from app.agents.shared.observability import create_graph_config
-from app.integrations.llm import LLMRegistry
+from app.agents.core import create_graph_config
+from app.integrations.llm import chat_model, with_fallbacks
 
 # The rename route's limit: a generated title must be one a user could have typed.
 TITLE_MAX_LENGTH = 100
@@ -40,33 +40,21 @@ def clean_title(raw: str) -> str:
     return title[:TITLE_MAX_LENGTH].rstrip()
 
 
-def first_exchange(history: list[ChatMessage]) -> tuple[str, str] | None:
-    """The first reply and the user message it answered, or None before any reply.
-
-    Paired, not taken separately: a first turn stopped before its reply leaves
-    a question with no answer, and the title must not mix two turns.
-    """
-    for index, message in enumerate(history):
-        if message.role == "assistant":
-            question = next((m.content for m in reversed(history[:index]) if m.role == "user"), None)
-            return (question, message.content) if question else None
-    return None
-
-
 async def generate_title(
     user_text: str,
     reply_text: str,
-    model_name: str,
     conversation_id: uuid.UUID,
     user_id: uuid.UUID,
+    *,
+    model: Runnable | None = None,
 ) -> str | None:
     """Ask the model for a title; None if it answers with nothing usable. Model errors propagate.
 
-    Uses a registry client directly: the chatbot's service has its tools bound,
-    and a title request must not come back as a tool call. It runs outside the
-    graph, so it carries its own Langfuse config, traced to the conversation.
+    Uses a plain model, not the agent's: a title request must not come back as a
+    tool call. It runs outside the graph, so it carries its own Langfuse config,
+    traced to the conversation.
     """
-    llm = LLMRegistry.get(model_name)
+    llm = model if model is not None else with_fallbacks(chat_model())
     response = await llm.ainvoke(
         [
             SystemMessage(content=TITLE_PROMPT),

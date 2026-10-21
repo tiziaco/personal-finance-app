@@ -34,25 +34,18 @@ except ExternalError as e:
 
 `app/integrations/clerk/client.py` is the real one.
 
-## Retry with Exponential Backoff
+## Retries and Fallback for Model Calls
 
-For transient failures on external calls, use `tenacity`. `LLMService._call_llm_with_retry` in
-`app/integrations/llm/service.py` is the real example, and the same file rotates through every configured model
-before raising a typed `LLMServiceError` for the last failure.
+Model calls do not hand-roll a retry. Transient failures retry inside the client: `chat_model` in
+`app/integrations/llm/models.py` sets `max_retries`, and the SDK backs off exponentially. Past that:
 
-```python
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type, before_sleep_log
+- **Fallback to another model:** `with_fallbacks` for the one-call agents, title and summary (it catches
+  `OpenAIError` only); inside the chat agent, `ModelFallbackMiddleware` (it catches any exception).
+- **A typed error:** a provider error becomes an `LLMServiceError` subclass through `translate_error`.
+- **An invalid answer:** `ask()` in `app/agents/core/structured.py` re-asks once.
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((RateLimitError, APITimeoutError)),
-    before_sleep=before_sleep_log(logger, "WARNING"),
-    reraise=True,
-)
-async def _call_with_retry(self, ...):
-    ...
-```
+For a retry on a non-LLM call, `tenacity` is not a direct dependency any more: adding one is a decision, not a
+default. A bounded loop that logs each attempt with the structlog `logger` is enough for most cases.
 
 ## Database Error Handling
 

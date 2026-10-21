@@ -36,6 +36,7 @@ Links are relative to `docs/`.
 | **Analytics rules** — an outlier rule for a thin category, frequent shopping not flagged recurring, yearly charges, hidden subscriptions that respect the user's "not recurring", and date bounds on hand-added transactions | complete — [PR #19](https://github.com/tiziaco/personal-finance-app/pull/19) into `template-base`; reaches `main` at Cutover | `feat/analytics-rules` | [`analytics.md`](./product/features/analytics.md) §3, [`data-model/transaction.md`](./data-model/transaction.md) D6, [`csv-import.md`](./product/features/csv-import.md) |
 | **Design system** — the app restyled to the design system made in Claude Design: tokens (colour in both themes, type, spacing, radius), fonts and the shared primitives, so every screen follows | complete — [PR #21](https://github.com/tiziaco/personal-finance-app/pull/21) into `template-base`; reaches `main` at Cutover | `feat/design-system` | [`web-app.md`](./architecture/web-app.md) §2 (the design system); the `finsight-design` skill; supersedes the former TODO **Web — legacy's theme** |
 | **7 Chat finance tools** — the assistant answers questions about the user's own money, shows its lookups and thinking, and releases the request's DB connection before a model call | complete — [PR #22](https://github.com/tiziaco/personal-finance-app/pull/22) into `template-base`; reaches `main` at Cutover | `feat/chat-finance-tools` | [`chat.md`](./product/features/chat.md), [`architecture/server.md`](./architecture/server.md) (agents get module knowledge by injection) |
+| **7b Agent core** — the chat agent on LangChain 1.3's `create_agent`, tools as `StructuredTool`s with a typed turn context, middleware for the step cap, wrap-up, context editing and memory; `agents/` reshaped into `core/` plus one package per agent; the chat's wire types owned by `conversation`. Behaviour unchanged: same stream, same history, same tool results | complete — [PR #23](https://github.com/tiziaco/personal-finance-app/pull/23) into `template-base`; reaches `main` at Cutover | `refactor/agent-core` | [`architecture/server.md`](./architecture/server.md) §1, [`chat.md`](./product/features/chat.md) §4; [`TODO.md`](./TODO.md) **one-call agents on with_structured_output** |
 | **8 Cutover** — merge into `main`, retire legacy | not started | — | [`TODO.md`](./TODO.md) **Cutover** |
 | **9 Chat evaluation** — an eval set of questions over a seeded account, a grounding check that every figure in an answer came from a tool result, and an LLM-as-judge for answer quality; builds on the Langfuse traces of tool calls | not started | — | [`chat.md`](./product/features/chat.md) §4 (figures come from tools). No spec yet |
 
@@ -55,6 +56,7 @@ here when someone picks it up.
 | 4 | Wave 3 cleanup ∥ Analytics rules | done — #19, #20 merged into `template-base` |
 | 5 | Design system | done — #21 merged into `template-base` |
 | 6 | 7 Chat finance tools | done — [PR #22](https://github.com/tiziaco/personal-finance-app/pull/22) into `template-base` |
+| 7 | 7b Agent core | done — [PR #23](https://github.com/tiziaco/personal-finance-app/pull/23) into `template-base` |
 
 A step starts when the steps it needs have merged, not when its whole wave has: 5b does
 not wait for 4.
@@ -102,6 +104,13 @@ not wait for 4.
   prompt, so building them inside 7 would be graded against a moving target.
 - **Evaluation comes after Cutover** (product; decision on 20 Oct 2026). It has no technical
   dependency on 8 either way, so the order is a product choice.
+- **7b Agent core comes between 7 and Cutover** (product; decision on 21 Oct 2026). Step 7's
+  reviews found the agent package hand-rolls what LangChain 1.3 ships (the tool loop, context
+  editing, the tool contract and context injection) and that the generic layer imports one
+  agent's package. Rebuilt on the library before Cutover, `main` receives the final loop and
+  Evaluation (9) is written against it rather than against a loop about to change: the eval
+  set reads the stream and checkpoint shapes 7b touches. Cutover has no technical dependency
+  on 7b; it waits by choice, as it did for the Wave 3 cleanup.
 - **Analytics rules is its own step, beside the cleanup** (product and technical; decision
   on 19 Oct 2026). The cleanup changes no behaviour; the rules step changes what the library
   reports, and may re-judge stored recurring flags, so the two are reviewed apart. They run

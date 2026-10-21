@@ -34,7 +34,6 @@ dependencies = [
     "prometheus-client>=0.19.0",
     "prometheus-fastapi-instrumentator>=8.1.0",
     "asgiref>=3.8.1",
-    "tenacity>=9.1.2",
     "mem0ai>=1.0.0",
     "uvloop>=0.22.1",
     "greenlet>=3.1.1",
@@ -75,10 +74,8 @@ test = [
 # smoke against the real API before the ceiling moves:
 #
 #   openai <4   (3.7.0 in the lock; the 4.x major is what is held)
-#     The earlier <2.34 and <3 ceilings are both gone. LLMRegistry stores
-#     configuration and builds clients on first use, so importing app.main
-#     needs no key and `make check-contract` runs without secrets as CI
-#     expects; tests/unit/integrations/llm/test_service_import.py guards that.
+#     The earlier <2.34 and <3 ceilings are both gone. Importing app.main builds no client, so it needs
+#     no key and `make check-contract` runs without secrets as CI expects; tests/unit/integrations/llm/test_service_import.py guards that.
 #
 # A constraint rather than an entry in [project.dependencies]: openai is a
 # transitive dependency, so this bounds it if something pulls it in without
@@ -269,10 +266,11 @@ source_modules = [
 forbidden_modules = ["app.modules.transaction.imports"]
 
 [[tool.importlinter.contracts]]
-name = "R10: conversation's core never imports its finance sub-package"
+name = "R10: conversation's core never imports its tools sub-package"
 type = "forbidden"
 source_modules = [
     "app.modules.conversation.dependencies",
+    "app.modules.conversation.domain",
     "app.modules.conversation.exceptions",
     "app.modules.conversation.handlers",
     "app.modules.conversation.models",
@@ -281,4 +279,4 @@ source_modules = [
     "app.modules.conversation.schemas",
     "app.modules.conversation.service",
 ]
-forbidden_modules = ["app.modules.conversation.finance"]
+forbidden_modules = ["app.modules.conversation.tools"]

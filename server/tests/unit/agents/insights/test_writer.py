@@ -7,9 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage
-from tenacity import wait_none
 from uuid_utils.compat import uuid7
 
+from app.agents.core import InvalidModelAnswer
 from app.agents.insights import (
     MAX_INSIGHTS,
     InsightLink,
@@ -18,9 +18,8 @@ from app.agents.insights import (
     WrittenInsight,
     write_insights,
 )
-from app.agents.shared import structured
-from app.agents.shared.structured import InvalidModelAnswer
 from app.integrations.llm import LLMAPIError, LLMServiceError
+from tests.unit.agents.fakes import FakeModel
 
 pytestmark = pytest.mark.unit
 
@@ -58,19 +57,10 @@ def no_langfuse():
         yield
 
 
-@pytest.fixture(autouse=True)
-def no_backoff():
-    """The retry's real backoff would sleep a second; tenacity reads `wait` from the decorated function."""
-    original = structured._ask_once.retry.wait
-    structured._ask_once.retry.wait = wait_none()
-    yield
-    structured._ask_once.retry.wait = original
-
-
 def answering(items: list[dict], seen: dict | None = None):
-    """An ask_json stub that validates `items` against the writer's own answer shape."""
+    """An ask stub that validates `items` against the writer's own answer shape."""
 
-    async def fake(service, system, user, shape, config):
+    async def fake(shape, system, user, config, *, model=None):
         if seen is not None:
             seen.update(system=system, user=user, config=config)
         return shape.model_validate(items)
@@ -90,7 +80,7 @@ async def test_returns_the_insights_in_order():
         insight(section="anomalies", severity="medium", link={"kind": "merchant", "merchant": "REWE"}),
         insight(section="spending", severity="info", link={"kind": "category", "category": "shopping"}),
     ]
-    with patch(f"{WRITER}.ask_json", answering(items)):
+    with patch(f"{WRITER}.ask", answering(items)):
         result = await write_insights(data(), **IDS)
     assert result == [
         WrittenInsight(
@@ -124,24 +114,21 @@ async def test_returns_the_insights_in_order():
 
 
 async def test_zero_insights_is_valid():
-    with patch(f"{WRITER}.ask_json", answering([])):
+    with patch(f"{WRITER}.ask", answering([])):
         assert await write_insights(data(), **IDS) == []
 
 
 async def test_more_than_ten_is_invalid():
     """The real parse runs: eleven insights fail validation, are asked once more, then raise."""
-    service = MagicMock()
-    service.call = AsyncMock(return_value=AIMessage(content=json.dumps([insight()] * (MAX_INSIGHTS + 1))))
-    with patch(f"{WRITER}.structured_llm_service", service), pytest.raises(InvalidModelAnswer):
-        await write_insights(data(), **IDS)
-    assert service.call.await_count == 2
+    model = FakeModel(json.dumps([insight()] * (MAX_INSIGHTS + 1)))
+    with pytest.raises(InvalidModelAnswer):
+        await write_insights(data(), **IDS, model=model)
+    assert len(model.calls) == 2
 
 
 async def test_ten_insights_is_valid_through_the_real_parse():
-    service = MagicMock()
-    service.call = AsyncMock(return_value=AIMessage(content=json.dumps([insight()] * MAX_INSIGHTS)))
-    with patch(f"{WRITER}.structured_llm_service", service):
-        assert len(await write_insights(data(), **IDS)) == MAX_INSIGHTS
+    model = FakeModel(json.dumps([insight()] * MAX_INSIGHTS))
+    assert len(await write_insights(data(), **IDS, model=model)) == MAX_INSIGHTS
 
 
 async def test_an_unknown_merchant_or_category_link_is_dropped_not_the_card():
@@ -152,7 +139,7 @@ async def test_an_unknown_merchant_or_category_link_is_dropped_not_the_card():
         insight(summary="no slug", link={"kind": "category"}),
         insight(summary="unknown kind", link={"kind": "url", "merchant": "REWE"}),
     ]
-    with patch(f"{WRITER}.ask_json", answering(items)):
+    with patch(f"{WRITER}.ask", answering(items)):
         result = await write_insights(data(), **IDS)
     assert [(i.summary, i.link) for i in result] == [
         ("unknown merchant", None),
@@ -170,7 +157,7 @@ async def test_month_to_date_severity_is_capped_at_medium():
         insight(period="month_to_date", severity="low"),
         insight(period="month", severity="critical"),
     ]
-    with patch(f"{WRITER}.ask_json", answering(items)):
+    with patch(f"{WRITER}.ask", answering(items)):
         result = await write_insights(data(), **IDS)
     assert [(i.period, i.severity) for i in result] == [
         ("month_to_date", "medium"),
@@ -186,7 +173,7 @@ async def test_month_to_date_insight_without_month_to_date_data_is_dropped():
         insight(summary="so far", period="month_to_date"),
         insight(summary="last", period="month"),
     ]
-    with patch(f"{WRITER}.ask_json", answering(items)):
+    with patch(f"{WRITER}.ask", answering(items)):
         result = await write_insights(data(month_to_date_through=None), **IDS)
     assert [i.summary for i in result] == ["first", "last"]
 
@@ -194,7 +181,7 @@ async def test_month_to_date_insight_without_month_to_date_data_is_dropped():
 async def test_the_user_message_carries_the_figures():
     seen: dict = {}
     given = data()
-    with patch(f"{WRITER}.ask_json", answering([], seen)):
+    with patch(f"{WRITER}.ask", answering([], seen)):
         await write_insights(given, **IDS)
     user = json.loads(seen["user"])
     assert user == {
@@ -209,14 +196,14 @@ async def test_the_user_message_carries_the_figures():
 
 async def test_the_call_is_traced_as_insights_with_the_prompt_version():
     trace = MagicMock(return_value={"metadata": {}})
-    with patch(f"{WRITER}.create_trace_config", trace), patch(f"{WRITER}.ask_json", answering([])):
+    with patch(f"{WRITER}.create_trace_config", trace), patch(f"{WRITER}.ask", answering([])):
         await write_insights(data(), **IDS)
     trace.assert_called_once_with(IDS["user_id"], IDS["generation_id"], "insights", metadata={"prompt_version": "v1"})
 
 
 async def test_a_model_error_propagates():
     with (
-        patch(f"{WRITER}.ask_json", AsyncMock(side_effect=LLMAPIError("down"))),
+        patch(f"{WRITER}.ask", AsyncMock(side_effect=LLMAPIError("down"))),
         pytest.raises(LLMServiceError),
     ):
         await write_insights(data(), **IDS)
@@ -235,26 +222,23 @@ async def test_an_invalid_insight_is_dropped_and_the_rest_survive():
         "not an object",
         insight(summary="last"),
     ]
-    service = MagicMock()
-    service.call = AsyncMock(return_value=AIMessage(content=json.dumps(items)))
-    with patch(f"{WRITER}.structured_llm_service", service), patch(f"{WRITER}.logger") as log:
-        result = await write_insights(data(), **IDS)
+    model = FakeModel(json.dumps(items))
+    with patch(f"{WRITER}.logger") as log:
+        result = await write_insights(data(), **IDS, model=model)
     assert [i.summary for i in result] == ["first", "last"]
-    assert service.call.await_count == 1
+    assert len(model.calls) == 1
     log.warning.assert_called_once_with("insights_items_dropped", generation_id=str(IDS["generation_id"]), dropped=7)
 
 
 async def test_an_answer_whose_every_insight_is_invalid_is_asked_again_then_raises():
-    service = MagicMock()
-    service.call = AsyncMock(return_value=AIMessage(content=json.dumps([insight(section="behaviour")] * 3)))
-    with patch(f"{WRITER}.structured_llm_service", service), pytest.raises(InvalidModelAnswer):
-        await write_insights(data(), **IDS)
-    assert service.call.await_count == 2
+    model = FakeModel(json.dumps([insight(section="behaviour")] * 3))
+    with pytest.raises(InvalidModelAnswer):
+        await write_insights(data(), **IDS, model=model)
+    assert len(model.calls) == 2
 
 
 async def test_an_answer_that_is_not_a_list_is_invalid():
-    service = MagicMock()
-    service.call = AsyncMock(return_value=AIMessage(content=json.dumps(insight())))
-    with patch(f"{WRITER}.structured_llm_service", service), pytest.raises(InvalidModelAnswer):
-        await write_insights(data(), **IDS)
-    assert service.call.await_count == 2
+    model = FakeModel(json.dumps(insight()))
+    with pytest.raises(InvalidModelAnswer):
+        await write_insights(data(), **IDS, model=model)
+    assert len(model.calls) == 2

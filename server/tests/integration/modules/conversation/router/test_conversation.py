@@ -1,9 +1,10 @@
 """Integration tests for conversation CRUD API endpoints."""
 
 import uuid
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 from sqlalchemy import update
 from uuid_utils.compat import uuid7
 
@@ -233,6 +234,27 @@ async def untitled_conversation(db_session, test_user):
     return conv
 
 
+@pytest.fixture
+async def title_for(agent, untitled_conversation):
+    """The title model as the route reaches it, by the conversation and user it titles.
+
+    The real agent's checkpoint holds a first exchange, so the service gets as far as
+    the model; `generate_title` (the agent's title call) forwards its conversation and
+    user here and returns what this mock returns.
+    """
+    await agent.graph.aupdate_state(
+        {"configurable": {"thread_id": str(untitled_conversation.id)}},
+        {"messages": [HumanMessage("How much on groceries?"), AIMessage("You spent 312 EUR.")]},
+    )
+    title_for = AsyncMock(return_value=None)
+
+    async def generate_title(user_text, reply_text, conversation_id, user_id):
+        return await title_for(conversation_id, user_id)
+
+    with patch("app.modules.conversation.service.generate_title", generate_title):
+        yield title_for
+
+
 class TestGenerateConversationTitle:
     """Tests for POST /api/v1/conversation/conversation/{id}/title"""
 
@@ -244,16 +266,16 @@ class TestGenerateConversationTitle:
         assert response.status_code == 401
 
     async def test_untitled_conversation_gets_a_title(
-        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+        self, authenticated_client_with_agent, untitled_conversation, title_for
     ):
-        mock_agent.title_for = AsyncMock(return_value="Grocery budget")
+        title_for.return_value = "Grocery budget"
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == "Grocery budget"
-        mock_agent.title_for.assert_awaited_once_with(untitled_conversation.id, untitled_conversation.user_id)
+        title_for.assert_awaited_once_with(untitled_conversation.id, untitled_conversation.user_id)
 
     async def test_title_releases_the_connection_before_the_model_and_still_saves(
-        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+        self, authenticated_client_with_agent, untitled_conversation, title_for, db_session
     ):
         seen = {}
 
@@ -261,7 +283,7 @@ class TestGenerateConversationTitle:
             seen["in_transaction"] = db_session.in_transaction()
             return "Grocery budget"
 
-        mock_agent.title_for = title
+        title_for.side_effect = title
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert seen["in_transaction"] is False
         assert response.json()["name"] == "Grocery budget"
@@ -269,17 +291,17 @@ class TestGenerateConversationTitle:
         assert untitled_conversation.name == "Grocery budget"
 
     async def test_named_conversation_is_unchanged(
-        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+        self, authenticated_client_with_agent, untitled_conversation, title_for, db_session
     ):
         untitled_conversation.name = "My name"
         await db_session.flush()
-        mock_agent.title_for = AsyncMock(return_value="Other")
+        title_for.return_value = "Other"
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.json()["name"] == "My name"
-        mock_agent.title_for.assert_not_awaited()
+        title_for.assert_not_awaited()
 
     async def test_rename_during_the_model_call_wins(
-        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+        self, authenticated_client_with_agent, untitled_conversation, title_for, db_session
     ):
         # A rename lands while the model is still writing the title: the title
         # must not overwrite it, and the route answers with the user's name.
@@ -294,17 +316,17 @@ class TestGenerateConversationTitle:
             )
             return "Generated"
 
-        mock_agent.title_for = AsyncMock(side_effect=rename_then_title)
+        title_for.side_effect = rename_then_title
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == "User rename"
 
     async def test_no_title_leaves_the_conversation_unchanged(
-        self, authenticated_client_with_agent, untitled_conversation, mock_agent
+        self, authenticated_client_with_agent, untitled_conversation, title_for
     ):
-        # The agent answers None for no reply yet or a failed model call
-        # (unit-tested on ChatbotAgent.title_for); the route still answers 200.
-        mock_agent.title_for = AsyncMock(return_value=None)
+        # No title: the model answered with nothing usable (no reply yet and a failed
+        # model call are ConversationService's, tested there); the route still answers 200.
+        title_for.return_value = None
         response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
         assert response.status_code == 200
         assert response.json()["name"] == ""

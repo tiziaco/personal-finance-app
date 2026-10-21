@@ -6,8 +6,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.agents.core import InvalidModelAnswer
 from app.agents.insights import InsightLink, KeyFigure, WrittenInsight
-from app.agents.shared.structured import InvalidModelAnswer
 from app.modules.analytics import service as analytics_service_module
 from app.modules.insights import service as insights_service_module
 from app.modules.insights.exceptions import InsightsUnavailableError

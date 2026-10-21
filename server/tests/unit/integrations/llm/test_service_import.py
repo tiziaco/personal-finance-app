@@ -6,8 +6,7 @@ secrets — the spec is built from registered routes and has never needed a key.
 
 That held only by accident until openai 2.34.0 made `OpenAI(api_key="")` raise
 instead of construct. Any client built at import time turns a missing key into
-an ImportError and breaks that job, which is why `LLMRegistry` in
-`app/integrations/llm/service.py` stores configuration and builds on first use.
+an ImportError and breaks that job, which is why `app/integrations/llm/models.py` builds a client only when asked for one.
 """
 
 import os

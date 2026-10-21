@@ -200,7 +200,7 @@ component
   because orval excludes `streaming` routes. It goes through `useApiRequest`, the
   transport under `useApiFetch`, so its URL, token and `ApiError` are the generated
   hooks' own; it reads the body itself.
-  Its events are typed (`app/agents/chatbot/events.py` on the server is the schema); the
+  Its events are typed (the event models in `server/app/modules/conversation/schemas.py` are the schema); the
   in-flight activity (reasoning, tool rows, the timer) is state in `lib/chat/activity.ts`,
   rendered by `ActivityBlock` (`components/chat/activity-block.tsx`). History returns the
   same parts per reply (`ChatMessage.activity`: `ReasoningPart`, `ToolPart` with a `title`,

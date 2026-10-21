@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.shared.checkpointing import delete_conversations_checkpoints
+from app.agents.core import delete_conversations_checkpoints
 from app.core.events import events
 from app.modules.account import USER_ERASING
 from app.modules.conversation.service import conversation_service

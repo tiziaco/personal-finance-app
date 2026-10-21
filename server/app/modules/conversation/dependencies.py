@@ -9,7 +9,7 @@ from fastapi import (
     Request,
 )
 
-from app.agents.chatbot.graph import ChatbotAgent
+from app.agents.chatbot import ChatbotAgent
 from app.database.dependencies import DbSession
 from app.modules.account import CurrentUser
 from app.modules.conversation.exceptions import ConversationNotFoundError

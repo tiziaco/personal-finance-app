@@ -34,9 +34,9 @@ Every finding was re-verified against the code. **Nine still stand; C1 is closed
 | | Verdict |
 |---|---|
 | A1 pseudonymisation | **Unchanged.** `anonymize_user()` keeps `user.id`; `conversation.user_id` still points at it |
-| A2 Langfuse | **Unchanged.** `langfuse_user_id` is still set on every call (`app/agents/shared/observability/langfuse.py:33`); nothing masks or deletes |
+| A2 Langfuse | **Unchanged.** `langfuse_user_id` is still set on every call (`app/agents/core/observability.py:33`); nothing masks or deletes |
 | A3 split state | **Unchanged.** `delete_me` still deletes from Clerk before `erase_user` runs |
-| A4 silent mem0 failure | **Unchanged.** `app/agents/shared/memory/factory.py:104-105` |
+| A4 silent mem0 failure | **Unchanged.** `app/agents/core/memory.py:104-105` |
 | A5 log retention | **Unchanged.** No retention policy exists |
 | A6 32-bit `anonymous_id` | **Unchanged.** `app/modules/account/models.py:66` |
 | B1–B3 | **Unchanged.** Out of scope for the template |
@@ -71,7 +71,7 @@ one.
 
 What WS4 *did* change is the call graph these findings point into: checkpoint
 deletion moved out of `BaseAgent` into
-`app/agents/shared/checkpointing/postgres.py`, and the cascade moved out of the
+`app/agents/core/checkpointing.py`, and the cascade moved out of the
 route into `UserService.erase_user`. Line references below were updated to match;
 the reasoning was not.
 
@@ -162,7 +162,7 @@ Since the modules refactor, the conversation-name blanking is done by `conversat
 
 ### A2. Langfuse retains message content keyed by the surviving id — *highest impact*
 
-`app/agents/shared/observability/langfuse.py:33` sets `langfuse_user_id: user_id`
+`app/agents/core/observability.py:33` sets `langfuse_user_id: user_id`
 on every LLM call. No masking is configured anywhere in `app/`, so Langfuse
 receives full prompts and completions.
 
@@ -186,7 +186,7 @@ Needs: a Langfuse deletion path (API or documented retention), or masking at
 
 `app/modules/account/router/auth.py` deletes from Clerk **first**, before any local work.
 `delete_conversations_checkpoints`
-(`app/agents/shared/checkpointing/postgres.py`) correctly propagates on failure —
+(`app/agents/core/checkpointing.py`) correctly propagates on failure —
 but by then the Clerk account is already gone, the DB transaction rolls back, and
 the caller gets a 500.
 
@@ -204,7 +204,7 @@ irreversible external calls happen last.
 
 ### A4. mem0 deletion failure is silent
 
-`app/agents/shared/memory/factory.py:104-105` catches and logs, then returns
+`app/agents/core/memory.py:104-105` catches and logs, then returns
 normally. Erasure reports success while the extracted-fact memories remain.
 
 Contrast with `delete_conversations_checkpoints`, which propagates. The two
@@ -420,9 +420,9 @@ Findings were read from source on 2026-08-25 at commit `6c2532a`
 - `app/modules/conversation/models.py:38` — retained FK (`user_id`)
 - `app/modules/supplier/models.py:19` — `contact_id` (nulled on erasure, correct)
 - `app/modules/account/router/auth.py` — `delete_me` seven-step flow
-- `app/agents/shared/observability/langfuse.py:23-37` — trace metadata
-- `app/agents/shared/memory/factory.py:98-105` — swallowed exception
-- `app/agents/shared/checkpointing/postgres.py:93-120` — checkpoint deletion (propagates)
+- `app/agents/core/observability.py:23-37` — trace metadata
+- `app/agents/core/memory.py:98-105` — swallowed exception
+- `app/agents/core/checkpointing.py:93-120` — checkpoint deletion (propagates)
 - `app/modules/conversation/handlers.py` — the conversation half of the cascade (since the module layout)
 - `app/api/middlewares/logging.py:37-40` — identifier binding
 

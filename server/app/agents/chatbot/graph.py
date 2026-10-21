@@ -1,77 +1,27 @@
-"""Chatbot agent implementation using LangGraph."""
+"""The chat agent's graph: `create_agent` with the chat's middleware, compiled once at startup."""
 
-import asyncio
-import datetime as dt
-import json
-import time
-import uuid
-from typing import Optional
+from collections.abc import Awaitable, Callable, Sequence
 
+from langchain.agents import create_agent
+from langchain.agents.middleware import AgentMiddleware, ModelFallbackMiddleware
 from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
-from langchain_core.runnables import RunnableLambda
-from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from langgraph.config import get_stream_writer
-from langgraph.graph import (
-    END,
-    StateGraph,
-)
-from langgraph.graph.state import (
-    Command,
-    CompiledStateGraph,
-)
-from langgraph.types import RunnableConfig
-from pydantic import BaseModel, ValidationError
+from langchain_core.tools import BaseTool
+from langgraph.checkpoint.base import BaseCheckpointSaver
+from langgraph.graph.state import CompiledStateGraph
 
-from app.agents.base import BaseAgent
-from app.agents.chatbot.context import build_model_context, render_turn_context, with_estimate_fallback
-from app.agents.chatbot.events import ToolFinishedEvent, ToolStartedEvent
+from app.agents.chatbot.context import TurnContext
+from app.agents.chatbot.middleware.memory import MemoryMiddleware
+from app.agents.chatbot.middleware.model_timing import ModelTimingMiddleware
+from app.agents.chatbot.middleware.request_shaping import RequestShapingMiddleware
+from app.agents.chatbot.middleware.summary import SummaryMiddleware
+from app.agents.chatbot.middleware.tool_events import ToolEventsMiddleware
+from app.agents.chatbot.middleware.turn_bound import TurnBoundMiddleware
 from app.agents.chatbot.prompts import load_system_prompt
-from app.agents.chatbot.state import GraphState
-from app.agents.chatbot.title import first_exchange, generate_title
-from app.agents.chatbot.toolkit import (
-    ToolArgumentError,
-    ToolDisplay,
-    Toolkit,
-    ToolOutcome,
-    TurnContext,
-)
-from app.agents.graph import (
-    process_llm_response,
-)
+from app.agents.chatbot.state import ChatState
 from app.core.config import settings
 from app.core.logging import logger
 from app.core.metadata import PROJECT_NAME
-from app.core.metrics import (
-    llm_inference_duration_seconds,
-    tool_call_duration_seconds,
-    tool_calls_total,
-)
-from app.integrations.llm import LLMService
-
-# What the model is told when a tool call does not produce a result. Fixed text
-# rather than the exception: a tool result becomes a ToolMessage in graph state,
-# which LangGraph persists to the checkpoint tables and which re-enters the
-# model's context on every later turn of the conversation. Upstream error strings
-# do not belong in either place.
-TOOL_FAILED_MESSAGE = "The tool failed to run. Tell the user this information could not be retrieved right now."
-TOOL_UNKNOWN_MESSAGE = "That tool does not exist. Answer without it."
-
-# Told to the model for the final call of a turn the server ended: no tools are
-# bound, so it must answer in text from what it already has.
-WRAP_UP_INSTRUCTION = (
-    "Tools are no longer available this turn. Answer from the results above and say that the answer may be incomplete."
-)
-# Persisted as the answer if the wrap-up call itself fails.
-STOPPED_FALLBACK_TEXT = (
-    "I could not finish looking into this, so I have no complete answer. Try asking again, or narrow the question."
-)
-
-# Tool arguments are logged, so they need a ceiling: they are the most useful
-# field when diagnosing a bad answer, but a tool taking a large payload would
-# otherwise dump it into every line.
-TOOL_ARGS_LOG_LIMIT = 200
-
+from app.integrations.llm import chat_model, fallback_models
 
 # Supersteps a turn may run past what its step cap needs; see `turn_recursion_limit`.
 RECURSION_LIMIT_MARGIN = 3
@@ -80,364 +30,76 @@ RECURSION_LIMIT_MARGIN = 3
 def turn_recursion_limit(max_steps: int) -> int:
     """LangGraph's superstep limit for one turn: a backstop just above the step cap.
 
-    A turn the cap ends runs `max_steps` chat supersteps and `max_steps - 1` tool
-    supersteps, which LangGraph completes under a limit of `2 * max_steps`. The
-    limit follows the setting so that the cap, which ends the turn with an answer,
-    is always met first; LangGraph's own default (10007 in 1.x) is no backstop at all.
+    A turn of k model calls runs 3k + 1 supersteps: the memory middleware's
+    before_agent node, then for each call the summary middleware's before_model
+    node and the model node, a tools superstep between calls, and the after_agent
+    node. A turn the cap ends makes `max_steps` calls, so it completes under a
+    limit of `3 * max_steps + 1`. The limit follows the setting so that the cap,
+    which ends the turn with an answer, is always met first; LangGraph's own
+    default (10007 in 1.x) is no backstop at all. A middleware that adds a node
+    hook (before_agent, before_model, after_model, after_agent) changes the count:
+    revisit this when one does.
     """
-    return 2 * max_steps + RECURSION_LIMIT_MARGIN
+    return 3 * max_steps + RECURSION_LIMIT_MARGIN
 
 
-def _format_tool_args(args: dict) -> str:
-    """Render tool arguments as JSON, truncated past `TOOL_ARGS_LOG_LIMIT`."""
-    rendered = json.dumps(args, default=str, ensure_ascii=False)
-    if len(rendered) <= TOOL_ARGS_LOG_LIMIT:
-        return rendered
-    return rendered[:TOOL_ARGS_LOG_LIMIT] + "..."
+def build_chatbot(
+    checkpointer: BaseCheckpointSaver | None,
+    tools: Sequence[BaseTool],
+    preamble: Callable[[TurnContext], Awaitable[str]],
+    *,
+    model: BaseChatModel | None = None,
+) -> CompiledStateGraph:
+    """Compile the chat agent: the model, the tools and the middleware, over `ChatState` and `TurnContext`.
 
-
-def _format_validation_error(error: ValidationError) -> str:
-    """Render argument validation errors for the model: which argument, and what is wrong with it."""
-    problems = "; ".join(f"{'.'.join(str(p) for p in e['loc']) or 'arguments'}: {e['msg']}" for e in error.errors())
-    return f"Invalid arguments: {problems}"
-
-
-def repeated_call(messages: list[BaseMessage]) -> bool:
-    """Whether the last AI message repeats a (tool, arguments) call already made this turn.
-
-    "This turn" is everything after the last human message. A repeat means the
-    model is going round in circles: the same lookup cannot return anything new.
+    The middleware run in list order, the first outermost: the turn bound wraps the
+    request shaping, which wraps the timing, which wraps the fallback across models.
+    The fallback is `ModelFallbackMiddleware`, which moves to the next model on any
+    exception, unlike `with_fallbacks` (an `OpenAIError` only). `model` is the test
+    seam; a given model gets no fallbacks. The tool node keeps its default error
+    handling, which re-raises a tool's exception to the tool-events middleware.
     """
-    turn: list[BaseMessage] = []
-    for message in reversed(messages):
-        if isinstance(message, HumanMessage):
-            break
-        turn.append(message)
-    ai_messages = [m for m in reversed(turn) if isinstance(m, AIMessage) and m.tool_calls]
-    if len(ai_messages) < 2:
-        return False
+    if not tools:
+        raise ValueError("the chatbot needs at least one tool")
 
-    def key(call: dict) -> tuple[str, str]:
-        return call["name"], json.dumps(call["args"], sort_keys=True, default=str)
+    fallbacks: list[BaseChatModel] = []
+    if model is None:
+        tuning = {
+            "max_tokens": settings.llm.CHAT_REPLY_MAX_TOKENS,
+            "reasoning_effort": settings.llm.CHAT_REASONING_EFFORT,
+        }
+        model = chat_model(**tuning)
+        fallbacks = fallback_models(**tuning)
 
-    earlier = {key(call) for message in ai_messages[:-1] for call in message.tool_calls}
-    return any(key(call) in earlier for call in ai_messages[-1].tool_calls)
+    middleware: list[AgentMiddleware] = [
+        MemoryMiddleware(),
+        SummaryMiddleware(),
+        TurnBoundMiddleware(),
+        RequestShapingMiddleware(preamble),
+        ModelTimingMiddleware(),
+        *([ModelFallbackMiddleware(*fallbacks)] if fallbacks else []),
+        ToolEventsMiddleware(),
+    ]
 
-
-class ChatbotAgent(BaseAgent):
-    """A LangGraph conversational workflow with tools, memory and checkpointing."""
-
-    def __init__(self, toolkit: Toolkit):
-        super().__init__()
-
-        self.toolkit = toolkit
-        # Its own services, not the shared singleton: the chat's reply budget and
-        # reasoning effort are set here and the tools bound are this agent's. The
-        # wrap-up answer must be text, so its service has no tools; both share the
-        # registry's cached clients.
-        self.llm_service = LLMService(
-            max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS,
-            reasoning_effort=settings.llm.CHAT_REASONING_EFFORT,
-        )
-        self.llm_service.bind_tools([tool.as_schema() for tool in self.toolkit.tools])
-        self.wrap_up_llm_service = LLMService(
-            max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS,
-            reasoning_effort=settings.llm.CHAT_REASONING_EFFORT,
-        )
-        self.tools_by_name = {tool.name: tool for tool in self.toolkit.tools}
-
-        logger.info(
-            "chatbot_agent_initialized",
-            model=settings.llm.DEFAULT_LLM_MODEL,
-            environment=settings.ENVIRONMENT.value,
-        )
-
-    def _turn_config(self, conversation_id: uuid.UUID, turn_context: TurnContext) -> dict:
-        """The base turn config, bounded by the recursion limit that follows `CHAT_MAX_STEPS`."""
-        config = super()._turn_config(conversation_id, turn_context)
-        config["recursion_limit"] = turn_recursion_limit(settings.llm.CHAT_MAX_STEPS)
-        return config
-
-    async def _call_model(
-        self, messages: list[BaseMessage], requested_model: str, *, wrap_up: bool = False
-    ) -> AIMessage:
-        """One model call, timed under the name of the model that answered.
-
-        A fallback can answer instead of the requested model; its name is on the
-        response, and only known after the call, so the duration is observed
-        rather than timed with a context manager.
-        """
-        started = time.perf_counter()
-        service = self.wrap_up_llm_service if wrap_up else self.llm_service
-        response = await service.call(messages)
-        answering_model = response.response_metadata.get("model_name") or requested_model
-        llm_inference_duration_seconds.labels(model=answering_model).observe(time.perf_counter() - started)
-        logger.info(
-            "llm_response_generated",
-            model=answering_model,
-            wrap_up=wrap_up,
-            environment=settings.ENVIRONMENT.value,
-        )
-        return process_llm_response(response)
-
-    async def _wrap_up(self, messages: list[BaseMessage], model_name: str, conversation_id: str) -> AIMessage:
-        """The final answer of a turn the server ended: a tool-less model call, or the fixed text."""
-        try:
-            answer = await self._call_model(
-                [*messages, SystemMessage(content=WRAP_UP_INSTRUCTION)], model_name, wrap_up=True
-            )
-            if answer.text.strip() and not answer.tool_calls:
-                return answer
-        except Exception as e:
-            logger.exception("llm_wrap_up_failed", conversation_id=conversation_id, error=str(e))
-        return AIMessage(content=STOPPED_FALLBACK_TEXT)
-
-    async def _model_context(self, state: GraphState, config: RunnableConfig, llm: BaseChatModel) -> list[BaseMessage]:
-        """The messages for this turn's model calls; the wrap-up call builds on the same ones.
-
-        A preamble that fails is left out, so the turn is still answered with today's date
-        and the user's memory; a tool that needs the same data fails on its own and the
-        model is told so.
-        """
-        ctx = config["configurable"]["turn_context"]
-        try:
-            preamble = await self.toolkit.preamble(ctx)
-        except Exception as e:
-            preamble = ""
-            logger.exception("chat_preamble_failed", thread_id=config["configurable"]["thread_id"], error=str(e))
-        return build_model_context(
-            state.messages,
+    try:
+        graph = create_agent(
+            model,
+            list(tools),
             system_prompt=load_system_prompt(),
-            turn_context_text=render_turn_context(
-                today=dt.date.today(), memory=state.long_term_memory, preamble=preamble
-            ),
-            budget_tokens=settings.llm.CHAT_HISTORY_MAX_TOKENS,
-            count_tokens=with_estimate_fallback(llm.get_num_tokens_from_messages),
+            middleware=middleware,
+            state_schema=ChatState,
+            context_schema=TurnContext,
+            checkpointer=checkpointer,
+            name=f"{PROJECT_NAME} Agent ({settings.ENVIRONMENT.value})",
         )
+    except Exception as e:
+        logger.exception("graph_creation_failed", error=str(e), environment=settings.ENVIRONMENT.value)
+        raise
 
-    async def _chat(self, state: GraphState, config: RunnableConfig) -> Command:
-        """Process the chat state and generate a response.
-
-        A response with tool calls goes on to the tools unless the turn has used
-        its steps or the model repeats a call; then its calls are dropped and a
-        tool-less wrap-up answer ends the turn, marked in `stopped`.
-        """
-        current_llm = self.llm_service.get_llm()
-        model_name = self.llm_service.current_model_name()
-        conversation_id = config["configurable"]["thread_id"]
-
-        messages = await self._model_context(state, config, current_llm)
-
-        try:
-            response_message = await self._call_model(messages, model_name)
-        except Exception as e:
-            logger.exception(
-                "llm_call_failed_all_models",
-                conversation_id=conversation_id,
-                error=str(e),
-                environment=settings.ENVIRONMENT.value,
-            )
-            raise Exception(f"failed to get llm response after trying all models: {str(e)}")
-
-        if not response_message.tool_calls:
-            if not response_message.text.strip():
-                # Not an answer: ending the turn here would store an empty reply and show the user nothing.
-                # The Responses API reports a cut-off reply as status "incomplete" with no content.
-                logger.warning(
-                    "llm_empty_response",
-                    conversation_id=conversation_id,
-                    model=response_message.response_metadata.get("model_name") or model_name,
-                    status=response_message.response_metadata.get("status"),
-                    incomplete_details=response_message.response_metadata.get("incomplete_details"),
-                )
-                raise Exception("the model returned an empty reply")
-            return Command(update={"messages": [response_message]}, goto=END)
-
-        if state.turn_steps + 1 >= settings.llm.CHAT_MAX_STEPS:
-            reason = "step_limit"
-        elif repeated_call([*state.messages, response_message]):
-            reason = "repeated_call"
-        else:
-            return Command(
-                update={"messages": [response_message], "turn_steps": state.turn_steps + 1}, goto="tool_call"
-            )
-
-        logger.warning("chat_turn_stopped", conversation_id=conversation_id, reason=reason, steps=state.turn_steps)
-        # The tool-calling response is not persisted: a stored AI message with calls
-        # and no results would be a dangling call in every later turn's history.
-        final = await self._wrap_up(messages, model_name, conversation_id)
-        final.id = final.id or str(uuid.uuid4())
-        return Command(update={"messages": [final], "stopped": {**state.stopped, final.id: reason}}, goto=END)
-
-    async def title_for(self, conversation_id: uuid.UUID, user_id: uuid.UUID) -> Optional[str]:
-        """A title for a conversation from its first exchange, on the current model, or None.
-
-        None before the first reply, or when the model fails or answers with
-        nothing usable: a title is cosmetic, and the client asks again after the
-        next completed reply.
-        """
-        exchange = first_exchange(await self.get_chat_history(conversation_id))
-        if exchange is None:
-            return None
-        user_text, reply_text = exchange
-        try:
-            return await generate_title(
-                user_text, reply_text, self.llm_service.current_model_name(), conversation_id, user_id
-            )
-        except Exception:
-            logger.exception("conversation_title_generation_failed", conversation_id=conversation_id)
-            return None
-
-    def _tool_title(self, name: str) -> Optional[str]:
-        """The title `_tool_call` announces; None for a name the model invented, which it announces nothing for."""
-        tool = self.tools_by_name.get(name)
-        return tool.title if tool is not None else None
-
-    async def _invoke_tool(
-        self, tool_call: dict, ctx: TurnContext, config: RunnableConfig | None = None
-    ) -> ToolMessage:
-        """Run one tool call, recording what happened.
-
-        This node hand-rolls the execution loop rather than using LangChain's
-        prebuilt ToolNode, so error handling belongs here and not on the tools:
-        one place covers a tool raising *and* a name the model invented, and
-        every tool added later is covered without opting in. The returned
-        ToolMessage carries `status="error"` if there was no result. Three
-        failures, three messages: arguments that do not validate or a
-        `ToolArgumentError` return text written for the model; anything else is
-        a crash and returns the fixed `TOOL_FAILED_MESSAGE`.
-        """
-        tool_name = tool_call["name"]
-        tool = self.tools_by_name.get(tool_name)
-
-        def error_message(content: str) -> ToolMessage:
-            return ToolMessage(content=content, name=tool_name, tool_call_id=tool_call["id"], status="error")
-
-        if tool is None:
-            # A hallucinated name used to raise KeyError out of the graph and
-            # surface as a bare 500 with nothing naming the tool.
-            logger.error(
-                "tool_call_unknown_tool",
-                tool_name=tool_name,
-                known_tools=sorted(self.tools_by_name),
-            )
-            tool_calls_total.labels(tool=tool_name, outcome="unknown_tool").inc()
-            return error_message(TOOL_UNKNOWN_MESSAGE)
-
-        tool_args = _format_tool_args(tool_call["args"])
-        logger.debug("tool_call_started", tool_name=tool_name, tool_args=tool_args)
-        started = time.perf_counter()
-
-        def finish(outcome: str) -> float:
-            # Timed on every outcome: a tool that fails slowly is a different
-            # problem from one that fails fast.
-            duration = time.perf_counter() - started
-            tool_call_duration_seconds.labels(tool=tool_name).observe(duration)
-            tool_calls_total.labels(tool=tool_name, outcome=outcome).inc()
-            return duration
-
-        try:
-            args = tool.args_schema.model_validate(tool_call["args"])
-        except ValidationError as e:
-            duration = finish("invalid_args")
-            message = _format_validation_error(e)
-            logger.warning(
-                "tool_call_invalid_args",
-                tool_name=tool_name,
-                tool_args=tool_args,
-                duration_ms=round(duration * 1000),
-                error=message,
-            )
-            return error_message(message)
-
-        async def run(model: BaseModel) -> ToolOutcome:
-            return await tool.run(model, ctx)
-
-        try:
-            # A runnable so the graph's Langfuse callback records one span per call,
-            # named for the tool, with its arguments and result.
-            outcome = await RunnableLambda(run).ainvoke(args, config={**(config or {}), "run_name": tool_name})
-        except ToolArgumentError as e:
-            duration = finish("invalid_args")
-            logger.warning(
-                "tool_call_rejected_args",
-                tool_name=tool_name,
-                tool_args=tool_args,
-                duration_ms=round(duration * 1000),
-                error=str(e),
-            )
-            return error_message(str(e))
-        except Exception as e:
-            duration = finish("error")
-            logger.exception(
-                "tool_call_failed",
-                tool_name=tool_name,
-                tool_args=tool_args,
-                duration_ms=round(duration * 1000),
-                error=str(e),
-            )
-            return error_message(TOOL_FAILED_MESSAGE)
-
-        duration = finish("success")
-        logger.info(
-            "tool_call_completed",
-            tool_name=tool_name,
-            tool_args=tool_args,
-            duration_ms=round(duration * 1000),
-            result_chars=len(outcome.content),
-        )
-        return ToolMessage(
-            content=outcome.content,
-            name=tool_name,
-            tool_call_id=tool_call["id"],
-            artifact=outcome.display.model_dump(),
-        )
-
-    async def _tool_call(self, state: GraphState, config: RunnableConfig) -> Command:
-        """Run every tool call on the last message concurrently, then route back to chat.
-
-        Results keep the order of the calls. Each call announces itself and its end
-        on the custom stream so the client can show it running.
-        """
-        ctx = config["configurable"]["turn_context"]
-        writer = get_stream_writer()
-
-        async def one(tool_call: dict) -> ToolMessage:
-            tool = self.tools_by_name.get(tool_call["name"])
-            if tool is not None:
-                writer(ToolStartedEvent(id=tool_call["id"], name=tool.name, title=tool.title))
-            message = await self._invoke_tool(tool_call, ctx, config)
-            if tool is not None:
-                ok = message.status == "success"
-                display = ToolDisplay.model_validate(message.artifact) if ok else None
-                writer(ToolFinishedEvent(id=tool_call["id"], ok=ok, display=display))
-            return message
-
-        outputs = await asyncio.gather(*(one(tool_call) for tool_call in state.messages[-1].tool_calls))
-        return Command(update={"messages": list(outputs)}, goto="chat")
-
-    async def create_graph(self, checkpointer: AsyncPostgresSaver) -> CompiledStateGraph:
-        """Create and compile the chatbot LangGraph workflow."""
-        try:
-            graph_builder = StateGraph(GraphState)
-            graph_builder.add_node("chat", self._chat, ends=["tool_call", END])
-            graph_builder.add_node("tool_call", self._tool_call, ends=["chat"])
-            graph_builder.set_entry_point("chat")
-            graph_builder.set_finish_point("chat")
-
-            self._graph = graph_builder.compile(
-                checkpointer=checkpointer,
-                name=f"{PROJECT_NAME} Agent ({settings.ENVIRONMENT.value})",
-            )
-
-            logger.info(
-                "graph_created",
-                graph_name=f"{PROJECT_NAME} Agent",
-                environment=settings.ENVIRONMENT.value,
-                has_checkpointer=checkpointer is not None,
-            )
-        except Exception as e:
-            logger.exception("graph_creation_failed", error=str(e), environment=settings.ENVIRONMENT.value)
-            raise
-
-        return self._graph
+    logger.info(
+        "graph_created",
+        graph_name=f"{PROJECT_NAME} Agent",
+        environment=settings.ENVIRONMENT.value,
+        has_checkpointer=checkpointer is not None,
+    )
+    return graph

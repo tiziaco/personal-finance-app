@@ -121,7 +121,6 @@ class LLMSettings(BaseSettings):
     # OpenAI-compatible API; model names are OpenRouter ids such as "openai/gpt-5-mini".
     LLM_BASE_URL: str = "https://openrouter.ai/api/v1"
     DEFAULT_LLM_MODEL: OpenRouterModel = "openai/gpt-5-mini"
-    DEFAULT_LLM_TEMPERATURE: float = 0.2
     MAX_TOKENS: int = 2000
     MAX_LLM_CALL_RETRIES: int = 3
     # Chat only: every other caller keeps MAX_TOKENS and its registry effort.
@@ -130,6 +129,11 @@ class LLMSettings(BaseSettings):
     CHAT_HISTORY_MAX_TOKENS: int = 24000
     # Model calls with tool calls per turn; the run's recursion limit follows it (`turn_recursion_limit`).
     CHAT_MAX_STEPS: int = Field(8, ge=1)
+    # Tried in order, after the model a caller starts on. The chat agent falls back on any error;
+    # the one-call agents, title and summary only on an OpenAI error.
+    LLM_FALLBACK_MODELS: list[OpenRouterModel] = Field(default_factory=lambda: ["openai/gpt-5", "openai/gpt-5-nano"])
+    # The model that folds old turns into the conversation summary.
+    CHAT_SUMMARY_MODEL: OpenRouterModel = "openai/gpt-5-nano"
 
 
 # Long-term Memory Settings

@@ -8,9 +8,11 @@ from typing import (
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.chatbot.graph import ChatbotAgent
+from app.agents.chatbot import ChatbotAgent
+from app.agents.chatbot.title import generate_title
 from app.core.logging import logger
 from app.database.dependencies import release_connection
+from app.modules.conversation.domain.chat import first_exchange, history
 from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.repository import conversation_repository
@@ -76,14 +78,25 @@ class ConversationService:
     async def generate_title(session: AsyncSession, conversation: Conversation, agent: ChatbotAgent) -> Conversation:
         """Name an untitled conversation from its first exchange.
 
-        A no-op for a named conversation, and for one the agent has no title for
-        (no reply yet, or the model failed).
+        A no-op for a named conversation, and for one with no title to give: no
+        reply yet, a model that fails, or one that answers with nothing usable. A
+        title is cosmetic, and the client asks again after the next completed reply.
         """
         if conversation.name:
             return conversation
 
         await release_connection(session)
-        title = await agent.title_for(conversation.id, conversation.user_id)
+        messages, stopped = await agent.state(conversation.id)
+        exchange = first_exchange(history(messages, stopped, agent.tool_titles))
+        if exchange is None:
+            return conversation
+        user_text, reply_text = exchange
+        try:
+            # The module-level `generate_title` (app.agents.chatbot.title), not this method.
+            title = await generate_title(user_text, reply_text, conversation.id, conversation.user_id)
+        except Exception:
+            logger.exception("conversation_title_generation_failed", conversation_id=conversation.id)
+            return conversation
         if title is None:
             return conversation
 

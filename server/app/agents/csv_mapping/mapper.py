@@ -8,8 +8,7 @@ from typing import Optional
 
 from pydantic import RootModel
 
-from app.agents.shared.observability import create_trace_config
-from app.agents.shared.structured import ask_json, structured_llm_service
+from app.agents.core import ask, create_trace_config
 from app.core.logging import logger
 
 CELL_LIMIT = 100
@@ -47,11 +46,10 @@ async def propose_mapping(
         "sample_rows": [[cell[:CELL_LIMIT] for cell in row] for row in samples],
     }
     try:
-        answer = await ask_json(
-            structured_llm_service,
+        answer = await ask(
+            _Mapping,
             _PROMPT,
             json.dumps(payload, ensure_ascii=False),
-            _Mapping,
             create_trace_config(user_id, upload_id, "csv_mapping"),
         )
     except Exception as e:  # noqa: BLE001  the review then asks the user to map by hand; an upload never fails on this

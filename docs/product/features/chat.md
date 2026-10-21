@@ -95,16 +95,19 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 - **A turn is bounded.** After `CHAT_MAX_STEPS` (default 8) model calls with lookups, or
   the same lookup with the same arguments twice, the turn ends with an answer written from
   what it has and marked stopped. The run's LangGraph recursion limit follows the setting
-  (twice the steps, plus three), so the cap, never the recursion limit, is what ends a turn.
+  (three times the steps, plus three), so the cap, never the recursion limit, is what ends a turn.
 - **Thinking is a setting.** `CHAT_REASONING_EFFORT` (default `medium`; the other model
   callers keep their own effort) sets how hard the model reasons. At any effort above `low`
   the model streams a readable summary of its reasoning (the chat's own model client asks for summaries); the
   summaries vary from turn to turn and are absent at `low`, and the block shows only the
   lookups then. Reasoning of earlier turns is not sent back; within a turn it is.
 - **What the model is sent is bounded.** The reply may use `CHAT_REPLY_MAX_TOKENS` (8000,
-  thinking included); the history is trimmed to `CHAT_HISTORY_MAX_TOKENS` (24000). The
-  current turn is never trimmed; earlier turns are dropped oldest first, so a very long
-  conversation forgets its beginning — there is no summary.
+  thinking included); earlier turns are sent stubbed and, once they pass
+  `CHAT_HISTORY_MAX_TOKENS` (24000), are folded into a running summary (figure-free by prompt
+  and by construction: the summariser reads the stubbed turns) sent in their place, while the
+  saved transcript keeps every message, so a reopened conversation shows it all. If the summary
+  call fails, the oldest turns are dropped for that turn as before. The current turn is never
+  trimmed.
 - **An empty model reply fails the turn**, as any other failure does.
 - **Memory holds who the user is, not figures.** Long-term memory is fed only the user's own
   messages, this turn's, never replies or tool results, and extraction is told to keep
@@ -128,7 +131,7 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 - **Stopping a reply while a lookup runs leaves the conversation usable.** The
   model's tool-call message is checkpointed before the tool runs, so a stop there leaves
   a call with no result, which providers reject with a 400 on every later turn.
-  `drop_unanswered_tool_calls` (`app/agents/graph.py`) removes such a call, keeping any
+  `drop_unanswered_tool_calls` (`app/agents/core/messages.py`) removes such a call, keeping any
   text written beside it, before every model call. Reopening a stopped turn shows the
   question alone: the history leaves out the activity of a turn with no final answer.
 - **Every LLM call goes through OpenRouter** (`OPENROUTER_API_KEY`) — the agent, titles and
@@ -143,7 +146,7 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 
 ## 5. Not built
 
-Summaries of long conversations (see [`TODO.md`](../../TODO.md)); a lookup over stored
+A lookup over stored
 insights; free-form questions beyond the seven lookups; web search; file or image input;
 voice; sharing a conversation; clearing history from the screen and suggested prompts
 (both deferred by decision on 13 Oct 2026).

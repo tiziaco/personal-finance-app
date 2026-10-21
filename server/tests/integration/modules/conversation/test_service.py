@@ -1,6 +1,9 @@
 """Integration tests for ConversationService — CRUD against real test database."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
+from langchain_core.messages import AIMessage, HumanMessage
 from uuid_utils.compat import uuid7
 
 from app.modules.account.models import User
@@ -171,3 +174,59 @@ async def test_blank_all_user_conversation_names_touches_deleted_rows_too(db_ses
     await db_session.refresh(kept)
     await db_session.refresh(gone)
     assert (kept.name, gone.name) == ("", "")
+
+
+class TestGenerateTitle:
+    """`generate_title` reads the agent's thread and asks the model for a title from its first exchange."""
+
+    @pytest.fixture
+    async def untitled(self, db_session, db_user):
+        return await ConversationService.create_conversation(db_session, db_user.id)
+
+    @staticmethod
+    async def _thread(agent, conversation, *messages):
+        await agent.graph.aupdate_state(
+            {"configurable": {"thread_id": str(conversation.id)}}, {"messages": list(messages)}
+        )
+
+    async def test_the_title_is_written_from_the_first_answered_exchange(self, db_session, untitled, agent):
+        await self._thread(
+            agent,
+            untitled,
+            HumanMessage("a question the user stopped"),
+            HumanMessage("How much on groceries?"),
+            AIMessage("You spent 312 EUR."),
+            HumanMessage("And on rent?"),
+            AIMessage("800 EUR."),
+        )
+        model = AsyncMock(return_value="Grocery spending")
+
+        with patch("app.modules.conversation.service.generate_title", model):
+            conversation = await ConversationService.generate_title(db_session, untitled, agent)
+
+        model.assert_awaited_once_with("How much on groceries?", "You spent 312 EUR.", untitled.id, untitled.user_id)
+        assert conversation.name == "Grocery spending"
+
+    @pytest.mark.parametrize("messages", [[], [HumanMessage("Hello")]], ids=["empty thread", "no reply yet"])
+    async def test_before_any_reply_the_model_is_not_asked(self, db_session, untitled, agent, messages):
+        if messages:
+            await self._thread(agent, untitled, *messages)
+        model = AsyncMock(return_value="Never")
+
+        with patch("app.modules.conversation.service.generate_title", model):
+            conversation = await ConversationService.generate_title(db_session, untitled, agent)
+
+        model.assert_not_awaited()
+        assert conversation.name == ""
+
+    async def test_a_failing_model_leaves_the_conversation_untitled_and_is_logged(self, db_session, untitled, agent):
+        await self._thread(agent, untitled, HumanMessage("Q"), AIMessage("A"))
+
+        with (
+            patch("app.modules.conversation.service.generate_title", AsyncMock(side_effect=RuntimeError("down"))),
+            patch("app.modules.conversation.service.logger") as log,
+        ):
+            conversation = await ConversationService.generate_title(db_session, untitled, agent)
+
+        assert conversation.name == ""
+        assert log.exception.call_args.args[0] == "conversation_title_generation_failed"
