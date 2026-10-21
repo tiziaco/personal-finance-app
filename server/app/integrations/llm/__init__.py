@@ -1,4 +1,4 @@
-"""LLM service exports."""
+"""LLM exports."""
 
 from app.integrations.llm.exceptions import (
     LLMAPIError,
@@ -16,18 +16,12 @@ from app.integrations.llm.models import (
     translate_error,
     with_fallbacks,
 )
-from app.integrations.llm.service import (
-    LLMRegistry,
-    LLMService,
-)
 
 __all__ = [
     "PLACEHOLDER_KEY",
     "REASONING_EFFORT_DEFAULTS",
     "LLMAPIError",
     "LLMRateLimitError",
-    "LLMRegistry",
-    "LLMService",
     "LLMServiceError",
     "LLMStreamingError",
     "LLMTimeoutError",

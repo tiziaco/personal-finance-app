@@ -91,11 +91,26 @@ it, for instance by not falling back for a charge the same merchant made about a
 
 ## Server — every LLM call starts at the default model
 
-Each call walks the registry from the default model, so while the default is down every
-chat turn and labelling batch spends its retries there first (three attempts, about 2 s
-apart) before falling back. It is the cost of keeping the position per call, which
-concurrent calls need (15 Oct 2026). If it matters, keep a short-lived "last model that
-answered" hint on the service and start unpinned calls there.
+Every call starts at `DEFAULT_LLM_MODEL` and walks `LLM_FALLBACK_MODELS`; the client's
+`max_retries` (three attempts, the SDK's exponential backoff) is spent on the primary first, so
+while the primary is down every chat turn and labelling batch pays those retries before falling
+back. It is the cost of keeping the position per call, which concurrent calls need (15 Oct
+2026). If it matters, keep a short-lived "last model that answered" hint and start there. The
+chain differs by caller: inside the chat agent `ModelFallbackMiddleware` falls back on any
+exception; the one-call agents, title and summary use `with_fallbacks`, which falls back on
+`OpenAIError` only.
+
+## Server — one-call agents on with_structured_output
+
+`ask()` (`app/agents/core/structured.py`) parses the model's text itself (fence-tolerant JSON,
+one re-ask) rather than using `with_structured_output`, because the OpenRouter spike of 21 Oct
+2026 found no single method reliable for all three shapes: the labeller works with
+`json_schema` (2/2, wrapped in an object); the CSV mapping only with `json_mode` on the bare
+object (5/5; `function_calling` 2/5 on the primary, `json_schema` a 400); the insights shape
+with a wrapper, flaky on gpt-5-mini (9/12), and needs Decimal declared as a JSON number. A
+later step could switch each shape to its working method; the prompts, frozen so far, would
+need checking for the wrapper object every method asks for. **Unblocks:** dropping the hand
+parse and the re-ask.
 
 ## Server — CSV import follow-ups
 
@@ -207,14 +222,6 @@ A picker would let the user look back; every analytics route already takes
 `month` parameter. **Unblocks:**
 looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
 
-## Chat — conversation summaries
-
-A very long conversation drops its oldest turns from what the model is sent, oldest first,
-once the history passes `CHAT_HISTORY_MAX_TOKENS`; nothing stands in for them, so the
-assistant forgets how it began. Summarising the dropped turns (into the checkpoint, or
-beside it) would keep the thread. Left out of step 7 by decision (20 Oct 2026).
-**Unblocks:** long-running conversations. Reasoning: [`product/features/chat.md`](./product/features/chat.md) §4.
-
 ## Chat — free-form questions over the user's data
 
 The chat tools call the analytics library's fixed functions. A question they do not
@@ -223,27 +230,6 @@ cover could be answered by generated code run in an isolated sandbox with its ow
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
-
-## Server — the agent layer imports the chatbot's stream contract
-
-`app/agents/base/agent.py` and `app/agents/messages.py` import
-`app/agents/chatbot/events.py` (the stream events) and the toolkit's display models from
-`app/agents/chatbot/toolkit.py`: the generic layer knows one agent's contract, and an import
-cycle is avoided only because `app/agents/chatbot/__init__.py` re-exports nothing. Move
-`events.py` and the toolkit and display models up to `app/agents/` (mechanical; the
-`chat` node name `BaseAgent` streams from goes with them). **Unblocks:** a second agent or
-a second toolkit, which must not import the chatbot package to stream. Found in step 7's
-final review (20 Oct 2026).
-
-The step's code review (21 Oct 2026) proposed a better fix. `BaseAgent` has one subclass,
-and its streaming and history-rebuild code (`get_stream_response`, the reasoning-block
-parsing, building `Activity`/`ToolPart` from a checkpoint, the `_tool_title` hook) is all
-chat semantics. Move that code into `app/agents/chatbot/` (for example `stream.py` and
-`history.py`) and shrink `BaseAgent` back to the generic shell: graph readiness, the turn
-config, memory. The `_tool_title` hook and the re-export restriction on
-`chatbot/__init__.py` then go, and so does the duplication between `get_response` and
-`get_stream_response` (readiness check, memory fetch, graph input, `update_memory`).
-Prefer this over hoisting `events.py` when a second agent arrives.
 
 ## Chat — keep "Worked for" by saving the turn's duration
 
@@ -267,27 +253,13 @@ blocking. **Unblocks:** nothing; pick them up when touching the file.
   order would replace the chains.
 - **Date-order validation is split.** `SearchArgs` checks `date_from <= date_to` in its
   validator (`schemas.py`); `PeriodArgs` is checked at run time in `resolve_period`
-  (`finance/service.py`), with a different message. Pick one place.
-- **`TurnContext.cache` is an untyped `dict[str, Any]`**, holding a `Future` under the
-  `HISTORY_KEY` string. A typed per-turn slot, or per-turn state the toolkit builds
-  itself, would say what it holds.
-- **Each tool call looks its tool up twice.** `_tool_call` (`graph.py`) repeats
-  `_invoke_tool`'s lookup and `model_validate`s the display that `_invoke_tool` has just
-  `model_dump`ed into the artifact. Returning the outcome beside the `ToolMessage` would do
-  both once.
+  (`tools/periods.py`), with a different message. Pick one place.
 - **The web's view of an activity.** `chat-message.tsx` casts `metadata.custom.activity`
   to `ActivityState`: a typed accessor in `lib/chat/activity.ts` would hold the cast. Its
   `ActivityPart` renames the generated `type`/`ok` to `kind`/`status`. And the server sends
   `Activity(parts=[], stopped=True)` for a stopped turn with no lookups
   (`agent.py`), which both `chat-message.tsx` and `ActivityBlock` hide, so a reopened
   stopped reply with no lookups never reads "Stopped": decide which side is right.
-- **Two reasoning paragraphs can run together** in the live stream of a stopped turn:
-  `get_stream_response` clears `last_reasoning_key` after a text event, so the wrap-up's
-  first reasoning delta arrives without its `"\n\n"` separator. Live only; a reopened
-  conversation shows just the wrap-up's reasoning.
-- **`LLMRegistry.get`'s overrides path** (`get(name, temperature=…)`, which replaces the
-  entry's whole configuration) has no caller in `app/`; only a registry test uses it.
-  Remove it, or keep it as the template's extension point on purpose.
 
 ## Web — one minus sign for percents
 

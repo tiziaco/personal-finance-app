@@ -234,19 +234,26 @@ api_key = settings.llm.OPENROUTER_API_KEY
 
 ## Agent Architecture
 
-A conversational agent extends `BaseAgent` (`app/agents/base/`) and implements `create_graph()`.
-A one-shot call whose answer must be JSON of a known shape — the CSV import's `csv_mapping` and
-`transaction_labeler` — is a plain function over `ask()` (`app/agents/core/structured.py`),
-traced with `create_trace_config()`, with no graph and no checkpoint.
+A conversational agent is `create_agent` plus `AgentMiddleware` classes under its package, held by a thin object the lifespan builds (`ChatbotAgent`). A one-shot call whose answer must be JSON of a known shape — the CSV import's `csv_mapping`, `transaction_labeler` and `insights` — is a plain function over `ask()` (`app/agents/core/structured.py`), traced with `create_trace_config()`, with no graph and no checkpoint. `ask` is a plain model through `with_fallbacks`, a fence-tolerant JSON parse and one re-ask on an invalid answer; it is not `with_structured_output` (no method was reliable for all three shapes on OpenRouter; see `docs/TODO.md`).
 
-**Shared components:**
-- `app/agents/core/memory.py` — `get_relevant_memory()`, `update_memory()`, `delete_user_memory()`
-- `app/agents/core/checkpointing.py` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()` and its set-based `delete_conversations_checkpoints()`
-- `app/agents/core/observability.py` — `create_graph_config()` wires Langfuse callbacks; `create_trace_config()` does it for a call outside a graph
+**Shared components** (`app/agents/core/`):
+- `memory.py` — `get_relevant_memory()`, `update_memory()`, `delete_user_memory()`
+- `checkpointing.py` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()` and its set-based `delete_conversations_checkpoints()`
+- `observability.py` — `create_graph_config()` wires Langfuse callbacks; `create_trace_config()` does it for a call outside a graph
+- `structured.py` — `ask()`; `messages.py` — `drop_unanswered_tool_calls`, which keeps a stopped reply usable
 
-**Toolkits.** The chatbot's tools are injected, never imported: `app.agents` may not import a module (R2), so a module builds a `Toolkit` (`app/agents/chatbot/toolkit.py`) and `main.py` passes it to `initialize_agents`. A tool reads the user from `TurnContext.user_id` and never takes a user argument; it opens its own session from `TurnContext.session_factory`, because the route releases the request's connection before the model call. **A tool's argument schema must carry no regex `pattern`** (a Decimal's made gpt-5-mini return empty replies): take money as a JSON number; `test_schemas.py` guards it. Bad arguments raise `ToolArgumentError` (its text goes to the model); any other crash reaches the model as a fixed message. The wiring is in [`architecture/server.md`](../docs/architecture/server.md) §1.
+**Tools.** The chatbot's tools are injected, never imported: `app.agents` may not import a module (R2), so `conversation/tools/` builds `chat_tools()` and `main.py` passes them to `build_chatbot`. A tool is a `StructuredTool` built by `chat_tool()` (`conversation/tools/base.py`); its arguments are a `ToolArgs` subclass, which carries the injected `runtime` slot. The tool reads the user from `runtime.context.user_id` (`ToolRuntime[TurnContext]`) and never takes a user argument; it opens its own session from `TurnContext.session_factory`, because the route releases the request's connection before the model call. **A tool's argument schema must carry no regex `pattern`** (a Decimal's made gpt-5-mini return empty replies): take money as a JSON number. `test_schemas.py` guards `tool_call_schema`, the schema the model actually sees; it has no `additionalProperties`, no per-property titles, no top-level title or description, and its `$defs` are inlined. Bad arguments raise `ToolException` (its text goes to the model); any other crash reaches the model as a fixed message. The wiring is in [`architecture/server.md`](../docs/architecture/server.md) §1.
 
-`BaseAgent` provides `get_response()`, `get_stream_response()` and `get_chat_history()` with memory and tracing built in. Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/core/checkpointing.py` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
+**Chatbot middleware** (`app/agents/chatbot/middleware/`, outermost first):
+- `MemoryMiddleware` — fetches relevant long-term memory before a turn, writes the user's message after it
+- `SummaryMiddleware` — folds earlier turns into a running summary kept in state; the transcript is never rewritten
+- `TurnBoundMiddleware` — the step cap, repeated-call detection and the tool-less wrap-up call
+- `RequestShapingMiddleware` — what the model is sent: summary, stubbed earlier turns, turn context, the current turn
+- `ModelTimingMiddleware` — model-call duration metric and provider-error translation
+- `ModelFallbackMiddleware` (library) — the next model on any exception
+- `ToolEventsMiddleware` — tool-call stream events, metrics, argument validation and the error texts the model sees
+
+Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/core/checkpointing.py` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. Model calls retry through the client's `max_retries` (the SDK's exponential backoff); `ask` re-asks once on an invalid answer, with no delay.
 
 ---
 
