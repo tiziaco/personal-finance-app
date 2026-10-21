@@ -286,3 +286,26 @@ def test_split_turns_and_turns_after_are_pure_helpers():
     assert turns_after(earlier, first[-1].id) == [second]
     assert turns_after(earlier, None) == earlier
     assert turns_after(earlier, "gone") == earlier
+
+
+async def test_a_trailing_system_message_after_the_last_human_message_stays_last():
+    wrap_up = SystemMessage("Tools are no longer available this turn.")
+
+    out = await _shape([*_tool_turn("old", "o1"), HumanMessage(content="now"), wrap_up])
+
+    assert out[-1] == wrap_up
+    assert out[-2].text == "now"
+
+
+async def test_shaping_does_not_mutate_the_state_messages():
+    ai = AIMessage(
+        content=[_reasoning(), {"type": "text", "text": "looking"}], tool_calls=[{"name": "t", "args": {}, "id": "c1"}]
+    )
+    tool = ToolMessage(content="full figures", tool_call_id="c1", name="t")
+    messages = [HumanMessage(content="old", id="h1"), ai, tool, AIMessage(content="ok"), HumanMessage(content="now")]
+
+    out = await _shape(messages)
+
+    assert not any(isinstance(m.content, list) for m in out if isinstance(m, AIMessage))
+    assert messages[1].content[0]["type"] == "reasoning"
+    assert messages[2].content == "full figures"
