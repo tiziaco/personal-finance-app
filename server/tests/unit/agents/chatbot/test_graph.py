@@ -1,116 +1,226 @@
 """Tests for app.agents.chatbot.graph — tool execution, logging and metrics."""
 
+import asyncio
+import datetime as dt
 import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from langchain_core.messages import AIMessage, HumanMessage
-from langchain_core.tools import tool
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableBinding
+from langgraph.checkpoint.memory import MemorySaver
 from prometheus_client import REGISTRY
+from pydantic import BaseModel, ValidationError
 
+from app.agents.chatbot.events import DoneEvent, TextEvent, ToolFinishedEvent, ToolStartedEvent
 from app.agents.chatbot.graph import (
+    STOPPED_FALLBACK_TEXT,
     TOOL_ARGS_LOG_LIMIT,
     TOOL_FAILED_MESSAGE,
     TOOL_UNKNOWN_MESSAGE,
     ChatbotAgent,
     _format_tool_args,
+    repeated_call,
 )
 from app.agents.chatbot.state import GraphState
-from app.agents.chatbot.tools import tools
-from app.agents.messages import Message
+from app.agents.chatbot.toolkit import (
+    AgentTool,
+    SummaryItem,
+    ToolArgumentError,
+    ToolDisplay,
+    Toolkit,
+    ToolOutcome,
+    TurnContext,
+)
+from app.agents.graph import drop_unanswered_tool_calls
+from app.agents.messages import Activity, ChatMessage, Message, ToolPart
+from app.core.config import LLMSettings, settings
 from app.integrations.llm.service import LLMRegistry
 
 pytestmark = pytest.mark.unit
 
 
-@tool
-def ok_tool(text: str) -> str:
-    """Return the input unchanged."""
-    return f"result for {text}"
+class IntArgs(BaseModel):
+    n: int
 
 
-@tool
-def exploding_tool(text: str) -> str:
-    """Always fail."""
-    raise RuntimeError("upstream is down")
+def _display(title: str = "Test") -> ToolDisplay:
+    return ToolDisplay(title=title, period=None, summary=[SummaryItem(kind="count", value=1)], table=None)
 
 
-def _tool_calls(tool_name: str) -> int:
-    """The `error`-outcome count for a tool, or 0 before it has ever been seen.
+def make_tool(name: str, run, *, args_schema: type[BaseModel] = IntArgs) -> AgentTool:
+    return AgentTool(name=name, title=f"{name} title", description="d", args_schema=args_schema, run=run)
+
+
+async def _ok(args: IntArgs, ctx: TurnContext) -> ToolOutcome:
+    return ToolOutcome(content=f"n is {args.n}", display=_display())
+
+
+def _agent_with(*tools: AgentTool) -> ChatbotAgent:
+    return ChatbotAgent(Toolkit(tools=list(tools), preamble=Toolkit.empty().preamble))
+
+
+CTX = TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
+THREAD_ID = uuid.uuid4()
+
+
+def _tool_calls(tool_name: str, outcome: str = "error") -> int:
+    """The count for a tool's outcome, or 0 before it has ever been seen.
 
     Read as a delta around the call under test: `app/core/metrics.py` registers
     on the default registry at import, so counters accumulate across every test
     in the process and an absolute assertion would depend on test order.
     """
-    value = REGISTRY.get_sample_value("tool_calls_total", {"tool": tool_name, "outcome": "error"})
+    value = REGISTRY.get_sample_value("tool_calls_total", {"tool": tool_name, "outcome": outcome})
     return int(value or 0)
 
 
 @pytest.fixture
 def agent() -> ChatbotAgent:
-    """A real ChatbotAgent.
+    """A real ChatbotAgent with no tools.
 
     Constructible without a credential: `bind_tools` records the tools and
     leaves the client to be built on first use.
     """
-    return ChatbotAgent()
+    return ChatbotAgent(Toolkit.empty())
 
 
 class TestInvokeTool:
     """Tests for `_invoke_tool` — the unit that owns one tool call."""
 
-    @pytest.mark.asyncio
-    async def test_tool_result_is_returned_to_the_model(self, agent):
-        agent.tools_by_name["ok_tool"] = ok_tool
+    async def test_success_carries_the_display_as_artifact(self):
+        agent = _agent_with(make_tool("t", _ok))
 
-        message = await agent._invoke_tool({"name": "ok_tool", "args": {"text": "hi"}, "id": "call_1"})
+        message = await agent._invoke_tool({"name": "t", "args": {"n": 3}, "id": "c1"}, CTX)
 
-        assert message.content == "result for hi"
+        assert message.content == "n is 3"
         assert message.status == "success"
-        assert message.tool_call_id == "call_1"
+        assert message.tool_call_id == "c1"
+        assert message.artifact == _display().model_dump()
 
-    @pytest.mark.asyncio
-    async def test_tool_failure_returns_an_error_message(self, agent):
-        """A raising tool must not escape the node, and must be visibly an error.
+    async def test_invalid_arguments_return_the_validation_message(self):
+        agent = _agent_with(make_tool("t", _ok))
+        before = _tool_calls("t", "invalid_args")
 
-        With `handle_tool_error=True` on the tool a failure came back as an
-        ordinary success-status message carrying the exception text, so a search
-        failing every time was indistinguishable from one working.
-        """
-        agent.tools_by_name["exploding_tool"] = exploding_tool
-        before = _tool_calls("exploding_tool")
+        message = await agent._invoke_tool({"name": "t", "args": {"n": "x"}, "id": "c1"}, CTX)
 
-        message = await agent._invoke_tool({"name": "exploding_tool", "args": {"text": "hi"}, "id": "call_2"})
+        assert message.status == "error"
+        assert message.content.startswith("Invalid arguments: n:")
+        assert message.content != TOOL_FAILED_MESSAGE
+        assert _tool_calls("t", "invalid_args") == before + 1
+
+    async def test_tool_argument_error_text_reaches_the_model(self):
+        async def run(args, ctx):
+            raise ToolArgumentError("no data before 2025-03-01")
+
+        message = await _agent_with(make_tool("t", run))._invoke_tool({"name": "t", "args": {"n": 1}, "id": "c1"}, CTX)
+
+        assert message.content == "no data before 2025-03-01"
+        assert message.status == "error"
+
+    async def test_crash_still_returns_the_fixed_message(self):
+        async def run(args, ctx):
+            raise RuntimeError("db down")
+
+        agent = _agent_with(make_tool("crashy", run))
+        before = _tool_calls("crashy")
+
+        message = await agent._invoke_tool({"name": "crashy", "args": {"n": 1}, "id": "c2"}, CTX)
 
         assert message.status == "error"
         assert message.content == TOOL_FAILED_MESSAGE
-        assert "upstream is down" not in message.content
-        assert _tool_calls("exploding_tool") == before + 1
+        assert "db down" not in message.content
+        assert _tool_calls("crashy") == before + 1
 
-    @pytest.mark.asyncio
     async def test_unknown_tool_does_not_raise(self, agent):
         """A name the model invented used to raise KeyError out of the graph."""
-        message = await agent._invoke_tool({"name": "no_such_tool", "args": {}, "id": "call_3"})
+        message = await agent._invoke_tool({"name": "no_such_tool", "args": {}, "id": "call_3"}, CTX)
 
         assert message.status == "error"
         assert message.content == TOOL_UNKNOWN_MESSAGE
         assert REGISTRY.get_sample_value("tool_calls_total", {"tool": "no_such_tool", "outcome": "unknown_tool"})
 
 
-class TestToolConfiguration:
-    """Tests for the tools themselves, not the node."""
+class TestToolCallNode:
+    """Tests for `_tool_call` — all calls of a message, concurrently, with stream events."""
 
-    @pytest.mark.parametrize("configured_tool", tools, ids=lambda t: t.name)
-    def test_tools_do_not_swallow_their_own_errors(self, configured_tool):
-        """No tool may set `handle_tool_error`.
+    @staticmethod
+    def _state(*names: str) -> GraphState:
+        calls = [{"name": n, "args": {"n": i}, "id": f"c{i}"} for i, n in enumerate(names)]
+        return GraphState(messages=[AIMessage(content="", tool_calls=calls)])
 
-        It makes LangChain catch the exception and return it as a plain string
-        result, so `_invoke_tool`'s except branch never runs: the call is counted
-        a success and the raw upstream error is handed to the model and persisted
-        into the checkpoint. Every assertion about failure handling in this file
-        is void for a tool that sets it, and nothing else would tell you.
-        """
-        assert not configured_tool.handle_tool_error
+    @staticmethod
+    def _config() -> dict:
+        return {"configurable": {"thread_id": "t1", "turn_context": CTX}}
+
+    async def test_tool_calls_run_concurrently_and_one_crash_does_not_sink_the_other(self):
+        started = {"a": asyncio.Event(), "b": asyncio.Event()}
+
+        async def waits(name: str, args, ctx):
+            started[name].set()
+            # Completes only if the other call has started too: sequential execution would hang.
+            await asyncio.wait_for(asyncio.gather(*(e.wait() for e in started.values())), timeout=2)
+            return await _ok(args, ctx)
+
+        async def crashes(args, ctx):
+            await asyncio.wait_for(started["a"].wait(), timeout=2)
+            raise RuntimeError("boom")
+
+        agent = _agent_with(
+            make_tool("a", lambda args, ctx: waits("a", args, ctx)),
+            make_tool("b", lambda args, ctx: waits("b", args, ctx)),
+            make_tool("c", crashes),
+        )
+
+        with patch("app.agents.chatbot.graph.get_stream_writer", return_value=MagicMock()):
+            command = await agent._tool_call(self._state("a", "b", "c"), self._config())
+
+        messages = command.update["messages"]
+        assert [m.tool_call_id for m in messages] == ["c0", "c1", "c2"]
+        assert [m.status for m in messages] == ["success", "success", "error"]
+        assert messages[2].content == TOOL_FAILED_MESSAGE
+        assert command.goto == "chat"
+
+    async def test_tool_node_emits_started_and_finished_events(self):
+        async def crashes(args, ctx):
+            raise RuntimeError("boom")
+
+        agent = _agent_with(make_tool("good", _ok), make_tool("bad", crashes))
+        writer = MagicMock()
+
+        with patch("app.agents.chatbot.graph.get_stream_writer", return_value=writer):
+            await agent._tool_call(self._state("good", "bad"), self._config())
+
+        events = [c.args[0] for c in writer.call_args_list]
+        assert ToolStartedEvent(id="c0", name="good", title="good title") in events
+        assert ToolFinishedEvent(id="c0", ok=True, display=_display()) in events
+        assert ToolStartedEvent(id="c1", name="bad", title="bad title") in events
+        assert ToolFinishedEvent(id="c1", ok=False, display=None) in events
+        assert events.index(ToolStartedEvent(id="c0", name="good", title="good title")) < events.index(
+            ToolFinishedEvent(id="c0", ok=True, display=_display())
+        )
+
+
+class TestToolBinding:
+    def test_no_web_search_tool_is_bound(self):
+        assert "duckduckgo" not in str(ChatbotAgent(Toolkit.empty()).llm_service._tools)
+
+    def test_toolkit_tools_are_bound_as_schemas(self):
+        schemas = ChatbotAgent(
+            Toolkit(tools=[make_tool("t", _ok)], preamble=Toolkit.empty().preamble)
+        ).llm_service._tools
+
+        assert [s["function"]["name"] for s in schemas] == ["t"]
+        assert schemas[0]["function"]["parameters"]["properties"]["n"]["type"] == "integer"
+
+    def test_the_wrap_up_service_has_no_tools_and_the_same_tuning(self):
+        """The wrap-up must answer in text, so the model must not be offered a tool."""
+        agent = _agent_with(make_tool("t", _ok))
+
+        assert agent.llm_service._tools and not agent.wrap_up_llm_service._tools
+        wrap_up, chat = agent.wrap_up_llm_service.get_llm(), agent.llm_service.get_llm()
+        assert not isinstance(wrap_up, RunnableBinding)
+        assert wrap_up is chat.bound
 
 
 class TestFormatToolArgs:
@@ -131,7 +241,7 @@ class TestChat:
 
     @pytest.mark.asyncio
     async def test_chat_does_not_send_a_tool_call_left_without_a_result(self, agent):
-        """Stop during a web search, then send again: the next call must not 400.
+        """Stop during a tool call, then send again: the next call must not 400.
 
         The chat node's AIMessage is checkpointed before the tool node runs; a
         cancelled tool node leaves it there with no ToolMessage, and the next
@@ -143,17 +253,386 @@ class TestChat:
         agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
         state = GraphState(
             messages=[
-                HumanMessage(content="Search rent prices"),
-                AIMessage(content="", tool_calls=[{"name": "web_search", "args": {"query": "rent"}, "id": "call_1"}]),
+                HumanMessage(content="What did I spend on rent"),
+                AIMessage(content="", tool_calls=[{"name": "some_tool", "args": {"query": "rent"}, "id": "call_1"}]),
                 HumanMessage(content="Never mind, thanks"),
             ]
         )
 
-        await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+        await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
 
         sent = agent.llm_service.call.call_args.args[0]
-        assert not any(m.get("tool_calls") for m in sent)
-        assert [m["content"] for m in sent[1:]] == ["Search rent prices", "Never mind, thanks"]
+        assert not any(getattr(m, "tool_calls", None) for m in sent)
+        # [static prompt, history..., turn context, current turn]
+        assert [m.content for m in sent[1:-2]] == ["What did I spend on rent"]
+        assert sent[-1].content == "Never mind, thanks"
+
+    @pytest.mark.asyncio
+    async def test_chat_puts_date_and_memory_in_a_message_after_the_history(self, agent):
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
+        agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
+        state = GraphState(messages=[HumanMessage(content="hi")], long_term_memory="Saving for a flat")
+
+        await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
+
+        sent = agent.llm_service.call.call_args.args[0]
+        assert "Saving for a flat" not in sent[0].content and "{" not in sent[0].content
+        assert str(dt.date.today()) in sent[1].content and "Saving for a flat" in sent[1].content
+        assert sent[2].content == "hi"
+
+    @pytest.mark.asyncio
+    async def test_a_turn_without_a_turn_context_is_a_wiring_bug_not_a_failed_preamble(self, agent):
+        """Every route sets one; a missing one raises rather than answering without the user's data."""
+        agent.llm_service = MagicMock()
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Sure."))
+        state = GraphState(messages=[HumanMessage(content="hi")])
+
+        with pytest.raises(KeyError, match="turn_context"):
+            await agent._chat(state, {"configurable": {"thread_id": "t1"}})
+
+        agent.llm_service.call.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_a_failed_preamble_still_answers_the_turn(self):
+        """The history load behind the preamble fails: the turn goes on without it, as a crashed tool would."""
+
+        async def failing_preamble(ctx: TurnContext) -> str:
+            raise RuntimeError("history load failed")
+
+        agent = ChatbotAgent(Toolkit(tools=[], preamble=failing_preamble))
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
+        agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Hello."))
+        state = GraphState(messages=[HumanMessage(content="hi")])
+
+        with patch("app.agents.chatbot.graph.logger") as logger:
+            await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
+
+        sent = agent.llm_service.call.call_args.args[0]
+        assert str(dt.date.today()) in sent[1].content
+        assert sent[2].content == "hi"
+        assert logger.exception.call_args.args[0] == "chat_preamble_failed"
+
+
+def _call(name: str, n: int, call_id: str) -> dict:
+    return {"name": name, "args": {"n": n}, "id": call_id}
+
+
+def _mock_services(agent: ChatbotAgent, llm_responses) -> list[bool]:
+    """Replace both model services; `llm_responses(with_tools, n)` makes the n-th reply of the turn.
+
+    `with_tools` is False for the wrap-up service's calls. The returned list records it per call.
+    """
+    name = LLMRegistry.get_all_names()[0]
+    calls: list[bool] = []
+
+    def service(with_tools: bool) -> MagicMock:
+        mock = MagicMock()
+        mock.get_llm.return_value = LLMRegistry.get(name)
+        mock.current_model_name.return_value = name
+
+        async def call(messages, *args, **kwargs):
+            calls.append(with_tools)
+            return llm_responses(with_tools, len(calls))
+
+        mock.call = AsyncMock(side_effect=call)
+        return mock
+
+    agent.llm_service = service(True)
+    agent.wrap_up_llm_service = service(False)
+    return calls
+
+
+class TestRepeatedCall:
+    def test_the_same_name_and_args_since_the_last_human_message_repeats(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "b")]),
+        ]
+        assert repeated_call(messages)
+
+    def test_different_args_or_name_is_not_a_repeat(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="", tool_calls=[_call("t", 2, "b"), _call("u", 1, "c")]),
+        ]
+        assert not repeated_call(messages)
+
+    def test_a_call_from_an_earlier_turn_does_not_count(self):
+        messages = [
+            HumanMessage(content="q"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "a")]),
+            ToolMessage(content="r", tool_call_id="a"),
+            AIMessage(content="done"),
+            HumanMessage(content="again"),
+            AIMessage(content="", tool_calls=[_call("t", 1, "b")]),
+        ]
+        assert not repeated_call(messages)
+
+
+class TestTurnLimits:
+    """The loop end to end on a MemorySaver: step cap, repeat detection, wrap-up."""
+
+    @staticmethod
+    async def _run(
+        agent: ChatbotAgent, llm_responses, text: str = "q", thread: str = "t1", recursion_limit=None, **extra
+    ):
+        """Run one turn on the agent's graph; `llm_responses(with_tools, n)` makes each model reply."""
+        calls = _mock_services(agent, llm_responses)
+        graph = agent._graph or await agent.create_graph(MemorySaver())
+        config = {"configurable": {"thread_id": thread, "turn_context": CTX}}
+        if recursion_limit is not None:
+            config["recursion_limit"] = recursion_limit
+        state = await graph.ainvoke(
+            {"messages": [HumanMessage(content=text)], "turn_steps": 0, **extra}, config=config
+        )
+        return state, calls, config
+
+    @staticmethod
+    def _counting_agent() -> tuple[ChatbotAgent, list[int]]:
+        ran: list[int] = []
+
+        async def run(args: IntArgs, ctx: TurnContext) -> ToolOutcome:
+            ran.append(args.n)
+            return await _ok(args, ctx)
+
+        return _agent_with(make_tool("t", run)), ran
+
+    async def test_step_cap_ends_the_turn_with_a_wrap_up_answer_marked_stopped(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 2)
+        agent, ran = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, calls, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert last.text == "Partial answer." and not last.tool_calls
+        assert state["stopped"] == {last.id: "step_limit"}
+        assert calls == [True, True, False]
+        assert ran == [1]
+
+    async def test_a_long_cap_is_what_ends_the_turn_not_langgraphs_recursion_limit(self, monkeypatch):
+        # 20 steps take 39 supersteps, past a fixed limit of 25: the turn's limit must follow the cap.
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 20)
+        agent, ran = self._counting_agent()
+        with patch("app.agents.shared.observability.langfuse.CallbackHandler"):
+            limit = agent._turn_config(THREAD_ID, CTX)["recursion_limit"]
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, _, _ = await self._run(agent, respond, recursion_limit=limit)
+
+        assert state["stopped"] == {state["messages"][-1].id: "step_limit"}
+        assert len(ran) == 19
+        # A backstop, not a bound the cap could never reach: it sits just above the turn's supersteps.
+        assert 2 * 20 <= limit < 2 * 20 + 10
+
+    def test_the_step_cap_setting_is_at_least_one(self):
+        with pytest.raises(ValidationError):
+            LLMSettings(CHAT_MAX_STEPS=0)
+
+    async def test_repeated_identical_call_stops_the_loop(self):
+        agent, ran = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial answer.")
+            return AIMessage(content="", tool_calls=[_call("t", 7, f"c{n}")])
+
+        state, calls, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert state["stopped"] == {last.id: "repeated_call"}
+        assert ran == [7]
+        assert calls == [True, True, False]
+
+    async def test_a_failing_wrap_up_falls_back_to_the_fixed_text(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent, _ = self._counting_agent()
+
+        def respond(with_tools, n):
+            if not with_tools:
+                raise RuntimeError("model down")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        state, _, _ = await self._run(agent, respond)
+
+        last = state["messages"][-1]
+        assert last.content == STOPPED_FALLBACK_TEXT
+        assert state["stopped"] == {last.id: "step_limit"}
+
+    async def test_turn_steps_reset_on_each_turn(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 2)
+        agent, _ = self._counting_agent()
+
+        def respond(with_tools, n):
+            # Each turn: one tool step, then an answer.
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")]) if n % 2 else AIMessage(content="ok")
+
+        await self._run(agent, respond)
+        state, _, _ = await self._run(agent, lambda w, n: respond(w, n), text="again")
+
+        assert not state.get("stopped")
+        assert state["messages"][-1].text == "ok"
+
+    async def test_the_next_turn_works_after_a_stopped_one(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent, _ = self._counting_agent()
+
+        def stops(with_tools, n):
+            return (
+                AIMessage(content="Partial.")
+                if not with_tools
+                else AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+            )
+
+        await self._run(agent, stops)
+        state, _, _ = await self._run(agent, lambda w, n: AIMessage(content="Fine."), text="next")
+
+        sent = drop_unanswered_tool_calls(state["messages"])
+        assert not any(isinstance(m, AIMessage) and m.tool_calls for m in sent)
+        assert state["messages"][-1].text == "Fine."
+
+    async def test_the_answering_model_labels_the_metric(self):
+        agent, _ = self._counting_agent()
+        before = REGISTRY.get_sample_value("llm_inference_duration_seconds_count", {"model": "answering-model"}) or 0
+
+        await self._run(
+            agent,
+            lambda w, n: AIMessage(content="hi", response_metadata={"model_name": "answering-model"}),
+        )
+
+        after = REGISTRY.get_sample_value("llm_inference_duration_seconds_count", {"model": "answering-model"})
+        assert after == before + 1
+
+
+class TestEmptyReply:
+    """A reply with no text and no tool calls is a failed model call, not an answer."""
+
+    @pytest.mark.parametrize(
+        "reply",
+        [
+            AIMessage(content=""),
+            AIMessage(content="  "),
+            AIMessage(
+                content=[],
+                response_metadata={"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+            ),
+        ],
+    )
+    async def test_the_turn_fails_and_nothing_empty_is_checkpointed(self, reply):
+        agent = _agent_with(make_tool("t", _ok))
+
+        with pytest.raises(Exception, match="empty"):
+            await TestStreamAndHistory._stream(agent, lambda w, n: reply)
+
+        history = await agent.get_chat_history(THREAD_ID)
+        assert [m.role for m in history] == ["user"]
+
+    async def test_it_is_logged_with_the_model_and_the_incomplete_reason(self):
+        agent = _agent_with(make_tool("t", _ok))
+        reply = AIMessage(
+            content="",
+            response_metadata={"status": "incomplete", "incomplete_details": {"reason": "max_output_tokens"}},
+        )
+
+        with patch("app.agents.chatbot.graph.logger") as log, pytest.raises(Exception, match="empty"):
+            await TestStreamAndHistory._stream(agent, lambda w, n: reply)
+
+        [call] = [c for c in log.warning.call_args_list if c.args[0] == "llm_empty_response"]
+        assert call.kwargs["model"] == LLMRegistry.get_all_names()[0]
+        assert call.kwargs["status"] == "incomplete"
+        assert call.kwargs["incomplete_details"] == {"reason": "max_output_tokens"}
+
+    async def test_an_empty_wrap_up_falls_back_to_the_fixed_text(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return AIMessage(content="") if not with_tools else AIMessage(content="", tool_calls=[_call("t", n, "c")])
+
+        events = await TestStreamAndHistory._stream(agent, respond)
+
+        assert events == [TextEvent(text=STOPPED_FALLBACK_TEXT), DoneEvent(stopped=True)]
+
+
+class TestStreamAndHistory:
+    """The typed stream and the history on the real graph: what reaches the client."""
+
+    @staticmethod
+    async def _stream(agent: ChatbotAgent, llm_responses, text: str = "q") -> list:
+        _mock_services(agent, llm_responses)
+        if agent._graph is None:
+            await agent.create_graph(MemorySaver())
+        with (
+            patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
+            patch("app.agents.base.agent.update_memory", new=AsyncMock()),
+        ):
+            return [
+                event
+                async for event in agent.get_stream_response([Message(role="user", content=text)], THREAD_ID, CTX)
+            ]
+
+    async def test_a_tool_turn_streams_tool_events_then_the_answer(self):
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return AIMessage(content="", tool_calls=[_call("t", 1, "c1")]) if n == 1 else AIMessage(content="Done.")
+
+        events = await self._stream(agent, respond)
+
+        assert events == [
+            ToolStartedEvent(id="c1", name="t", title="t title"),
+            ToolFinishedEvent(id="c1", ok=True, display=_display()),
+            TextEvent(text="Done."),
+            DoneEvent(stopped=False),
+        ]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.activity.parts == [ToolPart(id="c1", name="t", title="t title", ok=True, display=_display())]
+
+    async def test_a_turn_the_server_stopped_is_done_stopped_and_reopens_stopped(self, monkeypatch):
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            if not with_tools:
+                return AIMessage(content="Partial.")
+            return AIMessage(content="", tool_calls=[_call("t", n, f"c{n}")])
+
+        events = await self._stream(agent, respond)
+
+        assert events == [TextEvent(text="Partial."), DoneEvent(stopped=True)]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.content == "Partial."
+        assert reply.activity == Activity(parts=[], stopped=True)
+
+    async def test_an_unknown_tool_is_in_neither_the_stream_nor_the_history(self):
+        agent = _agent_with(make_tool("t", _ok))
+
+        def respond(with_tools, n):
+            return (
+                AIMessage(content="", tool_calls=[_call("invented", 1, "c1")]) if n == 1 else AIMessage(content="OK.")
+            )
+
+        events = await self._stream(agent, respond)
+
+        assert events == [TextEvent(text="OK."), DoneEvent(stopped=False)]
+        [_, reply] = await agent.get_chat_history(THREAD_ID)
+        assert reply.activity is None
 
 
 class TestTitleFor:
@@ -164,7 +643,7 @@ class TestTitleFor:
 
     async def test_titles_the_first_exchange_on_the_current_model(self, agent):
         agent.get_chat_history = AsyncMock(
-            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+            return_value=[ChatMessage(role="user", content="Q"), ChatMessage(role="assistant", content="A")]
         )
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(return_value="Budget")) as generate:
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) == "Budget"
@@ -173,14 +652,14 @@ class TestTitleFor:
         )
 
     async def test_no_reply_yet_is_none_without_a_model_call(self, agent):
-        agent.get_chat_history = AsyncMock(return_value=[Message(role="user", content="Q")])
+        agent.get_chat_history = AsyncMock(return_value=[ChatMessage(role="user", content="Q")])
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock()) as generate:
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None
         generate.assert_not_awaited()
 
     async def test_a_model_failure_is_none(self, agent):
         agent.get_chat_history = AsyncMock(
-            return_value=[Message(role="user", content="Q"), Message(role="assistant", content="A")]
+            return_value=[ChatMessage(role="user", content="Q"), ChatMessage(role="assistant", content="A")]
         )
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(side_effect=RuntimeError("down"))):
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) is None

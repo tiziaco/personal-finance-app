@@ -1,15 +1,68 @@
 import type { ApiRequest } from "@app/api-client"
+import {
+  SummaryItemKind,
+  TableColumnKind,
+  type ToolDisplay,
+} from "@app/api-client/types"
 import { z } from "zod"
+
+/**
+ * The display a finished tool call carries. Hand-written beside the events
+ * (the generated client has the type, not a zod schema for it); checked
+ * against the generated `ToolDisplay` so the two cannot drift.
+ */
+const ToolDisplaySchema = z.object({
+  title: z.string(),
+  period: z.string().nullable(),
+  summary: z.array(
+    z.object({
+      kind: z.enum(SummaryItemKind),
+      value: z.union([z.number(), z.string()]),
+      label: z.string().nullish(),
+    }),
+  ),
+  table: z
+    .object({
+      columns: z.array(
+        z.object({
+          key: z.string(),
+          label: z.string(),
+          kind: z.enum(TableColumnKind),
+        }),
+      ),
+      rows: z.array(
+        z.record(z.string(), z.union([z.string(), z.number(), z.null()])),
+      ),
+    })
+    .nullable(),
+}) satisfies z.ZodType<ToolDisplay>
 
 /**
  * One event of POST /api/v1/chatbot/chat/{id}/stream.
  *
- * Mirrors `StreamResponse` in server/app/modules/conversation/schemas.py. It is
- * the one hand-written API payload schema in the app, and deliberately so:
- * routes tagged "streaming" are excluded from generation (orval.config.ts), and
- * the route's OpenAPI entry is held fixed (WS7), so no generated type exists.
+ * Mirrors the events in server/app/agents/chatbot/events.py (its docstring is
+ * the wire description). It is the one hand-written API payload schema in the
+ * app, and deliberately so: routes tagged "streaming" are excluded from
+ * generation (orval.config.ts), so no generated type exists.
  */
-const StreamEventSchema = z.object({ content: z.string(), done: z.boolean() })
+const StreamEventSchema = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("reasoning"), text: z.string() }),
+  z.object({
+    type: z.literal("tool_started"),
+    id: z.string(),
+    name: z.string(),
+    title: z.string(),
+  }),
+  z.object({
+    type: z.literal("tool_finished"),
+    id: z.string(),
+    ok: z.boolean(),
+    display: ToolDisplaySchema.nullable(),
+  }),
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({ type: z.literal("done"), stopped: z.boolean() }),
+  z.object({ type: z.literal("error") }),
+])
 export type StreamEvent = z.infer<typeof StreamEventSchema>
 
 /** The stream reported a failure, ended early, or sent something unreadable. */
@@ -29,19 +82,18 @@ export type StreamChatOptions = {
 }
 
 /**
- * Send a message and yield the reply as it is written.
+ * Send a message and yield its events as they arrive, `done` last.
  *
- * The server reports a failure as a final event with `done: true` and
- * non-empty content (the shape is fixed), so that is thrown as
- * StreamFailedError; its text is never surfaced. Aborting `signal` closes the
- * connection, and the server then stops the model call.
+ * An `error` event is thrown as StreamFailedError (it carries no text to
+ * surface), and so is a stream that ends without `done`. Aborting `signal`
+ * closes the connection, and the server then stops the model call.
  */
 export async function* streamChat({
   conversationId,
   message,
   request,
   signal,
-}: StreamChatOptions): AsyncGenerator<string> {
+}: StreamChatOptions): AsyncGenerator<StreamEvent> {
   const response = await request(
     `/api/v1/chatbot/chat/${conversationId}/stream`,
     {
@@ -54,11 +106,9 @@ export async function* streamChat({
   if (!response.body) throw new StreamFailedError("The response has no body")
 
   for await (const event of readEvents(response.body)) {
-    if (event.done) {
-      if (event.content !== "") throw new StreamFailedError()
-      return
-    }
-    if (event.content) yield event.content
+    if (event.type === "error") throw new StreamFailedError()
+    yield event
+    if (event.type === "done") return
   }
   throw new StreamFailedError("The stream ended before it was done")
 }

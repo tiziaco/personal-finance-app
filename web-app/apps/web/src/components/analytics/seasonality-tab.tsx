@@ -14,7 +14,7 @@ import {
 
 import { formatAmount } from "@/components/transactions/format"
 
-import { formatPct, formatPeriod, purchases } from "./format"
+import { biasSentence, formatPeriod, purchases } from "./format"
 import { ANALYTICS_QUERY } from "./query"
 import { QueryGate } from "./query-gate"
 import { Section } from "./section"
@@ -22,12 +22,6 @@ import { MonthOfYearChart, WeekdayChart } from "./seasonality-charts"
 import { toMonthOfYearPoints, toWeekdayPoints } from "./seasonality-points"
 
 const isEmpty = (data: BehaviourResponse) => data.date_from === null
-
-function biasSentence(bias: number | null) {
-  if (bias === null) return null
-  if (bias === 0) return "Weekend and weekday days cost the same"
-  return `Weekend days cost you ${formatPct(Math.abs(bias))} ${bias > 0 ? "more" : "less"} than weekdays`
-}
 
 /** Spending by day of week, weekdays vs weekend and month of year, over all history. */
 export function SeasonalityTab() {

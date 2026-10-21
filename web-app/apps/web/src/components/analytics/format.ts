@@ -39,6 +39,13 @@ export function formatPct(pct: number): string {
   return `${number}%`
 }
 
+/** How much more or less a weekend day costs than a weekday, as a sentence; null without a figure. */
+export function biasSentence(bias: number | null) {
+  if (bias === null) return null
+  if (bias === 0) return "Weekend and weekday days cost the same"
+  return `Weekend days cost you ${formatPct(Math.abs(bias))} ${bias > 0 ? "more" : "less"} than weekdays`
+}
+
 /** Whether a change is good news: spending down and income up are good. */
 export function changeTone(pct: number | null, kind: "spend" | "income"): Tone {
   if (pct === null || pct === 0) return "neutral"

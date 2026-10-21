@@ -74,7 +74,8 @@ beforeEach(() => {
     calls.push(key)
     const handler = routes[key]
     if (!handler) return json({ detail: "not found" }, 404)
-    return json(await handler(init))
+    const body = await handler(init)
+    return body instanceof Response ? body : json(body)
   })
 })
 
@@ -100,7 +101,8 @@ async function send(text: string) {
 }
 
 async function* chunks(...parts: string[]) {
-  for (const part of parts) yield part
+  for (const part of parts) yield { type: "text", text: part }
+  yield { type: "done", stopped: false }
 }
 
 describe("ChatRuntimeProvider — leaving and refusals", () => {
@@ -108,14 +110,14 @@ describe("ChatRuntimeProvider — leaving and refusals", () => {
   it("switching conversation mid-stream aborts it and does not carry the reply over", async () => {
     mocks.params = { conversationId: "c1" }
     routes["GET /api/v1/chatbot/chat/c2/messages"] = () => ({
-      messages: [{ role: "user", content: "older question" }],
+      messages: [{ role: "user", content: "older question", activity: null }],
     })
     let signal: AbortSignal | undefined
     mocks.stream.mockImplementation(async function* (opts: {
       signal: AbortSignal
     }) {
       signal = opts.signal
-      yield "streaming in c1"
+      yield { type: "text", text: "streaming in c1" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -162,6 +164,29 @@ describe("ChatRuntimeProvider — leaving and refusals", () => {
   })
 })
 
+describe("ChatRuntimeProvider — a failed create", () => {
+  // docs/TODO.md: a failed create must not leave the exchange stuck or eat the
+  // user's text. The mutation cache toasts; the provider clears and restores.
+  it("clears the exchange and returns the text to the composer when create answers 500", async () => {
+    routes["POST /api/v1/conversation/conversation"] = () =>
+      json({ detail: "boom" }, 500)
+    renderChat()
+    await send("hello")
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("textbox", { name: CHAT_COPY.inputLabel }),
+      ).toHaveValue("hello"),
+    )
+    expect(document.querySelector('[data-role="user"]')).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: CHAT_COPY.stop }),
+    ).not.toBeInTheDocument()
+    expect(mocks.stream).not.toHaveBeenCalled()
+    expect(mocks.replace).not.toHaveBeenCalled()
+  })
+})
+
 describe("ChatRuntimeProvider", () => {
   it("creates a conversation on the first send, replaces the URL and streams the reply", async () => {
     mocks.stream.mockImplementation(() => chunks("Hel", "lo"))
@@ -185,14 +210,14 @@ describe("ChatRuntimeProvider", () => {
   it("a first send whose reply ends before the URL moves keeps showing the exchange", async () => {
     let saved = false
     mocks.stream.mockImplementation(async function* () {
-      yield "Hello"
+      yield { type: "text", text: "Hello" }
       saved = true
     })
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
       messages: saved
         ? [
-            { role: "user", content: "hi" },
-            { role: "assistant", content: "Hello" },
+            { role: "user", content: "hi", activity: null },
+            { role: "assistant", content: "Hello", activity: null },
           ]
         : [],
     })
@@ -227,14 +252,14 @@ describe("ChatRuntimeProvider", () => {
     // The server has saved the exchange once the stream has finished, not before.
     let saved = false
     mocks.stream.mockImplementation(async function* () {
-      yield "Hello"
+      yield { type: "text", text: "Hello" }
       saved = true
     })
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
       messages: saved
         ? [
-            { role: "user", content: "hi" },
-            { role: "assistant", content: "Hello" },
+            { role: "user", content: "hi", activity: null },
+            { role: "assistant", content: "Hello", activity: null },
           ]
         : [],
     })
@@ -248,6 +273,80 @@ describe("ChatRuntimeProvider", () => {
     )
     expect(screen.getAllByText("hi")).toHaveLength(1)
     expect(screen.getAllByText("Hello")).toHaveLength(1)
+  })
+
+  it("a finished reply keeps its timed header and the block the user opened when the history replaces it", async () => {
+    mocks.params = { conversationId: "c1" }
+    const display = {
+      title: "Spending overview",
+      period: "September 2026",
+      summary: [{ kind: "total" as const, value: "180.50", label: "spent" }],
+      table: null,
+    }
+    let finish = () => {}
+    const finished = new Promise<void>((resolve) => (finish = resolve))
+    let saved = false
+    mocks.stream.mockImplementation(async function* () {
+      yield { type: "reasoning", text: "**Checking September**" }
+      yield {
+        type: "tool_started",
+        id: "t1",
+        name: "spending_overview",
+        title: "Spending overview",
+      }
+      yield { type: "tool_finished", id: "t1", ok: true, display }
+      yield { type: "text", text: "You spent €180.50." }
+      await finished
+      yield { type: "done", stopped: false }
+      saved = true
+    })
+    routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
+      messages: saved
+        ? [
+            { role: "user", content: "hi", activity: null },
+            {
+              role: "assistant",
+              content: "You spent €180.50.",
+              activity: {
+                parts: [
+                  { type: "reasoning", text: "**Checking September**" },
+                  {
+                    type: "tool",
+                    id: "t1",
+                    name: "spending_overview",
+                    title: "Spending overview",
+                    ok: true,
+                    display,
+                  },
+                ],
+                stopped: false,
+              },
+            },
+          ]
+        : [],
+    })
+    renderChat()
+    await send("hi")
+    // The answer has started: the block collapsed itself; the user opens it.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /Worked for \d+s · 1 lookup/ }),
+    )
+    expect(screen.getByText("Spending overview")).toBeInTheDocument()
+
+    act(() => finish())
+    await waitFor(() =>
+      expect(calls).toContain(
+        "POST /api/v1/conversation/conversation/c1/title",
+      ),
+    )
+
+    // The saved copy has replaced the in-flight one: still timed, still open.
+    expect(
+      screen.getByRole("button", { name: /Worked for \d+s · 1 lookup/ }),
+    ).toHaveAttribute("aria-expanded", "true")
+    expect(screen.getByText("Spending overview")).toBeInTheDocument()
+    // Thinking renders as Markdown inside a message too.
+    expect(screen.getByText("Checking September").tagName).toBe("STRONG")
   })
 
   it("writes the generated title into the conversation list", async () => {
@@ -318,7 +417,7 @@ describe("ChatRuntimeProvider", () => {
       signal: AbortSignal
     }) {
       signal = opts.signal
-      yield "partial"
+      yield { type: "text", text: "partial" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -368,7 +467,7 @@ describe("ChatRuntimeProvider", () => {
       signal: AbortSignal
     }) {
       getsAtStream.push(calls.filter((c) => c === historyGet).length)
-      yield "partial"
+      yield { type: "text", text: "partial" }
       await new Promise((_, reject) =>
         opts.signal.addEventListener("abort", () =>
           reject(new DOMException("aborted", "AbortError")),
@@ -382,7 +481,7 @@ describe("ChatRuntimeProvider", () => {
     await screen.findByText(CHAT_COPY.stopped)
 
     routes[historyGet] = () => ({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
     const getsAfterStop = calls.filter((c) => c === historyGet).length
     mocks.stream.mockImplementationOnce(() => {
@@ -399,7 +498,7 @@ describe("ChatRuntimeProvider", () => {
     mocks.params = { conversationId: "c1" }
     const { StreamFailedError } = await import("@/lib/chat/stream-chat")
     mocks.stream.mockImplementation(async function* () {
-      yield "par"
+      yield { type: "text", text: "par" }
       throw new StreamFailedError()
     })
     renderChat()
@@ -526,11 +625,11 @@ describe("ChatRuntimeProvider", () => {
     mocks.params = { conversationId: "c1" }
     let resume: () => void = () => {}
     mocks.stream.mockImplementation(async function* () {
-      yield "Hel"
+      yield { type: "text", text: "Hel" }
       await new Promise<void>((resolve) => {
         resume = resolve
       })
-      yield "lo"
+      yield { type: "text", text: "lo" }
     })
     const { client } = renderChat()
     await send("hi")
@@ -538,7 +637,7 @@ describe("ChatRuntimeProvider", () => {
 
     // The graph has started: the server's history now holds the user's message.
     routes["GET /api/v1/chatbot/chat/c1/messages"] = () => ({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
     // TanStack notifies observers on a setTimeout(0) batch: let it render.
     await act(async () => {
@@ -548,7 +647,7 @@ describe("ChatRuntimeProvider", () => {
       await new Promise((r) => setTimeout(r, 0))
     })
     expect(client.getQueryData(getListChatMessagesQueryKey("c1"))).toEqual({
-      messages: [{ role: "user", content: "hi" }],
+      messages: [{ role: "user", content: "hi", activity: null }],
     })
 
     expect(screen.getAllByText("hi")).toHaveLength(1)

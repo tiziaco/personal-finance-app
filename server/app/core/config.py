@@ -8,7 +8,7 @@ configuration value parsing using Pydantic Settings for type safety and validati
 import os
 from enum import Enum
 from pathlib import Path
-from typing import Annotated, List
+from typing import Annotated, List, Literal
 
 from pydantic import (
     AfterValidator,
@@ -124,6 +124,12 @@ class LLMSettings(BaseSettings):
     DEFAULT_LLM_TEMPERATURE: float = 0.2
     MAX_TOKENS: int = 2000
     MAX_LLM_CALL_RETRIES: int = 3
+    # Chat only: every other caller keeps MAX_TOKENS and its registry effort.
+    CHAT_REASONING_EFFORT: Literal["minimal", "low", "medium", "high"] = "medium"
+    CHAT_REPLY_MAX_TOKENS: int = 8000
+    CHAT_HISTORY_MAX_TOKENS: int = 24000
+    # Model calls with tool calls per turn; the run's recursion limit follows it (`turn_recursion_limit`).
+    CHAT_MAX_STEPS: int = Field(8, ge=1)
 
 
 # Long-term Memory Settings

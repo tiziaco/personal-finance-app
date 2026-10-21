@@ -1,7 +1,6 @@
 """Chatbot API endpoints for handling chat interactions."""
 
 import asyncio
-import json
 
 from fastapi import (
     APIRouter,
@@ -9,19 +8,21 @@ from fastapi import (
 )
 from sse_starlette import EventSourceResponse
 
+from app.agents.chatbot.events import ErrorEvent
+from app.agents.chatbot.toolkit import TurnContext
 from app.agents.messages import Message
 from app.agents.shared.checkpointing import delete_conversation_checkpoints
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.core.metrics import llm_stream_duration_seconds
+from app.database.dependencies import DbSession, release_connection
 from app.modules.account import CurrentUser
 from app.modules.conversation.dependencies import ChatbotAgentDep, UserConversation
 from app.modules.conversation.schemas import (
     ChatRequest,
     ChatResponse,
     ConversationHistory,
-    StreamResponse,
 )
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
@@ -41,6 +42,7 @@ async def chat(
     chat_request: ChatRequest,
     user: CurrentUser,
     agent: ChatbotAgentDep,
+    db_session: DbSession,
 ):
     """Process a chat request using LangGraph."""
     logger.info(
@@ -49,8 +51,10 @@ async def chat(
         message_length=len(chat_request.message),
     )
 
+    await release_connection(db_session)
     user_message = Message(role="user", content=chat_request.message)
-    result = await agent.get_response([user_message], conversation.id, user_id=user.id)
+    turn_context = TurnContext(user_id=user.id, session_factory=request.app.state.session_factory)
+    result = await agent.get_response([user_message], conversation.id, turn_context)
 
     logger.info("chat_request_processed", conversation_id=conversation.id)
 
@@ -71,6 +75,7 @@ async def chat_stream(
     chat_request: ChatRequest,
     user: CurrentUser,
     agent: ChatbotAgentDep,
+    db_session: DbSession,
 ):
     """Process a chat request using LangGraph, streaming the response."""
     logger.info(
@@ -79,24 +84,28 @@ async def chat_stream(
         message_length=len(chat_request.message),
     )
 
+    # The stream takes seconds: hand the connection back first.
+    await release_connection(db_session)
+
+    # Plain values only: the body runs after the request's session has closed.
+    turn_context = TurnContext(user_id=user.id, session_factory=request.app.state.session_factory)
+
     async def event_generator():
-        """Yield the response as server-sent events, one JSON payload per chunk.
+        """Yield the turn's events as server-sent events, one JSON payload each.
+
+        The payloads are `app.agents.chatbot.events`: the agent's events as they
+        come, ending with `done`, or with `error` if the turn failed. An error
+        carries no text: the client words it.
 
         Run by EventSourceResponse, which cancels this generator when the client
         disconnects. The CancelledError travels down into the agent and the HTTP
         call to the model, which is what stops a call nobody is waiting for.
         """
         try:
-            full_response = ""
             user_message = Message(role="user", content=chat_request.message)
             with llm_stream_duration_seconds.labels(model=agent.llm_service.current_model_name()).time():
-                async for chunk in agent.get_stream_response([user_message], conversation.id, user_id=user.id):
-                    full_response += chunk
-                    response = StreamResponse(content=chunk, done=False)
-                    yield {"data": json.dumps(response.model_dump())}
-
-            final_response = StreamResponse(content="", done=True)
-            yield {"data": json.dumps(final_response.model_dump())}
+                async for event in agent.get_stream_response([user_message], conversation.id, turn_context):
+                    yield {"data": event.model_dump_json()}
 
         except asyncio.CancelledError:
             logger.info("stream_chat_client_disconnected", conversation_id=conversation.id)
@@ -109,10 +118,9 @@ async def chat_stream(
                 error=str(e),
                 exc_info=True,
             )
-            error_response = StreamResponse(content="An error occurred. Please try again.", done=True)
-            yield {"data": json.dumps(error_response.model_dump())}
+            yield {"data": ErrorEvent().model_dump_json()}
 
-    # sep="\n" keeps the frames byte-identical to the StreamingResponse this replaced.
+    # sep="\n": "data: {...}\n\n" frames, the framing `stream-chat.ts` splits on.
     return EventSourceResponse(event_generator(), sep="\n")
 
 

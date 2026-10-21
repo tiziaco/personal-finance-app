@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.agents.csv_mapping import ColumnHint, propose_mapping
 from app.agents.transaction_labeler import MerchantToLabel, label
 from app.core.logging import logger
+from app.database.dependencies import release_connection
 from app.modules.transaction.domain import normalise_merchant
 from app.modules.transaction.imports.domain import (
     ColumnProfile,
@@ -44,20 +45,6 @@ from app.modules.transaction.schemas import CATEGORIES, TransactionImport
 from app.modules.transaction.service import transaction_service
 
 UPLOAD_TTL = timedelta(minutes=30)
-
-
-async def _release_connection(session: AsyncSession) -> None:
-    """Commit what the request has done so far, handing the connection back before a model call.
-
-    The import's model calls take seconds, and DbSession would otherwise hold its
-    pool connection idle in a transaction through them (docs/TODO.md, "a model
-    call holds the request's DB connection"). Nothing written before this point
-    depends on what follows: at most a held upload, which must survive a failed
-    model call anyway. The session opens a new transaction on its next use, and
-    DbSession commits that one after the route as usual. With insights' generate, the
-    only commits outside DbSession in this app; keep it that way.
-    """
-    await session.commit()
 
 
 def _merchants_to_label(rows: list[ImportRow]) -> list[MerchantToLabel]:
@@ -126,7 +113,8 @@ class ImportService:
             folded = {name.strip().casefold(): field for name, field in remembered.mapping.items()}
             mapping = {c: folded.get(c.strip().casefold(), ImportField.IGNORE) for c in parsed.columns}
             return clean_proposal(parsed.columns, mapping), MappingSource.REMEMBERED
-        await _release_connection(session)
+        # Committing the held upload now is safe: it must survive a failed model call anyway.
+        await release_connection(session)
         proposal = await propose_mapping(
             [ColumnHint(p.name, p.empty_rate, p.date_format, p.amount_style) for p in profiles],
             [row.cells for row in samples],
@@ -161,7 +149,7 @@ class ImportService:
         )
         fresh = [row for row, new in zip(rows, keep, strict=True) if new]
 
-        await _release_connection(session)
+        await release_connection(session)
         labelled = await label(_merchants_to_label(fresh), CATEGORIES, user_id=user_id, upload_id=upload_id)
         if labelled.all_failed:
             raise CategorisationUnavailableError("Categorisation is unavailable", upload_id=str(upload_id))

@@ -47,7 +47,8 @@ file before writing any code.
 - `raise ... from e` on every external error to preserve the traceback
 - `flush()` + `refresh()` after DB writes — never `commit()`; the `get_db_session` dependency owns the transaction.
   `DbSession` is `scope="function"`, so the commit runs after the route returns and before the response is sent.
-  No carve-outs
+  The one exception: before awaiting a model call, `release_connection(session)` (`app/database/dependencies.py`)
+  commits the work so far and hands the connection back
 - A background task or a `StreamingResponse` body never uses the request's session: by the time it runs, that
   session is committed and closed. Pass plain values; a task that needs the database opens its own from
   `request.app.state.session_factory`

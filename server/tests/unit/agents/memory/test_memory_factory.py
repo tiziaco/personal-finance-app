@@ -53,6 +53,17 @@ async def test_create_memory_does_not_await_from_config():
     fake_cls.from_config.assert_called_once()
 
 
+async def test_memory_config_carries_the_instructions():
+    fake_cls = MagicMock()
+    fake_cls.from_config = MagicMock(return_value=MagicMock(spec=AsyncMemory))
+
+    with patch.object(factory, "AsyncMemory", fake_cls):
+        await factory.create_memory()
+
+    config = fake_cls.from_config.call_args.kwargs["config_dict"]
+    assert config["custom_instructions"] == factory.MEMORY_INSTRUCTIONS
+
+
 def test_from_config_is_not_a_coroutine_function():
     """Guards the reverse drift: mem0 making construction async again."""
     assert not inspect.iscoroutinefunction(AsyncMemory.from_config)

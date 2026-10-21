@@ -4,6 +4,7 @@ This module provides a registry pattern for agents, allowing easy addition
 of new agent types without modifying core initialization logic.
 """
 
+from collections.abc import Mapping
 from typing import (
     Dict,
     Type,
@@ -13,6 +14,7 @@ from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 
 from app.agents.base.agent import BaseAgent
 from app.agents.chatbot.graph import ChatbotAgent
+from app.agents.chatbot.toolkit import Toolkit
 from app.core.logging import logger
 
 # Agent Registry - Add new agents here
@@ -24,7 +26,7 @@ AGENT_REGISTRY: Dict[str, Type[BaseAgent]] = {
 }
 
 
-async def initialize_agents(checkpointer: AsyncPostgresSaver) -> Dict[str, BaseAgent]:
+async def initialize_agents(checkpointer: AsyncPostgresSaver, toolkits: Mapping[str, Toolkit]) -> Dict[str, BaseAgent]:
     """Initialize all registered agents with pre-compiled graphs.
 
     This function:
@@ -36,11 +38,13 @@ async def initialize_agents(checkpointer: AsyncPostgresSaver) -> Dict[str, BaseA
 
     Args:
         checkpointer: The AsyncPostgresSaver instance for all agents to share
+        toolkits: Tools to inject, by agent name; every registered agent needs an entry
 
     Returns:
         Dict[str, BaseAgent]: Dictionary mapping agent names to initialized instances
 
     Raises:
+        KeyError: If a registered agent has no toolkit, so a lost entry fails at startup
         Exception: If any agent fails to initialize (fails fast for startup safety)
     """
     agents: Dict[str, BaseAgent] = {}
@@ -52,8 +56,9 @@ async def initialize_agents(checkpointer: AsyncPostgresSaver) -> Dict[str, BaseA
             agent_class=agent_class.__name__,
         )
 
-        # Instantiate the agent
-        agent = agent_class()
+        if agent_name not in toolkits:
+            raise KeyError(f"no toolkit for agent {agent_name!r}")
+        agent = agent_class(toolkit=toolkits[agent_name])
 
         # Pre-compile the graph at startup
         await agent.create_graph(checkpointer)

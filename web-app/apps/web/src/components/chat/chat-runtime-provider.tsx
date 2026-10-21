@@ -37,6 +37,7 @@ import {
   replaceConversation,
   seedEmptyHistory,
 } from "@/lib/chat/chat-cache"
+import type { Timing } from "@/lib/chat/activity"
 import {
   exchangeReducer,
   toThreadMessages,
@@ -114,6 +115,13 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const history = useChatHistory(historyId)
 
   const [exchange, dispatch] = useReducer(exchangeReducer, null)
+  // The timing of each reply finished on this visit to the conversation, by
+  // its position in the history: the saved copy that replaces a finished
+  // exchange keeps its "Worked for" header. Reopened later, it reads without.
+  const [finished, setFinished] = useState<{
+    conversationId: string
+    timings: ReadonlyMap<number, Timing>
+  } | null>(null)
   const sendRef = useRef<Send | null>(null)
   const restoreTextRef = useRef<(text: string) => void>(() => {})
 
@@ -128,6 +136,8 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
     }
     dispatch({ type: "left", activeId })
     setCreatedId(null)
+    // A first send's conversation keeps its timings as the URL moves to it.
+    setFinished((f) => (f?.conversationId === activeId ? f : null))
   }, [activeId])
 
   useEffect(
@@ -214,7 +224,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   const settle = useCallback(
     (send: Send, conversationId: string, text: string, error: unknown) => {
       if (send.controller.signal.aborted) {
-        dispatch({ type: "stopped", send })
+        dispatch({ type: "stopped", send, now: Date.now() })
         markHistoryStale(queryClient, conversationId)
       } else if (error instanceof ApiError) {
         // Refused before anything streamed: nothing to show but the toast,
@@ -223,7 +233,7 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         dispatch({ type: "cleared", send })
         restoreTextRef.current(text)
       } else {
-        dispatch({ type: "failed", send })
+        dispatch({ type: "failed", send, now: Date.now() })
         markHistoryStale(queryClient, conversationId)
       }
     },
@@ -243,11 +253,13 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
         conversationId: activeId,
       }
       sendRef.current = opened
+      const startedAt = Date.now()
       dispatch({
         type: "start",
         send: opened,
         userText: text,
         baseCount: cachedHistory(queryClient, activeId).length,
+        now: startedAt,
       })
 
       const ready = await ensureConversation(opened, text)
@@ -257,21 +269,41 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
 
       // Stopped before the stream started: nothing was sent, nothing to stream.
       if (send.controller.signal.aborted) {
-        dispatch({ type: "stopped", send })
+        dispatch({ type: "stopped", send, now: Date.now() })
         release(sendRef, send)
         return
       }
 
       try {
-        for await (const chunk of streamChat({
+        let endedAt: number | null = null
+        for await (const event of streamChat({
           conversationId,
           message: text,
           request,
           signal: send.controller.signal,
         })) {
-          dispatch({ type: "chunk", send, text: chunk })
+          const now = Date.now()
+          if (event.type === "done") endedAt = now
+          dispatch({ type: "event", send, event, now })
         }
         await refetchHistory(queryClient, conversationId)
+        // The refetched history ends with this send's reply. A user who left
+        // meanwhile reopens it later, without the timing.
+        const saved = cachedHistory(queryClient, conversationId)
+        const reply = saved.length - 1
+        if (
+          owns(sendRef, send) &&
+          endedAt !== null &&
+          saved[reply]?.role === "assistant"
+        ) {
+          const timing = { startedAt, endedAt }
+          setFinished((f) => ({
+            conversationId,
+            timings: new Map(
+              f?.conversationId === conversationId ? f.timings : [],
+            ).set(reply, timing),
+          }))
+        }
         dispatch({ type: "cleared", send })
         requestTitle(conversationId)
       } catch (error) {
@@ -296,9 +328,14 @@ export function ChatRuntimeProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const savedMessages = history.data?.messages ?? NO_MESSAGES
+  const timings =
+    finished && finished.conversationId === historyId
+      ? finished.timings
+      : undefined
   const messages = useMemo(
-    () => toThreadMessages(savedMessages, exchange, activeId, historyId),
-    [activeId, exchange, historyId, savedMessages],
+    () =>
+      toThreadMessages(savedMessages, exchange, activeId, historyId, timings),
+    [activeId, exchange, historyId, savedMessages, timings],
   )
 
   const runtime = useExternalStoreRuntime<ThreadMessageLike>({

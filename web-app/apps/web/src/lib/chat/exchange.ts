@@ -1,5 +1,14 @@
 import type { ThreadMessageLike } from "@assistant-ui/react"
-import type { Message } from "@app/api-client/types"
+import type { ChatMessage } from "@app/api-client/types"
+
+import {
+  activityReducer,
+  emptyActivity,
+  fromHistory,
+  type ActivityState,
+  type Timing,
+} from "./activity"
+import type { StreamEvent } from "./stream-chat"
 
 /**
  * One send. Stop aborts its controller; `conversationId` is the conversation
@@ -28,18 +37,49 @@ export type Exchange = {
   baseCount: number
   userText: string
   replyText: string
+  activity: ActivityState
   status: "running" | "stopped" | "error"
 }
 
 export type ExchangeAction =
-  | { type: "start"; send: Send; userText: string; baseCount: number }
+  | {
+      type: "start"
+      send: Send
+      userText: string
+      baseCount: number
+      now: number
+    }
   | { type: "created"; send: Send; next: Send }
   | { type: "rebased"; send: Send; baseCount: number }
-  | { type: "chunk"; send: Send; text: string }
-  | { type: "stopped"; send: Send }
-  | { type: "failed"; send: Send }
+  | { type: "event"; send: Send; event: StreamEvent; now: number }
+  | { type: "stopped"; send: Send; now: number }
+  | { type: "failed"; send: Send; now: number }
   | { type: "cleared"; send: Send }
   | { type: "left"; activeId: string | null }
+
+/**
+ * A user stop or a failed stream sends no `done`, so the block would keep
+ * timing and its running lookups keep spinning. Close it: the lookups that
+ * never finished read as failed, and the header reads as stopped when the
+ * user stopped it. A failure keeps the neutral timing: the reply's own error
+ * line says what went wrong.
+ */
+function closeActivity(
+  activity: ActivityState,
+  now: number,
+  stopped: boolean,
+): ActivityState {
+  return {
+    ...activity,
+    stopped,
+    endedAt: activity.endedAt ?? now,
+    parts: activity.parts.map((part) =>
+      part.kind === "tool" && part.status === "running"
+        ? { ...part, status: "error" }
+        : part,
+    ),
+  }
+}
 
 export function exchangeReducer(
   state: Exchange | null,
@@ -51,6 +91,7 @@ export function exchangeReducer(
       baseCount: action.baseCount,
       userText: action.userText,
       replyText: "",
+      activity: emptyActivity(action.now),
       status: "running",
     }
   }
@@ -68,12 +109,27 @@ export function exchangeReducer(
       return { ...state, send: action.next }
     case "rebased":
       return { ...state, baseCount: action.baseCount }
-    case "chunk":
-      return { ...state, replyText: state.replyText + action.text }
+    case "event":
+      return {
+        ...state,
+        replyText:
+          action.event.type === "text"
+            ? state.replyText + action.event.text
+            : state.replyText,
+        activity: activityReducer(state.activity, action.event, action.now),
+      }
     case "stopped":
-      return { ...state, status: "stopped" }
+      return {
+        ...state,
+        status: "stopped",
+        activity: closeActivity(state.activity, action.now, true),
+      }
     case "failed":
-      return { ...state, status: "error" }
+      return {
+        ...state,
+        status: "error",
+        activity: closeActivity(state.activity, action.now, false),
+      }
     case "cleared":
       return null
   }
@@ -91,12 +147,21 @@ export function showsExchange(
   return exchange.send.conversationId === activeId || activeId === null
 }
 
-/** The thread: the saved history, then the exchange in flight if it shows here. */
+/**
+ * The thread: the saved history, then the exchange in flight if it shows here.
+ *
+ * A message's id is its position in the history, the exchange's included: when
+ * the history refetched at the end of a send replaces the exchange, its copy
+ * keeps the id, so the reply is not remounted and a block the user opened stays
+ * open. `timings` (by history position) are the replies finished on this visit,
+ * whose blocks keep their "Worked for" header (spec §7 drops it on reopening).
+ */
 export function toThreadMessages(
-  saved: Message[],
+  saved: ChatMessage[],
   exchange: Exchange | null,
   activeId: string | null,
   historyId: string | null,
+  timings?: ReadonlyMap<number, Timing>,
 ): ThreadMessageLike[] {
   const visible =
     exchange && showsExchange(exchange, activeId) ? exchange : null
@@ -105,15 +170,25 @@ export function toThreadMessages(
     id: `${historyId}-${i}`,
     role: m.role === "user" ? "user" : "assistant",
     content: m.content,
+    ...(m.activity && {
+      metadata: {
+        custom: { activity: fromHistory(m.activity, timings?.get(i)) },
+      },
+    }),
   }))
   if (!visible) return converted
   return [
     ...converted,
-    { id: "inflight-user", role: "user", content: visible.userText },
     {
-      id: "inflight-assistant",
+      id: `${historyId}-${visible.baseCount}`,
+      role: "user",
+      content: visible.userText,
+    },
+    {
+      id: `${historyId}-${visible.baseCount + 1}`,
       role: "assistant",
       content: visible.replyText,
+      metadata: { custom: { activity: visible.activity } },
       status:
         visible.status === "running"
           ? { type: "running" }

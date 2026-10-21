@@ -29,14 +29,170 @@ export const SendChatMessageBody = zod
     "Request model for chat endpoint.\n\nAttributes:\n    message: The user's message to send.",
   )
 
+export const sendChatMessageResponseMessageActivityOnePartsItemOneTypeDefault = `reasoning`
+export const sendChatMessageResponseMessageActivityOnePartsItemTwoTypeDefault = `tool`
+export const sendChatMessageResponseMessageActivityOneStoppedDefault = false
+
 export const SendChatMessageResponse = zod
   .object({
     message: zod
       .object({
-        content: zod.string().min(1).describe("The content of the message"),
-        role: zod
-          .enum(["user", "assistant", "system"])
-          .describe("The role of the message sender"),
+        activity: zod
+          .union([
+            zod
+              .object({
+                parts: zod
+                  .array(
+                    zod.union([
+                      zod
+                        .object({
+                          text: zod
+                            .string()
+                            .describe(
+                              "The reasoning summary, its parts separated by a blank line",
+                            ),
+                          type: zod
+                            .literal("reasoning")
+                            .default(
+                              sendChatMessageResponseMessageActivityOnePartsItemOneTypeDefault,
+                            )
+                            .meta({ title: "Type" }),
+                        })
+                        .describe(
+                          "The readable summary of the model's reasoning for one of a turn's model calls.",
+                        ),
+                      zod
+                        .object({
+                          display: zod
+                            .union([
+                              zod
+                                .object({
+                                  period: zod.union([zod.string(), zod.null()]),
+                                  summary: zod.array(
+                                    zod
+                                      .object({
+                                        kind: zod.enum([
+                                          "count",
+                                          "text",
+                                          "total",
+                                          "share",
+                                          "rate",
+                                          "weekendBias",
+                                        ]),
+                                        label: zod
+                                          .union([zod.string(), zod.null()])
+                                          .optional(),
+                                        value: zod.union([
+                                          zod.number(),
+                                          zod.int(),
+                                          zod.string(),
+                                        ]),
+                                      })
+                                      .describe(
+                                        "One figure in a tool row's one-line summary, e.g. a count, an amount or a share.",
+                                      ),
+                                  ),
+                                  table: zod.union([
+                                    zod
+                                      .object({
+                                        columns: zod.array(
+                                          zod
+                                            .object({
+                                              key: zod.string(),
+                                              kind: zod.enum([
+                                                "text",
+                                                "count",
+                                                "date",
+                                                "total",
+                                                "net",
+                                                "transaction",
+                                                "share",
+                                                "rate",
+                                                "change",
+                                              ]),
+                                              label: zod.string(),
+                                            })
+                                            .describe(
+                                              "A column of a tool result's table: the row key, its header and how to format it.",
+                                            ),
+                                        ),
+                                        rows: zod.array(
+                                          zod.record(
+                                            zod.string(),
+                                            zod.union([
+                                              zod.string(),
+                                              zod.number(),
+                                              zod.int(),
+                                              zod.null(),
+                                            ]),
+                                          ),
+                                        ),
+                                      })
+                                      .describe(
+                                        "The figures behind a tool result, as values the client formats by column kind; bounded for the UI.",
+                                      ),
+                                    zod.null(),
+                                  ]),
+                                  title: zod.string(),
+                                })
+                                .describe(
+                                  "What the chat UI shows for one tool call: a title, the period covered, a summary and an optional table.",
+                                ),
+                              zod.null(),
+                            ])
+                            .describe(
+                              "What the chat shows for the result; null when the call failed or its display can no longer be shown",
+                            ),
+                          id: zod
+                            .string()
+                            .describe(
+                              "The tool call's id, as the stream's tool events carry it",
+                            ),
+                          name: zod.string().describe("The tool's name"),
+                          ok: zod
+                            .boolean()
+                            .describe("Whether the call produced a result"),
+                          title: zod
+                            .string()
+                            .describe(
+                              "The tool's display title, as the stream's tool_started event carries it",
+                            ),
+                          type: zod
+                            .literal("tool")
+                            .default(
+                              sendChatMessageResponseMessageActivityOnePartsItemTwoTypeDefault,
+                            )
+                            .meta({ title: "Type" }),
+                        })
+                        .describe(
+                          "One tool call a reply made, as the chat shows it.",
+                        ),
+                    ]),
+                  )
+                  .describe("Reasoning and tool parts, in order"),
+                stopped: zod
+                  .boolean()
+                  .default(
+                    sendChatMessageResponseMessageActivityOneStoppedDefault,
+                  )
+                  .describe(
+                    "Whether the server ended the turn (step cap or repeat)",
+                  ),
+              })
+              .describe(
+                "What the assistant did on the way to a reply: reasoning and tool calls, in order.",
+              ),
+            zod.null(),
+          ])
+          .describe(
+            "A reply's reasoning and tool calls; null for a user message, and for a reply with neither that was not stopped",
+          ),
+        content: zod
+          .string()
+          .describe(
+            "The message text; for a reply, the text of the whole turn",
+          ),
+        role: zod.enum(["user", "assistant"]).describe("Who wrote the message"),
       })
       .describe("The assistant's response message"),
   })
@@ -62,22 +218,185 @@ export const ListChatMessagesParams = zod.object({
   conversation_id: zod.uuid(),
 })
 
+export const listChatMessagesResponseMessagesItemActivityOnePartsItemOneTypeDefault = `reasoning`
+export const listChatMessagesResponseMessagesItemActivityOnePartsItemTwoTypeDefault = `tool`
+export const listChatMessagesResponseMessagesItemActivityOneStoppedDefault = false
+
 export const ListChatMessagesResponse = zod
   .object({
     messages: zod
       .array(
         zod
           .object({
-            content: zod.string().min(1).describe("The content of the message"),
+            activity: zod
+              .union([
+                zod
+                  .object({
+                    parts: zod
+                      .array(
+                        zod.union([
+                          zod
+                            .object({
+                              text: zod
+                                .string()
+                                .describe(
+                                  "The reasoning summary, its parts separated by a blank line",
+                                ),
+                              type: zod
+                                .literal("reasoning")
+                                .default(
+                                  listChatMessagesResponseMessagesItemActivityOnePartsItemOneTypeDefault,
+                                )
+                                .meta({ title: "Type" }),
+                            })
+                            .describe(
+                              "The readable summary of the model's reasoning for one of a turn's model calls.",
+                            ),
+                          zod
+                            .object({
+                              display: zod
+                                .union([
+                                  zod
+                                    .object({
+                                      period: zod.union([
+                                        zod.string(),
+                                        zod.null(),
+                                      ]),
+                                      summary: zod.array(
+                                        zod
+                                          .object({
+                                            kind: zod.enum([
+                                              "count",
+                                              "text",
+                                              "total",
+                                              "share",
+                                              "rate",
+                                              "weekendBias",
+                                            ]),
+                                            label: zod
+                                              .union([zod.string(), zod.null()])
+                                              .optional(),
+                                            value: zod.union([
+                                              zod.number(),
+                                              zod.int(),
+                                              zod.string(),
+                                            ]),
+                                          })
+                                          .describe(
+                                            "One figure in a tool row's one-line summary, e.g. a count, an amount or a share.",
+                                          ),
+                                      ),
+                                      table: zod.union([
+                                        zod
+                                          .object({
+                                            columns: zod.array(
+                                              zod
+                                                .object({
+                                                  key: zod.string(),
+                                                  kind: zod.enum([
+                                                    "text",
+                                                    "count",
+                                                    "date",
+                                                    "total",
+                                                    "net",
+                                                    "transaction",
+                                                    "share",
+                                                    "rate",
+                                                    "change",
+                                                  ]),
+                                                  label: zod.string(),
+                                                })
+                                                .describe(
+                                                  "A column of a tool result's table: the row key, its header and how to format it.",
+                                                ),
+                                            ),
+                                            rows: zod.array(
+                                              zod.record(
+                                                zod.string(),
+                                                zod.union([
+                                                  zod.string(),
+                                                  zod.number(),
+                                                  zod.int(),
+                                                  zod.null(),
+                                                ]),
+                                              ),
+                                            ),
+                                          })
+                                          .describe(
+                                            "The figures behind a tool result, as values the client formats by column kind; bounded for the UI.",
+                                          ),
+                                        zod.null(),
+                                      ]),
+                                      title: zod.string(),
+                                    })
+                                    .describe(
+                                      "What the chat UI shows for one tool call: a title, the period covered, a summary and an optional table.",
+                                    ),
+                                  zod.null(),
+                                ])
+                                .describe(
+                                  "What the chat shows for the result; null when the call failed or its display can no longer be shown",
+                                ),
+                              id: zod
+                                .string()
+                                .describe(
+                                  "The tool call's id, as the stream's tool events carry it",
+                                ),
+                              name: zod.string().describe("The tool's name"),
+                              ok: zod
+                                .boolean()
+                                .describe("Whether the call produced a result"),
+                              title: zod
+                                .string()
+                                .describe(
+                                  "The tool's display title, as the stream's tool_started event carries it",
+                                ),
+                              type: zod
+                                .literal("tool")
+                                .default(
+                                  listChatMessagesResponseMessagesItemActivityOnePartsItemTwoTypeDefault,
+                                )
+                                .meta({ title: "Type" }),
+                            })
+                            .describe(
+                              "One tool call a reply made, as the chat shows it.",
+                            ),
+                        ]),
+                      )
+                      .describe("Reasoning and tool parts, in order"),
+                    stopped: zod
+                      .boolean()
+                      .default(
+                        listChatMessagesResponseMessagesItemActivityOneStoppedDefault,
+                      )
+                      .describe(
+                        "Whether the server ended the turn (step cap or repeat)",
+                      ),
+                  })
+                  .describe(
+                    "What the assistant did on the way to a reply: reasoning and tool calls, in order.",
+                  ),
+                zod.null(),
+              ])
+              .describe(
+                "A reply's reasoning and tool calls; null for a user message, and for a reply with neither that was not stopped",
+              ),
+            content: zod
+              .string()
+              .describe(
+                "The message text; for a reply, the text of the whole turn",
+              ),
             role: zod
-              .enum(["user", "assistant", "system"])
-              .describe("The role of the message sender"),
+              .enum(["user", "assistant"])
+              .describe("Who wrote the message"),
           })
           .describe(
-            "One message in an agent's history.\n\nOutput shape only. The rules on what a user may send (length, script tags,\nnull bytes) live on `ChatRequest`: applied here they also judged the\nassistant's replies, so a long answer, or one quoting `<script>` in a code\nblock, turned the history route into a 500.\n\nAttributes:\n    role: The role of the message sender (user, assistant or system).\n    content: The content of the message.",
+            "One message of a conversation's history, as the client shows it.\n\nOutput shape only: no length or content rules, so a long reply, or one quoting\n`<script>` in a code block, is returned as stored.",
           ),
       )
-      .describe("List of all messages in the conversation"),
+      .describe(
+        "The conversation's messages: each user message, then the reply to it with its activity",
+      ),
   })
   .describe(
     "Response model for conversation history endpoint.\n\nAttributes:\n    messages: List of all messages in the conversation.",

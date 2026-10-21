@@ -7,12 +7,12 @@
  */
 
 /**
- * The role of the message sender
+ * Who wrote the message
  */
-export type MessageRole = (typeof MessageRole)[keyof typeof MessageRole]
+export type ChatMessageRole =
+  (typeof ChatMessageRole)[keyof typeof ChatMessageRole]
 
-export const MessageRole = {
+export const ChatMessageRole = {
   user: "user",
   assistant: "assistant",
-  system: "system",
 } as const

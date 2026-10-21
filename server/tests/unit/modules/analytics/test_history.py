@@ -87,3 +87,10 @@ def test_behaviour(history, period):
 def test_anomalies(history, period):
     expected = AnomaliesResponse.model_validate(find_anomalies(ROWS, period, 2.0, 90))
     assert history.anomalies(RANGE, 2.0, 90) == expected
+
+
+def test_span_is_the_first_and_last_usable_day():
+    history = AnalyticsHistory(rows=(*ROWS, row("2026-12-01", "-5.00")), today=TODAY)  # December is past today's month
+
+    assert history.span() == (min(r.date for r in ROWS), max(r.date for r in ROWS))
+    assert AnalyticsHistory(rows=(), today=TODAY).span() is None

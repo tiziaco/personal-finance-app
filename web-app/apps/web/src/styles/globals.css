@@ -9,3 +9,13 @@
 @custom-variant dark (&:is(.dark *));
 
 @import "@app/ui/styles/globals.css";
+
+/* The activity block's live label. */
+@keyframes activity-shimmer {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}

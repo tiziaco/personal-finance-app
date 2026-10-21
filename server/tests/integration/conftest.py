@@ -5,7 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 
-from app.agents.messages import Message
+from app.agents.messages import ChatMessage
 from app.main import app
 from app.modules.account import get_current_user
 from app.modules.account.models import User
@@ -45,14 +45,14 @@ def mock_agent():
     agent = MagicMock()
     agent.get_response = AsyncMock(
         return_value=[
-            Message(role="user", content="Hello"),
-            Message(role="assistant", content="Hi there!"),
+            ChatMessage(role="user", content="Hello"),
+            ChatMessage(role="assistant", content="Hi there!"),
         ]
     )
     agent.get_chat_history = AsyncMock(
         return_value=[
-            Message(role="user", content="Hello"),
-            Message(role="assistant", content="Hi there!"),
+            ChatMessage(role="user", content="Hello"),
+            ChatMessage(role="assistant", content="Hi there!"),
         ]
     )
     agent.llm_service.current_model_name.return_value = "gpt-5-mini"
@@ -91,7 +91,14 @@ def stub_checkpoint_deletion():
 
 @pytest_asyncio.fixture
 async def authenticated_client_with_agent(authenticated_client, mock_agent):
-    """HTTP client with both auth and chatbot agent overridden."""
+    """HTTP client with both auth and chatbot agent overridden.
+
+    The chat routes put `app.state.session_factory` in the turn's context for the
+    agent's tools, and no lifespan sets it under test. The agent is a mock that opens
+    no session, so a sentinel stands in; whatever was there before is put back, so
+    tests relying on its absence (`unauthenticated_client`) are unaffected.
+    """
     app.dependency_overrides[get_chatbot_agent] = lambda: mock_agent
-    yield authenticated_client
+    with patch.object(app.state, "session_factory", MagicMock(name="session_factory"), create=True):
+        yield authenticated_client
     app.dependency_overrides.pop(get_chatbot_agent, None)

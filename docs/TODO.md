@@ -69,18 +69,6 @@ refuse the read instead. **Blocked by** the superuser role in [`BUGS.md`](./BUGS
 role with `BYPASSRLS` ignores every policy. **Unblocks:** defence in depth for the finance
 tables.
 
-## Server — a model call holds the request's DB connection
-
-`POST /chatbot/chat/{id}` and `POST /conversation/conversation/{id}/title` load the
-conversation through `UserConversation`, which opens the request's `DbSession`
-transaction, then await a model call of several seconds before the session commits after
-the route. The pool connection sits idle in transaction for that long. Fine at one user's
-traffic; under concurrent chats it starves other requests of connections. The fix is to
-read what the call needs, release the session before the model call, and write with a
-short-lived session from `request.app.state.session_factory`, as a streaming body already
-must (`server/CLAUDE.md`, Code Conventions). The import routes and `POST /insights/generate` already release it
-(`_release_connection` in `transaction/imports/service.py` and `insights/service.py`). **Unblocks:** chat under concurrent load.
-
 ## Insights — word an outlier by what it was compared with
 
 Since 19 Oct 2026 an outlier carries `compared_with`, and the insights agent already receives
@@ -100,14 +88,6 @@ a z of about 170. Ticking the row recurring clears it, and so does a third month
 because, until then, rent looks exactly like a one-off; excluding `household_utilities` from
 the fallback would also hide a large furniture or appliance purchase. Revisit if users report
 it, for instance by not falling back for a charge the same merchant made about a month earlier.
-
-## Server — the chatbot names the default model after a fallback
-
-After an LLM fallback, the chatbot's inference-time metric label and its stored model name
-are the default model's (`current_model_name()`), not the one that answered. `LLMService`
-keeps no fallback position on itself any more, by design; the answering model is in the
-response's `response_metadata`. Read it from there. Found while making the fallback
-per call (15 Oct 2026).
 
 ## Server — every LLM call starts at the default model
 
@@ -159,9 +139,6 @@ button. **Unblocks:** public sign-up without an open-ended LLM bill. Reasoning:
 
 ## Web — tests the suite does not have yet
 
-- **A failed conversation create.** In `ChatRuntimeProvider`, a create that answers 500
-  clears the exchange and gives the text back to the composer if the user is still there.
-  The provider restructure moved this into `ensureConversation`; no test exercises it.
 - **End to end.** Nothing drives a browser. The `.spec.` suffix and the `e2e/**` exclude
   are reserved for Playwright; the first flow worth it is sign-up and sign-in through to a
   real screen.
@@ -176,7 +153,7 @@ Every `AnalyticsService` method loads the user's entire transaction history
 for. `AnalyticsHistory` fixes the fan-out inside one caller that needs several windows (an insights generation) but not across
 requests: the home dashboard, each `/analytics` tab and each period change are separate
 requests, and each reads every row again. Fine at one user's data; it grows with the history
-and with every caller step 7 adds.
+and with every caller the chat tools add.
 
 **Fix:** cache a user's analysis rows on the server, keyed by `user_id`, and drop the entry
 whenever that user's transactions change. **Decide first:**
@@ -230,11 +207,93 @@ A picker would let the user look back; every analytics route already takes
 `month` parameter. **Unblocks:**
 looking at a past month without the analytics page. Reasoning: `analytics.md` §6.
 
+## Chat — conversation summaries
+
+A very long conversation drops its oldest turns from what the model is sent, oldest first,
+once the history passes `CHAT_HISTORY_MAX_TOKENS`; nothing stands in for them, so the
+assistant forgets how it began. Summarising the dropped turns (into the checkpoint, or
+beside it) would keep the thread. Left out of step 7 by decision (20 Oct 2026).
+**Unblocks:** long-running conversations. Reasoning: [`product/features/chat.md`](./product/features/chat.md) §4.
+
 ## Chat — free-form questions over the user's data
 
-The chat tools (step 7) call the analytics library's fixed functions. A question they do not
+The chat tools call the analytics library's fixed functions. A question they do not
 cover could be answered by generated code run in an isolated sandbox with its own environment
 (polars or similar); the server only hands it the user's rows from
 `transaction_service.list_for_analysis`, as CSV or JSON, so no dataframe library enters
 `server/pyproject.toml`. **Unblocks:** open-ended questions in chat. Decided with step 5a
 (15 Oct 2026): the server library stays plain Python.
+
+## Server — the agent layer imports the chatbot's stream contract
+
+`app/agents/base/agent.py` and `app/agents/messages.py` import
+`app/agents/chatbot/events.py` (the stream events) and the toolkit's display models from
+`app/agents/chatbot/toolkit.py`: the generic layer knows one agent's contract, and an import
+cycle is avoided only because `app/agents/chatbot/__init__.py` re-exports nothing. Move
+`events.py` and the toolkit and display models up to `app/agents/` (mechanical; the
+`chat` node name `BaseAgent` streams from goes with them). **Unblocks:** a second agent or
+a second toolkit, which must not import the chatbot package to stream. Found in step 7's
+final review (20 Oct 2026).
+
+The step's code review (21 Oct 2026) proposed a better fix. `BaseAgent` has one subclass,
+and its streaming and history-rebuild code (`get_stream_response`, the reasoning-block
+parsing, building `Activity`/`ToolPart` from a checkpoint, the `_tool_title` hook) is all
+chat semantics. Move that code into `app/agents/chatbot/` (for example `stream.py` and
+`history.py`) and shrink `BaseAgent` back to the generic shell: graph readiness, the turn
+config, memory. The `_tool_title` hook and the re-export restriction on
+`chatbot/__init__.py` then go, and so does the duplication between `get_response` and
+`get_stream_response` (readiness check, memory fetch, graph input, `update_memory`).
+Prefer this over hoisting `events.py` when a second agent arrives.
+
+## Chat — keep "Worked for" by saving the turn's duration
+
+A freshly saved reply keeps its "Worked for 4s" header only while the user stays on the
+conversation. The web holds a `finished` state and a timings map keyed by the history
+index for it (`chat-runtime-provider.tsx`, `exchange.ts`'s `timings`, `activity.ts`'s
+`fromHistory(…, timing?)`), about 40 lines. Saving the turn's duration with the checkpoint,
+beside `stopped`, and returning it on `Activity` would let every reopened reply show it
+and remove that state. **Decide first:** it changes the rule in
+[`product/features/chat.md`](./product/features/chat.md) that a reopened reply reads
+without timing. From step 7's code review (21 Oct 2026, M5).
+
+## Chat — code review leftovers
+
+Small items from step 7's code review (21 Oct 2026), each correct as it stands and none
+blocking. **Unblocks:** nothing; pick them up when touching the file.
+
+- **Groupings are strings in three places.** `search.py`'s `_group_label`, `display.py`'s
+  `_group_name` and `SearchArgs` each branch on `group_by == "month"` and so on. One
+  `Weekday` literal (with `WEEKDAYS` from `get_args`) and one table of key, label and
+  order would replace the chains.
+- **Date-order validation is split.** `SearchArgs` checks `date_from <= date_to` in its
+  validator (`schemas.py`); `PeriodArgs` is checked at run time in `resolve_period`
+  (`finance/service.py`), with a different message. Pick one place.
+- **`TurnContext.cache` is an untyped `dict[str, Any]`**, holding a `Future` under the
+  `HISTORY_KEY` string. A typed per-turn slot, or per-turn state the toolkit builds
+  itself, would say what it holds.
+- **Each tool call looks its tool up twice.** `_tool_call` (`graph.py`) repeats
+  `_invoke_tool`'s lookup and `model_validate`s the display that `_invoke_tool` has just
+  `model_dump`ed into the artifact. Returning the outcome beside the `ToolMessage` would do
+  both once.
+- **The web's view of an activity.** `chat-message.tsx` casts `metadata.custom.activity`
+  to `ActivityState`: a typed accessor in `lib/chat/activity.ts` would hold the cast. Its
+  `ActivityPart` renames the generated `type`/`ok` to `kind`/`status`. And the server sends
+  `Activity(parts=[], stopped=True)` for a stopped turn with no lookups
+  (`agent.py`), which both `chat-message.tsx` and `ActivityBlock` hide, so a reopened
+  stopped reply with no lookups never reads "Stopped": decide which side is right.
+- **Two reasoning paragraphs can run together** in the live stream of a stopped turn:
+  `get_stream_response` clears `last_reasoning_key` after a text event, so the wrap-up's
+  first reasoning delta arrives without its `"\n\n"` separator. Live only; a reopened
+  conversation shows just the wrap-up's reasoning.
+- **`LLMRegistry.get`'s overrides path** (`get(name, temperature=…)`, which replaces the
+  entry's whole configuration) has no caller in `app/`; only a registry test uses it.
+  Remove it, or keep it as the template's extension point on purpose.
+
+## Web — one minus sign for percents
+
+Money is signed with a true minus (`formatSignedAmount`: "−€84.20"), but the analytics
+page's `formatPct` writes the locale's hyphen-minus ("-8.3%"), and the dashboard's
+`formatPercent` a true minus again. The chat's tool rows now follow the analytics page,
+so they inherit the hyphen. **Unblocks:** consistent figures; pick one rule for percents
+in `components/analytics/format.ts` and `components/transactions/format.ts`. From step 7's
+code review (21 Oct 2026).

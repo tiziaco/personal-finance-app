@@ -11,6 +11,7 @@ from langfuse import Langfuse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
+from app.agents.chatbot.toolkit import Toolkit
 from app.api.middlewares import (
     AccessLogMiddleware,
     AuthMiddleware,
@@ -46,6 +47,7 @@ from app.modules import analytics as _analytics
 from app.modules import conversation as _conversation
 from app.modules import insights as _insights
 from app.modules import transaction as _transaction
+from app.modules.conversation import finance_toolkit
 
 # Load environment variables
 load_dotenv()
@@ -56,6 +58,15 @@ langfuse = Langfuse(
     secret_key=os.getenv("LANGFUSE_SECRET_KEY"),
     host=os.getenv("LANGFUSE_HOST", "https://cloud.langfuse.com"),
 )
+
+
+def agent_toolkits() -> dict[str, Toolkit]:
+    """The tools each agent runs with, by agent name.
+
+    Modules build them and they are handed over here: `app.agents` may not import a
+    module (R2). `initialize_agents` refuses to start without an entry for every agent.
+    """
+    return {"chatbot": finance_toolkit()}
 
 
 @asynccontextmanager
@@ -83,7 +94,7 @@ async def lifespan(app: FastAPI):
     logger.info("checkpointer_initialized_at_startup")
 
     # Initialize all agents with pre-compiled graphs
-    agents = await initialize_agents(checkpointer)
+    agents = await initialize_agents(checkpointer, agent_toolkits())
     logger.info("application_ready", agent_names=list(agents.keys()))
 
     # Store in app state for dependency injection

@@ -252,6 +252,22 @@ class TestGenerateConversationTitle:
         assert response.json()["name"] == "Grocery budget"
         mock_agent.title_for.assert_awaited_once_with(untitled_conversation.id, untitled_conversation.user_id)
 
+    async def test_title_releases_the_connection_before_the_model_and_still_saves(
+        self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
+    ):
+        seen = {}
+
+        async def title(*_):
+            seen["in_transaction"] = db_session.in_transaction()
+            return "Grocery budget"
+
+        mock_agent.title_for = title
+        response = await authenticated_client_with_agent.post(self._url(untitled_conversation.id))
+        assert seen["in_transaction"] is False
+        assert response.json()["name"] == "Grocery budget"
+        await db_session.refresh(untitled_conversation)
+        assert untitled_conversation.name == "Grocery budget"
+
     async def test_named_conversation_is_unchanged(
         self, authenticated_client_with_agent, untitled_conversation, mock_agent, db_session
     ):

@@ -16,6 +16,17 @@ export const TONE_FILL: Record<Tone, string> = {
   neutral: "fill-muted-foreground",
 }
 
+/** A savings rate; bad when negative, a dash when there is none. */
+export function Rate({ pct }: { pct: number | null }) {
+  if (pct === null) return <>—</>
+  const tone = changeTone(pct, "income")
+  return (
+    <span data-tone={tone} className={TONE_CLASS[tone]}>
+      {formatPct(pct)}
+    </span>
+  )
+}
+
 /** A savings rate in words, bad when spending beat income; a dash when there is none. */
 export function SavingsHeadline({ pct }: { pct: number | null }) {
   if (pct === null) return <span>—</span>

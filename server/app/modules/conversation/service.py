@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.chatbot.graph import ChatbotAgent
 from app.core.logging import logger
+from app.database.dependencies import release_connection
 from app.modules.conversation.exceptions import ConversationNotFoundError
 from app.modules.conversation.models import Conversation
 from app.modules.conversation.repository import conversation_repository
@@ -81,6 +82,7 @@ class ConversationService:
         if conversation.name:
             return conversation
 
+        await release_connection(session)
         title = await agent.title_for(conversation.id, conversation.user_id)
         if title is None:
             return conversation

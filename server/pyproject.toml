@@ -34,9 +34,6 @@ dependencies = [
     "prometheus-client>=0.19.0",
     "prometheus-fastapi-instrumentator>=8.1.0",
     "asgiref>=3.8.1",
-    "duckduckgo-search>=3.9.0",
-    "ddgs>=9.10.0",
-    "langchain-community>=0.4.1",
     "tenacity>=9.1.2",
     "mem0ai>=1.0.0",
     "uvloop>=0.22.1",
@@ -270,3 +267,18 @@ source_modules = [
     "app.modules.transaction.service",
 ]
 forbidden_modules = ["app.modules.transaction.imports"]
+
+[[tool.importlinter.contracts]]
+name = "R10: conversation's core never imports its finance sub-package"
+type = "forbidden"
+source_modules = [
+    "app.modules.conversation.dependencies",
+    "app.modules.conversation.exceptions",
+    "app.modules.conversation.handlers",
+    "app.modules.conversation.models",
+    "app.modules.conversation.repository",
+    "app.modules.conversation.router",
+    "app.modules.conversation.schemas",
+    "app.modules.conversation.service",
+]
+forbidden_modules = ["app.modules.conversation.finance"]

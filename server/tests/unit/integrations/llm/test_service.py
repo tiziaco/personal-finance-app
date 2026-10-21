@@ -51,8 +51,8 @@ class TestLLMServiceInit:
     def test_no_client_is_built_until_asked_for(self):
         """__init__ must not construct a client.
 
-        It runs at import via the module-level `llm_service` singleton, and
-        constructing a client is what requires a credential.
+        It runs at import for a module-level service (`structured_llm_service`),
+        and constructing a client is what requires a credential.
         """
         service = LLMService()
         assert service._llm is None
@@ -170,9 +170,8 @@ class TestLLMServiceCall:
     async def test_pinned_model_does_not_persist(self, messages):
         """A pinned model applies to its own call and no others.
 
-        `llm_service` is a module-level singleton shared by every request, so an
-        override left in place would retarget all subsequent traffic until the
-        process restarted.
+        A service is shared by every request, so an override left in place
+        would retarget all subsequent traffic until the process restarted.
         """
         service = LLMService()
         before_llm, before_index = service.get_llm(), service._default_index
@@ -302,7 +301,7 @@ class _FakeModel:
 
 
 class TestConcurrentCalls:
-    """Calls running at once on one service: `llm_service` is shared by every request."""
+    """Calls running at once on one service: a service is shared by every request."""
 
     @pytest.mark.asyncio
     async def test_each_call_walks_the_registry_from_the_default(self):
@@ -344,3 +343,54 @@ class TestConcurrentCalls:
 
         assert default_answer.content == default
         assert pinned_answer.content == pinned
+
+
+class TestTunedClients:
+    """A tuned client and a tuned service: chat-only budgets that leave every other caller alone."""
+
+    def test_tuning_replaces_effort_only_on_reasoning_entries(self):
+        tuned = LLMRegistry.get("openai/gpt-5-mini", max_tokens=8000, reasoning_effort="medium")
+        assert tuned.reasoning["effort"] == "medium" and tuned.max_tokens == 8000
+        assert tuned.reasoning["summary"] == "auto"
+        plain = LLMRegistry.get("openai/gpt-4o", max_tokens=8000, reasoning_effort="medium")
+        assert plain.reasoning is None and plain.max_tokens == 8000
+
+    def test_tuning_does_not_touch_the_default_instances(self):
+        LLMRegistry.get("openai/gpt-5-mini", max_tokens=8000, reasoning_effort="high")
+        default = LLMRegistry.get("openai/gpt-5-mini")
+        assert default.reasoning == {"effort": "low"}
+        assert default.max_tokens == settings.llm.MAX_TOKENS
+
+    def test_each_tuning_is_cached(self):
+        a = LLMRegistry.get("openai/gpt-5", max_tokens=100, reasoning_effort="low")
+        assert a is LLMRegistry.get("openai/gpt-5", max_tokens=100, reasoning_effort="low")
+        assert a is not LLMRegistry.get("openai/gpt-5", max_tokens=100, reasoning_effort="high")
+
+    def test_the_default_budget_is_the_untuned_client(self):
+        assert LLMRegistry.get("openai/gpt-5", max_tokens=settings.llm.MAX_TOKENS) is LLMRegistry.get("openai/gpt-5")
+
+    @pytest.mark.asyncio
+    async def test_a_tuned_service_falls_back_with_the_tuning(self, messages):
+        """Every model in the chain is built with the tuning, a non-reasoning one included."""
+        service = LLMService(max_tokens=8000, reasoning_effort="high")
+        seen = []
+
+        async def fail_all_but_last(llm, msgs, config=None):
+            seen.append(llm)
+            if len(seen) < len(LLMRegistry.get_all_names()):
+                raise OpenAIError("down")
+            return AIMessage(content="ok")
+
+        with patch.object(service, "_call_llm_with_retry", side_effect=fail_all_but_last):
+            await service.call(messages)
+
+        assert len(seen) == len(LLMRegistry.get_all_names())
+        for llm in seen:
+            assert llm.max_tokens == 8000
+            if llm.reasoning is not None:
+                assert llm.reasoning["effort"] == "high"
+        assert any(llm.reasoning is None for llm in seen)
+
+    def test_an_untuned_service_uses_the_registry_defaults(self):
+        service = LLMService()
+        assert service._resolve("openai/gpt-5-mini") is LLMRegistry.get("openai/gpt-5-mini")

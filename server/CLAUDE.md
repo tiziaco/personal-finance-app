@@ -244,6 +244,8 @@ traced with `create_trace_config()`, with no graph and no checkpoint.
 - `app/agents/shared/checkpointing/` — `AsyncPostgresSaver` for LangGraph persistence, plus `delete_conversation_checkpoints()` and its set-based `delete_conversations_checkpoints()`
 - `app/agents/shared/observability/` — `create_graph_config()` wires Langfuse callbacks; `create_trace_config()` does it for a call outside a graph
 
+**Toolkits.** The chatbot's tools are injected, never imported: `app.agents` may not import a module (R2), so a module builds a `Toolkit` (`app/agents/chatbot/toolkit.py`) and `main.py` passes it to `initialize_agents`. A tool reads the user from `TurnContext.user_id` and never takes a user argument; it opens its own session from `TurnContext.session_factory`, because the route releases the request's connection before the model call. **A tool's argument schema must carry no regex `pattern`** (a Decimal's made gpt-5-mini return empty replies): take money as a JSON number; `test_schemas.py` guards it. Bad arguments raise `ToolArgumentError` (its text goes to the model); any other crash reaches the model as a fixed message. The wiring is in [`architecture/server.md`](../docs/architecture/server.md) §1.
+
 `BaseAgent` provides `get_response()`, `get_stream_response()` and `get_chat_history()` with memory and tracing built in. Clearing a conversation is **not** an agent method: checkpoints are keyed by `thread_id` in tables every agent shares, so use `delete_conversation_checkpoints()` from `app/agents/shared/checkpointing/` and do not take an agent parameter just to reach it. All LLM calls must have Langfuse tracing. All retries must use `tenacity` with exponential backoff.
 
 ---

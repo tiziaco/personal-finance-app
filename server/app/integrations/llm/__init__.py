@@ -10,7 +10,6 @@ from app.integrations.llm.exceptions import (
 from app.integrations.llm.service import (
     LLMRegistry,
     LLMService,
-    llm_service,
 )
 
 __all__ = [
@@ -21,5 +20,4 @@ __all__ = [
     "LLMServiceError",
     "LLMStreamingError",
     "LLMTimeoutError",
-    "llm_service",
 ]

@@ -1,6 +1,7 @@
-import type { Message } from "@app/api-client/types"
+import type { ChatMessage } from "@app/api-client/types"
 import { describe, expect, it } from "vitest"
 
+import { emptyActivity } from "./activity"
 import {
   exchangeReducer,
   toThreadMessages,
@@ -8,6 +9,9 @@ import {
   type ExchangeAction,
   type Send,
 } from "./exchange"
+import type { StreamEvent } from "./stream-chat"
+
+const text = (t: string): StreamEvent => ({ type: "text", text: t })
 
 const sendIn = (conversationId: string | null): Send => ({
   controller: new AbortController(),
@@ -24,6 +28,7 @@ function started(send: Send, baseCount = 0): Exchange {
     send,
     userText: "hi",
     baseCount,
+    now: 0,
   }) as Exchange
 }
 
@@ -36,12 +41,14 @@ describe("exchangeReducer", () => {
       send: second,
       userText: "again",
       baseCount: 2,
+      now: 7,
     })
     expect(state).toEqual({
       send: second,
       baseCount: 2,
       userText: "again",
       replyText: "",
+      activity: emptyActivity(7),
       status: "running",
     })
   })
@@ -50,7 +57,12 @@ describe("exchangeReducer", () => {
     const old = sendIn("c1")
     const state = started(sendIn("c1"))
     expect(
-      exchangeReducer(state, { type: "chunk", send: old, text: "x" }),
+      exchangeReducer(state, {
+        type: "event",
+        send: old,
+        event: text("x"),
+        now: 0,
+      }),
     ).toBe(state)
     expect(exchangeReducer(state, { type: "cleared", send: old })).toBe(state)
   })
@@ -58,16 +70,50 @@ describe("exchangeReducer", () => {
   it("chunks append; stopped, failed and cleared end the exchange", () => {
     const send = sendIn("c1")
     let state = started(send)
-    state = step(state, { type: "chunk", send, text: "Hel" })
-    state = step(state, { type: "chunk", send, text: "lo" })
+    state = step(state, { type: "event", send, event: text("Hel"), now: 1 })
+    state = step(state, { type: "event", send, event: text("lo"), now: 2 })
     expect(state.replyText).toBe("Hello")
-    expect(exchangeReducer(state, { type: "stopped", send })?.status).toBe(
-      "stopped",
-    )
-    expect(exchangeReducer(state, { type: "failed", send })?.status).toBe(
-      "error",
-    )
+    expect(
+      exchangeReducer(state, { type: "stopped", send, now: 9 })?.status,
+    ).toBe("stopped")
+    expect(
+      exchangeReducer(state, { type: "failed", send, now: 9 })?.status,
+    ).toBe("error")
     expect(exchangeReducer(state, { type: "cleared", send })).toBeNull()
+  })
+
+  it("a stop or failure closes the activity: timer ends, running lookups stop", () => {
+    const send = sendIn("c1")
+    let state = started(send)
+    state = step(state, {
+      type: "event",
+      send,
+      event: {
+        type: "tool_started",
+        id: "t1",
+        name: "n",
+        title: "Top merchants",
+      },
+      now: 1,
+    })
+    for (const type of ["stopped", "failed"] as const) {
+      const { activity } = exchangeReducer(state, { type, send, now: 5 })!
+      expect(activity.endedAt).toBe(5)
+      // Only the user stopped it: a failed reply's block keeps neutral timing.
+      expect(activity.stopped).toBe(type === "stopped")
+      expect(activity.parts[0]).toMatchObject({ kind: "tool", status: "error" })
+    }
+    // A server done already closed it: its end time stays.
+    const done = step(state, {
+      type: "event",
+      send,
+      event: { type: "done", stopped: false },
+      now: 3,
+    })
+    expect(
+      exchangeReducer(done, { type: "stopped", send, now: 9 })!.activity
+        .endedAt,
+    ).toBe(3)
   })
 
   it("created swaps in the send that names the conversation", () => {
@@ -76,9 +122,9 @@ describe("exchangeReducer", () => {
     const state = step(started(send), { type: "created", send, next })
     expect(state.send).toBe(next)
     // The pre-create send no longer owns the exchange.
-    expect(exchangeReducer(state, { type: "chunk", send, text: "x" })).toBe(
-      state,
-    )
+    expect(
+      exchangeReducer(state, { type: "event", send, event: text("x"), now: 0 }),
+    ).toBe(state)
   })
 
   it("leaving drops another conversation's exchange, /chat included, and keeps its own", () => {
@@ -90,10 +136,14 @@ describe("exchangeReducer", () => {
 })
 
 describe("toThreadMessages", () => {
-  const saved: Message[] = [
-    { role: "user", content: "older" },
-    { role: "assistant", content: "reply" },
-    { role: "user", content: "hi" }, // the in-flight message, saved mid-stream
+  const saved: ChatMessage[] = [
+    { role: "user", content: "older", activity: null },
+    {
+      role: "assistant",
+      content: "reply",
+      activity: { parts: [{ type: "reasoning", text: "hm" }], stopped: false },
+    },
+    { role: "user", content: "hi", activity: null }, // the in-flight message, saved mid-stream
   ]
 
   it("slices the history at baseCount so a mid-stream refetch shows the user's message once", () => {
@@ -126,5 +176,45 @@ describe("toThreadMessages", () => {
   it("hides another conversation's exchange and shows the history whole", () => {
     const exchange = started(sendIn("c1"), 1)
     expect(toThreadMessages(saved, exchange, "c2", "c2")).toHaveLength(3)
+  })
+
+  it("puts history activity in metadata.custom.activity", () => {
+    const messages = toThreadMessages(saved, null, "c1", "c1")
+    expect(messages[0].metadata).toBeUndefined()
+    expect(messages[1].metadata?.custom?.activity).toMatchObject({
+      parts: [{ kind: "reasoning", text: "hm" }],
+      startedAt: null,
+      answerStarted: true,
+    })
+  })
+
+  it("gives the in-flight messages the ids their saved copies will have", () => {
+    const exchange = started(sendIn("c1"), 2)
+    const messages = toThreadMessages(saved.slice(0, 2), exchange, "c1", "c1")
+    expect(messages.map((m) => m.id)).toEqual(["c1-0", "c1-1", "c1-2", "c1-3"])
+  })
+
+  it("puts the timing of a reply finished on this visit onto its saved copy", () => {
+    const timings = new Map([[1, { startedAt: 1000, endedAt: 5000 }]])
+    const messages = toThreadMessages(saved, null, "c1", "c1", timings)
+    expect(messages[1].metadata?.custom?.activity).toMatchObject({
+      startedAt: 1000,
+      endedAt: 5000,
+    })
+  })
+
+  it("carries the in-flight activity, advanced by events", () => {
+    const send = sendIn("c1")
+    const exchange = step(started(send), {
+      type: "event",
+      send,
+      event: { type: "reasoning", text: "thinking" },
+      now: 5,
+    })
+    const last = toThreadMessages([], exchange, "c1", "c1").at(-1)
+    expect(last?.metadata?.custom?.activity).toMatchObject({
+      parts: [{ kind: "reasoning", text: "thinking" }],
+      startedAt: 0,
+    })
   })
 })

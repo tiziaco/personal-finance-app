@@ -7,7 +7,7 @@ from langchain_core.messages import AIMessage
 from uuid_utils.compat import uuid7
 
 from app.agents.chatbot.title import TITLE_MAX_LENGTH, clean_title, first_exchange, generate_title
-from app.agents.messages import Message
+from app.agents.messages import ChatMessage
 
 pytestmark = pytest.mark.unit
 
@@ -84,16 +84,16 @@ def test_first_exchange_pairs_the_first_reply_with_the_question_it_answered():
     # A first turn stopped before any reply leaves its question unanswered:
     # the title must not pair it with the second turn's answer.
     history = [
-        Message(role="user", content="stopped question"),
-        Message(role="user", content="answered question"),
-        Message(role="assistant", content="the answer"),
-        Message(role="user", content="a follow-up"),
+        ChatMessage(role="user", content="stopped question"),
+        ChatMessage(role="user", content="answered question"),
+        ChatMessage(role="assistant", content="the answer"),
+        ChatMessage(role="user", content="a follow-up"),
     ]
     assert first_exchange(history) == ("answered question", "the answer")
 
 
 def test_first_exchange_is_none_before_any_reply():
-    assert first_exchange([Message(role="user", content="hi")]) is None
+    assert first_exchange([ChatMessage(role="user", content="hi")]) is None
 
 
 async def test_generate_title_is_traced_to_its_conversation():

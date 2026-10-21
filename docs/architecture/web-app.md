@@ -200,6 +200,15 @@ component
   because orval excludes `streaming` routes. It goes through `useApiRequest`, the
   transport under `useApiFetch`, so its URL, token and `ApiError` are the generated
   hooks' own; it reads the body itself.
+  Its events are typed (`app/agents/chatbot/events.py` on the server is the schema); the
+  in-flight activity (reasoning, tool rows, the timer) is state in `lib/chat/activity.ts`,
+  rendered by `ActivityBlock` (`components/chat/activity-block.tsx`). History returns the
+  same parts per reply (`ChatMessage.activity`: `ReasoningPart`, `ToolPart` with a `title`,
+  and `stopped`), so a reopened conversation rebuilds the block without timing.
+  A tool row's summary and table cells carry a kind (`SummaryItemKind`, `TableColumnKind`),
+  amounts as decimal strings; `ActivityBlock` renders each with the app's own pieces —
+  `Money` for `total`, `net` and `transaction`, and the analytics page's `formatPct`, `Rate`,
+  `Change` and `biasSentence` — so a figure reads the same in chat as on `/analytics`.
 - **The route sizes itself to the viewport** inside the shared dashboard container.
   Nothing outside `/chat` changes.
 - **Errors.** The history query's `meta.silentError` is `isConversationNotFound`: the
