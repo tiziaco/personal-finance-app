@@ -390,6 +390,29 @@ class TestStreamWireFormat:
         assert events[2] == {"type": "text", "text": "You spent €40."}
         assert events[3] == {"type": "done", "stopped": False}
 
+    async def test_a_turn_the_server_stopped_ends_in_done_stopped_and_reopens_stopped(
+        self, authenticated_client_with_agent, test_conversation, scripted_model, use_tools, monkeypatch
+    ):
+        # The cap is one model call: the tool-calling response uses it, so the wrap-up text ends the turn.
+        monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 1)
+        use_tools(stub_tool("spending", "Looking up spending", DISPLAY.model_dump()))
+        scripted_model.responses[:] = [
+            AIMessage(content="", tool_calls=[tool_call("spending", "c1")]),
+            AIMessage(content="Mostly groceries."),
+        ]
+
+        response = await authenticated_client_with_agent.post(
+            f"/api/v1/chatbot/chat/{test_conversation.id}/stream",
+            json={"message": "Hello"},
+        )
+        events = _events(response)
+        assert events[-1] == {"type": "done", "stopped": True}
+
+        history = await authenticated_client_with_agent.get(f"/api/v1/chatbot/chat/{test_conversation.id}/messages")
+        [_, reply] = history.json()["messages"]
+        assert reply["content"] == "Mostly groceries."
+        assert reply["activity"]["stopped"] is True
+
     async def test_stream_failure_is_an_error_event_without_server_text(
         self, authenticated_client_with_agent, test_conversation, scripted_model
     ):

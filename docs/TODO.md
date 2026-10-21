@@ -242,6 +242,16 @@ and remove that state. **Decide first:** it changes the rule in
 [`product/features/chat.md`](./product/features/chat.md) that a reopened reply reads
 without timing. From step 7's code review (21 Oct 2026, M5).
 
+## Chat — a mid-stream fallback re-streams the answer
+
+If the primary model fails after streaming part of a reply, `ModelFallbackMiddleware`
+retries on the next model, and the stream shows the partial text, a blank line, then the
+fallback's full answer. History and `done` hold only the fallback's text, so a reopened
+conversation is clean. The artefact existed in design before 7b, but the broken tenacity
+retry meant fallback rarely ran. **Unblocks:** a clean live stream after a failover; a real
+fix holds back or resets the turn's streamed text when the message id changes after a
+failure. From 7b's final review (21 Oct 2026).
+
 ## Chat — code review leftovers
 
 Small items from step 7's code review (21 Oct 2026), each correct as it stands and none
@@ -252,13 +262,13 @@ blocking. **Unblocks:** nothing; pick them up when touching the file.
   `Weekday` literal (with `WEEKDAYS` from `get_args`) and one table of key, label and
   order would replace the chains.
 - **Date-order validation is split.** `SearchArgs` checks `date_from <= date_to` in its
-  validator (`schemas.py`); `PeriodArgs` is checked at run time in `resolve_period`
+  validator (`tools/search.py`); `PeriodArgs` is checked at run time in `resolve_period`
   (`tools/periods.py`), with a different message. Pick one place.
 - **The web's view of an activity.** `chat-message.tsx` casts `metadata.custom.activity`
   to `ActivityState`: a typed accessor in `lib/chat/activity.ts` would hold the cast. Its
   `ActivityPart` renames the generated `type`/`ok` to `kind`/`status`. And the server sends
   `Activity(parts=[], stopped=True)` for a stopped turn with no lookups
-  (`agent.py`), which both `chat-message.tsx` and `ActivityBlock` hide, so a reopened
+  (built in `conversation/domain/chat.py`, `history`/`_reply`), which both `chat-message.tsx` and `ActivityBlock` hide, so a reopened
   stopped reply with no lookups never reads "Stopped": decide which side is right.
 
 ## Web — one minus sign for percents

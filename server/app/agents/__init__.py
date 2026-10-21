@@ -4,7 +4,7 @@ It imports no module (R2): what an agent needs from a module (the chat's tools a
 preamble) is handed to it at startup by `app/main.py`.
 
 Structure:
-- core/: what every agent shares (checkpointing, memory, observability, structured calls)
+- core/: what every agent shares (checkpointing, memory, messages, observability, structured calls)
 - chatbot/: the chat agent, `create_agent` with its middleware, held by `ChatbotAgent`
 - csv_mapping/, transaction_labeler/, insights/: the one-call agents
 """

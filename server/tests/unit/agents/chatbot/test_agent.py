@@ -164,3 +164,24 @@ async def test_a_stream_cancelled_by_an_anyio_cancel_scope_cancels_the_model_cal
             group.cancel_scope.cancel()
 
         await asyncio.wait_for(cancelled.wait(), timeout=2)
+
+
+async def test_a_producer_killed_by_a_non_exception_releases_the_consumer():
+    """A cancellation of the producer task from outside is not an `Exception`; the consumer must still end."""
+
+    class _Killed(_Graph):
+        async def astream(self, *args, **kwargs):
+            yield "messages", (AIMessage("partial"), {"langgraph_node": "model"})
+            raise asyncio.CancelledError
+
+    agent = ChatbotAgent(_Killed(), [])
+    received = []
+
+    async def consume() -> None:
+        async for item in agent.stream("q", CONVERSATION_ID, CTX):
+            received.append(item)
+
+    with pytest.raises(asyncio.CancelledError):
+        await asyncio.wait_for(consume(), timeout=2)
+
+    assert received == [("messages", (AIMessage("partial"), {"langgraph_node": "model"}))]

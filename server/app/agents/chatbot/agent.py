@@ -50,6 +50,9 @@ class ChatbotAgent:
         directly, the graph's stream would take the scope's cancellation at every
         await of LangGraph's own cleanup, which then never cancels the model call in
         flight; a single cancellation of the task lets the cleanup run, and the call stops.
+
+        The producer runs ahead of the consumer by design: the queue is unbounded, and
+        what it holds is bounded by one turn's output.
         """
         items: asyncio.Queue[tuple[bool, Any]] = asyncio.Queue()
 
@@ -64,6 +67,10 @@ class ChatbotAgent:
                     items.put_nowait((True, item))
             except Exception as e:
                 items.put_nowait((False, e))
+            except BaseException as e:
+                # A cancellation from outside or an exception group: release the consumer, then let it unwind.
+                items.put_nowait((False, e))
+                raise
             else:
                 items.put_nowait((False, None))
 

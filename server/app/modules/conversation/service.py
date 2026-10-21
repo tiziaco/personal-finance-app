@@ -92,6 +92,7 @@ class ConversationService:
             return conversation
         user_text, reply_text = exchange
         try:
+            # The module-level `generate_title` (app.agents.chatbot.title), not this method.
             title = await generate_title(user_text, reply_text, conversation.id, conversation.user_id)
         except Exception:
             logger.exception("conversation_title_generation_failed", conversation_id=conversation.id)
