@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.runnables import RunnableBinding
 from langgraph.checkpoint.memory import MemorySaver
 from prometheus_client import REGISTRY
 from pydantic import BaseModel, ValidationError
@@ -212,6 +213,15 @@ class TestToolBinding:
         assert [s["function"]["name"] for s in schemas] == ["t"]
         assert schemas[0]["function"]["parameters"]["properties"]["n"]["type"] == "integer"
 
+    def test_the_wrap_up_service_has_no_tools_and_the_same_tuning(self):
+        """The wrap-up must answer in text, so the model must not be offered a tool."""
+        agent = _agent_with(make_tool("t", _ok))
+
+        assert agent.llm_service._tools and not agent.wrap_up_llm_service._tools
+        wrap_up, chat = agent.wrap_up_llm_service.get_llm(), agent.llm_service.get_llm()
+        assert not isinstance(wrap_up, RunnableBinding)
+        assert wrap_up is chat.bound
+
 
 class TestFormatToolArgs:
     """Tests for the log rendering of tool arguments."""
@@ -311,6 +321,31 @@ def _call(name: str, n: int, call_id: str) -> dict:
     return {"name": name, "args": {"n": n}, "id": call_id}
 
 
+def _mock_services(agent: ChatbotAgent, llm_responses) -> list[bool]:
+    """Replace both model services; `llm_responses(with_tools, n)` makes the n-th reply of the turn.
+
+    `with_tools` is False for the wrap-up service's calls. The returned list records it per call.
+    """
+    name = LLMRegistry.get_all_names()[0]
+    calls: list[bool] = []
+
+    def service(with_tools: bool) -> MagicMock:
+        mock = MagicMock()
+        mock.get_llm.return_value = LLMRegistry.get(name)
+        mock.current_model_name.return_value = name
+
+        async def call(messages, *args, **kwargs):
+            calls.append(with_tools)
+            return llm_responses(with_tools, len(calls))
+
+        mock.call = AsyncMock(side_effect=call)
+        return mock
+
+    agent.llm_service = service(True)
+    agent.wrap_up_llm_service = service(False)
+    return calls
+
+
 class TestRepeatedCall:
     def test_the_same_name_and_args_since_the_last_human_message_repeats(self):
         messages = [
@@ -350,17 +385,7 @@ class TestTurnLimits:
         agent: ChatbotAgent, llm_responses, text: str = "q", thread: str = "t1", recursion_limit=None, **extra
     ):
         """Run one turn on the agent's graph; `llm_responses(with_tools, n)` makes each model reply."""
-        name = LLMRegistry.get_all_names()[0]
-        agent.llm_service = MagicMock()
-        agent.llm_service.get_llm.return_value = LLMRegistry.get(name)
-        agent.llm_service.current_model_name.return_value = name
-        calls: list[bool] = []
-
-        async def call(messages, *args, with_tools=True, **kwargs):
-            calls.append(with_tools)
-            return llm_responses(with_tools, len(calls))
-
-        agent.llm_service.call = AsyncMock(side_effect=call)
+        calls = _mock_services(agent, llm_responses)
         graph = agent._graph or await agent.create_graph(MemorySaver())
         config = {"configurable": {"thread_id": thread, "turn_context": CTX}}
         if recursion_limit is not None:
@@ -550,17 +575,7 @@ class TestStreamAndHistory:
 
     @staticmethod
     async def _stream(agent: ChatbotAgent, llm_responses, text: str = "q") -> list:
-        name = LLMRegistry.get_all_names()[0]
-        agent.llm_service = MagicMock()
-        agent.llm_service.get_llm.return_value = LLMRegistry.get(name)
-        agent.llm_service.current_model_name.return_value = name
-        calls: list[bool] = []
-
-        async def call(messages, *args, with_tools=True, **kwargs):
-            calls.append(with_tools)
-            return llm_responses(with_tools, len(calls))
-
-        agent.llm_service.call = AsyncMock(side_effect=call)
+        _mock_services(agent, llm_responses)
         if agent._graph is None:
             await agent.create_graph(MemorySaver())
         with (

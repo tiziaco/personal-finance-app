@@ -131,13 +131,19 @@ class ChatbotAgent(BaseAgent):
         super().__init__()
 
         self.toolkit = toolkit
-        # Its own service, not the shared singleton: the chat's reply budget and
-        # reasoning effort are set here and the tools bound are this agent's.
+        # Its own services, not the shared singleton: the chat's reply budget and
+        # reasoning effort are set here and the tools bound are this agent's. The
+        # wrap-up answer must be text, so its service has no tools; both share the
+        # registry's cached clients.
         self.llm_service = LLMService(
             max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS,
             reasoning_effort=settings.llm.CHAT_REASONING_EFFORT,
         )
         self.llm_service.bind_tools([tool.as_schema() for tool in self.toolkit.tools])
+        self.wrap_up_llm_service = LLMService(
+            max_tokens=settings.llm.CHAT_REPLY_MAX_TOKENS,
+            reasoning_effort=settings.llm.CHAT_REASONING_EFFORT,
+        )
         self.tools_by_name = {tool.name: tool for tool in self.toolkit.tools}
 
         logger.info(
@@ -153,7 +159,7 @@ class ChatbotAgent(BaseAgent):
         return config
 
     async def _call_model(
-        self, messages: list[BaseMessage], requested_model: str, *, with_tools: bool = True
+        self, messages: list[BaseMessage], requested_model: str, *, wrap_up: bool = False
     ) -> AIMessage:
         """One model call, timed under the name of the model that answered.
 
@@ -162,13 +168,14 @@ class ChatbotAgent(BaseAgent):
         rather than timed with a context manager.
         """
         started = time.perf_counter()
-        response = await self.llm_service.call(messages, with_tools=with_tools)
+        service = self.wrap_up_llm_service if wrap_up else self.llm_service
+        response = await service.call(messages)
         answering_model = response.response_metadata.get("model_name") or requested_model
         llm_inference_duration_seconds.labels(model=answering_model).observe(time.perf_counter() - started)
         logger.info(
             "llm_response_generated",
             model=answering_model,
-            with_tools=with_tools,
+            wrap_up=wrap_up,
             environment=settings.ENVIRONMENT.value,
         )
         return process_llm_response(response)
@@ -177,7 +184,7 @@ class ChatbotAgent(BaseAgent):
         """The final answer of a turn the server ended: a tool-less model call, or the fixed text."""
         try:
             answer = await self._call_model(
-                [*messages, SystemMessage(content=WRAP_UP_INSTRUCTION)], model_name, with_tools=False
+                [*messages, SystemMessage(content=WRAP_UP_INSTRUCTION)], model_name, wrap_up=True
             )
             if answer.text.strip() and not answer.tool_calls:
                 return answer

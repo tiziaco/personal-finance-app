@@ -398,7 +398,7 @@ class TestFinanceToolsThroughTheRoute:
         agent = (await initialize_agents(MemorySaver(), agent_toolkits()))["chatbot"]
         sent: list[list] = []
 
-        async def model(messages, *args, with_tools=True, **kwargs):
+        async def model(messages, *args, **kwargs):
             sent.append(messages)
             if len(sent) == 1:
                 call = {"name": "spending_overview", "args": {"months": 1}, "id": "c1", "type": "tool_call"}

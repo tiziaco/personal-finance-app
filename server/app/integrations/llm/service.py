@@ -76,12 +76,10 @@ class LLMRegistry:
         },
     ]
 
-    # Clients built by `get()`, keyed by model name. A plain dict is enough:
-    # the process is single-threaded asyncio, and a lost race would cost one
-    # redundant client, not a correctness bug.
-    _instances: Dict[str, BaseChatModel] = {}
-    # Clients built by `get_tuned()`, kept apart so the defaults above stay untouched.
-    _tuned: Dict[tuple[str, int, Optional[str]], BaseChatModel] = {}
+    # Clients built by `get()`, keyed by model name, token budget and reasoning effort. A
+    # plain dict is enough: the process is single-threaded asyncio, and a lost race would
+    # cost one redundant client, not a correctness bug.
+    _instances: Dict[tuple[str, int, Optional[str]], BaseChatModel] = {}
 
     @classmethod
     def _build(cls, model_name: str, **params) -> BaseChatModel:
@@ -96,53 +94,40 @@ class LLMRegistry:
         )
 
     @classmethod
-    def get(cls, model_name: str, **kwargs) -> BaseChatModel:
-        """Get an LLM by name, raising ValueError if it is not registered."""
-        model_entry = None
-        for entry in cls.LLMS:
-            if entry["name"] == model_name:
-                model_entry = entry
-                break
+    def get(
+        cls,
+        model_name: str,
+        *,
+        max_tokens: Optional[int] = None,
+        reasoning_effort: Optional[str] = None,
+        **overrides,
+    ) -> BaseChatModel:
+        """Get an LLM by name, raising ValueError if it is not registered.
 
-        if not model_entry:
-            available_models = [entry["name"] for entry in cls.LLMS]
+        `max_tokens` replaces the default budget. `reasoning_effort` replaces the effort only
+        on entries whose params carry `reasoning` (and asks for a readable summary of it);
+        the others ignore it, so a non-reasoning fallback never fails because of the tuning.
+        Each tuning is its own cached client, so a tuned caller leaves the defaults alone.
+        """
+        entry = next((e for e in cls.LLMS if e["name"] == model_name), None)
+        if entry is None:
             raise ValueError(
-                f"model '{model_name}' not found in registry. available models: {', '.join(available_models)}"
+                f"model '{model_name}' not found in registry. available models: {', '.join(cls.get_all_names())}"
             )
 
         # Overrides replace the entry's configuration rather than layering onto
         # it: only the model and the credential carry over.
-        if kwargs:
-            logger.debug("creating_llm_with_custom_args", model_name=model_name, custom_args=list(kwargs.keys()))
-            return cls._build(model_name, **kwargs)
+        if overrides:
+            logger.debug("creating_llm_with_custom_args", model_name=model_name, custom_args=list(overrides.keys()))
+            return cls._build(model_name, **overrides)
 
-        if model_name not in cls._instances:
-            cls._instances[model_name] = cls._build(
-                model_name, max_tokens=settings.llm.MAX_TOKENS, **model_entry["params"]
-            )
-        logger.debug("using_default_llm_instance", model_name=model_name)
-        return cls._instances[model_name]
-
-    @classmethod
-    def get_tuned(cls, model_name: str, *, max_tokens: int, reasoning_effort: Optional[str]) -> BaseChatModel:
-        """Get an LLM by name with its token budget and reasoning effort replaced.
-
-        Only entries whose params carry `reasoning` take the effort (and ask for a
-        readable summary of it); the others ignore it, so a non-reasoning fallback
-        never fails because of the tuning. The default instances are not touched.
-        """
-        key = (model_name, max_tokens, reasoning_effort)
-        if key not in cls._tuned:
-            entry = next((e for e in cls.LLMS if e["name"] == model_name), None)
-            if entry is None:
-                raise ValueError(
-                    f"model '{model_name}' not found in registry. available models: {', '.join(cls.get_all_names())}"
-                )
+        key = (model_name, max_tokens if max_tokens is not None else settings.llm.MAX_TOKENS, reasoning_effort)
+        if key not in cls._instances:
             params = dict(entry["params"])
             if "reasoning" in params and reasoning_effort is not None:
                 params["reasoning"] = {**params["reasoning"], "effort": reasoning_effort, "summary": "auto"}
-            cls._tuned[key] = cls._build(model_name, max_tokens=max_tokens, **params)
-        return cls._tuned[key]
+            cls._instances[key] = cls._build(model_name, max_tokens=key[1], **params)
+        return cls._instances[key]
 
     @classmethod
     def get_all_names(cls) -> List[str]:
@@ -164,7 +149,7 @@ class LLMService:
         """Initialize the LLM service.
 
         `max_tokens` and `reasoning_effort` tune every client the service builds, fallbacks
-        included (see `LLMRegistry.get_tuned`); unset, the registry defaults apply.
+        included (see `LLMRegistry.get`); unset, the registry defaults apply.
 
         No client is constructed here: services are module-level or startup-time
         instances (`structured_llm_service`, the chatbot's own), so anything built in
@@ -198,8 +183,8 @@ class LLMService:
                 error=str(e),
             )
 
-    def _resolve(self, model_name: str, *, with_tools: bool = True, **kwargs) -> BaseChatModel:
-        """Build the client for `model_name` with the registered tools bound (unless `with_tools` is False).
+    def _resolve(self, model_name: str, **overrides) -> BaseChatModel:
+        """Build the client for `model_name` with the registered tools bound.
 
         Every client the service calls is built here.
 
@@ -210,15 +195,10 @@ class LLMService:
         Resolving from the registry rather than from a held client is what makes
         that correct for a fallback, which moves to another model.
         """
-        if kwargs or (self._max_tokens is None and self._reasoning_effort is None):
-            llm = LLMRegistry.get(model_name, **kwargs)
-        else:
-            llm = LLMRegistry.get_tuned(
-                model_name,
-                max_tokens=self._max_tokens if self._max_tokens is not None else settings.llm.MAX_TOKENS,
-                reasoning_effort=self._reasoning_effort,
-            )
-        return llm.bind_tools(self._tools) if self._tools and with_tools else llm
+        llm = LLMRegistry.get(
+            model_name, max_tokens=self._max_tokens, reasoning_effort=self._reasoning_effort, **overrides
+        )
+        return llm.bind_tools(self._tools) if self._tools else llm
 
     @retry(
         stop=stop_after_attempt(settings.llm.MAX_LLM_CALL_RETRIES),
@@ -256,26 +236,22 @@ class LLMService:
         messages: List[BaseMessage],
         model_name: Optional[str] = None,
         config: Optional[RunnableConfig] = None,
-        *,
-        with_tools: bool = True,
         **model_kwargs,
     ) -> BaseMessage:
         """Call the LLM with circular fallback, on `model_name` if given.
 
         `config` carries tracing callbacks for a call made outside a graph;
-        inside one, LangChain propagates the graph's. `with_tools=False` calls clients
-        without the bound tools (a wrap-up call that must answer in text).
+        inside one, LangChain propagates the graph's.
 
         Raises:
             ValueError: `model_name` is not in the registry.
             LLMServiceError: every model failed after retries (see _call_with_fallback).
         """
         if not model_name:
-            start = self.get_llm() if with_tools else self._resolve(self.current_model_name(), with_tools=False)
-            return await self._call_with_fallback(messages, config, self._default_index, start, with_tools)
+            return await self._call_with_fallback(messages, config, self._default_index, self.get_llm())
 
         try:
-            pinned = self._resolve(model_name, with_tools=with_tools, **model_kwargs)
+            pinned = self._resolve(model_name, **model_kwargs)
         except ValueError as e:
             logger.error("requested_model_not_found", model_name=model_name, error=str(e))
             raise
@@ -283,9 +259,7 @@ class LLMService:
         # The pin lives in this call's locals, never on the service: a service is shared
         # by every request, and a pin set on it would retarget their calls.
         logger.info("using_requested_model", model_name=model_name, has_custom_kwargs=bool(model_kwargs))
-        return await self._call_with_fallback(
-            messages, config, LLMRegistry.get_all_names().index(model_name), pinned, with_tools
-        )
+        return await self._call_with_fallback(messages, config, LLMRegistry.get_all_names().index(model_name), pinned)
 
     async def _call_with_fallback(
         self,
@@ -293,7 +267,6 @@ class LLMService:
         config: Optional[RunnableConfig],
         start_index: int,
         start_llm: BaseChatModel,
-        with_tools: bool = True,
     ) -> BaseMessage:
         """Call the model at `start_index`, then each next one in the registry, wrapping, until one answers.
 
@@ -310,7 +283,7 @@ class LLMService:
         last_error: Optional[OpenAIError] = None
         for offset in range(len(names)):
             index = (start_index + offset) % len(names)
-            llm = start_llm if offset == 0 else self._resolve(names[index], with_tools=with_tools)
+            llm = start_llm if offset == 0 else self._resolve(names[index])
             try:
                 return await self._call_llm_with_retry(llm, messages, config)
             except OpenAIError as e:
