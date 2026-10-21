@@ -10,7 +10,6 @@ from langchain_core.messages import (
 from langchain_core.runnables import Runnable
 
 from app.agents.core import create_graph_config
-from app.agents.messages import ChatMessage
 from app.integrations.llm import chat_model, with_fallbacks
 
 # The rename route's limit: a generated title must be one a user could have typed.
@@ -39,19 +38,6 @@ def clean_title(raw: str) -> str:
         title = title.strip(_QUOTES).strip()
         title = title.rstrip(".!?:;,").strip()
     return title[:TITLE_MAX_LENGTH].rstrip()
-
-
-def first_exchange(history: list[ChatMessage]) -> tuple[str, str] | None:
-    """The first reply and the user message it answered, or None before any reply.
-
-    Paired, not taken separately: a first turn stopped before its reply leaves
-    a question with no answer, and the title must not mix two turns.
-    """
-    for index, message in enumerate(history):
-        if message.role == "assistant":
-            question = next((m.content for m in reversed(history[:index]) if m.role == "user"), None)
-            return (question, message.content) if question else None
-    return None
 
 
 async def generate_title(

@@ -3,17 +3,23 @@
 from datetime import UTC, datetime
 
 import pytest
-from pydantic import ValidationError
+from pydantic import TypeAdapter, ValidationError
 from uuid_utils.compat import uuid7
 
-from app.agents.messages import ChatMessage
 from app.modules.conversation.schemas import (
+    Activity,
+    ChatMessage,
     ChatRequest,
     ChatResponse,
     ConversationHistory,
     ConversationResponse,
+    DoneEvent,
+    ReasoningPart,
+    StreamEvent,
     SummaryItem,
     ToolDisplay,
+    ToolFinishedEvent,
+    ToolPart,
 )
 
 pytestmark = pytest.mark.unit
@@ -110,3 +116,24 @@ def test_display_models_forbid_unknown_fields():
         SummaryItem(kind="count", value=1, extra="x")
     with pytest.raises(ValidationError):
         ToolDisplay(title="t", period=None, summary=[], table=None, extra="x")
+
+
+def test_stream_events_are_discriminated_by_type():
+    adapter = TypeAdapter(StreamEvent)
+
+    assert adapter.validate_python({"type": "done", "stopped": True}) == DoneEvent(stopped=True)
+    assert isinstance(adapter.validate_python({"type": "tool_finished", "id": "c", "ok": False}), ToolFinishedEvent)
+
+
+@pytest.mark.parametrize(
+    ("model", "fields"),
+    [
+        (ReasoningPart, {"type", "text"}),
+        (ToolPart, {"type", "id", "name", "title", "ok", "display"}),
+        (Activity, {"parts", "stopped"}),
+        (ChatMessage, {"role", "content", "activity"}),
+    ],
+)
+def test_history_fields_with_defaults_are_still_required_in_the_response_schema(model, fields):
+    """A default is always serialised, so the generated client types `type`, `parts` and `activity` as required."""
+    assert set(model.model_json_schema(mode="serialization")["required"]) == fields

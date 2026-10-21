@@ -8,10 +8,8 @@ from fastapi import (
 )
 from sse_starlette import EventSourceResponse
 
-from app.agents.chatbot.events import ErrorEvent
-from app.agents.chatbot.toolkit import TurnContext
+from app.agents.chatbot import TurnContext
 from app.agents.core import delete_conversation_checkpoints
-from app.agents.messages import Message
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
@@ -19,10 +17,12 @@ from app.core.metrics import llm_stream_duration_seconds
 from app.database.dependencies import DbSession, release_connection
 from app.modules.account import CurrentUser
 from app.modules.conversation.dependencies import ChatbotAgentDep, UserConversation
+from app.modules.conversation.domain.chat import done, events, history
 from app.modules.conversation.schemas import (
     ChatRequest,
     ChatResponse,
     ConversationHistory,
+    ErrorEvent,
 )
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
@@ -52,13 +52,12 @@ async def chat(
     )
 
     await release_connection(db_session)
-    user_message = Message(role="user", content=chat_request.message)
     turn_context = TurnContext(user_id=user.id, session_factory=request.app.state.session_factory)
-    result = await agent.get_response([user_message], conversation.id, turn_context)
+    messages, stopped = await agent.run(chat_request.message, conversation.id, turn_context)
 
     logger.info("chat_request_processed", conversation_id=conversation.id)
 
-    return ChatResponse(message=result[-1])
+    return ChatResponse(message=history(messages, stopped, agent.tool_titles)[-1])
 
 
 @router.post(
@@ -93,19 +92,23 @@ async def chat_stream(
     async def event_generator():
         """Yield the turn's events as server-sent events, one JSON payload each.
 
-        The payloads are `app.agents.chatbot.events`: the agent's events as they
-        come, ending with `done`, or with `error` if the turn failed. An error
-        carries no text: the client words it.
+        The payloads are the stream events of `conversation.schemas`: the turn's
+        events as `domain.chat.events` translates them, then `done` from the saved
+        state, or `error` if the turn failed. An error carries no text: the client
+        words it.
 
         Run by EventSourceResponse, which cancels this generator when the client
         disconnects. The CancelledError travels down into the agent and the HTTP
         call to the model, which is what stops a call nobody is waiting for.
         """
         try:
-            user_message = Message(role="user", content=chat_request.message)
-            with llm_stream_duration_seconds.labels(model=agent.llm_service.current_model_name()).time():
-                async for event in agent.get_stream_response([user_message], conversation.id, turn_context):
+            with llm_stream_duration_seconds.labels(model=settings.llm.DEFAULT_LLM_MODEL).time():
+                async for event in events(
+                    agent.stream(chat_request.message, conversation.id, turn_context), agent.tool_titles
+                ):
                     yield {"data": event.model_dump_json()}
+                messages, stopped = await agent.state(conversation.id)
+                yield {"data": done(messages, stopped).model_dump_json()}
 
         except asyncio.CancelledError:
             logger.info("stream_chat_client_disconnected", conversation_id=conversation.id)
@@ -138,8 +141,7 @@ async def get_conversation_messages(
     agent: ChatbotAgentDep,
 ):
     """Get all messages for a conversation."""
-    messages = await agent.get_chat_history(conversation.id)
-    return ConversationHistory(messages=messages)
+    return ConversationHistory(messages=history(*await agent.state(conversation.id), agent.tool_titles))
 
 
 @router.delete(

@@ -5,8 +5,7 @@ from unittest.mock import patch
 import pytest
 from uuid_utils.compat import uuid7
 
-from app.agents.chatbot.title import TITLE_MAX_LENGTH, clean_title, first_exchange, generate_title
-from app.agents.messages import ChatMessage
+from app.agents.chatbot.title import TITLE_MAX_LENGTH, clean_title, generate_title
 from tests.unit.agents.fakes import FakeModel
 
 pytestmark = pytest.mark.unit
@@ -75,22 +74,6 @@ async def test_without_a_model_it_uses_the_primary_with_its_fallbacks():
         patch("app.agents.chatbot.title.with_fallbacks", return_value=model),
     ):
         assert await generate_title("a", "b", CONVERSATION_ID, USER_ID) == "Car savings plan"
-
-
-def test_first_exchange_pairs_the_first_reply_with_the_question_it_answered():
-    # A first turn stopped before any reply leaves its question unanswered:
-    # the title must not pair it with the second turn's answer.
-    history = [
-        ChatMessage(role="user", content="stopped question"),
-        ChatMessage(role="user", content="answered question"),
-        ChatMessage(role="assistant", content="the answer"),
-        ChatMessage(role="user", content="a follow-up"),
-    ]
-    assert first_exchange(history) == ("answered question", "the answer")
-
-
-def test_first_exchange_is_none_before_any_reply():
-    assert first_exchange([ChatMessage(role="user", content="hi")]) is None
 
 
 async def test_generate_title_is_traced_to_its_conversation():

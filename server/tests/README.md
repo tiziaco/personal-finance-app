@@ -71,8 +71,9 @@ after each test. External services are mocked:
 |---------|-------|-------------|
 | `test_user` | function | A user created in the database for the current test |
 | `authenticated_client` | function | `client` + `get_current_user → test_user` |
-| `mock_agent` | function | Mock `ChatbotAgent` with async method stubs |
-| `authenticated_client_with_agent` | function | `authenticated_client` + `get_chatbot_agent → mock_agent` |
+| `scripted_model` | function | `ScriptedChatModel` (`tests/fakes/chat_model.py`) answering "Hi there!"; script turns with `responses[:] = [...]`, read requests from `sent` |
+| `agent` | function | The real `ChatbotAgent` (`build_chatbot` on a MemorySaver, the chat's tools and preamble) over `scripted_model`, mem0 stubbed |
+| `authenticated_client_with_agent` | function | `authenticated_client` + `get_chatbot_agent → agent`; `app.state.session_factory` hands out the test's session |
 | `stub_checkpoint_deletion` | function | Stubs LangGraph checkpoint deletion; yields the erasure path's stub |
 
 ## Markers

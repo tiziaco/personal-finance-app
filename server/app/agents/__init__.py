@@ -1,18 +1,10 @@
-"""Agents package for LangGraph-based AI agents.
+"""The agent layer: LangGraph and LangChain agents over the LLM integration.
 
-This package contains the base agent abstraction, shared components,
-and specific agent implementations.
+It imports no module (R2): what an agent needs from a module (the chat's tools and
+preamble) is handed to it at startup by `app/main.py`.
 
 Structure:
-- base/: Abstract BaseAgent class
-- core/: Reusable components (memory, checkpointing, observability)
-- chatbot/: Chatbot agent implementation
+- core/: what every agent shares (checkpointing, memory, observability, structured calls)
+- chatbot/: the chat agent, `create_agent` with its middleware, held by `ChatbotAgent`
+- csv_mapping/, transaction_labeler/, insights/: the one-call agents
 """
-
-from app.agents.base import BaseAgent
-from app.agents.chatbot.graph import ChatbotAgent
-
-__all__ = [
-    "BaseAgent",
-    "ChatbotAgent",
-]

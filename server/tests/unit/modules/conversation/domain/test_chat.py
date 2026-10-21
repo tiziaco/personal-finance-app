@@ -1,23 +1,25 @@
-"""Tests for BaseAgent — what reaches the client's stream, and the history rebuilt from a checkpoint."""
+"""Tests for app.modules.conversation.domain.chat — the stream events and the history the client sees."""
 
-import asyncio
-import uuid
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from langchain_core.messages import AIMessage, AIMessageChunk, HumanMessage, ToolMessage
 
-from app.agents.base.agent import BaseAgent
-from app.agents.chatbot.events import (
+from app.agents.chatbot.middleware.tool_events import ToolCallFinished, ToolCallStarted
+from app.modules.conversation.domain.chat import done, events, first_exchange, history
+from app.modules.conversation.schemas import (
+    Activity,
+    ChatMessage,
     DoneEvent,
     ReasoningEvent,
+    ReasoningPart,
+    SummaryItem,
     TextEvent,
+    ToolDisplay,
     ToolFinishedEvent,
+    ToolPart,
     ToolStartedEvent,
 )
-from app.agents.chatbot.toolkit import SummaryItem, ToolDisplay, TurnContext
-from app.agents.messages import Activity, ChatMessage, Message, ReasoningPart, ToolPart
 
 pytestmark = pytest.mark.unit
 
@@ -28,70 +30,28 @@ DISPLAY = ToolDisplay(
     table=None,
 )
 
-
 TITLES = {"spending": "Spending by category", "income": "Income"}
 
 
-class _Agent(BaseAgent):
-    async def create_graph(self, checkpointer):  # pragma: no cover - not used
-        raise NotImplementedError
+async def _graph_stream(items):
+    """What `ChatbotAgent.stream` yields: (mode, payload) pairs.
 
-    def _tool_title(self, name: str) -> str | None:
-        return TITLES.get(name)
-
-
-class _FakeGraph:
-    """Emits what LangGraph's stream_mode=["messages", "custom"] emits: (mode, payload) pairs.
-
-    A bare message is a "messages" item from the chat node; a (message, node) pair names
-    another node; anything else is a "custom" item.
+    A bare AI message is a "messages" item from the model node, a ToolMessage one from the
+    tools node; a (message, node) pair names another node; anything else is a "custom" item.
     """
-
-    def __init__(self, items, values=None):
-        self._items = items
-        self._values = values or {}
-        self.inputs: list[dict] = []
-        self.configs: list[dict] = []
-
-    async def astream(self, graph_input, *, config, stream_mode):
-        self.inputs.append(graph_input)
-        self.configs.append(config)
-        for item in self._items:
-            if isinstance(item, tuple):
-                message, node = item
-                yield "messages", (message, {"langgraph_node": node})
-            elif isinstance(item, AIMessage | ToolMessage):
-                node = "tool_call" if isinstance(item, ToolMessage) else "chat"
-                yield "messages", (item, {"langgraph_node": node})
-            else:
-                yield "custom", item
-
-    async def ainvoke(self, input, config):
-        self.inputs.append(input)
-        self.configs.append(config)
-        return self._values
-
-    async def aget_state(self, config):
-        return SimpleNamespace(values=self._values)
+    for item in items:
+        if isinstance(item, tuple):
+            message, node = item
+            yield "messages", (message, {"langgraph_node": node})
+        elif isinstance(item, AIMessage | ToolMessage):
+            node = "tools" if isinstance(item, ToolMessage) else "model"
+            yield "messages", (item, {"langgraph_node": node})
+        else:
+            yield "custom", item
 
 
-def _turn_context() -> TurnContext:
-    return TurnContext(user_id=uuid.uuid4(), session_factory=MagicMock())
-
-
-async def _collect(items, values=None, *, ctx: TurnContext | None = None) -> list:
-    agent = _Agent()
-    agent._graph = _FakeGraph(items, values)
-    with (
-        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
-        patch("app.agents.base.agent.update_memory", new=AsyncMock()),
-    ):
-        return [
-            event
-            async for event in agent.get_stream_response(
-                [Message(role="user", content="hi")], uuid.uuid4(), ctx or _turn_context()
-            )
-        ]
+async def _collect(items, titles=TITLES) -> list:
+    return [event async for event in events(_graph_stream(items), titles)]
 
 
 def _text(events) -> str:
@@ -130,24 +90,46 @@ async def test_tool_results_are_not_streamed():
     assert "RAW" not in _text(events)
 
 
-async def test_the_stream_ends_with_done():
-    events = await _collect([AIMessageChunk(content="Hi", id="m1")])
-    assert events == [TextEvent(text="Hi"), DoneEvent(stopped=False)]
+async def test_a_text_turn_streams_its_text_and_no_done():
+    """`done` is the route's: it reads the saved state after the stream."""
+    assert await _collect([AIMessageChunk(content="Hi", id="m1")]) == [TextEvent(text="Hi")]
 
 
-async def test_tool_events_from_the_tool_node_pass_through_in_order():
-    started = ToolStartedEvent(id="c1", name="spending", title="Looking up spending")
-    finished = ToolFinishedEvent(id="c1", ok=True, display=DISPLAY)
+async def test_tool_events_become_wire_events_in_order():
     events = await _collect(
         [
             AIMessageChunk(content="", id="m1"),
-            started,
-            finished,
+            ToolCallStarted(id="c1", name="spending"),
+            ToolCallFinished(id="c1", ok=True, artifact=DISPLAY.model_dump()),
             ToolMessage(content="RAW", tool_call_id="c1"),
             AIMessageChunk(content="You spent €40.", id="m2"),
         ]
     )
-    assert events == [started, finished, TextEvent(text="You spent €40."), DoneEvent()]
+    assert events == [
+        ToolStartedEvent(id="c1", name="spending", title="Spending by category"),
+        ToolFinishedEvent(id="c1", ok=True, display=DISPLAY),
+        TextEvent(text="You spent €40."),
+    ]
+
+
+async def test_a_failed_call_finishes_without_a_display():
+    events = await _collect([ToolCallFinished(id="c1", ok=False, artifact=None)])
+    assert events == [ToolFinishedEvent(id="c1", ok=False, display=None)]
+
+
+async def test_an_artifact_that_does_not_validate_streams_a_null_display():
+    """Review Focus 3: the row still finishes, without figures, and the stream goes on."""
+    with patch("app.modules.conversation.domain.chat.logger") as log:
+        events = await _collect(
+            [ToolCallFinished(id="c1", ok=True, artifact={"bogus": 1}), AIMessageChunk(content="OK", id="m2")]
+        )
+    assert events == [ToolFinishedEvent(id="c1", ok=True, display=None), TextEvent(text="OK")]
+    assert log.warning.call_args.args[0] == "chat_stream_tool_display_invalid"
+    assert log.warning.call_args.kwargs["tool_call_id"] == "c1"
+
+
+async def test_a_started_event_for_a_name_without_a_title_yields_nothing():
+    assert await _collect([ToolCallStarted(id="c1", name="invented")]) == []
 
 
 async def test_a_tool_message_without_events_is_tolerated():
@@ -155,12 +137,12 @@ async def test_a_tool_message_without_events_is_tolerated():
     events = await _collect(
         [ToolMessage(content="That tool does not exist.", tool_call_id="c1"), AIMessageChunk(content="OK", id="m2")]
     )
-    assert events == [TextEvent(text="OK"), DoneEvent()]
+    assert events == [TextEvent(text="OK")]
 
 
 async def test_empty_chunks_are_skipped():
     events = await _collect([AIMessageChunk(content="", id="m1"), AIMessageChunk(content="Hi", id="m1")])
-    assert events == [TextEvent(text="Hi"), DoneEvent()]
+    assert events == [TextEvent(text="Hi")]
 
 
 async def test_only_text_blocks_are_reply_text():
@@ -197,7 +179,7 @@ async def test_a_message_with_no_text_does_not_add_a_break():
 
 
 async def test_reasoning_summary_deltas_stream_as_reasoning():
-    """Spike outcome A: the first chunk opens an empty summary; later chunks carry text deltas."""
+    """The first chunk opens an empty summary; later chunks carry text deltas (spike 1's raw content shape)."""
     events = await _collect(
         [
             AIMessageChunk(content=[{"type": "reasoning", "index": 0, "id": "rs_1", "summary": []}], id="m1"),
@@ -211,7 +193,6 @@ async def test_reasoning_summary_deltas_stream_as_reasoning():
         ReasoningEvent(text="**Checking**\n\nI"),
         ReasoningEvent(text=" need"),
         TextEvent(text="Done."),
-        DoneEvent(),
     ]
 
 
@@ -226,111 +207,41 @@ async def test_reasoning_after_a_tool_starts_fresh():
     events = await _collect(
         [
             _summary_chunk("Before.", id="m1"),
-            ToolStartedEvent(id="c1", name="spending", title="Looking up spending"),
+            ToolCallStarted(id="c1", name="spending"),
             _summary_chunk("After.", id="m2"),
         ]
     )
     assert [e.text for e in events if isinstance(e, ReasoningEvent)] == ["Before.", "After."]
 
 
-async def test_only_the_chat_nodes_model_output_is_streamed():
+async def test_a_reasoning_delta_after_a_text_event_starts_a_new_paragraph():
+    """The separator fix: a wrap-up's reasoning after streamed text begins a new paragraph."""
+    events = await _collect(
+        [
+            _summary_chunk("Thinking.", id="m1"),
+            AIMessageChunk(content="Some text.", id="m1"),
+            _summary_chunk("Wrapping up.", id="m2"),
+        ]
+    )
+    assert [e.text for e in events if isinstance(e, ReasoningEvent)] == ["Thinking.", "\n\nWrapping up."]
+
+
+async def test_only_the_model_nodes_output_is_streamed():
     """Another LLM call inside the graph must not reach the user."""
-    events = await _collect([(AIMessageChunk(content="internal", id="x"), "memory"), AIMessageChunk(content="Hi")])
+    events = await _collect(
+        [(AIMessageChunk(content="internal", id="x"), "SummaryMiddleware.before_model"), AIMessageChunk(content="Hi")]
+    )
     assert _text(events) == "Hi"
 
 
-async def test_done_is_stopped_when_the_server_ended_the_turn():
-    final = AIMessage(content="Partial answer.", id="final")
-    events = await _collect(
-        [final],
-        values={"messages": [HumanMessage(content="hi"), final], "stopped": {"final": "step_limit"}},
-    )
-    assert events[-1] == DoneEvent(stopped=True)
-
-
-async def test_done_is_not_stopped_for_an_earlier_stopped_turn():
+def test_done_is_stopped_only_when_the_last_message_is_in_stopped():
     earlier = AIMessage(content="Partial.", id="earlier")
     final = AIMessage(content="Full answer.", id="final")
-    events = await _collect(
-        [final],
-        values={
-            "messages": [HumanMessage(content="a"), earlier, HumanMessage(content="b"), final],
-            "stopped": {"earlier": "repeated_call"},
-        },
-    )
-    assert events[-1] == DoneEvent(stopped=False)
-
-
-async def test_stream_input_resets_turn_steps_and_carries_the_turn_context():
-    ctx = _turn_context()
-    agent = _Agent()
-    agent._graph = _FakeGraph([AIMessageChunk(content="Hi")])
-    with (
-        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
-        patch("app.agents.base.agent.update_memory", new=AsyncMock()),
-    ):
-        _ = [e async for e in agent.get_stream_response([Message(role="user", content="hi")], uuid.uuid4(), ctx)]
-    assert agent._graph.inputs[0]["turn_steps"] == 0
-    assert agent._graph.configs[0]["configurable"]["turn_context"] is ctx
-
-
-async def test_get_response_input_resets_turn_steps_and_carries_the_turn_context():
-    ctx = _turn_context()
-    agent = _Agent()
-    agent._graph = _FakeGraph([], values={"messages": [HumanMessage(content="hi"), AIMessage(content="Hello.")]})
-    with (
-        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
-        patch("app.agents.base.agent.update_memory", new=AsyncMock()),
-    ):
-        result = await agent.get_response([Message(role="user", content="hi")], uuid.uuid4(), ctx)
-    assert agent._graph.inputs[0]["turn_steps"] == 0
-    assert agent._graph.configs[0]["configurable"]["turn_context"] is ctx
-    assert result[-1] == ChatMessage(role="assistant", content="Hello.")
-
-
-async def test_get_response_sends_memory_only_this_turns_user_message():
-    agent = _Agent()
-    agent._graph = _FakeGraph(
-        [],
-        values={
-            "messages": [
-                HumanMessage(content="how much on food?"),
-                AIMessage(content="", tool_calls=[{"name": "spending", "args": {}, "id": "c1"}], id="a1"),
-                ToolMessage(content="RAW: 412.50 EUR", tool_call_id="c1"),
-                AIMessage(content="You spent 412.50 EUR."),
-            ]
-        },
-    )
-    update = AsyncMock()
-    with (
-        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
-        patch("app.agents.base.agent.update_memory", new=update),
-    ):
-        await agent.get_response([Message(role="user", content="how much on food?")], uuid.uuid4(), _turn_context())
-        await asyncio.sleep(0)
-    sent = update.await_args.args[1]
-    assert sent == [{"role": "user", "content": "how much on food?"}]
-
-
-async def test_the_stream_sends_memory_only_this_turns_user_message():
-    agent = _Agent()
-    agent._graph = _FakeGraph(
-        [AIMessageChunk(content="Hi")],
-        values={"messages": [HumanMessage(content="how much on food?"), AIMessage(content="You spent 412.50 EUR.")]},
-    )
-    update = AsyncMock()
-    with (
-        patch("app.agents.base.agent.get_relevant_memory", new=AsyncMock(return_value="")),
-        patch("app.agents.base.agent.update_memory", new=update),
-    ):
-        _ = [
-            e
-            async for e in agent.get_stream_response(
-                [Message(role="user", content="how much on food?")], uuid.uuid4(), _turn_context()
-            )
-        ]
-        await asyncio.sleep(0)
-    assert update.await_args.args[1] == [{"role": "user", "content": "how much on food?"}]
+    assert done([HumanMessage(content="hi"), final], {"final": "step_limit"}) == DoneEvent(stopped=True)
+    assert done(
+        [HumanMessage(content="a"), earlier, HumanMessage(content="b"), final], {"earlier": "repeated_call"}
+    ) == DoneEvent(stopped=False)
+    assert done([], {}) == DoneEvent(stopped=False)
 
 
 # ── The history ───────────────────────────────────────────────────────────────
@@ -348,18 +259,17 @@ def _tool_turn(*, artifact=DISPLAY.model_dump(), status: str = "success", answer
 
 
 def test_history_folds_a_turn_into_one_message_with_activity():
-    [user, reply] = _Agent()._process_messages(_tool_turn(), stopped={})
+    [user, reply] = history(_tool_turn(), {}, TITLES)
     assert user == ChatMessage(role="user", content="Where did my money go?")
     assert reply.content == "answer"
     assert reply.activity == Activity(
         parts=[ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=DISPLAY)]
     )
-    assert reply.activity.parts[0].display.title == "Spending by category"
 
 
 def test_history_drops_the_activity_of_an_unanswered_turn():
-    """Review Focus 1: a turn the user stopped mid-tool reopens as the question alone."""
-    assert [m.role for m in _Agent()._process_messages(_tool_turn(answer=None), stopped={})] == ["user"]
+    """A turn the user stopped mid-tool reopens as the question alone."""
+    assert [m.role for m in history(_tool_turn(answer=None), {}, TITLES)] == ["user"]
 
 
 def test_history_drops_a_turn_whose_only_text_came_before_its_tool_call():
@@ -367,12 +277,12 @@ def test_history_drops_a_turn_whose_only_text_came_before_its_tool_call():
         HumanMessage(content="Q"),
         AIMessage(content="Let me check.", tool_calls=[{"name": "spending", "args": {}, "id": "c1"}]),
     ]
-    assert [m.role for m in _Agent()._process_messages(messages, stopped={})] == ["user"]
+    assert [m.role for m in history(messages, {}, TITLES)] == ["user"]
 
 
 def test_an_unanswered_turn_does_not_affect_the_next_one():
     messages = [*_tool_turn(answer=None), HumanMessage(content="Try again"), AIMessage(content="Here.")]
-    assert _Agent()._process_messages(messages, stopped={}) == [
+    assert history(messages, {}, TITLES) == [
         ChatMessage(role="user", content="Where did my money go?"),
         ChatMessage(role="user", content="Try again"),
         ChatMessage(role="assistant", content="Here."),
@@ -380,17 +290,17 @@ def test_an_unanswered_turn_does_not_affect_the_next_one():
 
 
 def test_history_marks_server_stopped_turns():
-    [_, reply] = _Agent()._process_messages(_tool_turn(), stopped={"a2": "step_limit"})
+    [_, reply] = history(_tool_turn(), {"a2": "step_limit"}, TITLES)
     assert reply.activity.stopped is True
 
 
 def test_a_reply_without_reasoning_or_tools_has_no_activity():
-    history = _Agent()._process_messages([HumanMessage(content="Hi"), AIMessage(content="Hello.")], stopped={})
-    assert history[-1] == ChatMessage(role="assistant", content="Hello.", activity=None)
+    reply = history([HumanMessage(content="Hi"), AIMessage(content="Hello.")], {}, TITLES)[-1]
+    assert reply == ChatMessage(role="assistant", content="Hello.", activity=None)
 
 
 def test_a_failed_tool_call_is_a_part_without_display_but_with_its_title():
-    [_, reply] = _Agent()._process_messages(_tool_turn(artifact=None, status="error"), stopped={})
+    [_, reply] = history(_tool_turn(artifact=None, status="error"), {}, TITLES)
     assert reply.activity.parts == [
         ToolPart(id="c1", name="spending", title="Spending by category", ok=False, display=None)
     ]
@@ -398,10 +308,12 @@ def test_a_failed_tool_call_is_a_part_without_display_but_with_its_title():
 
 def test_an_artifact_that_no_longer_validates_keeps_the_part_without_display():
     """An old checkpoint's artifact must not fail the whole history."""
-    [_, reply] = _Agent()._process_messages(_tool_turn(artifact={"title": "Old shape"}), stopped={})
+    with patch("app.modules.conversation.domain.chat.logger") as log:
+        [_, reply] = history(_tool_turn(artifact={"title": "Old shape"}), {}, TITLES)
     assert reply.activity.parts == [
         ToolPart(id="c1", name="spending", title="Spending by category", ok=True, display=None)
     ]
+    assert log.warning.call_args.args[0] == "chat_history_tool_display_invalid"
 
 
 def test_reasoning_and_tool_parts_keep_their_order():
@@ -433,7 +345,7 @@ def test_reasoning_and_tool_parts_keep_their_order():
             ]
         ),
     ]
-    [_, reply] = _Agent()._process_messages(messages, stopped={})
+    [_, reply] = history(messages, {}, TITLES)
     assert reply == ChatMessage(
         role="assistant",
         content="Answer.",
@@ -453,26 +365,20 @@ def test_an_empty_reasoning_summary_adds_no_part():
         HumanMessage(content="Hi"),
         AIMessage(content=[{"type": "reasoning", "id": "rs", "summary": []}, {"type": "text", "text": "Hello."}]),
     ]
-    assert _Agent()._process_messages(messages, stopped={})[-1].activity is None
+    assert history(messages, {}, TITLES)[-1].activity is None
 
 
 def test_history_joins_a_turns_assistant_messages_as_they_were_streamed():
     """The thread swaps the streamed reply for the history: they must read the same."""
-    history = _Agent()._process_messages(
-        [
-            HumanMessage(content="How much did I spend?"),
-            AIMessage(
-                content="Let me check your spending.",
-                tool_calls=[{"name": "search", "args": {}, "id": "call_1"}],
-            ),
-            ToolMessage(content="RAW", tool_call_id="call_1", artifact=DISPLAY.model_dump()),
-            AIMessage(content="You spent €40."),
-            HumanMessage(content="Thanks"),
-            AIMessage(content="Any time."),
-        ],
-        stopped={},
-    )
-    assert [(m.role, m.content) for m in history] == [
+    messages = [
+        HumanMessage(content="How much did I spend?"),
+        AIMessage(content="Let me check your spending.", tool_calls=[{"name": "search", "args": {}, "id": "call_1"}]),
+        ToolMessage(content="RAW", tool_call_id="call_1", artifact=DISPLAY.model_dump()),
+        AIMessage(content="You spent €40."),
+        HumanMessage(content="Thanks"),
+        AIMessage(content="Any time."),
+    ]
+    assert [(m.role, m.content) for m in history(messages, {}, {"search": "Search"})] == [
         ("user", "How much did I spend?"),
         ("assistant", "Let me check your spending.\n\nYou spent €40."),
         ("user", "Thanks"),
@@ -480,12 +386,23 @@ def test_history_joins_a_turns_assistant_messages_as_they_were_streamed():
     ]
 
 
-def test_a_tool_the_agent_does_not_show_is_left_out():
+def test_a_tool_without_a_title_is_left_out():
     """The stream announces only the agent's own tools; the history matches it."""
-
-    class _Shows(_Agent):
-        def _tool_title(self, name: str) -> str | None:
-            return None if name == "spending" else super()._tool_title(name)
-
-    [_, reply] = _Shows()._process_messages(_tool_turn(), stopped={})
+    [_, reply] = history(_tool_turn(), {}, {"income": "Income"})
     assert reply.activity is None
+
+
+def test_first_exchange_pairs_the_first_reply_with_the_question_it_answered():
+    # A first turn stopped before any reply leaves its question unanswered:
+    # the title must not pair it with the second turn's answer.
+    messages = [
+        ChatMessage(role="user", content="stopped question"),
+        ChatMessage(role="user", content="answered question"),
+        ChatMessage(role="assistant", content="the answer"),
+        ChatMessage(role="user", content="a follow-up"),
+    ]
+    assert first_exchange(messages) == ("answered question", "the answer")
+
+
+def test_first_exchange_is_none_before_any_reply():
+    assert first_exchange([ChatMessage(role="user", content="hi")]) is None

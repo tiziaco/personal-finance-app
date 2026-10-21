@@ -1,15 +1,19 @@
 """Integration test fixtures — real DB, mocked external services, short-circuit auth."""
 
-from unittest.mock import AsyncMock, MagicMock, patch
+from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import pytest_asyncio
+from langchain_core.messages import AIMessage
+from langgraph.checkpoint.memory import MemorySaver
 
-from app.agents.messages import ChatMessage
+from app.agents.chatbot import ChatbotAgent, build_chatbot
 from app.main import app
 from app.modules.account import get_current_user
 from app.modules.account.models import User
-from app.modules.conversation import get_chatbot_agent
+from app.modules.conversation import chat_preamble, chat_tools, get_chatbot_agent
+from tests.fakes.chat_model import ScriptedChatModel
 
 
 @pytest_asyncio.fixture
@@ -40,24 +44,28 @@ async def authenticated_client(client, test_user):
 
 
 @pytest.fixture
-def mock_agent():
-    """Mock ChatbotAgent with pre-configured async method stubs."""
-    agent = MagicMock()
-    agent.get_response = AsyncMock(
-        return_value=[
-            ChatMessage(role="user", content="Hello"),
-            ChatMessage(role="assistant", content="Hi there!"),
-        ]
-    )
-    agent.get_chat_history = AsyncMock(
-        return_value=[
-            ChatMessage(role="user", content="Hello"),
-            ChatMessage(role="assistant", content="Hi there!"),
-        ]
-    )
-    agent.llm_service.current_model_name.return_value = "gpt-5-mini"
-    agent.is_ready.return_value = True
-    return agent
+def scripted_model():
+    """The chat model behind `agent`: answers "Hi there!" unless a test scripts more.
+
+    Set `scripted_model.responses[:] = [...]` to script a turn; `sent` holds every request.
+    """
+    return ScriptedChatModel(responses=[AIMessage(content="Hi there!")])
+
+
+@pytest.fixture
+def agent(scripted_model):
+    """The real chat agent, as `main.py` builds it, on a MemorySaver and the scripted model.
+
+    The graph, the middleware, the seven tools and the preamble all run; only the model
+    and mem0 are stand-ins (nothing relevant in memory, and the write goes nowhere).
+    """
+    with (
+        patch("app.agents.chatbot.middleware.memory.get_relevant_memory", new=AsyncMock(return_value="")),
+        patch("app.agents.chatbot.middleware.memory.update_memory", new=AsyncMock()),
+    ):
+        yield ChatbotAgent(
+            build_chatbot(MemorySaver(), chat_tools(), chat_preamble, model=scripted_model), chat_tools()
+        )
 
 
 @pytest.fixture
@@ -90,15 +98,21 @@ def stub_checkpoint_deletion():
 
 
 @pytest_asyncio.fixture
-async def authenticated_client_with_agent(authenticated_client, mock_agent):
-    """HTTP client with both auth and chatbot agent overridden.
+async def authenticated_client_with_agent(authenticated_client, agent, db_session):
+    """HTTP client with auth overridden and the chat routes on the real `agent`.
 
     The chat routes put `app.state.session_factory` in the turn's context for the
-    agent's tools, and no lifespan sets it under test. The agent is a mock that opens
-    no session, so a sentinel stands in; whatever was there before is put back, so
-    tests relying on its absence (`unauthenticated_client`) are unaffected.
+    preamble and the tools, and no lifespan sets it under test. It hands out the
+    test's own session, so they read the rows the test seeded; whatever was there
+    before is put back, so tests relying on its absence (`unauthenticated_client`)
+    are unaffected.
     """
-    app.dependency_overrides[get_chatbot_agent] = lambda: mock_agent
-    with patch.object(app.state, "session_factory", MagicMock(name="session_factory"), create=True):
+
+    @asynccontextmanager
+    async def sessions():
+        yield db_session
+
+    app.dependency_overrides[get_chatbot_agent] = lambda: agent
+    with patch.object(app.state, "session_factory", sessions, create=True):
         yield authenticated_client
     app.dependency_overrides.pop(get_chatbot_agent, None)
