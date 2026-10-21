@@ -7,6 +7,7 @@ from mem0 import AsyncMemory
 
 from app.core.config import settings
 from app.core.logging import logger
+from app.integrations.llm import PLACEHOLDER_KEY
 
 # What mem0 extracts from the user's message. Figures in a memory go stale and would be
 # read back as facts, and the transaction data already answers questions about them.
@@ -23,12 +24,6 @@ _memory_instance: Optional[AsyncMemory] = None
 # The graph config we hand through carries user_id for Langfuse, so strip them.
 MEM0_IDENTITY_KEYS = frozenset({"user_id", "agent_id", "run_id", "actor_id"})
 
-# Stands in for an unset OPENROUTER_API_KEY. Given an empty key, mem0's OpenAI
-# client falls back to OPENAI_API_KEY from the environment and would send that
-# secret to OpenRouter. With this, a memory search or write fails with a 401
-# that its caller logs, and erasure, which makes no LLM call, still runs.
-_NO_KEY = "openrouter-key-not-set"
-
 
 def _openrouter_credentials() -> Dict[str, Any]:
     """The key and base URL every mem0 client uses.
@@ -39,7 +34,7 @@ def _openrouter_credentials() -> Dict[str, Any]:
     base URLs makes either branch land on OpenRouter.
     """
     return {
-        "api_key": settings.llm.OPENROUTER_API_KEY.get_secret_value() or _NO_KEY,
+        "api_key": settings.llm.OPENROUTER_API_KEY.get_secret_value() or PLACEHOLDER_KEY,
         "openai_base_url": settings.llm.LLM_BASE_URL,
     }
 

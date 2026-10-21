@@ -130,6 +130,10 @@ class LLMSettings(BaseSettings):
     CHAT_HISTORY_MAX_TOKENS: int = 24000
     # Model calls with tool calls per turn; the run's recursion limit follows it (`turn_recursion_limit`).
     CHAT_MAX_STEPS: int = Field(8, ge=1)
+    # Tried in order, after the model a caller starts on, when it fails with an OpenAI error.
+    LLM_FALLBACK_MODELS: list[OpenRouterModel] = Field(default_factory=lambda: ["openai/gpt-5", "openai/gpt-5-nano"])
+    # The model that folds old turns into the conversation summary.
+    CHAT_SUMMARY_MODEL: OpenRouterModel = "openai/gpt-5-nano"
 
 
 # Long-term Memory Settings
