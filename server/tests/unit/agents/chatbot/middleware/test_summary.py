@@ -35,14 +35,14 @@ def _turn(question: str, key: str, *, result: str = "x"):
 class _Model:
     """A summary model that records its input."""
 
-    def __init__(self, fail: bool = False):
+    def __init__(self, fail: bool = False, reply: str = SUMMARY):
         self.seen: list = []
 
         def call(messages):
             self.seen.append(messages)
             if fail:
                 raise RuntimeError("boom")
-            return AIMessage(SUMMARY)
+            return AIMessage(reply)
 
         self.runnable = RunnableLambda(call)
 
@@ -159,3 +159,34 @@ def test_render_for_summary_lines():
     assert text.splitlines()[-1] == "Assistant: answer to rent?"
     assert "Tool result: " in text
     assert "Assistant: \n" not in text + "\n"  # a text-less tool-call message adds no line
+
+
+@pytest.mark.parametrize("reply", ["", "  \n "])
+async def test_an_empty_summary_reply_is_a_failed_summary_and_keeps_the_old_one(monkeypatch, reply):
+    with patch(f"{MODULE}.logger") as log:
+        update, _ = await _run(
+            [*_turn("rent?", "a"), HumanMessage(content="now")],
+            state={"summary": "old", "summary_through": None},
+            model=_Model(reply=reply),
+            monkeypatch=monkeypatch,
+        )
+
+    assert update is None
+    assert log.exception.call_args.args[0] == "chat_summary_failed"
+
+
+async def test_the_default_model_is_built_once_and_reused(monkeypatch):
+    monkeypatch.setattr(settings.llm, "CHAT_HISTORY_MAX_TOKENS", 1)
+    messages = [*_turn("rent?", "a"), HumanMessage(content="now")]
+    middleware = SummaryMiddleware()
+
+    with (
+        patch(f"{MODULE}.chat_model") as build,
+        patch(f"{MODULE}.with_fallbacks", return_value=_Model().runnable) as wrap,
+        patch(f"{MODULE}.get_config", return_value={"configurable": {"thread_id": "t"}}),
+    ):
+        await middleware.abefore_model({"messages": messages}, runtime=None)
+        await middleware.abefore_model({"messages": messages}, runtime=None)
+
+    build.assert_called_once_with(settings.llm.CHAT_SUMMARY_MODEL)
+    wrap.assert_called_once()

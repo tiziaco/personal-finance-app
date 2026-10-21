@@ -81,7 +81,10 @@ class SummaryMiddleware(AgentMiddleware[ChatState, TurnContext]):
                     ),
                 ]
             )
-            return {"summary": response.text.strip(), "summary_through": pending[-1][-1].id}
+            text = response.text.strip()
+            if not text:
+                raise ValueError("the summary model returned no text")
+            return {"summary": text, "summary_through": pending[-1][-1].id}
         except Exception as e:
             try:
                 thread_id = get_config()["configurable"]["thread_id"]
