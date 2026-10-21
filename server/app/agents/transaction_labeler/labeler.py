@@ -15,7 +15,7 @@ from typing import Optional
 from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, RootModel
 
-from app.agents.shared.observability import create_trace_config
+from app.agents.core import create_trace_config
 from app.agents.shared.structured import ask_json, structured_llm_service
 from app.agents.transaction_labeler.known_merchants import match_known
 from app.core.logging import logger

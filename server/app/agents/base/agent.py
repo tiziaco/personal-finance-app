@@ -33,6 +33,11 @@ from app.agents.chatbot.events import (
     ToolStartedEvent,
 )
 from app.agents.chatbot.toolkit import ToolDisplay, TurnContext
+from app.agents.core import (
+    create_graph_config,
+    get_relevant_memory,
+    update_memory,
+)
 from app.agents.graph import dump_messages
 from app.agents.messages import (
     Activity,
@@ -42,11 +47,6 @@ from app.agents.messages import (
     ReasoningPart,
     ToolPart,
 )
-from app.agents.shared.memory import (
-    get_relevant_memory,
-    update_memory,
-)
-from app.agents.shared.observability import create_graph_config
 from app.core.logging import logger
 
 

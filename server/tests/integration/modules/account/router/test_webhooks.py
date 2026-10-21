@@ -174,7 +174,7 @@ def mocked_memory():
     """Stub mem0 for user.deleted's erasure cascade.
 
     delete_user_memory() swallows its own exceptions (see
-    app/agents/shared/memory/factory.py), so leaving it unmocked would not
+    app/agents/core/memory.py), so leaving it unmocked would not
     fail the test — but it would try to build a real AsyncMemory against
     whatever OpenAI/pgvector config is in the test environment, which is
     slow and produces noisy exception logs. Mirrors the pattern already used

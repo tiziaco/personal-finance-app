@@ -14,7 +14,7 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, PrivateAttr, RootModel, ValidationError, model_validator
 
-from app.agents.shared.observability import create_trace_config
+from app.agents.core import create_trace_config
 from app.agents.shared.structured import ask_json, structured_llm_service
 from app.core.logging import logger
 

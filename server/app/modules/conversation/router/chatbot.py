@@ -10,8 +10,8 @@ from sse_starlette import EventSourceResponse
 
 from app.agents.chatbot.events import ErrorEvent
 from app.agents.chatbot.toolkit import TurnContext
+from app.agents.core import delete_conversation_checkpoints
 from app.agents.messages import Message
-from app.agents.shared.checkpointing import delete_conversation_checkpoints
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger

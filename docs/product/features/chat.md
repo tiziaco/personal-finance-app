@@ -128,7 +128,7 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 - **Stopping a reply while a lookup runs leaves the conversation usable.** The
   model's tool-call message is checkpointed before the tool runs, so a stop there leaves
   a call with no result, which providers reject with a 400 on every later turn.
-  `drop_unanswered_tool_calls` (`app/agents/graph.py`) removes such a call, keeping any
+  `drop_unanswered_tool_calls` (`app/agents/core/messages.py`) removes such a call, keeping any
   text written beside it, before every model call. Reopening a stopped turn shows the
   question alone: the history leaves out the activity of a turn with no final answer.
 - **Every LLM call goes through OpenRouter** (`OPENROUTER_API_KEY`) — the agent, titles and

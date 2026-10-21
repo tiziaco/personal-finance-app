@@ -3,7 +3,7 @@
 import pytest
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 
-from app.agents.graph import drop_unanswered_tool_calls
+from app.agents.core.messages import drop_unanswered_tool_calls
 
 pytestmark = pytest.mark.unit
 

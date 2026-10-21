@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from uuid_utils.compat import uuid7
 
-from app.agents.shared.checkpointing.postgres import (
+from app.agents.core.checkpointing import (
     delete_conversation_checkpoints,
     delete_conversations_checkpoints,
 )
@@ -29,7 +29,7 @@ def pool_with_connection():
 
     pool.connection = connection
     with patch(
-        "app.agents.shared.checkpointing.postgres.create_connection_pool",
+        "app.agents.core.checkpointing.create_connection_pool",
         new=AsyncMock(return_value=pool),
     ) as create_pool:
         yield create_pool, conn

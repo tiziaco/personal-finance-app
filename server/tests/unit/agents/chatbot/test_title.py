@@ -17,7 +17,7 @@ USER_ID = uuid7()
 
 @pytest.fixture(autouse=True)
 def no_langfuse_client():
-    with patch("app.agents.shared.observability.langfuse.CallbackHandler"):
+    with patch("app.agents.core.observability.CallbackHandler"):
         yield
 
 

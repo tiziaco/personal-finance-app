@@ -19,7 +19,7 @@ from mem0 import AsyncMemory
 from mem0.llms.base import LLMBase
 from pydantic import SecretStr
 
-import app.agents.shared.memory.factory as factory
+import app.agents.core.memory as factory
 from app.core.config import settings
 
 pytestmark = pytest.mark.unit

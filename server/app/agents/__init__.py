@@ -5,7 +5,7 @@ and specific agent implementations.
 
 Structure:
 - base/: Abstract BaseAgent class
-- shared/: Reusable components (memory, checkpointing, observability)
+- core/: Reusable components (memory, checkpointing, observability)
 - chatbot/: Chatbot agent implementation
 """
 

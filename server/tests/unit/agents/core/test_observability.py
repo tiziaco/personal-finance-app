@@ -5,14 +5,14 @@ from unittest.mock import patch
 import pytest
 from uuid_utils.compat import uuid7
 
-from app.agents.shared.observability.langfuse import create_graph_config, create_trace_config
+from app.agents.core.observability import create_graph_config, create_trace_config
 
 pytestmark = pytest.mark.unit
 
 
 @pytest.fixture(autouse=True)
 def no_langfuse_client():
-    with patch("app.agents.shared.observability.langfuse.CallbackHandler"):
+    with patch("app.agents.core.observability.CallbackHandler"):
         yield
 
 

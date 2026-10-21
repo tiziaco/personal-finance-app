@@ -72,11 +72,11 @@ def agent_toolkits() -> dict[str, Toolkit]:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Handle application startup and shutdown events."""
-    from app.agents.factory import initialize_agents
-    from app.agents.shared.checkpointing.postgres import (
+    from app.agents.core.checkpointing import (
         close_connection_pool,
         create_postgres_saver,
     )
+    from app.agents.factory import initialize_agents
 
     logger.info(
         "application_startup",

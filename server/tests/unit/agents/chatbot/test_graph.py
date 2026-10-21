@@ -32,7 +32,7 @@ from app.agents.chatbot.toolkit import (
     ToolOutcome,
     TurnContext,
 )
-from app.agents.graph import drop_unanswered_tool_calls
+from app.agents.core import drop_unanswered_tool_calls
 from app.agents.messages import Activity, ChatMessage, Message, ToolPart
 from app.core.config import LLMSettings, settings
 from app.integrations.llm.service import LLMRegistry
@@ -426,7 +426,7 @@ class TestTurnLimits:
         # 20 steps take 39 supersteps, past a fixed limit of 25: the turn's limit must follow the cap.
         monkeypatch.setattr(settings.llm, "CHAT_MAX_STEPS", 20)
         agent, ran = self._counting_agent()
-        with patch("app.agents.shared.observability.langfuse.CallbackHandler"):
+        with patch("app.agents.core.observability.CallbackHandler"):
             limit = agent._turn_config(THREAD_ID, CTX)["recursion_limit"]
 
         def respond(with_tools, n):

@@ -13,7 +13,7 @@ from collections.abc import Callable
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 
-from app.agents.graph import drop_unanswered_tool_calls
+from app.agents.core import drop_unanswered_tool_calls
 from app.core.logging import logger
 
 STUB_TEMPLATE = "{title}{period}: result omitted from an earlier turn; call the tool again for figures."

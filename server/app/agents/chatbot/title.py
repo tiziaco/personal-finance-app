@@ -8,8 +8,8 @@ from langchain_core.messages import (
     SystemMessage,
 )
 
+from app.agents.core import create_graph_config
 from app.agents.messages import ChatMessage
-from app.agents.shared.observability import create_graph_config
 from app.integrations.llm import LLMRegistry
 
 # The rename route's limit: a generated title must be one a user could have typed.

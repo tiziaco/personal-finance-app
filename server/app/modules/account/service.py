@@ -5,7 +5,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.agents.shared.memory.factory import delete_user_memory
+from app.agents.core.memory import delete_user_memory
 from app.core.events import events
 from app.core.logging import logger
 from app.integrations.clerk import (
