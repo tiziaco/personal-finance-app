@@ -45,6 +45,7 @@ class ModelTimingMiddleware(AgentMiddleware):
                 conversation_id=_conversation_id(),
                 error_type=type(e).__name__,
                 error=str(e),
+                environment=settings.ENVIRONMENT.value,
             )
             raise translate_error(e) from e
 

@@ -86,6 +86,7 @@ async def test_a_provider_error_is_translated():
 
     assert log.error.call_args.args[0] == "llm_call_failed_all_models"
     assert log.error.call_args.kwargs["conversation_id"] == "thread-1"
+    assert "environment" in log.error.call_args.kwargs
 
 
 async def test_other_errors_pass_through_untranslated():

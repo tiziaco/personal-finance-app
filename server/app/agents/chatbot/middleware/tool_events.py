@@ -145,15 +145,29 @@ class ToolEventsMiddleware(AgentMiddleware):
                 )
                 message = error(TOOL_FAILED_MESSAGE)
             else:
-                duration = finish("success")
-                logger.info(
-                    "tool_call_completed",
-                    tool_name=tool_name,
-                    tool_args=tool_args,
-                    duration_ms=round(duration * 1000),
-                    result_chars=len(message.content),
-                )
+                if isinstance(message, ToolMessage) and message.status == "error":
+                    # The tool node turned an exception into a message (a pydantic ValidationError raised
+                    # inside the tool body, say) with the library's text: a crash, not something to show the model.
+                    duration = finish("error")
+                    logger.error(
+                        "tool_call_failed",
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        duration_ms=round(duration * 1000),
+                        error=str(message.content),
+                    )
+                    message = error(TOOL_FAILED_MESSAGE)
+                else:
+                    duration = finish("success")
+                    logger.info(
+                        "tool_call_completed",
+                        tool_name=tool_name,
+                        tool_args=tool_args,
+                        duration_ms=round(duration * 1000),
+                        result_chars=len(message.content) if isinstance(message, ToolMessage) else None,
+                    )
 
-        ok = message.status != "error"
-        writer(ToolCallFinished(id=call["id"], ok=ok, artifact=message.artifact if ok else None))
+        ok = not (isinstance(message, ToolMessage) and message.status == "error")
+        artifact = message.artifact if ok and isinstance(message, ToolMessage) else None
+        writer(ToolCallFinished(id=call["id"], ok=ok, artifact=artifact))
         return message

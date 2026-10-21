@@ -258,3 +258,33 @@ async def test_a_real_tool_node_runs_success_invalid_and_unknown_calls_in_order(
     assert messages[2].content == TOOL_UNKNOWN_MESSAGE
     assert sorted(type(e).__name__ for e in events) == ["ToolCallFinished"] * 2 + ["ToolCallStarted"] * 2
     assert json.dumps(messages[0].artifact)
+
+
+async def test_a_real_tool_node_error_message_from_a_validation_error_in_the_body_is_a_crash():
+    try:
+        Args(n="x")  # type: ignore[arg-type]
+    except Exception as exc:  # noqa: BLE001
+        body_error = exc
+    tool = _tool("r_val", behaviour=body_error)
+    before = _count("r_val", "error")
+
+    with patch(f"{MODULE}.logger") as log:
+        messages, events = await _run_real(tool, [{"name": "r_val", "args": {"n": 1}, "id": "c1"}])
+
+    assert [(m.content, m.status) for m in messages] == [(TOOL_FAILED_MESSAGE, "error")]
+    assert events[-1] == ToolCallFinished(id="c1", ok=False, artifact=None)
+    assert _count("r_val", "error") == before + 1
+    assert log.error.call_args.args[0] == "tool_call_failed"
+
+
+async def test_a_command_from_the_handler_passes_through():
+    from langgraph.types import Command
+
+    request, events = _request(_tool("t_cmd"), {"n": 1}, name="t_cmd")
+    command = Command(update={})
+
+    async def handler(req):
+        return command
+
+    assert await ToolEventsMiddleware().awrap_tool_call(request, handler) is command
+    assert events[-1] == ToolCallFinished(id="c1", ok=True, artifact=None)
