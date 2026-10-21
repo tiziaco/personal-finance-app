@@ -11,6 +11,7 @@ from uuid_utils.compat import uuid7
 from app.agents.insights import PROMPT_VERSION, WrittenInsight, write_insights
 from app.agents.shared.structured import InvalidModelAnswer
 from app.core.logging import logger
+from app.database.dependencies import release_connection
 from app.integrations.llm import LLMServiceError
 from app.modules.insights.exceptions import InsightsUnavailableError
 from app.modules.insights.figures import gather_figures
@@ -34,16 +35,6 @@ def _response(row: InsightSet, status: InsightsStatus, stale_reason: Optional[St
         month_to_date_through=row.month_to_date_through,
         insights=[InsightResponse.model_validate(item) for item in row.insights],
     )
-
-
-async def _release_connection(session: AsyncSession) -> None:
-    """End the read-only transaction, handing the connection back before the model call.
-
-    The call takes seconds, and DbSession would otherwise hold its pool connection idle in
-    a transaction through it (docs/TODO.md). Nothing has been written yet; the session opens
-    a new transaction on its next use, which DbSession commits after the route as usual.
-    """
-    await session.commit()
 
 
 def _to_response(item: WrittenInsight) -> InsightResponse:
@@ -89,7 +80,7 @@ class InsightsService:
         if figures is None:
             return InsightsResponse(status="no_data")
         generation_id = uuid7()
-        await _release_connection(session)
+        await release_connection(session)
         try:
             written = await write_insights(figures, user_id=user_id, generation_id=generation_id)
         except (InvalidModelAnswer, LLMServiceError) as e:

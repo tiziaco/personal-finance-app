@@ -281,6 +281,28 @@ class TestChat:
         assert str(dt.date.today()) in sent[1].content and "Saving for a flat" in sent[1].content
         assert sent[2].content == "hi"
 
+    @pytest.mark.asyncio
+    async def test_a_failed_preamble_still_answers_the_turn(self):
+        """The history load behind the preamble fails: the turn goes on without it, as a crashed tool would."""
+
+        async def failing_preamble(ctx: TurnContext) -> str:
+            raise RuntimeError("history load failed")
+
+        agent = ChatbotAgent(Toolkit(tools=[], preamble=failing_preamble))
+        agent.llm_service = MagicMock()
+        agent.llm_service.get_llm.return_value = LLMRegistry.get(LLMRegistry.get_all_names()[0])
+        agent.llm_service.current_model_name.return_value = LLMRegistry.get_all_names()[0]
+        agent.llm_service.call = AsyncMock(return_value=AIMessage(content="Hello."))
+        state = GraphState(messages=[HumanMessage(content="hi")])
+
+        with patch("app.agents.chatbot.graph.logger") as logger:
+            await agent._chat(state, {"configurable": {"thread_id": "t1", "turn_context": CTX}})
+
+        sent = agent.llm_service.call.call_args.args[0]
+        assert str(dt.date.today()) in sent[1].content
+        assert sent[2].content == "hi"
+        assert logger.exception.call_args.args[0] == "chat_preamble_failed"
+
 
 def _call(name: str, n: int, call_id: str) -> dict:
     return {"name": name, "args": {"n": n}, "id": call_id}

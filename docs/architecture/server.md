@@ -221,7 +221,7 @@ imports are excluded from the graph, which lets R4's hint through; every directo
 carries an `__init__.py` because the graph builder needs regular packages. R9 is a `forbidden` contract too: it
 forbids `sqlmodel`, `sqlalchemy` and `fastapi` in `app.modules.*.domain` and
 `app.modules.*.*.domain`. R10 is one `forbidden` contract per feature sub-package, with the
-core's slots as sources; `transaction/imports/` has the only one.
+core's slots as sources: `transaction/imports/` has one, `conversation/finance/` the other.
 
 A new module is three edits to `pyproject.toml` before it is enforced.
 `tests/unit/test_module_contracts.py` fails when a module is missing its R1 contract, is absent
@@ -286,7 +286,10 @@ handlers — a unique violation is a 409, not a 200 followed by a lost write.
 
 Consequences code relies on:
 
-- Services and repositories `flush()`, never `commit()`.
+- Services and repositories `flush()`, never `commit()`. The one exception is
+  `release_connection` (`app/database/dependencies.py`): a request that awaits a model call
+  commits its work so far first, so the pool connection is not held idle in a transaction for
+  seconds. The chat routes, the title, insights' generate and the import's model calls use it.
 - Deferred event handlers add to the response's latency.
 - By the time a `BackgroundTasks` callable or a `StreamingResponse` body runs, the request's
   session is committed and closed. They take plain values and, if they need the database,

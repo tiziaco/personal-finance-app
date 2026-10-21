@@ -189,10 +189,17 @@ class ChatbotAgent(BaseAgent):
         """The messages for this turn's model calls; the wrap-up call builds on the same ones.
 
         The turn context is absent until a route sets it: the toolkit's preamble is then
-        empty, and the model still gets today's date and the user's memory.
+        empty, and the model still gets today's date and the user's memory. A preamble that
+        fails is left out the same way, so the turn is still answered; a tool that needs the
+        same data fails on its own and the model is told so.
         """
         ctx = config.get("configurable", {}).get("turn_context")
-        preamble = await self.toolkit.preamble(ctx) if ctx is not None else ""
+        preamble = ""
+        if ctx is not None:
+            try:
+                preamble = await self.toolkit.preamble(ctx)
+            except Exception as e:
+                logger.exception("chat_preamble_failed", thread_id=config["configurable"]["thread_id"], error=str(e))
         return build_model_context(
             state.messages,
             system_prompt=load_system_prompt(),

@@ -87,7 +87,9 @@ conversation table. A user's memory is stored by the memory service, keyed by th
 - **A bad lookup corrects itself.** A call with invalid arguments ("category must be one
   of …", "no data before March 2025") goes back to the model as that call's result and it
   tries again. A crash inside a lookup reaches the model as a fixed message, never the
-  exception text. Independent lookups in one step run together.
+  exception text. When the user's history cannot be loaded, the turn is still answered
+  without what the model is told each turn about the data's span; a lookup then fails as a
+  crash does. Independent lookups in one step run together.
 - **A turn is bounded.** After `CHAT_MAX_STEPS` (default 8) model calls with lookups, or
   the same lookup with the same arguments twice, the turn ends with an answer written from
   what it has and marked stopped. The run's LangGraph recursion limit follows the setting

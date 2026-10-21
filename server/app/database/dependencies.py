@@ -124,3 +124,16 @@ async def get_db_session(request: Request) -> AsyncGenerator[AsyncSession, None]
 
 
 DbSession = Annotated[AsyncSession, Depends(get_db_session, scope="function")]
+
+
+async def release_connection(session: AsyncSession) -> None:
+    """Commit the request's work so far, handing its pool connection back before a model call.
+
+    A model call takes seconds, and the request's session would otherwise hold its
+    connection idle in a transaction through it; under concurrent requests that starves
+    the pool. Call it only where nothing committed so far depends on what follows. The
+    session opens a new transaction on its next use, which `get_db_session` commits after
+    the route as usual. It is the one commit outside `get_db_session`, and only a request
+    that awaits a model call uses it.
+    """
+    await session.commit()

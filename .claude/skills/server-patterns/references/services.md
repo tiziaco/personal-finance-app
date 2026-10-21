@@ -114,7 +114,8 @@ repository (`app/modules/conversation/handlers.py`).
 - Parameter order: `session` first, then the domain params
 - `flush()` + `refresh()` after DB writes — never `commit()`; the `get_db_session` dependency owns the transaction.
   `DbSession` is `scope="function"`, so the commit runs after the route returns and before the response is sent.
-  No carve-outs
+  The one exception: before awaiting a model call, `release_connection(session)` (`app/database/dependencies.py`)
+  commits the work so far and hands the connection back
 - A background task never receives the request's session: by the time a `BackgroundTasks` callable runs, that
   session is committed and closed. Pass it plain values; a task that needs the database opens its own from
   `request.app.state.session_factory`. The same holds for a `StreamingResponse` body

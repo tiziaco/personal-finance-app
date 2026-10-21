@@ -16,7 +16,7 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.logging import logger
 from app.core.metrics import llm_stream_duration_seconds
-from app.database.dependencies import DbSession
+from app.database.dependencies import DbSession, release_connection
 from app.modules.account import CurrentUser
 from app.modules.conversation.dependencies import ChatbotAgentDep, UserConversation
 from app.modules.conversation.schemas import (
@@ -24,7 +24,6 @@ from app.modules.conversation.schemas import (
     ChatResponse,
     ConversationHistory,
 )
-from app.modules.conversation.service import release_connection
 
 router = APIRouter(prefix="/chatbot", tags=["chatbot"])
 
