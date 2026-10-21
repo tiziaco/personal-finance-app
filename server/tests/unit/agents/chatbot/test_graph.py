@@ -641,15 +641,13 @@ class TestTitleFor:
     CONVERSATION_ID = uuid.uuid4()
     USER_ID = uuid.uuid4()
 
-    async def test_titles_the_first_exchange_on_the_current_model(self, agent):
+    async def test_titles_the_first_exchange(self, agent):
         agent.get_chat_history = AsyncMock(
             return_value=[ChatMessage(role="user", content="Q"), ChatMessage(role="assistant", content="A")]
         )
         with patch("app.agents.chatbot.graph.generate_title", new=AsyncMock(return_value="Budget")) as generate:
             assert await agent.title_for(self.CONVERSATION_ID, self.USER_ID) == "Budget"
-        generate.assert_awaited_once_with(
-            "Q", "A", agent.llm_service.current_model_name(), self.CONVERSATION_ID, self.USER_ID
-        )
+        generate.assert_awaited_once_with("Q", "A", self.CONVERSATION_ID, self.USER_ID)
 
     async def test_no_reply_yet_is_none_without_a_model_call(self, agent):
         agent.get_chat_history = AsyncMock(return_value=[ChatMessage(role="user", content="Q")])

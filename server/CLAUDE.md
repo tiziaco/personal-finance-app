@@ -236,7 +236,7 @@ api_key = settings.llm.OPENROUTER_API_KEY
 
 A conversational agent extends `BaseAgent` (`app/agents/base/`) and implements `create_graph()`.
 A one-shot call whose answer must be JSON of a known shape — the CSV import's `csv_mapping` and
-`transaction_labeler` — is a plain function over `ask_json()` (`app/agents/shared/structured.py`),
+`transaction_labeler` — is a plain function over `ask()` (`app/agents/core/structured.py`),
 traced with `create_trace_config()`, with no graph and no checkpoint.
 
 **Shared components:**

@@ -16,9 +16,12 @@ from app.agents.core.memory import (
 )
 from app.agents.core.messages import drop_unanswered_tool_calls
 from app.agents.core.observability import create_graph_config, create_trace_config
+from app.agents.core.structured import InvalidModelAnswer, ask, parse_answer
 
 __all__ = [
+    "InvalidModelAnswer",
     "MEMORY_INSTRUCTIONS",
+    "ask",
     "close_connection_pool",
     "create_connection_pool",
     "create_graph_config",
@@ -30,5 +33,6 @@ __all__ = [
     "delete_user_memory",
     "drop_unanswered_tool_calls",
     "get_relevant_memory",
+    "parse_answer",
     "update_memory",
 ]

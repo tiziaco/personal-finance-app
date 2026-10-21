@@ -24,11 +24,11 @@ def no_langfuse():
 async def test_returns_the_models_mapping_and_sends_hints_and_capped_samples():
     seen = {}
 
-    async def fake(service, system, user, shape, config):
+    async def fake(shape, system, user, config):
         seen.update(json.loads(user))
         return shape.model_validate({"Buchungsdatum": "date", "Betrag": "amount"})
 
-    with patch("app.agents.csv_mapping.mapper.ask_json", fake):
+    with patch("app.agents.csv_mapping.mapper.ask", fake):
         mapping = await propose_mapping(COLUMNS, [["15.01.2026", "x" * 500]], **IDS)
     assert mapping == {"Buchungsdatum": "date", "Betrag": "amount"}
     assert seen["columns"][0] == {
@@ -42,5 +42,5 @@ async def test_returns_the_models_mapping_and_sends_hints_and_capped_samples():
 
 @pytest.mark.parametrize("error", [LLMAPIError("down"), ValueError("bad json"), RuntimeError("no key")])
 async def test_any_failure_is_none(error):
-    with patch("app.agents.csv_mapping.mapper.ask_json", AsyncMock(side_effect=error)):
+    with patch("app.agents.csv_mapping.mapper.ask", AsyncMock(side_effect=error)):
         assert await propose_mapping(COLUMNS, [], **IDS) is None

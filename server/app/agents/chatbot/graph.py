@@ -270,7 +270,7 @@ class ChatbotAgent(BaseAgent):
         return Command(update={"messages": [final], "stopped": {**state.stopped, final.id: reason}}, goto=END)
 
     async def title_for(self, conversation_id: uuid.UUID, user_id: uuid.UUID) -> Optional[str]:
-        """A title for a conversation from its first exchange, on the current model, or None.
+        """A title for a conversation from its first exchange, or None.
 
         None before the first reply, or when the model fails or answers with
         nothing usable: a title is cosmetic, and the client asks again after the
@@ -281,9 +281,7 @@ class ChatbotAgent(BaseAgent):
             return None
         user_text, reply_text = exchange
         try:
-            return await generate_title(
-                user_text, reply_text, self.llm_service.current_model_name(), conversation_id, user_id
-            )
+            return await generate_title(user_text, reply_text, conversation_id, user_id)
         except Exception:
             logger.exception("conversation_title_generation_failed", conversation_id=conversation_id)
             return None

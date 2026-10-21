@@ -5,8 +5,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from app.agents.core import InvalidModelAnswer
 from app.agents.insights import WrittenInsight
-from app.agents.shared.structured import InvalidModelAnswer
 from app.integrations.llm import LLMServiceError
 from app.modules.analytics import service as analytics_service_module
 from app.modules.insights.repository import insight_repository

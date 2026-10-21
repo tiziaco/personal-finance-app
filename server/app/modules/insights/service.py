@@ -8,8 +8,8 @@ from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid_utils.compat import uuid7
 
+from app.agents.core import InvalidModelAnswer
 from app.agents.insights import PROMPT_VERSION, WrittenInsight, write_insights
-from app.agents.shared.structured import InvalidModelAnswer
 from app.core.logging import logger
 from app.database.dependencies import release_connection
 from app.integrations.llm import LLMServiceError

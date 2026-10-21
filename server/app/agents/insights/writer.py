@@ -12,10 +12,10 @@ from decimal import Decimal
 from pathlib import Path
 from typing import Any, Literal, Optional
 
+from langchain_core.runnables import Runnable
 from pydantic import BaseModel, Field, PrivateAttr, RootModel, ValidationError, model_validator
 
-from app.agents.core import create_trace_config
-from app.agents.shared.structured import ask_json, structured_llm_service
+from app.agents.core import ask, create_trace_config
 from app.core.logging import logger
 
 PROMPT_VERSION = "v1"
@@ -106,7 +106,7 @@ class _Insights(RootModel[list[_Insight]]):
     @model_validator(mode="wrap")
     @classmethod
     def _drop_invalid_items(cls, value: Any, handler: Any) -> "_Insights":
-        # Not a list, or too long: the strict parse rejects it, and ask_json asks once more.
+        # Not a list, or too long: the strict parse rejects it, and ask asks once more.
         if not isinstance(value, list) or len(value) > MAX_INSIGHTS:
             return handler(value)
         valid: list[_Insight] = []
@@ -122,7 +122,9 @@ class _Insights(RootModel[list[_Insight]]):
         return answer
 
 
-async def write_insights(data: InsightsInput, *, user_id: uuid.UUID, generation_id: uuid.UUID) -> list[WrittenInsight]:
+async def write_insights(
+    data: InsightsInput, *, user_id: uuid.UUID, generation_id: uuid.UUID, model: Runnable | None = None
+) -> list[WrittenInsight]:
     """The model's insights about `data`, in its order.
 
     Raises InvalidModelAnswer (still invalid after one retry) and LLMServiceError unchanged.
@@ -138,7 +140,7 @@ async def write_insights(data: InsightsInput, *, user_id: uuid.UUID, generation_
         },
         ensure_ascii=False,
     )
-    answer = await ask_json(structured_llm_service, system, user, _Insights, config)
+    answer = await ask(_Insights, system, user, config, model=model)
     if answer._dropped:
         logger.warning("insights_items_dropped", generation_id=str(generation_id), dropped=answer._dropped)
 
